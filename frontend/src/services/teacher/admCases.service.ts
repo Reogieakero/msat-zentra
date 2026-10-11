@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api/client";
 import { pickList } from "@/lib/api/payload";
 import type { AdmCase, MyAdmCasesPage } from "./admCases.types";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export async function fetchMyAdmCases(
   params: { q?: string; page?: number; pageSize?: number; highlight?: string; signal?: AbortSignal } = {}
@@ -8,7 +9,7 @@ export async function fetchMyAdmCases(
   const search = new URLSearchParams();
   if (params.q?.trim()) search.set("q", params.q.trim());
   search.set("page", String(Math.max(1, params.page ?? 1)));
-  search.set("pageSize", String(params.pageSize ?? 15));
+  search.set("pageSize", String(params.pageSize ?? PAGE_SIZE));
   if (params.highlight) search.set("highlight", params.highlight);
   const { data } = await apiClient.get<
     MyAdmCasesPage | AdmCase[] | { cases: AdmCase[] }
@@ -36,7 +37,7 @@ export async function fetchMyAdmCases(
     page: fallback.page ?? params.page ?? 1,
     totalPages:
       fallback.totalPages ??
-      Math.max(1, Math.ceil(total / (params.pageSize ?? 15))),
-    pageSize: fallback.pageSize ?? params.pageSize ?? 15,
+      Math.max(1, Math.ceil(total / (params.pageSize ?? PAGE_SIZE))),
+    pageSize: fallback.pageSize ?? params.pageSize ?? PAGE_SIZE,
   };
 }

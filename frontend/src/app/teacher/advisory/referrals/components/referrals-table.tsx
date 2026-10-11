@@ -8,7 +8,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Loader2, MoreHorizontal, RotateCcw, Route, SearchIcon, Send, X } from "lucide-react";
+import { Loader2, MoreHorizontal, RotateCcw, Route, SearchIcon, Send, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +31,7 @@ import { ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/share
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
 import { typeForDesk } from "./referral-types";
+import { Pagination } from "@/components/shared/pagination";
 import type { ReferralRow } from "./use-my-referrals";
 import refStyles from "./referrals.module.css";
 export const STATUS_BADGE: Record<ReferralRow["status"], { variant: "amber" | "blue" | "green" | "red" | "outline"; label: string }> = {
@@ -58,7 +59,6 @@ export function ReferralsTable({
   query,
   onQueryChange,
   safePage,
-  totalPages,
   goToPage,
   highlightId,
   referralsQuery,
@@ -381,34 +381,11 @@ export function ReferralsTable({
           </TableBody>
         </Table>
       </div>
-      {totalPages > 1 && (
-        <div className="relative flex items-center justify-end space-x-2">
-          <div className="text-muted-foreground flex-1 text-sm">
-            Page {safePage} of {totalPages} — {total} referral
-            {total === 1 ? "" : "s"}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(Math.max(1, safePage - 1))}
-              disabled={safePage <= 1 || isPageLoading}
-            >
-              <ChevronLeft aria-hidden />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
-              disabled={safePage >= totalPages || isPageLoading}
-            >
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        currentPage={safePage}
+        totalItems={total}
+        onPageChange={goToPage}
+      />
     </div>
   );
 }

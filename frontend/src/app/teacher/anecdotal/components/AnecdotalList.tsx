@@ -8,7 +8,6 @@ import {
   CardDescription,
   CardAction,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,8 +32,6 @@ import {
 import {
   Search,
   MoreHorizontal,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   X,
 } from "lucide-react";
@@ -45,8 +42,9 @@ import {
   type MockAnecdotalRecord,
 } from "./anecdotal-workspace-mock";
 import styles from "./AnecdotalList.module.css";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
-const PAGE_SIZE = 15;
+
 
 const CATEGORIES: MockAnecdotalCategory[] = [
   "behavioral",
@@ -85,8 +83,6 @@ export function AnecdotalList({ records, onSelect }: AnecdotalListProps) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, filtered.length);
 
   return (
     <Card className={styles.card}>
@@ -252,33 +248,11 @@ export function AnecdotalList({ records, onSelect }: AnecdotalListProps) {
         </Table>
       </CardContent>
 
-      {totalPages > 1 && (
-        <CardFooter className={styles.footer}>
-          <span className={styles.footerInfo}>
-            {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
-          </span>
-          <div className={styles.footerActions}>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage <= 1 || filtered.length === 0}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeft aria-hidden />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage >= totalPages || filtered.length === 0}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          </div>
-        </CardFooter>
-      )}
+      <Pagination
+        currentPage={safePage}
+        totalItems={filtered.length}
+        onPageChange={setPage}
+      />
     </Card>
   );
 }

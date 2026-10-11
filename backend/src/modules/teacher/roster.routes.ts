@@ -2,7 +2,11 @@ import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { scopedYearId } from "../../lib/termScope.js";
 import { validate } from "../../middleware/validate.js";
+import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { TEACHER_ROLES } from "./advisory.repository.js";
+import { attendanceSheetQuerySchema } from "./teacher.schemas.js";
 import { rosterSchema } from "./advisory.schemas.js";
 import { enlistRoster, getAttendanceSheet } from "../../services/advisory/roster.service.js";
 
@@ -47,20 +51,19 @@ router.get(
   "/attendance",
   requireAuth,
   requireRole(...TEACHER_ROLES),
+  validate("query", attendanceSheetQuerySchema),
+  cache({ ttl: CACHE_TTLS.dashboard, tags: [CACHE_TAGS.teacher, CACHE_TAGS.attendance, CACHE_TAGS.roster] }),
+  etag(),
   async (req, res, next) => {
     try {
+      const q = req.query as Record<string, unknown>;
       const onlySection =
-        typeof req.query.sectionId === "string" && req.query.sectionId.length > 0
-          ? req.query.sectionId
-          : undefined;
+        typeof q.sectionId === "string" && q.sectionId.length > 0 ? q.sectionId : undefined;
       const subjectId =
-        typeof req.query.subjectId === "string" && req.query.subjectId.length > 0
-          ? req.query.subjectId
-          : undefined;
-      const slotRaw = typeof req.query.slot === "string" ? parseInt(req.query.slot, 10) : 1;
-      const slot = Number.isFinite(slotRaw) ? Math.min(Math.max(slotRaw, 1), 10) : 1;
-      const session = String(req.query.session ?? "");
-      const date = new Date(String(req.query.date ?? ""));
+        typeof q.subjectId === "string" && q.subjectId.length > 0 ? q.subjectId : undefined;
+      const slot = Math.min(Math.max(Number(q.slot) || 1, 1), 10);
+      const session = typeof q.session === "string" ? q.session : "";
+      const date = new Date(String(q.date ?? ""));
       const schoolYearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
       res.json(
         await getAttendanceSheet(ctxOf(req), {

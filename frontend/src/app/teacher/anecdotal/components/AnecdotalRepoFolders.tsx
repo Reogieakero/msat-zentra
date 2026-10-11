@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import type { MyAnecdotalRecord } from "@/components/ocform01/folders";
 import { CATEGORY_COLORS } from "./AnecdotalSideRail";
 import styles from "./anecdotal-repo-folders.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   behavioral: 1,
@@ -142,33 +142,11 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
             </div>
           )}
           </div>
-          {visible.length > PAGE_SIZE ? (
-            <div className="relative flex items-center justify-end space-x-2">
-              <div className="text-muted-foreground flex-1 text-sm">
-                {visible.length} record{visible.length === 1 ? "" : "s"}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={safePage <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  <ChevronLeft aria-hidden />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={safePage >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                  <ChevronRight aria-hidden />
-                </Button>
-              </div>
-            </div>
-          ) : null}
+          <Pagination
+            currentPage={safePage}
+            totalItems={visible.length}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 

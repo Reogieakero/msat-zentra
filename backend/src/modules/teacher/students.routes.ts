@@ -1,5 +1,8 @@
 import { Router, type Request } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { scopedYearId } from "../../lib/termScope.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { TEACHER_ROLES } from "./advisory.repository.js";
@@ -40,6 +43,8 @@ router.get(
   "/students",
   requireAuth,
   requireRole(...TEACHER_ROLES),
+  cache({ ttl: CACHE_TTLS.list, tags: [CACHE_TAGS.teacher, CACHE_TAGS.roster] }),
+  etag(),
   async (req, res, next) => {
     try {
       res.json(await getStudents(await schoolYearCtxOf(req)));

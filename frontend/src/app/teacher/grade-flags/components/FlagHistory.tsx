@@ -22,6 +22,7 @@ import {
 } from "@/services/teacher/gradeFlags.service";
 import { initialsOfTeacher } from "./history-helpers";
 import styles from "./FlagHistory.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 type Mode = "raised-by-me" | "against-me" | "advisees";
 type StatusFilter = "all" | FlagStatus;
@@ -73,13 +74,13 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
 
   const mineQuery = useQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "mine", termKey],
-    queryFn: ({ signal }) => fetchFlags("mine", { pageSize: 15, signal }),
+    queryFn: ({ signal }) => fetchFlags("mine", { pageSize: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,
     enabled: mode === "raised-by-me",
   });
   const againstQuery = useQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "against-me", termKey],
-    queryFn: ({ signal }) => fetchFlags("against-me", { pageSize: 15, signal }),
+    queryFn: ({ signal }) => fetchFlags("against-me", { pageSize: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,
     enabled: mode === "against-me",
   });
@@ -97,7 +98,7 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
   });
   const adviseeQuery = useQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "advisees", termKey],
-    queryFn: ({ signal }) => fetchFlags("advisees", { pageSize: 15, signal }),
+    queryFn: ({ signal }) => fetchFlags("advisees", { pageSize: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,
     retry: false,
     enabled: mode === "advisees",

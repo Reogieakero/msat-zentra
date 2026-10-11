@@ -14,7 +14,7 @@ import type {
   AnecdotalStudent,
 } from "@/services/anecdotal/anecdotal.types";
 import styles from "./AnecdotalChat.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 export function StudentPicker({
   open,
@@ -152,35 +152,12 @@ export function StudentPicker({
           </tbody>
         </table>
         {totalPages > 1 && (
-          <div className={styles.dropPagination}>
-            <button
-              type="button"
-              className={styles.dropPageBtn}
-              disabled={page <= 1}
-              onClick={() =>
-                setPage((p) => Math.max(1, p - 1))
-              }
-              aria-label="Previous page"
-            >
-              Prev
-            </button>
-            <span className={styles.dropPageInfo}>
-              {page} / {totalPages}
-            </span>
-            <button
-              type="button"
-              className={styles.dropPageBtn}
-              disabled={page >= totalPages}
-              onClick={() =>
-                setPage((p) =>
-                  Math.min(totalPages, p + 1)
-                )
-              }
-              aria-label="Next page"
-            >
-              Next
-            </button>
-          </div>
+          <Pagination
+            compact
+            currentPage={page}
+            totalItems={visible.length}
+            onPageChange={setPage}
+          />
         )}
       </PopoverContent>
     </Popover>
@@ -326,35 +303,12 @@ export function ClassPicker({
           </tbody>
         </table>
         {totalPages > 1 && (
-          <div className={styles.dropPagination}>
-            <button
-              type="button"
-              className={styles.dropPageBtn}
-              disabled={page <= 1}
-              onClick={() =>
-                setPage((p) => Math.max(1, p - 1))
-              }
-              aria-label="Previous page"
-            >
-              Prev
-            </button>
-            <span className={styles.dropPageInfo}>
-              {page} / {totalPages}
-            </span>
-            <button
-              type="button"
-              className={styles.dropPageBtn}
-              disabled={page >= totalPages}
-              onClick={() =>
-                setPage((p) =>
-                  Math.min(totalPages, p + 1)
-                )
-              }
-              aria-label="Next page"
-            >
-              Next
-            </button>
-          </div>
+          <Pagination
+            compact
+            currentPage={page}
+            totalItems={visible.length}
+            onPageChange={setPage}
+          />
         )}
       </PopoverContent>
     </Popover>

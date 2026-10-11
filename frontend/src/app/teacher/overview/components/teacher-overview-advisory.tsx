@@ -63,6 +63,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DragAlongCell, DraggableHeader } from "@/components/data-table/drag-columns";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { riskBadgeVariant } from "@/lib/risk/status";
 import type { AdvisoryStatusRow } from "@/services/teacher/overview.types";
 import styles from "./teacher-overview-advisory.module.css";
@@ -258,7 +259,7 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
       const newOrder = typeof updater === "function" ? updater(fullColumnOrder) : updater;
       setColumnOrder(newOrder.filter((id: string) => id !== "select" && id !== "actions"));
     },
-    initialState: { pagination: { pageSize: 15 } },
+    initialState: { pagination: { pageSize: PAGE_SIZE } },
     state: {
       sorting,
       columnFilters,
@@ -423,30 +424,15 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
               </DndContext>
             </div>
             <div className="flex items-center justify-end space-x-2">
-              <div className="text-muted-foreground flex-1 text-sm">
+              <div className="text-muted-foreground flex-1 text-sm" aria-live="polite">
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected.
               </div>
-              {table.getPageCount() > 1 && (
-                <div className="space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
+              <Pagination
+                currentPage={table.getState().pagination.pageIndex + 1}
+                totalItems={table.getFilteredRowModel().rows.length}
+                onPageChange={(p) => table.setPageIndex(p - 1)}
+              />
             </div>
           </div>
         )}

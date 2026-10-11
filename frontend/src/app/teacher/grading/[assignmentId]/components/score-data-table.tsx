@@ -1,12 +1,11 @@
 "use client";
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, flexRender, type ColumnDef, type SortingState } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ClassAssessment, ClassStudent } from "@/services/teacher/grading.types";
 import { scoreOf } from "./score-input";
 import styles from "./ScoreGrid.module.css";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 export function ScoreDataTable({ assessment, students, drafts, nameFilter }: { assessment: ClassAssessment; students: ClassStudent[]; drafts: Record<string, string>; nameFilter: string }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const columns = React.useMemo<ColumnDef<ClassStudent>[]>(
@@ -69,7 +68,7 @@ export function ScoreDataTable({ assessment, students, drafts, nameFilter }: { a
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 15 } },
+    initialState: { pagination: { pageSize: PAGE_SIZE } },
     state: { sorting, columnFilters },
   });
   if (students.length === 0) {
@@ -111,23 +110,11 @@ export function ScoreDataTable({ assessment, students, drafts, nameFilter }: { a
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end gap-2">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} student{table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
-        </div>
-        {table.getPageCount() > 1 && (
-          <>
-            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-              <ChevronLeft aria-hidden />
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          </>
-        )}
-      </div>
+      <Pagination
+        currentPage={table.getState().pagination.pageIndex + 1}
+        totalItems={table.getFilteredRowModel().rows.length}
+        onPageChange={(p) => table.setPageIndex(p - 1)}
+      />
     </div>
   );
 }

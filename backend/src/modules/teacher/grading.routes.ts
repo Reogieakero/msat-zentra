@@ -1,6 +1,9 @@
 import { Router, type Request } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
+import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { invalidateGradingCaches } from "./grading.repository.js";
 import {
@@ -36,6 +39,8 @@ router.get(
   "/classes/:assignmentId",
   requireAuth,
   requireRole(...TEACHER_ROLES),
+  cache({ ttl: CACHE_TTLS.dashboard, tags: [CACHE_TAGS.teacher, CACHE_TAGS.grades] }),
+  etag(),
   async (req, res, next) => {
     try {
       res.json(await getClassWorkspace(await gradingCtxOf(req), String(req.params.assignmentId)));

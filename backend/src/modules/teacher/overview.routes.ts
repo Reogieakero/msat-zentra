@@ -1,5 +1,9 @@
 import { Router } from "express";import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
 import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
+import { teacherOverviewQuerySchema } from "./teacher.schemas.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { getOverview } from "../../services/teacher/overview.service.js";
 import { getStudentList } from "../../services/teacher/overview-students.service.js";
@@ -11,29 +15,32 @@ router.get(
   requireAuth,
   requireRole("subject_teacher", "adviser"),
 
-  cache({ ttl: 300, tags: ["teacher", "overview"] }),
+  validate("query", teacherOverviewQuerySchema),
+  cache({ ttl: CACHE_TTLS.dashboard, tags: [CACHE_TAGS.teacher, CACHE_TAGS.overview] }),
+  etag(),
   async (req, res, next) => {
     try {
 
-      const scopeParam = req.query.scope;
+      const q = req.query as Record<string, unknown>;
+      const scopeParam = q.scope;
       const scope =
         scopeParam === "critical" || scopeParam === "secondary" || scopeParam === "gradebook"
           ? scopeParam
           : "full";
       const termId = await resolveActiveTermId(req);
-      const atRiskOnly = req.query.atRiskOnly === "1" || req.query.atRiskOnly === "true";
+      const atRiskOnly = q.atRiskOnly === "1" || q.atRiskOnly === "true";
       const clampPage = (v: unknown) => {
         const n = Math.floor(Number(v));
         return Number.isFinite(n) && n > 0 ? n : 0;
       };
       const clampLimit = (v: unknown) => {
         const n = Math.floor(Number(v));
-        return Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0;
+        return Number.isFinite(n) && n > 0 ? Math.min(n, 15) : 0;
       };
-      const classPage = clampPage(req.query.classPage);
-      const classLimit = clampLimit(req.query.classLimit);
-      const advisoryPage = clampPage(req.query.advisoryPage);
-      const advisoryLimit = clampLimit(req.query.advisoryLimit);
+      const classPage = clampPage(q.classPage);
+      const classLimit = clampLimit(q.classLimit);
+      const advisoryPage = clampPage(q.advisoryPage);
+      const advisoryLimit = clampLimit(q.advisoryLimit);
       res.json(
         await getOverview(
           {
@@ -61,7 +68,8 @@ router.get(
   requireAuth,
   requireRole("subject_teacher", "adviser"),
 
-  cache({ ttl: 300, tags: ["teacher", "overview"] }),
+  cache({ ttl: CACHE_TTLS.dashboard, tags: [CACHE_TAGS.teacher, CACHE_TAGS.overview] }),
+  etag(),
   async (req, res, next) => {
     try {
       const classIdParam = String(req.query.classId ?? "").trim();

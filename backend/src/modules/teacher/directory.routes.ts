@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
-import { invalidateTags } from "../../lib/cache.js";
+import { cache, invalidateTags } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { validate } from "../../middleware/validate.js";
 import { claimCodeSchema, verifyCodeSchema } from "./teacher.schemas.js";
 import {
@@ -30,6 +32,8 @@ router.get(
   "/schedule/teachers",
   requireAuth,
   requireRole("subject_teacher", "adviser"),
+  cache({ ttl: CACHE_TTLS.lookup, tags: [CACHE_TAGS.teacher, CACHE_TAGS.directory] }),
+  etag(),
   async (_req, res, next) => {
     try {
       res.json(await listTeachers());

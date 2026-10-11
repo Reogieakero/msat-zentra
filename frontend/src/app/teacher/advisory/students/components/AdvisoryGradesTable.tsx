@@ -13,7 +13,7 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Info, SearchIcon, X } from "lucide-react";
+import { Info, SearchIcon, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
@@ -31,6 +31,7 @@ import type {
 } from "@/services/teacher/advisory.types";
 import tableScroll from "./advisory-grades-table.module.css";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 function gradeOf(student: AdviseeRow, subject: string): number | null {
   const g = (student.liveGrades ?? []).find((x) => x.subject === subject);
@@ -209,7 +210,7 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 15 } },
+    initialState: { pagination: { pageSize: PAGE_SIZE } },
     state: { sorting, columnFilters },
   });
 
@@ -349,35 +350,11 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
             </TableBody>
           </Table>
       </div>
-      <div className="relative flex items-center justify-end gap-2">
-          <div className="flex-1 text-sm text-muted-foreground">
-            {table.getFilteredRowModel().rows.length} student
-            {table.getFilteredRowModel().rows.length === 1 ? "" : "s"} ·{" "}
-            Live grades
-          </div>
-        {table.getPageCount() > 1 && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <ChevronLeft aria-hidden />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          </>
-        )}
-      </div>
+      <Pagination
+        currentPage={table.getState().pagination.pageIndex + 1}
+        totalItems={table.getFilteredRowModel().rows.length}
+        onPageChange={(p) => table.setPageIndex(p - 1)}
+      />
     </div>
 
       {showLegend ? (

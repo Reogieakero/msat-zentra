@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, FolderOpen } from "lucide-react";
+import { FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { writeLastViewedReferralId } from "../referrals/last-viewed";
@@ -17,8 +17,10 @@ import type {
 import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/adm-cases.module.css";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
-const TEACHER_ADM_CASES_PAGE_SIZE = 15;
+const TEACHER_ADM_CASES_PAGE_SIZE = PAGE_SIZE;
 
 const GRID_STYLE: React.CSSProperties = {
   display: "grid",
@@ -58,7 +60,9 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   const router = useRouter();
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [page, setPage] = useState(1);
+  const pager = useUrlPager(0, {});
+  const page = pager.page;
+  const setPage = pager.setPage;
   const [takeover, setTakeover] = useState(false);
   const [detailCase, setDetailCase] = useState<AdmCase | null>(null);
 
@@ -111,7 +115,6 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   // stacking/keeping stale rows, while cached pages resolve instantly.
   const isPageFetching =
     !casesQuery.isPending && !casesQuery.isError && casesQuery.isFetching;
-  const paginationBusy = isPageFetching;
 
   function handleTrack(caseData: AdmCase) {
 
@@ -195,35 +198,11 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
                 })}
               </div>
               )}
-              {total > TEACHER_ADM_CASES_PAGE_SIZE ? (
-                <div className="relative flex items-center justify-end space-x-2">
-                  <div className="text-muted-foreground flex-1 text-sm">
-                    {total} case{total === 1 ? "" : "s"}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={safePage <= 1 || total === 0 || paginationBusy}
-                      aria-busy={paginationBusy || undefined}
-                      onClick={() => goToPage(Math.max(1, safePage - 1))}
-                    >
-                      <ChevronLeft aria-hidden />
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={safePage >= totalPages || total === 0 || paginationBusy}
-                      aria-busy={paginationBusy || undefined}
-                      onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
-                    >
-                      Next
-                      <ChevronRight aria-hidden />
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
+              <Pagination
+                currentPage={safePage}
+                totalItems={total}
+                onPageChange={(p) => goToPage(p)}
+              />
             </div>
             <div className={`min-w-0 ${detailCase ? "" : "overflow-hidden"}`} inert={!detailCase}>
               <div

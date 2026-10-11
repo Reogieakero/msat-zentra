@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
-import { invalidateTags } from "../../lib/cache.js";
+import { cache, invalidateTags } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { listQuerySchema, raiseSchema, resolveSchema } from "./grade-flags.schemas.js";
 import {
   getFlagOptions,
@@ -31,6 +33,8 @@ router.get(
   requireAuth,
   requireRole(...TEACHER_ROLES),
   validate("query", listQuerySchema),
+  cache({ ttl: CACHE_TTLS.list, tags: [CACHE_TAGS.teacher, "grade-flags"] }),
+  etag(),
   async (req, res, next) => {
     try {
       const { scope, status, q, page, pageSize, limit } = req.query as unknown as {
@@ -59,6 +63,8 @@ router.get(
   "/options",
   requireAuth,
   requireRole(...TEACHER_ROLES),
+  cache({ ttl: CACHE_TTLS.lookup, tags: [CACHE_TAGS.teacher, "grade-flags"] }),
+  etag(),
   async (req, res, next) => {
     try {
       const scopeTermId = req.termScope?.termId ?? null;

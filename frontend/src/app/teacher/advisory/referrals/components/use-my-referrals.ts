@@ -4,6 +4,9 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 export interface ReferralRow {
   id: string;
   studentName: string;
@@ -44,14 +47,33 @@ export interface MyReferralsPage {
   totalPages: number;
   pageSize: number;
 }
-export const TEACHER_REFERRALS_PAGE_SIZE = 15;
+export const TEACHER_REFERRALS_PAGE_SIZE = PAGE_SIZE;
 export function useMyReferrals(highlightId: string | null) {
+  const searchParams = useSearchParams();
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [query, setQuery] = React.useState("");
-  const [page, setPage] = React.useState(1);
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const query = useDebouncedValue(queryInput.trim(), 300);
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
   const [takeover, setTakeover] = React.useState(false);
-  const debounced = useDebouncedValue(query.trim(), 300);
+  const debounced = query;
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debounced || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced]);
+
+  const setQuery = React.useCallback((value: string) => {
+    setQueryInput(value);
+  }, []);
   const landing = !takeover && highlightId !== null;
   const referralsQuery = useQuery<MyReferralsPage>({
     queryKey: ["myReferrals", takeover || !landing ? page : 1, debounced, termKey, landing ? (highlightId ?? "") : ""],
@@ -124,7 +146,7 @@ export function useMyReferrals(highlightId: string | null) {
   const total = referralsQuery.data?.total ?? referrals.length;
   const unfilteredTotal = referralsQuery.data?.unfilteredTotal ?? referrals.length;
   return {
-    query,
+    query: queryInput,
     setQuery,
     page,
     setPage,

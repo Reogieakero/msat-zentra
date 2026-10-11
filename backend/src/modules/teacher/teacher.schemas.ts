@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../lib/pagination.js";
 
 export const masterTeacherSchema = z.object({ isMasterTeacher: z.boolean() });
 
@@ -76,4 +77,28 @@ export const subjectSchema = z.object({
   code: z.string().min(1).max(24),
   gradeLevel: z.enum(["G7", "G8", "G9", "G10"]),
   category: z.enum(["CORE", "ELECTIVE"]).optional().default("CORE"),
+});
+
+/** Teacher overview + attendance-sheet query validation (sub-lists capped at 15). */
+export const teacherOverviewQuerySchema = z.object({
+  scope: z.enum(["critical", "secondary", "gradebook", "full"]).optional(),
+  atRiskOnly: z.enum(["0", "1", "true", "false"]).optional(),
+  classPage: z.coerce.number().int().min(1).optional(),
+  classLimit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+  advisoryPage: z.coerce.number().int().min(1).optional(),
+  advisoryLimit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+});
+
+export const teacherStudentListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional().default(PAGE_SIZE),
+  q: z.string().trim().max(200).optional().default(""),
+});
+
+export const attendanceSheetQuerySchema = z.object({
+  sectionId: z.string().trim().max(120).optional(),
+  subjectId: z.string().trim().max(120).optional(),
+  slot: z.coerce.number().int().min(1).max(10).optional().default(1),
+  session: z.string().trim().max(20).optional().default(""),
+  date: z.string().trim().max(30).optional().default(""),
 });
