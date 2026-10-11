@@ -1,5 +1,5 @@
 "use client";
-import { ChevronDown, ChevronLeft, ChevronRight, HeartHandshake, Search, SearchX } from "lucide-react";
+import { ChevronDown, HeartHandshake, Search, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ import type {
 } from "@/services/guidance/interventions.types";
 import { InterventionTableRow } from "./intervention-row";
 import { Busy } from "./busy";
+import { Pagination } from "@/components/shared/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./guidance-interventions.module.css";
 
@@ -77,8 +78,6 @@ export function InterventionTableView({
   page,
   pageSize,
   total,
-  totalPages,
-  unfilteredTotal,
   onPageChange,
   query,
   onQueryChange,
@@ -106,8 +105,6 @@ export function InterventionTableView({
   onDocsChanged,
   highlightId = null,
 }: InterventionTableViewProps) {
-  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const end = Math.min(page * pageSize, total);
   const hasActiveSearch = query.trim() !== "";
   const levelLabel =
     LEVEL_OPTIONS.find((o) => o.value === level)?.label ?? "High risk";
@@ -289,48 +286,12 @@ export function InterventionTableView({
             </Table>
           </div>
         )}
-        {totalPages > 1 && (
-          <div className={styles.pager}>
-            <p className={styles.range}>
-              Showing {start}–{end} of {total}
-              {unfilteredTotal !== undefined && unfilteredTotal !== total
-                ? ` (of ${unfilteredTotal} in cohort)`
-                : ""}
-            </p>
-            <div className={styles.pagerButtons}>
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={page <= 1 || isNavigating}
-                onClick={() => onPageChange(page - 1)}
-                aria-label="Go to previous page"
-              >
-                <ChevronLeft aria-hidden="true" />
-                Previous
-              </Button>
-              <span className={styles.pageLabel} aria-live="polite">
-                {isNavigating ? (
-                  <span className={styles.loadingLabel}>
-                    <Busy busy />
-                    Loading…
-                  </span>
-                ) : (
-                  `Page ${page} of ${totalPages}`
-                )}
-              </span>
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={page >= totalPages || isNavigating}
-                onClick={() => onPageChange(page + 1)}
-                aria-label="Go to next page"
-              >
-                Next
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={page}
+          totalItems={total}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+        />
       </div>
     </section>
   );

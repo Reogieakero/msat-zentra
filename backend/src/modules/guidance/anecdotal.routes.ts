@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
 import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
+import { guidanceAnecdotalQuerySchema } from "./guidance.schemas.js";
 import { resolveGuidancePageSize } from "./guidance.repository.js";
 import {
   getAnecdotal,
@@ -13,29 +17,29 @@ router.get(
   "/anecdotal",
   requireAuth,
   requireRole("guidance_counselor"),
-  cache({ tags: ["guidance", "anecdotal"] }),
+  validate("query", guidanceAnecdotalQuerySchema),
+  cache({ tags: [CACHE_TAGS.guidance, "anecdotal"], ttl: CACHE_TTLS.list }),
+  etag(),
   async (req, res, next) => {
     try {
+      const query = req.query as Record<string, unknown>;
       const categoryFilter =
-        req.query.category === "behavioral" ||
-        req.query.category === "bullying" ||
-        req.query.category === "academic" ||
-        req.query.category === "attendance" ||
-        req.query.category === "health"
-          ? (req.query.category as AnecdotalCategory)
+        query.category === "behavioral" ||
+        query.category === "bullying" ||
+        query.category === "academic" ||
+        query.category === "attendance" ||
+        query.category === "health"
+          ? (query.category as AnecdotalCategory)
           : null;
-      const q =
-        typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      const q = typeof query.q === "string" ? query.q.trim().toLowerCase() : "";
       const anecdotalTypeFilter =
-        req.query.type === "adm" || req.query.type === "counseling"
-          ? (req.query.type as "adm" | "counseling")
-          : null;
-      const page = Math.max(1, Number(req.query.page) || 1);
+        query.type === "adm" || query.type === "counseling" ? query.type : null;
+      const page = Math.max(1, Number(query.page) || 1);
       const pageSize = resolveGuidancePageSize(req);
 
       const scopeTermId = req.termScope?.termId ?? null;
 
-      const docsOnly = req.query.docs === "1";
+      const docsOnly = query.docs === "1";
       res.json(
         await getAnecdotal(
           { userId: req.user!.id, role: req.user!.role, termId: scopeTermId, schoolYearId: null },

@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api/client";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 import { pickList } from "@/lib/api/payload";
 import { asArray } from "@/lib/api/payload";
 import type {
@@ -38,11 +39,10 @@ export async function fetchGuidanceInterventions(
   return { ...(data as GuidanceInterventionsData), students };
 }
 
-// Bounded preview fan-out: larger pages (server allows up to 100) so the full
-// live cohort is covered in at most 2 requests instead of 10 sequential
-// full-cohort recomputes. Cap stays at 150 rows.
-const FETCH_ALL_PAGE_SIZE = 75;
-const FETCH_ALL_MAX_PAGES = 2;
+// Bounded preview fan-out at the shared page size: the full live cohort is
+// covered page by page (server caps list pages at 15). Cap stays at 150 rows.
+const FETCH_ALL_PAGE_SIZE = PAGE_SIZE;
+const FETCH_ALL_MAX_PAGES = 10;
 
 export async function fetchAllGuidanceInterventions(): Promise<AtRiskStudentItem[]> {
   const first = await fetchGuidanceInterventions({

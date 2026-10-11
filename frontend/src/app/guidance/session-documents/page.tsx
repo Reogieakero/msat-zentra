@@ -24,8 +24,11 @@ import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types"
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "@/app/guidance/anecdotal/components/guidance-anecdotal.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 
-const GUIDANCE_SESSION_DOCS_PAGE_SIZE = 15;
+const GUIDANCE_SESSION_DOCS_PAGE_SIZE = PAGE_SIZE;
 
 function hasDocsCheck(record: { sessionDocs?: { files: { mimeType: string }[] }[] }): boolean {
   return (record.sessionDocs ?? []).some((s) =>
@@ -34,17 +37,50 @@ function hasDocsCheck(record: { sessionDocs?: { files: { mimeType: string }[] }[
 }
 
 export default function GuidanceSessionDocumentsPage() {
+  return (
+    <React.Suspense>
+      <GuidanceSessionDocumentsPageInner />
+    </React.Suspense>
+  );
+}
+
+function GuidanceSessionDocumentsPageInner() {
+  const searchParams = useSearchParams();
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [queryInput, setQueryInput] = React.useState("");
-  const [type, setType] = React.useState<TypeFilter>("");
-  const [page, setPage] = React.useState(1);
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const [type, setTypeState] = React.useState<TypeFilter>(
+    searchParams.get("type") === "adm" || searchParams.get("type") === "counseling"
+      ? (searchParams.get("type") as TypeFilter)
+      : "",
+  );
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "type"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const setType = React.useCallback(
+    (value: TypeFilter) => {
+      setTypeState(value);
+      pager.setFilters({ type: value === "" ? undefined : value });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const query = useDebouncedValue(queryInput.trim(), 300);
 
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: query || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
   const handleQueryInputChange = (value: string) => {
     setQueryInput(value);
-    setPage(1);
   };
 
   const { data, isPending, isError, isFetching, refetch, isRefetching } =

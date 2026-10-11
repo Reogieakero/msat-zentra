@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { prisma } from "../../lib/prisma.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { getOverview } from "../../services/guidance/overview.service.js";
@@ -11,7 +13,8 @@ router.get(
   "/overview",
   requireAuth,
   requireRole("guidance_counselor"),
-  cache({ tags: ["guidance", "overview"] }),
+  cache({ tags: [CACHE_TAGS.guidance, CACHE_TAGS.overview], ttl: CACHE_TTLS.dashboard }),
+  etag(),
   async (req, res, next) => {
     try {
 

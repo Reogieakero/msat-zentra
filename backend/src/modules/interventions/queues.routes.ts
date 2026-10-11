@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
 import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
+import { interventionsQueueQuerySchema } from "./interventions.schemas.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import {
   getEngineBreakdown,
@@ -14,37 +18,26 @@ router.get(
   "/",
   requireAuth,
   requireRole("guidance_counselor"),
-  cache({ tags: ["guidance", "guidance-interventions", "interventions"] }),
+  validate("query", interventionsQueueQuerySchema),
+  cache({ tags: [CACHE_TAGS.guidance, "guidance-interventions", CACHE_TAGS.interventions], ttl: CACHE_TTLS.list }),
+  etag(),
   async (req, res, next) => {
     try {
+      const query = req.query as Record<string, unknown>;
       const levelFilter =
-        req.query.level === "Moderate" || req.query.level === "All"
-          ? String(req.query.level)
-          : "High";
+        query.level === "Moderate" || query.level === "All" ? String(query.level) : "High";
       const factorFilter =
-        req.query.factor === "Academic" ||
-        req.query.factor === "Attendance" ||
-        req.query.factor === "Behavioral"
-          ? (req.query.factor as "Academic" | "Attendance" | "Behavioral")
+        query.factor === "Academic" || query.factor === "Attendance" || query.factor === "Behavioral"
+          ? (query.factor as "Academic" | "Attendance" | "Behavioral")
           : null;
-      const mineOnly = req.query.mine === "true";
+      const mineOnly = query.mine === "true";
       const outcomeFilter =
-        req.query.outcome === "ongoing" ||
-        req.query.outcome === "resolved" ||
-        req.query.outcome === "unresolved" ||
-        req.query.outcome === "all"
-          ? String(req.query.outcome)
+        query.outcome === "ongoing" || query.outcome === "resolved" || query.outcome === "unresolved" || query.outcome === "all"
+          ? String(query.outcome)
           : "";
-      const q =
-        typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
-      const page = Math.max(1, Number(req.query.page) || 1);
-      const qRaw = req.query as Record<string, unknown>;
-      const rawSize =
-        typeof qRaw.pageSize !== "undefined" ? Number(qRaw.pageSize) : Number(qRaw.limit);
-      const pageSize =
-        !Number.isFinite(rawSize) || rawSize <= 0
-          ? 15
-          : Math.min(Math.floor(rawSize), 100);
+      const q = typeof query.q === "string" ? query.q.trim().toLowerCase() : "";
+      const page = Math.max(1, Number(query.page) || 1);
+      const pageSize = Math.max(1, Math.min(Number(query.pageSize) || 15, 15));
       res.json(
         await listQueue(
           { userId: req.user!.id, role: req.user!.role, termId: req.termScope?.termId ?? null },
@@ -70,7 +63,8 @@ router.get(
   "/staff",
   requireAuth,
   requireRole("guidance_counselor"),
-  cache({ tags: ["guidance", "staff"] }),
+  cache({ tags: [CACHE_TAGS.guidance, "staff"], ttl: CACHE_TTLS.lookup }),
+  etag(),
   async (_req, res, next) => {
     try {
       res.json(await listStaff());

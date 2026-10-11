@@ -18,10 +18,13 @@ import {
 } from "./guidance-referrals-format";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 import styles from "./guidance-referrals.module.css";
 import pageStyles from "../../pages.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
-const GUIDANCE_REFERRALS_PAGE_SIZE = 15;
+const GUIDANCE_REFERRALS_PAGE_SIZE = PAGE_SIZE;
 
 export function GuidanceReferralsView({
   lockedType = "",
@@ -35,16 +38,34 @@ export function GuidanceReferralsView({
   highlightId?: string | null;
 }) {
   const locked = lockedType !== "";
+  const searchParams = useSearchParams();
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [query, setQuery] = React.useState("");
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const query = useDebouncedValue(queryInput.trim(), 300);
   const [typeFilter, setTypeFilter] = React.useState<GuidanceTypeFilter>(lockedType);
 
   const [action, setAction] = React.useState<GuidanceAction>("");
-  const [page, setPage] = React.useState(1);
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
   const [takeover, setTakeover] = React.useState(false);
 
-  const debounced = useDebouncedValue(query.trim(), 300);
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: query || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
+  const setQuery = React.useCallback((value: string) => {
+    setQueryInput(value);
+  }, []);
+  const debounced = query;
   const landing = !takeover && highlightId !== null;
 
   const handleQueryChange = (value: string) => {
@@ -233,7 +254,7 @@ export function GuidanceReferralsView({
         pageSize={data.pageSize}
         totalPages={totalPages}
         onPageChange={handlePageChange}
-        query={query}
+        query={queryInput}
         onQueryChange={handleQueryChange}
         typeFilter={typeFilter}
         onTypeChange={handleTypeChange}

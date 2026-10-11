@@ -20,20 +20,48 @@ import {
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/guidance-interventions.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
-const GUIDANCE_INTERVENTIONS_PAGE_SIZE = 15;
+const GUIDANCE_INTERVENTIONS_PAGE_SIZE = PAGE_SIZE;
 
 function GuidanceInterventionsView({ highlightId }: { highlightId: string | null }) {
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const landing = highlightId !== null;
-  const [query, setQuery] = React.useState("");
-  const [level, setLevel] = React.useState<RiskLevelFilter>(landing ? "All" : "High");
-  const [page, setPage] = React.useState(1);
+  const [query, setQueryInput] = React.useState("");
+  const [level, setLevelState] = React.useState<RiskLevelFilter>(landing ? "All" : "High");
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "level"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
   const [takeover, setTakeover] = React.useState(false);
   const [locatedFor, setLocatedFor] = React.useState<string | null>(null);
 
   const debounced = useDebouncedValue(query.trim(), 300);
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debounced || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pager identity changes with URL; debounced + setPage are the real inputs
+  }, [debounced, setPage]);
+
+  const setQuery = React.useCallback((value: string) => {
+    setQueryInput(value);
+  }, []);
+
+  const setLevel = React.useCallback(
+    (value: RiskLevelFilter) => {
+      setLevelState(value);
+      pager.setFilters({ level: value === "All" ? undefined : value });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const handleQueryChange = (value: string) => {
     setQuery(value);
@@ -97,7 +125,7 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
       setPage(Math.floor(idx / GUIDANCE_INTERVENTIONS_PAGE_SIZE) + 1);
     }
     setTakeover(true);
-  }, [landing, takeover, highlightId, locatedFor, locateQuery.data]);
+  }, [landing, takeover, highlightId, locatedFor, locateQuery.data, setPage]);
 
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);

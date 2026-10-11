@@ -1,7 +1,11 @@
 import { Router } from "express";
+import { z } from "zod";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
-import { cache, invalidateTags } from "../../lib/cache.js";
 import { validate } from "../../middleware/validate.js";
+import { cache, invalidateTags } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
+import { paginationQuerySchema } from "../../lib/pagination.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { ADM_STAGE_FLOW } from "../../services/adm.js";
 import { resolveGuidancePageSize } from "./guidance.repository.js";
@@ -15,18 +19,23 @@ router.get(
   "/adm",
   requireAuth,
   requireRole("guidance_counselor"),
-  cache({ tags: ["guidance", "adm"] }),
+  validate(
+    "query",
+    paginationQuerySchema().extend({ stage: z.string().trim().max(40).optional() }),
+  ),
+  cache({ tags: [CACHE_TAGS.guidance, CACHE_TAGS.adm], ttl: CACHE_TTLS.list }),
+  etag(),
   async (req, res, next) => {
     try {
+      const query = req.query as Record<string, unknown>;
       const validStages = new Set(ADM_STAGE_FLOW.map((s) => s.stage));
       const stageFilter =
-        typeof req.query.stage === "string" &&
-        validStages.has(req.query.stage as (typeof ADM_STAGE_FLOW)[number]["stage"])
-          ? (req.query.stage as string)
+        typeof query.stage === "string" &&
+        validStages.has(query.stage as (typeof ADM_STAGE_FLOW)[number]["stage"])
+          ? (query.stage as string)
           : "";
-      const q =
-        typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
-      const page = Math.max(1, Number(req.query.page) || 1);
+      const q = typeof query.q === "string" ? query.q.trim().toLowerCase() : "";
+      const page = Math.max(1, Number(query.page) || 1);
       const pageSize = resolveGuidancePageSize(req);
 
       const scopeTermId = req.termScope?.termId ?? null;

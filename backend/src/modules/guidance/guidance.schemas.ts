@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationQuerySchema } from "../../lib/pagination.js";
 
 export const consultReviewSchema = z.object({
   recommendation: z.string().trim().min(1).max(500),
@@ -28,4 +29,27 @@ export const guidancePhotoSchema = z.object({
     .string()
     .regex(/^data:image\/(png|jpeg|gif|webp);base64,/, "Photo must be a PNG, JPEG, GIF, or WebP data URL")
     .max(2_800_000),
+});
+
+/** Shared list-query validation: page/pageSize capped at 15, trimmed filters. */
+export const guidanceAlertsQuerySchema = paginationQuerySchema().extend({
+  level: z.enum(["High", "Moderate"]).optional(),
+  factor: z.enum(["academic", "attendance", "behavioral"]).optional(),
+});
+
+export const guidanceAnecdotalQuerySchema = paginationQuerySchema().extend({
+  category: z.enum(["behavioral", "bullying", "academic", "attendance", "health"]).optional(),
+  type: z.enum(["adm", "counseling"]).optional(),
+  docs: z.enum(["0", "1"]).optional(),
+});
+
+export const guidanceCasesQuerySchema = paginationQuerySchema().extend({
+  status: z
+    .enum(["pending", "in_progress", "resolved", "escalated", "follow_up", "info_requested", "dismissed"])
+    .optional(),
+  type: z.enum(["adm", "counseling"]).optional(),
+  booked: z.enum(["0", "1"]).optional(),
+  completed: z.enum(["0", "1"]).optional(),
+  open: z.enum(["0", "1"]).optional(),
+  highlight: z.string().trim().max(120).optional(),
 });

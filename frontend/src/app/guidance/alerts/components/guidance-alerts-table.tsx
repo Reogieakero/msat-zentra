@@ -3,8 +3,6 @@ import * as React from "react";
 import {
   BellRing,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Search,
   SearchX,
   X,
@@ -41,9 +39,11 @@ import {
   type TypeFilter,
 } from "./guidance-alerts-helpers";
 import { CaseTableRow } from "./guidance-alerts-row";
+import { Pagination } from "@/components/shared/pagination";
 import styles from "./guidance-alerts-table.module.css";
 export type { GuidanceAlertRow };
-const PAGE_SIZE = 15;
+import { PAGE_SIZE } from "@/components/shared/pagination";
+
 const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "", label: "All types" },
   { value: "ADM", label: "ADM" },
@@ -207,38 +207,11 @@ export function GuidanceAlertsTable({
             </Table>
           </div>
         )}
-        {totalPages > 1 && (
-          <div className={styles.pager}>
-            <p className={styles.range}>
-              {total} case{total === 1 ? "" : "s"}
-            </p>
-            <div className={styles.pagerButtons}>
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={safePage <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                aria-label="Go to previous page"
-              >
-                <ChevronLeft aria-hidden="true" />
-                Previous
-              </Button>
-              <span className={styles.pageLabel} aria-live="polite">
-                Page {safePage} of {totalPages}
-              </span>
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={safePage >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-                aria-label="Go to next page"
-              >
-                Next
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={safePage}
+          totalItems={total}
+          onPageChange={setPage}
+        />
       </div>
     </section>
   );

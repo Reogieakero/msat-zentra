@@ -25,6 +25,7 @@ import {
   type GuidanceAction,
   type GuidanceTypeFilter,
 } from "./guidance-referrals-format";
+import { Pagination } from "@/components/shared/pagination";
 
 import styles from "./guidance-referrals-table.module.css";
 
@@ -86,7 +87,6 @@ export function GuidanceReferralsTable({
   page = 1,
   pageSize = 0,
   total,
-  totalPages = 1,
   onPageChange,
   query,
   onQueryChange,
@@ -96,13 +96,11 @@ export function GuidanceReferralsTable({
   onActionChange,
   onRetry,
   isRetrying,
-  isNavigating = false,
 
   paginate = true,
   lockType = false,
   title = "Referrals to me",
   highlightId = null,
-  unfilteredTotal,
 }: GuidanceReferralsTableProps) {
   const {
     dialogs,
@@ -133,8 +131,6 @@ export function GuidanceReferralsTable({
     draft: AdmReviewDraft;
   } | null>(null);
 
-  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const end = Math.min(page * pageSize, total);
   const goToPage = (next: number) => onPageChange?.(next);
   const hasActiveFilters =
     query.trim() !== "" || action !== "" || (!lockType && typeFilter !== "");
@@ -227,45 +223,13 @@ export function GuidanceReferralsTable({
         </ol>
       )}
 
-      {paginate && totalPages > 1 ? (
-        <nav className={styles.pager} aria-label="Cases pages">
-          <p className={styles.range}>
-            Showing cases {start}–{end} of {total}
-            {unfilteredTotal !== undefined && unfilteredTotal !== total
-              ? ` (of ${unfilteredTotal} on your desk)`
-              : ""}
-          </p>
-          <div className={styles.pagerButtons}>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page <= 1 || isNavigating}
-              onClick={() => goToPage(page - 1)}
-              aria-label="Show newer cases"
-            >
-              ← Newer
-            </Button>
-            <span className={styles.pageLabel} aria-live="polite">
-              {isNavigating ? (
-                <span className={styles.loadingLabel}>
-                  <Busy busy />
-                  Loading…
-                </span>
-              ) : (
-                `Page ${page} of ${totalPages}`
-              )}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page >= totalPages || isNavigating}
-              onClick={() => goToPage(page + 1)}
-              aria-label="Show older cases"
-            >
-              Older →
-            </Button>
-          </div>
-        </nav>
+      {paginate ? (
+        <Pagination
+          currentPage={page}
+          totalItems={total}
+          pageSize={pageSize}
+          onPageChange={goToPage}
+        />
       ) : (
         <ScrollHint count={total} />
       )}

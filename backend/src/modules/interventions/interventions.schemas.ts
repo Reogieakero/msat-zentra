@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationQuerySchema } from "../../lib/pagination.js";
 
 export const startSchema = z.object({
   studentId: z.string().min(1).optional(),
@@ -53,4 +54,12 @@ export const assignSchema = z.object({
 export const outcomeSchema = z.object({
   outcomeStatus: z.enum(["ongoing", "resolved", "unresolved"]),
   outcomeNotes: z.string().trim().max(2000).optional(),
+});
+
+/** Queue list-query validation: page/pageSize capped at 15, trimmed filters. */
+export const interventionsQueueQuerySchema = paginationQuerySchema().extend({
+  level: z.enum(["High", "Moderate", "All"]).optional(),
+  factor: z.enum(["Academic", "Attendance", "Behavioral"]).optional(),
+  mine: z.enum(["true", "false"]).optional(),
+  outcome: z.enum(["ongoing", "resolved", "unresolved", "all"]).optional(),
 });

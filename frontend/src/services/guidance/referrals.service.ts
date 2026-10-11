@@ -49,7 +49,8 @@ export async function fetchGuidanceReferrals(
 // Full-dataset traversal is never allowed from list UI; server pagination +
 // search must be used instead. Callers needing complete data must use a
 // dedicated aggregate/export endpoint.
-const FETCH_ALL_PAGE_SIZE = 15;
+const FETCH_ALL_PAGE_SIZE = PAGE_SIZE;
+import { PAGE_SIZE } from "@/components/shared/pagination";
 const FETCH_ALL_MAX_PAGES = 10;
 
 export async function fetchAllGuidanceReferrals(

@@ -32,17 +32,55 @@ import filterStyles from "./components/guidance-behavioral-filters.module.css";
 import donutStyles from "./components/guidance-category-donut.module.css";
 import cardsStyles from "./components/guidance-behavioral-cards.module.css";
 import styles from "../../pages.module.css";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 
-const GUIDANCE_BEHAVIORAL_PAGE_SIZE = 15;
+const GUIDANCE_BEHAVIORAL_PAGE_SIZE = PAGE_SIZE;
 
 export default function GuidanceBehavioralPage() {
+  return (
+    <React.Suspense>
+      <GuidanceBehavioralPageInner />
+    </React.Suspense>
+  );
+}
+
+function GuidanceBehavioralPageInner() {
+  const searchParams = useSearchParams();
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [queryInput, setQueryInput] = React.useState("");
-  const [category, setCategory] = React.useState<BehavioralCategoryFilter>("all");
-  const [page, setPage] = React.useState(1);
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const [category, setCategoryState] = React.useState<BehavioralCategoryFilter>(() => {
+    const c = searchParams.get("category");
+    return c === "behavioral" || c === "bullying" || c === "academic" || c === "attendance" || c === "health"
+      ? c
+      : "all";
+  });
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "category"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const setCategory = React.useCallback(
+    (v: BehavioralCategoryFilter) => {
+      setCategoryState(v);
+      pager.setFilters({ category: v === "all" ? undefined : v });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const query = useDebouncedValue(queryInput.trim(), 300);
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: query || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<GuidanceAnecdotalData>({
@@ -263,38 +301,11 @@ export default function GuidanceBehavioralPage() {
             <GuidanceBehavioralCards records={data.records} />
           )}
 
-          {totalPages > 1 && (
-            <div className={styles.actionsRight} style={{ marginTop: "0.75rem" }}>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={safePage <= 1 || (isFetching && !isPending)}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </Button>
-              <span className={styles.sectionDesc} aria-live="polite">
-                {isFetching && !isPending ? (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-                    <Loader2 className="animate-spin" aria-hidden style={{ width: "0.875rem", height: "0.875rem" }} />
-                    Loading…
-                  </span>
-                ) : (
-                  `Page ${safePage} of ${totalPages}`
-                )}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={safePage >= totalPages || (isFetching && !isPending)}
-                onClick={() =>
-                  setPage((p) => Math.min(totalPages, p + 1))
-                }
-              >
-                Next
-              </Button>
-            </div>
-          )}
+          <Pagination
+            currentPage={safePage}
+            totalItems={data.total}
+            onPageChange={setPage}
+          />
 
           <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
             <Button size="sm" variant="outline" asChild>

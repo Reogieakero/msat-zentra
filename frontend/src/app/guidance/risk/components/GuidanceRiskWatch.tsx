@@ -24,6 +24,7 @@ const FACTOR_WORDS: Record<keyof GuidanceRiskFactorFlags, string> = {
   attendance: "Attendance",
   behavioral: "Behavioral",
 };
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export interface RiskWatchedStudent {
   studentId: string;
@@ -52,11 +53,11 @@ export async function fetchAllGuidanceAlertFactors(): Promise<
   Record<string, GuidanceRiskFactorFlags>
 > {
   // Bounded preview (15×10=150 max). Full-dataset traversal is not allowed.
-  const first = await fetchGuidanceAlerts({ page: 1, pageSize: 15 });
+  const first = await fetchGuidanceAlerts({ page: 1, pageSize: PAGE_SIZE });
   const pages = Math.min(first.totalPages, 10);
   const all = [...first.alerts];
   for (let p = 2; p <= pages; p++) {
-    const res = await fetchGuidanceAlerts({ page: p, pageSize: 15 });
+    const res = await fetchGuidanceAlerts({ page: p, pageSize: PAGE_SIZE });
     all.push(...res.alerts);
   }
   const map: Record<string, GuidanceRiskFactorFlags> = {};

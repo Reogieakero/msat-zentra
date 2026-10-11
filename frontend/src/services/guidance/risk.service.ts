@@ -51,7 +51,8 @@ export async function fetchGuidanceRiskLevels(
 }
 
 // Strict 15/page ceiling (was 100×10=1000 rows max).
-const ALERTS_PAGE_SIZE = 15;
+const ALERTS_PAGE_SIZE = PAGE_SIZE;
+import { PAGE_SIZE } from "@/components/shared/pagination";
 const MAX_ALERT_PAGES = 10;
 
 async function fetchAllAlerts(): Promise<{

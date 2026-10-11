@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { HelpCircle, Loader2, SearchX } from "lucide-react";
+import { HelpCircle, SearchX } from "lucide-react";
 import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { CATEGORY_COLORS } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
 import type { GuidanceAnecdotalRecord } from "@/services/guidance/anecdotal.types";
@@ -21,6 +21,7 @@ import {
   GuidanceAnecdotalFilters,
   type TypeFilter,
 } from "./guidance-anecdotal-filters";
+import { Pagination } from "@/components/shared/pagination";
 import styles from "./guidance-anecdotal-folders.module.css";
 
 function humanize(value: string): string {
@@ -120,23 +121,17 @@ function statusColor(record: GuidanceAnecdotalRecord): string {
 export function GuidanceAnecdotalFolders({
   records,
   page,
-  pageSize,
   total,
-  totalPages,
   onPageChange,
   query,
   onQueryChange,
   type,
   onTypeChange,
-  isNavigating = false,
 }: GuidanceAnecdotalFoldersProps) {
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [privacyFor, setPrivacyFor] = React.useState<string | null>(null);
   const [endorsedFor, setEndorsedFor] = React.useState<string | null>(null);
   const [helpOpen, setHelpOpen] = React.useState(false);
-
-  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const end = Math.min(page * pageSize, total);
 
   const openRecord = (record: GuidanceAnecdotalRecord) => {
 
@@ -228,41 +223,11 @@ export function GuidanceAnecdotalFolders({
               </div>
           )}
           </div>
-          {totalPages > 1 && (
-            <div className={styles.pager}>
-              <p className={styles.range}>
-                Showing {start}–{end} of {total}
-              </p>
-              <div className={styles.pagerButtons}>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page <= 1 || isNavigating}
-                  onClick={() => onPageChange(page - 1)}
-                >
-                  Previous
-                </Button>
-                <span className={styles.pageLabel} aria-live="polite">
-                  {isNavigating ? (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-                      <Loader2 className="animate-spin" aria-hidden style={{ width: "0.875rem", height: "0.875rem" }} />
-                      Loading…
-                    </span>
-                  ) : (
-                    `Page ${page} of ${totalPages}`
-                  )}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page >= totalPages || isNavigating}
-                  onClick={() => onPageChange(page + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            currentPage={page}
+            totalItems={total}
+            onPageChange={onPageChange}
+          />
         </div>
       </div>
 
