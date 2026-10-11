@@ -23,13 +23,39 @@ import { useGcForm03Opener } from "./components/use-gc-form-03-opener";
 import { AdmReferralsTable } from "./components/adm-referrals-table";
 import { AdmFormsModal } from "./components/adm-forms-modal";
 import { AdmPreviewModal, type AdmPreviewState } from "./components/adm-preview-modal";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useSearchParams } from "next/navigation";
 export default function PrincipalAdmReferralsAllPage() {
+  return (
+    <React.Suspense>
+      <PrincipalAdmReferralsAllPageInner />
+    </React.Suspense>
+  );
+}
+
+function PrincipalAdmReferralsAllPageInner() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [actionId, setActionId] = React.useState<string | null>(null);
-  const [search, setSearch] = React.useState("");
-  const [page, setPage] = React.useState(1);
+  const [searchInput, setSearchInput] = React.useState(searchParams.get("q") ?? "");
+  const search = useDebouncedValue(searchInput.trim(), 300);
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
   const { rows, setRows, totalCount, totalPages, safePage, start, end, loading, isFetching, error, refetch } =
     useAdmReferralsList(search, page);
+
+  // Keep search in the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: search || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
   const { gcOpen, setGcOpen, gcData, openGcForm03 } = useGcForm03Opener();
   const [pendingAction, setPendingAction] = React.useState<{
     id: string;
@@ -60,6 +86,7 @@ export default function PrincipalAdmReferralsAllPage() {
   const handleSign = (id: string) => {
     if (actionId) return;
     setActionId(id);
+    const snapshot = rows;
     return apiClient
       .post(`/api/adm/${id}/principal-approve`)
       .then(() => {
@@ -80,9 +107,10 @@ export default function PrincipalAdmReferralsAllPage() {
       })
       .catch((err: unknown) => {
         console.error("[/api/adm principal-approve] failed:", err);
+        setRows(() => snapshot);
         toast.error({
           title: "Sign failed",
-          description: "Could not approve this case.",
+          description: "Could not approve this case. Changes were rolled back.",
         });
       })
       .finally(() => setActionId(null));
@@ -145,10 +173,9 @@ export default function PrincipalAdmReferralsAllPage() {
           <InputGroup className="max-w-40 shrink-0">
             <InputGroupInput
               placeholder="Search name, LRN, or ID…"
-              value={search}
+              value={searchInput}
               onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
+                setSearchInput(e.target.value);
               }}
               aria-label="Search referrals"
             />
@@ -172,8 +199,7 @@ export default function PrincipalAdmReferralsAllPage() {
           onRequestSign={(id) => setPendingAction({ id, type: "sign" })}
           onRequestReturn={(id) => setPendingAction({ id, type: "return" })}
           onViewForms={(r) => setFormsFor(r)}
-          onPrev={() => setPage(Math.max(1, safePage - 1))}
-          onNext={() => setPage(safePage + 1)}
+          onPageChange={(p) => setPage(p)}
         />
       </div>
       )}

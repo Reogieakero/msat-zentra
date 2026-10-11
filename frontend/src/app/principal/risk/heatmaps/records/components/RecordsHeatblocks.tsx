@@ -12,8 +12,9 @@ import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import styles from "./RecordsHeatblocks.module.css";
 import { CATEGORY_META, fetchRecords } from "@/services/principal/records.service";
 import type { BehavioralRecord } from "../types";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
-const PAGE_SIZE = 15;
+
 
 function severityTone(severity: BehavioralRecord["severity"]): 2 | 3 | 5 {
   if (severity === "High") return 5;

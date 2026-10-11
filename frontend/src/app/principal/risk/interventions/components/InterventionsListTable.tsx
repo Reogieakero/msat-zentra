@@ -51,7 +51,8 @@ import { ActionGlyph, FactorBadges, canAlert, latestAction, planStatus } from ".
 import { useInterventionFilters } from "./use-intervention-filters";
 import { AlertGuidanceDialog } from "./alert-guidance-dialog";
 import styles from "./InterventionsListTable.module.css";
-const PAGE_SIZE = 15;
+import { PAGE_SIZE } from "@/components/shared/pagination";
+
 export function InterventionsListTable() {
   const queryClient = useQueryClient();
   const [alertTarget, setAlertTarget] = React.useState<RiskSnapshotStudent | null>(null);

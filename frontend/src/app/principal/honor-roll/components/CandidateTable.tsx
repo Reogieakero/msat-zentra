@@ -15,7 +15,6 @@ import {
 import { SearchIcon, Trophy } from "lucide-react";
 import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
   Table,
@@ -28,7 +27,7 @@ import {
 import type { HonorRollCandidate } from "@/services/principal/honorRoll.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./CandidateTable.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 interface Props {
   candidates: HonorRollCandidate[];
@@ -259,32 +258,11 @@ export function CandidateTable({
                 </TableBody>
               </Table>
             </div>
-            <div className="relative flex items-center justify-end space-x-2">
-              <div className="text-muted-foreground flex-1 text-sm">
-                {table.getFilteredRowModel().rows.length} awardee
-                {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
-              </div>
-              {table.getPageCount() > 1 && (
-                <div className="space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </div>
+          <Pagination
+            currentPage={table.getState().pagination.pageIndex + 1}
+            totalItems={table.getFilteredRowModel().rows.length}
+            onPageChange={(p) => table.setPageIndex(p - 1)}
+          />
           </>
         )}
       </div>

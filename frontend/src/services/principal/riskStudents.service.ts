@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/api/client";
 import type { BackendBoard, BackendHeatmap, BackendStudentsResult } from "./riskStudents.types";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 // Real-time unified: no gradeMode.
 export async function fetchHeatmap(): Promise<BackendHeatmap> {
@@ -14,7 +15,7 @@ export async function fetchRiskBoard(): Promise<BackendBoard> {
 
 export async function fetchRiskStudents(
   section?: string,
-  pageSize = 50,
+  pageSize = PAGE_SIZE,
 ): Promise<BackendStudentsResult> {
   const params: Record<string, string> = { pageSize: String(pageSize) };
   if (section) params.section = section;

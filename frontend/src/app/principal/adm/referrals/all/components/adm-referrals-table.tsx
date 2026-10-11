@@ -29,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
+import { Pagination } from "@/components/shared/pagination";
 import type { AdmReferralRow } from "@/services/principal/adm.types";
 import {
   stageLabel,
@@ -92,8 +93,7 @@ export function AdmReferralsTable({
   onRequestSign,
   onRequestReturn,
   onViewForms,
-  onPrev,
-  onNext,
+  onPageChange,
 }: {
   rows: AdmReferralRow[];
   totalCount: number;
@@ -109,8 +109,7 @@ export function AdmReferralsTable({
   onRequestSign: (id: string) => void;
   onRequestReturn: (id: string) => void;
   onViewForms: (row: AdmReferralRow) => void;
-  onPrev: () => void;
-  onNext: () => void;
+  onPageChange: (page: number) => void;
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] =
@@ -408,31 +407,11 @@ export function AdmReferralsTable({
           </TableBody>
         </Table>
       </div>
-      {totalPages > 1 && (
-        <div className="relative flex items-center justify-end space-x-2">
-          <div className="text-muted-foreground flex-1 text-sm">
-            {totalCount > 0 ? `${start}–${end} of ${totalCount}` : "0 of 0"}
-          </div>
-          <div className="space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage <= 1 || totalCount === 0}
-              onClick={onPrev}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage >= totalPages || totalCount === 0}
-              onClick={onNext}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        currentPage={safePage}
+        totalItems={totalCount}
+        onPageChange={onPageChange}
+      />
     </>
   );
 }

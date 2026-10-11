@@ -27,7 +27,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SortTh, TablePager } from "./heatmap-table";
+import { SortTh } from "./heatmap-table";
+import { Pagination } from "@/components/shared/pagination";
 import common from "./heatmap-table.module.css";
 import styles from "./SectionAttendanceModal.module.css";
 
@@ -55,7 +56,7 @@ interface SectionStudent {
   rate: number;
 }
 
-const PAGE_SIZE = 15;
+
 
 const gradeNum = (name: string) => {
   const m = String(name).match(/(\d+)/);
@@ -63,6 +64,7 @@ const gradeNum = (name: string) => {
   const n = parseInt(m[1], 10);
   return Number.isNaN(n) ? 0 : n;
 };
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export function SectionAttendanceModal({
   open,
@@ -231,8 +233,6 @@ export function SectionAttendanceModal({
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(safePageIndex + 1, totalPages);
-  const start = total === 0 ? 0 : safePageIndex * PAGE_SIZE + 1;
-  const end = Math.min((safePageIndex + 1) * PAGE_SIZE, total);
 
   return (
     <CardModal
@@ -429,17 +429,10 @@ export function SectionAttendanceModal({
                   </TableBody>
                 </Table>
               </div>
-              <TablePager
-                start={start}
-                end={end}
-                total={total}
-                page={safePage}
-                totalPages={totalPages}
-                canPrev={table.getCanPreviousPage()}
-                canNext={table.getCanNextPage()}
-                onPrev={() => setPageIndex((p) => Math.max(0, p - 1))}
-                onNext={() => setPageIndex((p) => p + 1)}
-                label="students"
+              <Pagination
+                currentPage={safePage}
+                totalItems={total}
+                onPageChange={(p) => setPageIndex(p - 1)}
               />
             </>
           )}

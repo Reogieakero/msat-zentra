@@ -16,8 +16,6 @@ import {
 import {
   ArrowDownRight,
   ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
   Minus,
 } from "lucide-react";
 import { SearchIcon, Users } from "lucide-react";
@@ -48,8 +46,9 @@ import type { SectionAttendanceStat } from "../../components/types";
 import { SortTh } from "./heatmap-table";
 import common from "./heatmap-table.module.css";
 import styles from "./SectionAverages.module.css";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
-const PAGE_SIZE = 15;
+
 
 const TREND_RANK = { up: 2, flat: 1, down: 0 } as const;
 
@@ -215,12 +214,6 @@ export function SectionAverages({
 
   const rows = table.getRowModel().rows;
 
-  const pageCount = table.getPageCount();
-  const pageIdx = table.getState().pagination.pageIndex;
-  const filteredCount = table.getFilteredRowModel().rows.length;
-  const start = filteredCount === 0 ? 0 : pageIdx * PAGE_SIZE + 1;
-  const end = Math.min((pageIdx + 1) * PAGE_SIZE, filteredCount);
-
   const isEmpty = !isPending && sections.length === 0;
   if (isEmpty) {
     return (
@@ -381,31 +374,11 @@ export function SectionAverages({
             </Table>
           </div>
           <div className="relative flex items-center justify-between gap-2">
-            <p className="text-muted-foreground text-[0.8125rem] tabular-nums" aria-live="polite">
-              {filteredCount > 0 ? `${start}–${end} of ${filteredCount} · Page ${pageIdx + 1} of ${Math.max(pageCount, 1)}` : "0 of 0"}
-            </p>
-            {pageCount > 1 && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronLeft aria-hidden />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  Next
-                  <ChevronRight aria-hidden />
-                </Button>
-              </div>
-            )}
+            <Pagination
+              currentPage={table.getState().pagination.pageIndex + 1}
+              totalItems={table.getFilteredRowModel().rows.length}
+              onPageChange={(p) => table.setPageIndex(p - 1)}
+            />
           </div>
         </>
       )}

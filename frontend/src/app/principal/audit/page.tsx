@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { AuditToolbar, type ActorScope } from "./components/AuditToolbar";
 import { AuditTable } from "./components/AuditTable";
 import { AuditSkeleton } from "./components/AuditSkeleton";
@@ -18,43 +18,73 @@ import {
 import type {
   AuditActionType,
   AuditEntry,
-  AuditResponse,
   AuditRole,
 } from "@/services/principal/audit.types";
 import styles from "./page.module.css";
 import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
 import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 import assign from "../academics/assign/components/section-assignments.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { usePaginatedQuery } from "@/lib/api/usePaginatedQuery";
+import { useSearchParams } from "next/navigation";
 
 export default function PrincipalAuditPage() {
+  return (
+    <React.Suspense>
+      <PrincipalAuditPageInner />
+    </React.Suspense>
+  );
+}
+
+function PrincipalAuditPageInner() {
   const session = useSession();
   const currentUserId = session?.sub ?? "";
+  const searchParams = useSearchParams();
 
-  const [actionType, setActionType] = React.useState<AuditActionType | "all">("all");
-  const [actorRole, setActorRole] = React.useState<AuditRole | "all">("all");
-  const [actorScope, setActorScope] = React.useState<ActorScope>("all");
-  const [sourceTable, setSourceTable] = React.useState<string | "all">("all");
-  const [query, setQuery] = React.useState("");
+  const [actionType, setActionType] = React.useState<AuditActionType | "all">(
+    (searchParams.get("actionType") as AuditActionType | null) ?? "all",
+  );
+  const [actorRole, setActorRole] = React.useState<AuditRole | "all">(
+    (searchParams.get("actorRole") as AuditRole | null) ?? "all",
+  );
+  const [actorScope, setActorScope] = React.useState<ActorScope>(
+    (searchParams.get("scope") as ActorScope | null) ?? "all",
+  );
+  const [sourceTable, setSourceTable] = React.useState<string | "all">(
+    searchParams.get("sourceTable") ?? "all",
+  );
+  const [query, setQuery] = React.useState(searchParams.get("q") ?? "");
 
   const debouncedQuery = useDebouncedValue(query, 300);
   const [exporting, setExporting] = React.useState(false);
-  const [page, setPage] = React.useState(1);
   const queryClient = useQueryClient();
 
-  const auditQuery = useQuery({
-    queryKey: [
-      "principal-audit",
+  const filters = React.useMemo(
+    () => ({
       actionType,
       actorRole,
       actorScope,
       sourceTable,
-      debouncedQuery,
-      page,
-      currentUserId,
-    ],
-    queryFn: ({ signal }) =>
-      fetchAuditEntries(
+      q: debouncedQuery || undefined,
+      userId: actorScope === "me" ? currentUserId : undefined,
+    }),
+    [actionType, actorRole, actorScope, sourceTable, debouncedQuery, currentUserId],
+  );
+
+  // Total is unknown until the first fetch; the pager clamps once it arrives.
+  const pager = useUrlPager(0, {}, { extraParams: ["q", "actionType", "actorRole", "scope", "sourceTable"] });
+  const page = pager.page;
+
+  const auditQuery = usePaginatedQuery<AuditEntry>({
+    module: "principal",
+    resource: "audit",
+    page,
+    pageSize: PAGE_SIZE,
+    filters: filters as Record<string, unknown>,
+    preset: "semi",
+    fetcher: async (signal) => {
+      const res = await fetchAuditEntries(
         {
           actionType,
           actorRole,
@@ -65,15 +95,18 @@ export default function PrincipalAuditPage() {
           pageSize: PAGE_SIZE,
         },
         signal,
-      ),
-    staleTime: 30_000,
-    gcTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-    placeholderData: keepPreviousData,
-    retry: 1,
+      );
+      return {
+        data: res.entries,
+        total: res.total,
+        page: res.page,
+        pageSize: PAGE_SIZE,
+        totalPages: Math.max(1, Math.ceil(res.total / PAGE_SIZE)),
+      };
+    },
   });
 
-  const entries: AuditEntry[] = auditQuery.data?.entries ?? [];
+  const entries: AuditEntry[] = auditQuery.data?.data ?? [];
   const total = auditQuery.data?.total ?? 0;
   const loading = auditQuery.isPending;
   const error = auditQuery.isError
@@ -85,11 +118,11 @@ export default function PrincipalAuditPage() {
 
   const knownTables = React.useMemo(() => {
     const tables = new Set<string>();
-    const cached = queryClient.getQueriesData<AuditResponse>({
-      queryKey: ["principal-audit"],
+    const cached = queryClient.getQueriesData<{ data?: AuditEntry[] }>({
+      queryKey: ["principal", "audit"],
     });
     for (const [, data] of cached) {
-      for (const entry of data?.entries ?? []) {
+      for (const entry of data?.data ?? []) {
         const name = entry.sourceTable?.trim();
         if (name) tables.add(name);
       }
@@ -128,8 +161,17 @@ export default function PrincipalAuditPage() {
   const totalCount = total;
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
-  const start = totalCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, totalCount);
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debouncedQuery || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery]);
 
   const isEmpty = !loading && !error && totalCount === 0 && !hasActiveFilters && query.trim() === "";
   const headerLoading = loading;
@@ -162,28 +204,27 @@ export default function PrincipalAuditPage() {
               actionType={actionType}
               onActionTypeChange={(v) => {
                 setActionType(v);
-                setPage(1);
+                pager.setFilters({ actionType: v === "all" ? undefined : v });
               }}
               actorRole={actorRole}
               onActorRoleChange={(v) => {
                 setActorRole(v);
-                setPage(1);
+                pager.setFilters({ actorRole: v === "all" ? undefined : v });
               }}
               actorScope={actorScope}
               onActorScopeChange={(v) => {
                 setActorScope(v);
-                setPage(1);
+                pager.setFilters({ scope: v === "all" ? undefined : v });
               }}
               sourceTable={sourceTable}
               onSourceTableChange={(v) => {
                 setSourceTable(v);
-                setPage(1);
+                pager.setFilters({ sourceTable: v === "all" ? undefined : v });
               }}
               sourceTables={knownTables}
               query={query}
               onQueryChange={(v) => {
                 setQuery(v);
-                setPage(1);
               }}
               onExport={handleExport}
               exporting={exporting}
@@ -225,31 +266,12 @@ export default function PrincipalAuditPage() {
               <div className="relative">
                 <AuditTable entries={entries} />
               </div>
-              {pageCount > 1 && (
-                <div className="relative flex items-center justify-end space-x-2">
-                  <div className="text-muted-foreground flex-1 text-sm">
-                    {`${start}–${end} of ${totalCount}`}
-                  </div>
-                  <div className="space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={safePage <= 1 || totalCount === 0}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={safePage >= pageCount || totalCount === 0}
-                      onClick={() => setPage((p) => p + 1)}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <Pagination
+                currentPage={safePage}
+                totalItems={totalCount}
+                pageSize={PAGE_SIZE}
+                onPageChange={pager.setPage}
+              />
             </>
           )}
         </div>

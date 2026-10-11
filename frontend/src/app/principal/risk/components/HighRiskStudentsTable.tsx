@@ -44,6 +44,7 @@ import type { BackendStudent, RiskFactor } from "@/services/principal/riskStuden
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./HighRiskStudentsTable.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 const FACTOR_LABEL: Record<RiskFactor, string> = {
   Academic: "Academic",
@@ -66,7 +67,7 @@ const FACTOR_DOT: Record<RiskFactor, string> = {
   Behavioral: "#3b82f6",
 };
 
-const PAGE_SIZE = 15;
+
 
 export function HighRiskStudentsTable() {
   const [query, setQuery] = usePersistentState<string>(

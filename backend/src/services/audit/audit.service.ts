@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { MAX_PAGE_SIZE, PAGE_SIZE, resolvePaging } from "../../lib/pagination.js";
+import { MAX_PAGE_SIZE, PAGE_SIZE, buildPaginationMeta, resolvePaging } from "../../lib/pagination.js";
 import { resolveSourceLabels } from "../../modules/audit/audit.repository.js";
 
 export interface AuditListQuery {
@@ -90,7 +90,18 @@ export async function listAudit(query: AuditListQuery) {
       `${e.sourceTable} #${e.sourceId}`,
   }));
 
-  return { entries, total, page: Math.max(parseInt(page, 10) || 1, 1), pageSize: take };
+  const meta = metaFor(page, take, total);
+  return {
+    entries,
+    total,
+    page: meta.page,
+    pageSize: take,
+    totalPages: meta.totalPages,
+  };
+}
+
+function metaFor(page: string, take: number, total: number) {
+  return buildPaginationMeta(Math.max(parseInt(page, 10) || 1, 1), take, total);
 }
 
 export async function exportAuditCsv(query: Omit<AuditListQuery, "page" | "pageSize">) {
