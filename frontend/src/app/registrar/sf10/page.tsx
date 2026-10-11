@@ -1,5 +1,11 @@
 "use client";
+import * as React from "react";
 import { Sf10Page } from "@/components/registry/sf10/sf10-page";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 export default function RegistrarSf10Page() {
-  return <Sf10Page desk="registrar" pageSize={15} gradeRange="11–12" />;
+  return (
+    <React.Suspense>
+      <Sf10Page desk="registrar" pageSize={PAGE_SIZE} gradeRange="11–12" />
+    </React.Suspense>
+  );
 }

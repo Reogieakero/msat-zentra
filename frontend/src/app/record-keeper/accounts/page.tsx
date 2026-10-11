@@ -27,7 +27,9 @@ import type { PendingStudentsResponse } from "./components/types";
 import { formatRelativeTime } from "./components/types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./accounts.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 
 async function fetchPendingStudents(page: number, q: string, signal?: AbortSignal) {
   return apiClient
@@ -39,10 +41,37 @@ async function fetchPendingStudents(page: number, q: string, signal?: AbortSigna
 }
 
 export default function AccountApprovalsPage() {
+  return (
+    <React.Suspense>
+      <AccountApprovalsPageInner />
+    </React.Suspense>
+  );
+}
+
+function AccountApprovalsPageInner() {
+  const searchParams = useSearchParams();
   const qc = useQueryClient();
-  const [query, setQuery] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  const debouncedQuery = useDebouncedValue(query.trim(), 300);
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const query = useDebouncedValue(queryInput.trim(), 300);
+  const debouncedQuery = query;
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debouncedQuery || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery]);
+
+  const setQuery = React.useCallback((value: string) => {
+    setQueryInput(value);
+  }, []);
 
   const { data, isPending, isError, isFetching } = useQuery({
     queryKey: ["record-keeper-pending-students", page, debouncedQuery],
@@ -71,6 +100,19 @@ export default function AccountApprovalsPage() {
         approve ? `/api/auth/approve/${id}` : `/api/auth/reject/${id}`,
         approve ? {} : { reason: "Rejected by record keeper" }
       ),
+    onMutate: async ({ id }) => {
+      // Optimistic removal with rollback on error.
+      await qc.cancelQueries({ queryKey: ["record-keeper-pending-students"] });
+      const previous = qc.getQueriesData({ queryKey: ["record-keeper-pending-students"] });
+      qc.setQueriesData<PendingStudentsResponse>(
+        { queryKey: ["record-keeper-pending-students"] },
+        (old) =>
+          old && Array.isArray(old.students)
+            ? { ...old, students: old.students.filter((s) => s.id !== id), total: Math.max(0, (old.total ?? 1) - 1) }
+            : old,
+      );
+      return { previous };
+    },
     onSuccess: (_data, { id, approve }) => {
 
       markSelfNotified(id);
@@ -79,15 +121,17 @@ export default function AccountApprovalsPage() {
         description: approve ? "The student account is now active." : "The account request was rejected.",
       });
     },
-    onError: () => {
-      toast.error({ title: "Action failed", description: "Could not process this account." });
+    onError: (err, _vars, context) => {
+      for (const [key, data] of context?.previous ?? []) {
+        qc.setQueryData(key, data);
+      }
+      toast.error({ title: "Action failed", description: "Could not process this account. Changes were rolled back." });
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["record-keeper-pending-students"] });
       qc.invalidateQueries({ queryKey: ["record-keeper-accounts-audit"] });
       qc.invalidateQueries({ queryKey: ["record-keeper-account-breakdown"] });
       qc.invalidateQueries({ queryKey: ["record-keeper-notifications"] });
-      setPage(1);
     },
   });
 
@@ -95,8 +139,6 @@ export default function AccountApprovalsPage() {
 
   const safePage = Math.min(page, totalPages);
   const pageRows = students;
-  const start = filteredTotal === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, filteredTotal);
   const hasRecords = unfilteredTotal > 0;
   const searching = debouncedQuery.length > 0;
 
@@ -199,22 +241,20 @@ export default function AccountApprovalsPage() {
                 <Input
                   className={styles.search}
                   placeholder="Search name, LRN, or section…"
-                  value={query}
+                  value={queryInput}
                   onChange={(e) => {
                     setQuery(e.target.value);
-                    setPage(1);
                   }}
                   aria-label="Search pending students"
                 />
               </div>
-              {query && (
+              {queryInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className={styles.clearBtn}
                   onClick={() => {
                     setQuery("");
-                    setPage(1);
                   }}
                 >
                   <X aria-hidden />
@@ -306,34 +346,11 @@ export default function AccountApprovalsPage() {
             )}
           </div>
 
-          {totalPages > 1 && (
-            <div className={`${styles.pager} relative`}>
-              <p className={styles.range}>
-                Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}
-              </p>
-              <div className={styles.pagerButtons}>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={safePage <= 1 || filteredTotal === 0}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </Button>
-                <span className={styles.pageLabel} aria-live="polite">
-                  Page {safePage} of {totalPages}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={safePage >= totalPages || filteredTotal === 0}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            currentPage={safePage}
+            totalItems={filteredTotal}
+            onPageChange={setPage}
+          />
         </section>
 
         <AccountsBreakdown data={breakdownData ?? []} loading={breakdownPending} />

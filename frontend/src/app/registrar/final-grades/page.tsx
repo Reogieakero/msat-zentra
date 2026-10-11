@@ -32,6 +32,9 @@ import { RegistrarPageHeader } from "../components/RegistrarPageHeader";
 import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import { GradePipeline } from "@/components/registry/final-grades/GradePipeline";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 
 interface SubjectRow {
   id: string;
@@ -65,13 +68,40 @@ interface GradesResponse {
   pageSize: number;
 }
 
-const PAGE_SIZE = 15;
+
 
 export default function FinalGradeApprovalsPage() {
+  return (
+    <React.Suspense>
+      <FinalGradeApprovalsPageInner />
+    </React.Suspense>
+  );
+}
+
+function FinalGradeApprovalsPageInner() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const [query, setQuery] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  const debouncedQuery = useDebouncedValue(query.trim(), 300);
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const query = useDebouncedValue(queryInput.trim(), 300);
+  const debouncedQuery = query;
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debouncedQuery || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery]);
+
+  const setQuery = React.useCallback((value: string) => {
+    setQueryInput(value);
+  }, []);
 
   const { data, isPending, isError } = useQuery<GradesResponse>({
     queryKey: ["registrar-final-grades", page, debouncedQuery],
@@ -97,8 +127,6 @@ export default function FinalGradeApprovalsPage() {
   const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
 
   const safePage = Math.min(page, totalPages);
-  const start = filteredTotal === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, filteredTotal);
   const hasRecords = (data?.complete ?? 0) > 0;
   const searching = debouncedQuery.length > 0;
   // True empty (no records at all, not a search with no matches):
@@ -112,7 +140,7 @@ export default function FinalGradeApprovalsPage() {
         <RegistrarEmptyCard
           icon={GraduationCap}
           title="No complete grade sets yet"
-          hint="Students appear once every subject is adviser-approved."
+          hint="Students appear once every subject is locked or adviser-approved."
           label="Final grade approvals"
           centered
         />
@@ -128,7 +156,7 @@ export default function FinalGradeApprovalsPage() {
         ) : (
           <RegistrarPageHeader
             title="Final Grade Approvals"
-            description="One row per student with a complete term — every subject adviser-approved (grades 11–12)."
+            description="One row per student with a complete term — every subject locked or adviser-approved (grades 11–12)."
           />
         )}
         <GradePipeline
@@ -185,7 +213,7 @@ export default function FinalGradeApprovalsPage() {
                 Final Grade Approvals
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                One row per student with a complete term — every subject adviser-approved.
+                One row per student with a complete term — every subject locked or adviser-approved.
               </p>
             </div>
             <div className={styles.headerActions}>
@@ -194,23 +222,21 @@ export default function FinalGradeApprovalsPage() {
                 <Input
                   className={styles.search}
                   placeholder="Search name, LRN, or subject…"
-                  value={query}
+                  value={queryInput}
                   onChange={(e) => {
                     setQuery(e.target.value);
-                    setPage(1);
                   }}
                   aria-label="Search final grades"
                 />
               </div>
 
-              {query && (
+              {queryInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className={styles.clearBtn}
                   onClick={() => {
                     setQuery("");
-                    setPage(1);
                   }}
                 >
                   <X aria-hidden />
@@ -245,7 +271,7 @@ export default function FinalGradeApprovalsPage() {
               <RegistrarEmptyState
                 icon={GraduationCap}
                 title="No complete grade sets yet"
-                hint="Students appear once every subject is adviser-approved."
+                hint="Students appear once every subject is locked or adviser-approved."
               />
             ) : searching && pageRows.length === 0 ? (
               <RegistrarEmptyState
@@ -312,34 +338,11 @@ export default function FinalGradeApprovalsPage() {
             )}
           </div>
 
-          {totalPages > 1 && (
-            <div className={`${styles.footer} relative`}>
-              <p className={styles.footerInfo}>
-                Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}
-              </p>
-              <div className={styles.footerActions}>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={safePage <= 1 || filteredTotal === 0}
-                  onClick={() => setPage(Math.max(1, safePage - 1))}
-                >
-                  Previous
-                </Button>
-                <span className={styles.pageLabel} aria-live="polite">
-                  Page {safePage} of {totalPages}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={safePage >= totalPages || filteredTotal === 0}
-                  onClick={() => setPage(safePage + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            currentPage={safePage}
+            totalItems={filteredTotal}
+            onPageChange={setPage}
+          />
         </section>
       </div>
     </section>
@@ -375,3 +378,5 @@ function SkeletonRows() {
     </>
   );
 }
+
+

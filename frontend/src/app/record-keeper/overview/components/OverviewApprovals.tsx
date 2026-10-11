@@ -66,6 +66,19 @@ export function OverviewApprovals() {
         approve ? `/api/auth/approve/${id}` : `/api/auth/reject/${id}`,
         approve ? {} : { reason: "Rejected by record keeper" }
       ),
+    onMutate: async ({ id }) => {
+      // Optimistic removal with rollback on error.
+      await qc.cancelQueries({ queryKey: ["record-keeper-pending-students"] });
+      const previous = qc.getQueriesData({ queryKey: ["record-keeper-pending-students"] });
+      qc.setQueriesData<PendingStudentsResponse>(
+        { queryKey: ["record-keeper-pending-students"] },
+        (old) =>
+          old && Array.isArray(old.students)
+            ? { ...old, students: old.students.filter((s) => s.id !== id) }
+            : old,
+      );
+      return { previous };
+    },
     onSuccess: (_data, { id, approve }) => {
 
       markSelfNotified(id);
@@ -74,8 +87,12 @@ export function OverviewApprovals() {
         description: approve ? "The student account is now active." : "The account request was rejected.",
       });
     },
-    onError: () => {
-      toast.error({ title: "Action failed", description: "Could not process this account." });
+    onError: (err, _vars, context) => {
+      void err;
+      for (const [key, data] of context?.previous ?? []) {
+        qc.setQueryData(key, data);
+      }
+      toast.error({ title: "Action failed", description: "Could not process this account. Changes were rolled back." });
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["record-keeper-pending-students"] });
@@ -169,10 +186,10 @@ export function OverviewApprovals() {
           </div>
         )}
       </div>
-      {hasRecords && (
+      {hasRecords && total > PAGE_SIZE && (
         <div className={`${styles.footer} relative`}>
           <span className={styles.footerInfo}>
-            {total > 0 ? `Showing ${start}–${end} of ${total}` : "0 of 0"} —{" "}
+            {`Showing ${start}–${end} of ${total}`} —{" "}
             <button type="button" className={styles.viewAll} onClick={goAccounts}>
               View all
             </button>

@@ -3,8 +3,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, History } from "lucide-react";import { apiClient } from "@/lib/api/client";
-import { Button } from "@/components/ui/button";
+import { ChevronRight, History } from "lucide-react";import { apiClient } from "@/lib/api/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -14,7 +13,7 @@ import styles from "./accounts-audit.module.css";
 import pageStyles from "../accounts.module.css";
 import { RegistrarEmptyState } from "../../components/RegistrarEmptyCard";
 
-const PAGE_SIZE = 15;
+
 
 export type AccountsAuditEntry = {
   id: string;
@@ -28,6 +27,7 @@ export type AccountsAuditEntry = {
   action: "approve" | "reject";
   reason: string;
 };
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 type AuditResponse = {
   entries: AccountsAuditEntry[];
@@ -72,8 +72,6 @@ export function AccountsAudit() {
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
 
   return (
     <section className={assign.card} aria-labelledby="accounts-audit">
@@ -193,31 +191,11 @@ export function AccountsAudit() {
       </div>
 
       {!isPending && total > 0 ? (
-        <div className={`${pageStyles.footer} relative`}>
-          <span className={pageStyles.footerInfo}>
-            {`${start}–${end} of ${total}`}
-          </span>
-          <div className={pageStyles.footerActions}>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeft aria-hidden />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage >= pageCount}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={safePage}
+          totalItems={total}
+          onPageChange={setPage}
+        />
       ) : null}
     </section>
   );

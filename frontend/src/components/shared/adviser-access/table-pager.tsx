@@ -1,8 +1,6 @@
 "use client";
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import styles from "./adviser-access-tables.module.css";
+import { Pagination } from "@/components/shared/pagination";
 export function usePager(total: number, pageSize: number) {
   const [page, setPage] = React.useState(1);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -15,8 +13,6 @@ export function Pager({
   total,
   totalPages,
   safePage,
-  start,
-  end,
   setPage,
 }: {
   total: number;
@@ -28,30 +24,10 @@ export function Pager({
 }) {
   if (totalPages <= 1) return null;
   return (
-    <div className={`${styles.footer} relative`}>
-      <span className={styles.footerInfo}>
-        {total > 0 ? `${start}–${end} of ${total}` : "0 of 0"}
-      </span>
-      <div className={styles.footerActions}>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={safePage <= 1 || total === 0}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-        >
-          <ChevronLeft aria-hidden />
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={safePage >= totalPages || total === 0}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Next
-          <ChevronRight aria-hidden />
-        </Button>
-      </div>
-    </div>
+    <Pagination
+      currentPage={safePage}
+      totalItems={total}
+      onPageChange={(p) => setPage(p)}
+    />
   );
 }

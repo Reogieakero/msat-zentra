@@ -6,9 +6,9 @@ import {
   TableSkeleton,
 } from "@/components/shared/adviser-access/AdviserAccessTables";
 import type { AdviserAccessRequest } from "./types";
-import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export { TableSkeleton };
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 type ActFn = (id: string, approved: boolean, reason?: string) => Promise<void>;
 

@@ -4,8 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ChevronLeft,
-  ChevronRight,
   MoreHorizontal,
   UserCheck,
 } from "lucide-react";
@@ -30,7 +28,7 @@ import { RegistrarEmptyState } from "../../components/RegistrarEmptyCard";
 import { fetchRegistrarOverview } from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/components/registry/overview/OverviewApprovals.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 export function OverviewApprovals() {
   const router = useRouter();
@@ -56,8 +54,6 @@ export function OverviewApprovals() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRows = pendingStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
   const hasRecords = (data?.pendingStudents ?? []).length > 0;
   const isEmpty = !isPending && !isError && !hasRecords;
 
@@ -151,31 +147,11 @@ export function OverviewApprovals() {
         )}
       </div>
       {hasRecords && (
-        <div className={`${styles.footer} relative`}>
-          <span className={styles.footerInfo}>
-            {total > 0 ? `${start}–${end} of ${total}` : "0 of 0"}
-          </span>
-          <div className={styles.footerActions}>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage <= 1 || total === 0}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeft aria-hidden />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage >= totalPages || total === 0}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={safePage}
+          totalItems={total}
+          onPageChange={setPage}
+        />
       )}
     </section>
   );

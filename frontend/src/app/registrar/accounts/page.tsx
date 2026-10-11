@@ -38,8 +38,11 @@ import type { PendingStudentsResponse } from "./components/types";
 import { formatRelativeTime } from "./components/types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./accounts.module.css";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 
-const PAGE_SIZE = 15;
+
 
 async function fetchPendingStudents(page: number, q: string, signal?: AbortSignal) {
   return apiClient
@@ -51,10 +54,37 @@ async function fetchPendingStudents(page: number, q: string, signal?: AbortSigna
 }
 
 export default function AccountApprovalsPage() {
+  return (
+    <React.Suspense>
+      <AccountApprovalsPageInner />
+    </React.Suspense>
+  );
+}
+
+function AccountApprovalsPageInner() {
+  const searchParams = useSearchParams();
   const qc = useQueryClient();
-  const [query, setQuery] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  const debouncedQuery = useDebouncedValue(query.trim(), 300);
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const query = useDebouncedValue(queryInput.trim(), 300);
+  const debouncedQuery = query;
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debouncedQuery || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery]);
+
+  const setQuery = React.useCallback((value: string) => {
+    setQueryInput(value);
+  }, []);
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["pending-students", page, debouncedQuery],
@@ -83,10 +113,26 @@ export default function AccountApprovalsPage() {
         approve ? {} : { reason: "Rejected by registrar" }
       ),
 
-    onError: (err) => {
+    onMutate: async ({ id }) => {
+      // Optimistic removal with rollback on error.
+      await qc.cancelQueries({ queryKey: ["pending-students"] });
+      const previous = qc.getQueriesData({ queryKey: ["pending-students"] });
+      qc.setQueriesData<PendingStudentsResponse>(
+        { queryKey: ["pending-students"] },
+        (old) =>
+          old && Array.isArray(old.students)
+            ? { ...old, students: old.students.filter((s) => s.id !== id), total: Math.max(0, (old.total ?? 1) - 1) }
+            : old,
+      );
+      return { previous };
+    },
+    onError: (err, _vars, context) => {
+      for (const [key, data] of context?.previous ?? []) {
+        qc.setQueryData(key, data);
+      }
       const message =
         (err as { response?: { data?: { error?: { message?: string } } } })?.response
-          ?.data?.error?.message ?? "Could not process this account.";
+          ?.data?.error?.message ?? "Could not process this account. Changes were rolled back.";
       toast.error({ title: "Action failed", description: message });
     },
     onSuccess: (_data, { id, approve }) => {
@@ -120,8 +166,6 @@ export default function AccountApprovalsPage() {
     ? (act.variables as { id: string; approve: boolean } | undefined)
     : undefined;
   const pageRows = students;
-  const start = filteredTotal === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, filteredTotal);
   const hasRecords = unfilteredTotal > 0;
   const searching = debouncedQuery.length > 0;
 
@@ -224,22 +268,20 @@ export default function AccountApprovalsPage() {
                 <Input
                   className={styles.search}
                   placeholder="Search name, LRN, or section…"
-                  value={query}
+                  value={queryInput}
                   onChange={(e) => {
                     setQuery(e.target.value);
-                    setPage(1);
                   }}
                   aria-label="Search pending students"
                 />
               </div>
-              {query && (
+              {queryInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className={styles.clearBtn}
                   onClick={() => {
                     setQuery("");
-                    setPage(1);
                   }}
                 >
                   <X aria-hidden />
@@ -375,34 +417,11 @@ export default function AccountApprovalsPage() {
             )}
           </div>
 
-          {totalPages > 1 && (
-            <div className={`${styles.pager} relative`}>
-              <p className={styles.range}>
-                Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}
-              </p>
-              <div className={styles.pagerButtons}>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={safePage <= 1 || filteredTotal === 0}
-                  onClick={() => setPage(Math.max(1, safePage - 1))}
-                >
-                  Previous
-                </Button>
-                <span className={styles.pageLabel} aria-live="polite">
-                  Page {safePage} of {totalPages}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={safePage >= totalPages || filteredTotal === 0}
-                  onClick={() => setPage(safePage + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            currentPage={safePage}
+            totalItems={filteredTotal}
+            onPageChange={setPage}
+          />
         </section>
 
         <AccountsBreakdown data={breakdownData ?? []} loading={breakdownPending} />

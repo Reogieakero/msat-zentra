@@ -30,6 +30,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import type { RegistryDesk } from "@/services/registry/overview.service";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 interface SubjectRow {
   id: string;
@@ -72,7 +73,7 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
       apiClient
         .get<GradesResponse>(`/api/${desk}/final-grades`, {
           // Strict 15-record ceiling; detail lookup uses server filtering.
-          params: { pageSize: 15 },
+          params: { pageSize: PAGE_SIZE },
         })
         .then((res) => res.data),
     staleTime: 30_000,

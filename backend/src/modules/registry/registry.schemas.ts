@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationQuerySchema } from "../../lib/pagination.js";
 
 export const HEX_COLOR = z
   .string()
@@ -15,4 +16,13 @@ export const registryPhotoSchema = z.object({
     .string()
     .regex(/^data:image\/(png|jpeg|gif|webp);base64,/, "Photo must be a PNG, JPEG, GIF, or WebP data URL")
     .max(2_800_000),
+});
+
+/** Registry list-query validation: page/pageSize capped at 15, trimmed filters. */
+export const registryFinalGradesQuerySchema = paginationQuerySchema();
+
+export const registryAccountsAuditQuerySchema = paginationQuerySchema();
+
+export const registryAccessRequestsQuerySchema = paginationQuerySchema().extend({
+  status: z.string().trim().max(40).optional(),
 });

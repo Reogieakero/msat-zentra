@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
 import { prisma } from "../../lib/prisma.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { getRiskBoard, getRiskTrend, getSchoolsForRisk } from "./riskBoard.service.js";
@@ -46,6 +47,7 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal"], ttl: 15 }),
+  etag(),
   async (req, res, next) => {
     try {
       // Real-time unified: ?gradeMode accepted but ignored.
@@ -62,6 +64,7 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal", "schoolyear"] }),
+  etag(),
   async (_req, res, next) => {
     try {
       res.json(await getSchoolsForRisk());
@@ -76,6 +79,7 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal"], ttl: 15 }),
+  etag(),
   async (req, res, next) => {
     try {
       const schoolYearId =
@@ -98,6 +102,7 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal"], ttl: 15 }),
+  etag(),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
@@ -116,6 +121,7 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal"], ttl: 60 }),
+  etag(),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
@@ -153,6 +159,7 @@ router.get(
   "/students/batch",
   requireAuth,
   cache({ tags: ["risk"], ttl: 60 }),
+  etag(),
   (req: Request, res: Response, next: (e: unknown) => void) => {
     sendLookupResult(res, next, () =>
       getBatchLevels(req.query.ids, req.user!.role, req.user!.id, req),
@@ -175,6 +182,7 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal"], ttl: 60 }),
+  etag(),
   async (req, res, next) => {
     try {
       const termId = await resolveActiveTermId(req);
@@ -195,6 +203,7 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal"], ttl: 15 }),
+  etag(),
   async (req, res, next) => {
     try {
       const termId = typeof req.query.termId === "string" ? req.query.termId : null;
@@ -238,6 +247,7 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal"] }),
+  etag(),
   async (_req, res, next) => {
     try {
       res.json(await getRiskStaff());
@@ -252,6 +262,7 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal"], ttl: 60 }),
+  etag(),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
@@ -332,6 +343,7 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal"], ttl: 15 }),
+  etag(),
   async (req, res, next) => {
     try {
       // Aggregate stats via DB counts — never slice a page to compute totals.

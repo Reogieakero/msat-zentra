@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { validate } from "../../middleware/validate.js";
 import { scopedYearId } from "../../lib/termScope.js";
 import {
@@ -8,6 +10,9 @@ import {
 } from "../registry/registry.repository.js";
 import { RECORD_KEEPER_IDENTITY } from "../../services/registry/registry.types.js";
 import {
+  registryAccessRequestsQuerySchema,
+  registryAccountsAuditQuerySchema,
+  registryFinalGradesQuerySchema,
   registryPhotoSchema,
   registryProfileSchema,
 } from "../registry/registry.schemas.js";
@@ -39,7 +44,8 @@ router.get(
   "/overview",
   requireAuth,
   requireRole("record_keeper"),
-  cache({ tags: ["record-keeper", "overview"] }),
+  cache({ tags: [CACHE_TAGS.recordKeeper, CACHE_TAGS.overview], ttl: CACHE_TTLS.dashboard }),
+  etag(),
   async (req, res, next) => {
     try {
       const schoolYearId = req.termScope?.schoolYearId ?? null;
@@ -54,13 +60,16 @@ router.get(
   "/final-grades",
   requireAuth,
   requireRole("record_keeper"),
-  cache({ tags: ["record-keeper", "academics", "overview"] }),
+  validate("query", registryFinalGradesQuerySchema),
+  cache({ tags: [CACHE_TAGS.recordKeeper, CACHE_TAGS.academics, CACHE_TAGS.overview], ttl: CACHE_TTLS.list }),
+  etag(),
   async (req, res, next) => {
     try {
-      const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 15, 1), 100);
-      const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
-      res.json(await listFinalGrades(ctxOf(req), { page, pageSize, q }));
+      const q = req.query as Record<string, unknown>;
+      const page = Math.max(1, Number(q.page) || 1);
+      const pageSize = Math.max(1, Math.min(Number(q.pageSize) || 15, 15));
+      const search = typeof q.q === "string" ? q.q.trim().toLowerCase() : "";
+      res.json(await listFinalGrades(ctxOf(req), { page, pageSize, q: search }));
     } catch (e) {
       next(e);
     }
@@ -71,7 +80,8 @@ router.get(
   "/account-breakdown",
   requireAuth,
   requireRole("record_keeper"),
-  cache({ tags: ["record-keeper", "accounts"] }),
+  cache({ tags: [CACHE_TAGS.recordKeeper, "accounts"], ttl: CACHE_TTLS.list }),
+  etag(),
   async (req, res, next) => {
     try {
       const schoolYearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
@@ -87,10 +97,14 @@ router.get(
   "/accounts-audit",
   requireAuth,
   requireRole("record_keeper"),
+  validate("query", registryAccountsAuditQuerySchema),
+  cache({ tags: [CACHE_TAGS.recordKeeper, CACHE_TAGS.audit], ttl: CACHE_TTLS.list }),
+  etag(),
   async (req, res, next) => {
     try {
-      const page = Math.max(parseInt(String(req.query.page ?? "1"), 10) || 1, 1);
-      const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? "15"), 10) || 15, 1), 50);
+      const q = req.query as Record<string, unknown>;
+      const page = Math.max(parseInt(String(q.page ?? "1"), 10) || 1, 1);
+      const pageSize = Math.max(1, Math.min(parseInt(String(q.pageSize ?? "15"), 10) || 15, 15));
       res.json(await getAccountsAudit({ band: GRADE_BAND_7_10, page, pageSize }));
     } catch (e) {
       next(e);
@@ -102,10 +116,13 @@ router.get(
   "/adviser-access-requests",
   requireAuth,
   requireRole("record_keeper"),
-  cache({ tags: ["record-keeper", "adviser-access"] }),
+  validate("query", registryAccessRequestsQuerySchema),
+  cache({ tags: [CACHE_TAGS.recordKeeper, "adviser-access"], ttl: CACHE_TTLS.list }),
+  etag(),
   async (req, res, next) => {
     try {
-      const statusFilter = req.query.status ? String(req.query.status) : undefined;
+      const q = req.query as Record<string, unknown>;
+      const statusFilter = typeof q.status === "string" && q.status ? q.status : undefined;
       res.json(
         await listAccessRequests({ band: GRADE_BAND_7_10, scope: "request", status: statusFilter }),
       );

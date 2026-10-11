@@ -2,8 +2,6 @@
 import * as React from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ChevronLeft,
-  ChevronRight,
   Eye,
   FolderOpen,
   Search,
@@ -32,6 +30,9 @@ import { Sf10DetailSheet as RecordKeeperDetailSheet } from "@/app/record-keeper/
 import { StatusBadge, formatRelativeTime } from "@/components/registry/sf10/shared";
 import { toast } from "@/components/ui/sonner";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { Pagination } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 import { fetchSf10Records } from "@/services/registry/sf10.service";
 import {
   GRADE_LABEL,
@@ -57,10 +58,34 @@ export function Sf10Page({
   gradeRange: string;
 }) {
   const qc = useQueryClient();
-  const [queryInput, setQueryInput] = React.useState("");
+  const searchParams = useSearchParams();
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
   const query = useDebouncedValue(queryInput.trim(), 300);
-  const [status, setStatus] = React.useState<Sf10Status | "all">("all");
-  const [page, setPage] = React.useState(1);
+  const [status, setStatusState] = React.useState<Sf10Status | "all">(
+    (searchParams.get("status") as Sf10Status | null) ?? "all",
+  );
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "status"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const setStatus = React.useCallback(
+    (value: Sf10Status | "all") => {
+      setStatusState(value);
+      pager.setFilters({ status: value === "all" ? undefined : value });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: query || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
   const [selected, setSelected] = React.useState<Sf10Record | null>(null);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const {
@@ -89,8 +114,6 @@ export function Sf10Page({
   const filteredTotal = data?.total ?? pageRows.length;
   const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize));
   const safePage = Math.min(page, totalPages);
-  const start = filteredTotal === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const end = Math.min(safePage * pageSize, filteredTotal);
   const filtering = query.length > 0 || status !== "all";
   const isSyncing = isFetching && !isPending;
   const openRecord = (r: Sf10Record) => {
@@ -203,7 +226,6 @@ export function Sf10Page({
                   value={queryInput}
                   onChange={(e) => {
                     setQueryInput(e.target.value);
-                    setPage(1);
                   }}
                   aria-label="Search SF10 records"
                 />
@@ -215,7 +237,6 @@ export function Sf10Page({
                   className={styles.clearBtn}
                   onClick={() => {
                     setQueryInput("");
-                    setPage(1);
                   }}
                 >
                   <X aria-hidden />
@@ -233,7 +254,6 @@ export function Sf10Page({
                 size="sm"
                 onClick={() => {
                   setStatus(f.key);
-                  setPage(1);
                 }}
                 aria-pressed={status === f.key}
               >
@@ -350,34 +370,12 @@ export function Sf10Page({
             )}
           </div>
           {filteredTotal > pageSize && (
-            <div className={`${styles.footer} relative`}>
-              <p className={styles.footerInfo}>
-                Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}
-              </p>
-              <div className={styles.footerActions}>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={safePage <= 1 || filteredTotal === 0}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  <ChevronLeft aria-hidden />
-                  Previous
-                </Button>
-                <span className={styles.pageLabel} aria-live="polite">
-                  Page {safePage} of {totalPages}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={safePage >= totalPages || filteredTotal === 0}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                  <ChevronRight aria-hidden />
-                </Button>
-              </div>
-            </div>
+            <Pagination
+              currentPage={safePage}
+              totalItems={filteredTotal}
+              pageSize={pageSize}
+              onPageChange={setPage}
+            />
           )}
         </section>
       </div>

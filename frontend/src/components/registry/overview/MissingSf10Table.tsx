@@ -27,16 +27,11 @@ import {
 import { formatSection } from "@/lib/utils";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewApprovals.module.css";
-
-const PAGE_SIZE_BY_DESK: Record<RegistryDesk, number> = {
-  registrar: 10,
-  "record-keeper": 5,
-};
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export function MissingSf10Table({ desk }: { desk: RegistryDesk }) {
   const router = useRouter();
   const [page, setPage] = React.useState(1);
-  const PAGE_SIZE = PAGE_SIZE_BY_DESK[desk];
 
   const { data, isPending, isError } = useQuery({
     queryKey: [`${desk}-overview`],

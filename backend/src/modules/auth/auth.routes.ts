@@ -15,6 +15,7 @@ import {
   approveSchema,
   changePasswordSchema,
   loginSchema,
+  pendingAccountsQuerySchema,
   registerSchema,
   rejectSchema,
 } from "./auth.schemas.js";
@@ -136,20 +137,22 @@ router.get(
   "/pending",
   requireAuth,
   requireRole("record_keeper", "registrar"),
+  validate("query", pendingAccountsQuerySchema),
   async (req, res, next) => {
     try {
       const band: GradeLevel[] =
         req.user!.role === "registrar" ? ["G11", "G12"] : ["G7", "G8", "G9", "G10"];
-      const roleFilter = req.query.role ? String(req.query.role) : "student";
-      const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
-      const rawPage = req.query.page !== undefined ? Number(req.query.page) : NaN;
-      const rawSize = req.query.pageSize !== undefined ? Number(req.query.pageSize) : NaN;
-      const hasPaging = !!q || Number.isFinite(rawPage) || Number.isFinite(rawSize);
+      const q = req.query as Record<string, unknown>;
+      const roleFilter = typeof q.role === "string" && q.role ? q.role : "student";
+      const search = typeof q.q === "string" ? q.q.trim().toLowerCase() : "";
+      const rawPage = q.page !== undefined ? Number(q.page) : NaN;
+      const rawSize = q.pageSize !== undefined ? Number(q.pageSize) : NaN;
+      const hasPaging = !!search || Number.isFinite(rawPage) || Number.isFinite(rawSize);
       res.json(
         await listPending({
           band,
           roleFilter,
-          q,
+          q: search,
           page: rawPage,
           pageSize: rawSize,
           hasPaging,
