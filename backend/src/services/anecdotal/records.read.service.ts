@@ -105,27 +105,43 @@ export async function getReferable(query: ReferableQuery) {
     where.observerId = userId;
   }
 
-  const records = await prisma.anecdotalRecord.findMany({
+  const baseQuery = {
     where: where as never,
     orderBy: { observationDatetime: "desc" },
     take: overview ? 10 : undefined,
-    select: overview
-      ? {
-          id: true,
-          observationDatetime: true,
-          category: true,
-          student: {
-            select: {
-              user: { select: { fullName: true } },
-              section: { select: { name: true } },
-            },
+  } as const;
+
+  if (overview) {
+    const records = await prisma.anecdotalRecord.findMany({
+      ...baseQuery,
+      select: {
+        id: true,
+        observationDatetime: true,
+        category: true,
+        student: {
+          select: {
+            user: { select: { fullName: true } },
+            section: { select: { name: true } },
           },
-          roster: {
-            select: { fullName: true, section: { select: { name: true } } },
-          },
-          section: { select: { name: true } },
-        }
-      : {
+        },
+        roster: {
+          select: { fullName: true, section: { select: { name: true } } },
+        },
+        section: { select: { name: true } },
+      },
+    });
+    return records.map((r) => ({
+      id: r.id,
+      observationDate: r.observationDatetime.toISOString().slice(0, 10),
+      category: r.category,
+      studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
+      section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
+    }));
+  }
+
+  const records = await prisma.anecdotalRecord.findMany({
+    ...baseQuery,
+    select: {
       id: true,
       observationDatetime: true,
       category: true,
@@ -152,34 +168,22 @@ export async function getReferable(query: ReferableQuery) {
       section: { select: { name: true } },
     },
   });
-  if (overview) {
-    return records.map((r) => ({
-      id: r.id,
-      observationDate: r.observationDatetime.toISOString().slice(0, 10),
-      category: r.category,
-      studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
-      section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
-    }));
-  }
-  return (
-
-    records.map((r) => ({
-      id: r.id,
-      observationDatetime: r.observationDatetime,
-      observationDate: r.observationDatetime.toISOString().slice(0, 10),
-      category: r.category,
-      confidentialityLevel: r.confidentialityLevel,
-      incident: r.descriptionOfIncident,
-      studentId: r.student?.userId ?? (r.roster ? `roster:${r.roster.id}` : ""),
-      studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
-      lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
-      section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
-      excerpt: r.descriptionOfIncident?.slice(0, 120) ?? "",
-      hasReferral: r.referrals.length > 0,
-      referralCount: r.referrals.length,
-      hasAccount: r.student != null,
-    }))
-  );
+  return records.map((r) => ({
+    id: r.id,
+    observationDatetime: r.observationDatetime,
+    observationDate: r.observationDatetime.toISOString().slice(0, 10),
+    category: r.category,
+    confidentialityLevel: r.confidentialityLevel,
+    incident: r.descriptionOfIncident,
+    studentId: r.student?.userId ?? (r.roster ? `roster:${r.roster.id}` : ""),
+    studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
+    lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+    section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
+    excerpt: r.descriptionOfIncident?.slice(0, 120) ?? "",
+    hasReferral: r.referrals.length > 0,
+    referralCount: r.referrals.length,
+    hasAccount: r.student != null,
+  }));
 }
 
 export async function getRecordDetail(ctx: AnecdotalContext, recordId: string) {
