@@ -12,6 +12,7 @@ import { CoordinatorEnrolledGrid } from "./components/coordinator-enrolled-grid"
 import { CoordinatorEnrolledSkeleton } from "./components/coordinator-enrolled-skeleton";
 import { CoordinatorPageHeader } from "../components/CoordinatorPageHeader";
 import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
+import { Pagination } from "@/components/shared/pagination";
 import styles from "./components/coordinator-enrolled.module.css";
 
 function CoordinatorEnrolledPageInner() {
@@ -73,39 +74,12 @@ function CoordinatorEnrolledPageInner() {
         onComplete={r.setCompleteTarget}
       />
 
-      {!r.enrolledPending && !r.enrolledError && r.total > 0 && r.totalPages > 1 ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: "1rem",
-          }}
-          aria-label="Enrolled pagination"
-        >
-          <p style={{ fontSize: "0.875rem", opacity: 0.75 }}>
-            Showing {r.start}–{r.end} of {r.total} · Page {r.safePage} of{" "}
-            {r.totalPages}
-          </p>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={r.safePage <= 1}
-              onClick={() => r.setPage(r.safePage - 1)}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={r.safePage >= r.totalPages}
-              onClick={() => r.setPage(r.safePage + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+      {!r.enrolledPending && !r.enrolledError && r.total > 0 ? (
+        <Pagination
+          currentPage={r.safePage}
+          totalItems={r.total}
+          onPageChange={(p) => r.setPage(p)}
+        />
       ) : null}
 
       <CaseHistoryDialog

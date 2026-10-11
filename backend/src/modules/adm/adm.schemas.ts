@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationQuerySchema } from "../../lib/pagination.js";
 import { ADM_STAGES, type AdmStage } from "../../services/adm.js";
 
 export const profileSchema = z.object({
@@ -87,4 +88,21 @@ export const coordinatorPhotoSchema = z.object({
     .string()
     .regex(/^data:image\/(png|jpeg|gif|webp);base64,/, "Photo must be a PNG, JPEG, GIF, or WebP data URL")
     .max(2_800_000),
+});
+
+/** Shared list-query validation: page/pageSize capped at 15, trimmed filters. */
+export const admReferralsQuerySchema = paginationQuerySchema().extend({
+  stage: z.string().trim().max(40).optional(),
+  eligibility: z.enum(["eligible", "ineligible", "pending"]).optional(),
+});
+
+export const admApprovalsQuerySchema = paginationQuerySchema();
+
+export const admDevicesQuerySchema = paginationQuerySchema().extend({
+  status: z.string().trim().max(40).optional(),
+  order: z.enum(["oldest", "newest"]).optional(),
+});
+
+export const admMyCasesQuerySchema = paginationQuerySchema().extend({
+  highlight: z.string().trim().max(120).optional(),
 });

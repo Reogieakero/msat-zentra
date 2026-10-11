@@ -34,6 +34,7 @@ import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { historyTargetFor } from "../../components/CaseHistoryDialog";
 import { CoordinatorEmptyState } from "../../components/CoordinatorEmptyCard";
 import styles from "./coordinator-overview-forwards.module.css";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 interface CoordinatorOverviewForwardsProps {
   rows: AdmCaseRow[];
@@ -45,7 +46,7 @@ interface CoordinatorOverviewForwardsProps {
   onHistory: (target: HistoryTarget) => void;
 }
 
-const PAGE_SIZE = 15;
+
 
 function buildInterpretation(rows: AdmCaseRow[], now: number): string {
   if (rows.length === 0) {
@@ -85,7 +86,6 @@ export function CoordinatorOverviewForwards({
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * PAGE_SIZE;
   const pageRows = rows.slice(start, start + PAGE_SIZE);
-  const end = Math.min(start + PAGE_SIZE, rows.length);
   const isEmpty = !isPending && !isError && rows.length === 0;
   return (
     <Card className={styles.card}>
@@ -273,34 +273,11 @@ export function CoordinatorOverviewForwards({
                 </TableBody>
               </Table>
             </div>
-            {rows.length > PAGE_SIZE ? (
-              <div className={styles.pager}>
-                <p className={styles.range}>
-                  Showing {start + 1}–{end} of {rows.length}
-                </p>
-                <div className={styles.pagerButtons}>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    disabled={safePage <= 1}
-                    onClick={() => setPage(safePage - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <span className={styles.pageLabel} aria-live="polite">
-                    Page {safePage} of {totalPages}
-                  </span>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    disabled={safePage >= totalPages}
-                    onClick={() => setPage(safePage + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            ) : null}
+            <Pagination
+              currentPage={safePage}
+              totalItems={rows.length}
+              onPageChange={setPage}
+            />
           </>
         )}
         {!isPending && !isError && !isEmpty ? (

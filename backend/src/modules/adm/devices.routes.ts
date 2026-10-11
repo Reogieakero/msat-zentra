@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { validate } from "../../middleware/validate.js";
 import { resolvePageSize } from "./adm.repository.js";
-import { deviceIssueSchema, deviceReturnSchema } from "./adm.schemas.js";
+import { admDevicesQuerySchema, deviceIssueSchema, deviceReturnSchema } from "./adm.schemas.js";
 import { issueDevice, listDevices, returnDevice } from "../../services/adm/devices.service.js";
 
 const router = Router();
@@ -61,25 +63,23 @@ router.get(
   "/devices",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
-  cache({ tags: ["adm", "adm-devices", "adm-overview"] }),
+  validate("query", admDevicesQuerySchema),
+  cache({ tags: [CACHE_TAGS.adm, CACHE_TAGS.admDevices, CACHE_TAGS.overview], ttl: CACHE_TTLS.list }),
+  etag(),
   async (req, res, next) => {
     try {
-      const q =
-        typeof req.query.q === "string" && req.query.q.trim()
-          ? req.query.q.trim()
-          : "";
+      const query = req.query as Record<string, unknown>;
+      const q = typeof query.q === "string" && query.q.trim() ? query.q.trim() : "";
       const statusParam =
-        typeof req.query.status === "string" && req.query.status.trim()
-          ? req.query.status.trim()
-          : "";
+        typeof query.status === "string" && query.status.trim() ? query.status.trim() : "";
 
       const hasPaging =
-        typeof req.query.page !== "undefined" ||
-        typeof req.query.pageSize !== "undefined" ||
-        typeof req.query.limit !== "undefined";
+        typeof query.page !== "undefined" ||
+        typeof query.pageSize !== "undefined" ||
+        typeof query.limit !== "undefined";
       const limit = hasPaging ? resolvePageSize(req) : 0;
-      const page = Math.max(1, Number(req.query.page) || 1);
-      const orderOldest = req.query.order === "oldest";
+      const page = Math.max(1, Number(query.page) || 1);
+      const orderOldest = query.order === "oldest";
       res.json(await listDevices({ q, statusParam, hasPaging, limit, page, orderOldest }));
     } catch (e) {
       next(e);

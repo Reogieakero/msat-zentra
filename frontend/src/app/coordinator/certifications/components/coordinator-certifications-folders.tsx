@@ -28,6 +28,7 @@ import type {
 } from "@/services/coordinator/certifications.types";
 import { CoordinatorCertificationsFilters } from "./coordinator-certifications-filters";
 import { CoordinatorEmptyCard, CoordinatorEmptyState } from "../../components/CoordinatorEmptyCard";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import styles from "./coordinator-certifications-folders.module.css";
 
 function timeAgo(iso: string | null): string {
@@ -55,7 +56,7 @@ interface CoordinatorCertificationsFoldersProps {
   isSyncing?: boolean;
 }
 
-const DISPLAY_LIMIT = 15;
+const DISPLAY_LIMIT = PAGE_SIZE;
 
 export function CoordinatorCertificationsFolders({
   records,
@@ -281,32 +282,11 @@ export function CoordinatorCertificationsFolders({
               })}
             </div>
           )}
-          {totalPages > 1 ? (
-            <div className={styles.pager} aria-label="Certification pagination">
-              <p className={styles.pagerCount}>
-                Showing {start}–{end} of {total} · Page {safePage} of{" "}
-                {totalPages}
-              </p>
-              <div className={styles.pagerActions}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={safePage <= 1}
-                  onClick={() => setPage(safePage - 1)}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={safePage >= totalPages}
-                  onClick={() => setPage(safePage + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          ) : null}
+          <Pagination
+            currentPage={safePage}
+            totalItems={total}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 

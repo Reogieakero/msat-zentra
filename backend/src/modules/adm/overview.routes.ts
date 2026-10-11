@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
 import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
+import { admMyCasesQuerySchema } from "./adm.schemas.js";
 import { scopedTermRow } from "../../lib/termScope.js";
 import { getDashboard, getMyCases } from "../../services/adm/overview.service.js";
 
@@ -10,7 +14,8 @@ router.get(
   "/dashboard",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
-  cache({ tags: ["adm", "adm-overview", "overview"] }),
+  cache({ tags: [CACHE_TAGS.adm, CACHE_TAGS.overview], ttl: CACHE_TTLS.dashboard }),
+  etag(),
   async (_req, res, next) => {
     try {
       res.json(await getDashboard());
@@ -33,7 +38,10 @@ router.get(
       "teacher-adm-cases",
       "overview",
     ],
+    ttl: CACHE_TTLS.list,
   }),
+  etag(),
+  validate("query", admMyCasesQuerySchema),
   async (req, res, next) => {
     try {
 
@@ -50,7 +58,7 @@ router.get(
       const pageSize =
         !Number.isFinite(limitRaw) || limitRaw <= 0
           ? 15
-          : Math.min(Math.floor(limitRaw), 100);
+          : Math.min(Math.floor(limitRaw), 15);
       const q =
         typeof qRaw.q === "string" ? qRaw.q.trim().toLowerCase() : "";
       const highlightRaw = qRaw.highlight;

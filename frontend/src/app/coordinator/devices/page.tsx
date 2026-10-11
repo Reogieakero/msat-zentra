@@ -30,19 +30,36 @@ import {
 } from "./components/coordinator-devices-table";
 import { CoordinatorDevicesIssueDialog } from "./components/coordinator-devices-issue-dialog";
 import pageStyles from "../pages.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
-const DEVICE_PAGE_SIZE = 15;
+const DEVICE_PAGE_SIZE = PAGE_SIZE;
 
 function CoordinatorDevicesPageInner() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const [queryInput, setQueryInput] = React.useState("");
+  const [queryInput, setQueryInput] = React.useState(
+    () => searchParams.get("q") ?? "",
+  );
 
   const debounced = useDebouncedValue(queryInput.trim(), 300);
-  const [filter, setFilter] = React.useState<DeviceFilter>("all");
-  const [page, setPage] = React.useState(1);
+  const [filter, setFilterState] = React.useState<DeviceFilter>(() => {
+    const s = searchParams.get("status");
+    return s === "issued" || s === "returned" ? s : "all";
+  });
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "status"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const setFilter = React.useCallback(
+    (v: DeviceFilter) => {
+      setFilterState(v);
+      pager.setFilters({ status: v === "all" ? undefined : v });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const [issueOpen, setIssueOpen] = React.useState(
     () => searchParams.get("issue") === "1",
@@ -60,8 +77,18 @@ function CoordinatorDevicesPageInner() {
   }, [searchParams, pathname, router]);
   const setQuery = React.useCallback((v: string) => {
     setQueryInput(v);
-    setPage(1);
   }, []);
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debounced || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced]);
 
   const devicesQuery = useQuery({
     queryKey: ["coordinator-devices", page, debounced, filter, DEVICE_PAGE_SIZE],
@@ -80,7 +107,7 @@ function CoordinatorDevicesPageInner() {
   const needsQuery = useQuery({
     queryKey: ["coordinator-devices", "preview", "needs-device"],
     queryFn: ({ signal }) =>
-      fetchCoordinatorApprovals(1, { limit: 15, signal }),
+      fetchCoordinatorApprovals(1, { limit: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
@@ -128,6 +155,23 @@ function CoordinatorDevicesPageInner() {
   const deviceStart = deviceTotal === 0 ? 0 : (deviceSafePage - 1) * deviceLimit + 1;
   const deviceEnd = Math.min(deviceSafePage * deviceLimit, deviceTotal);
   const deviceBackground = devicesQuery.isFetching && !devicesQuery.isPending;
+
+  // Prefetch the next page while the user views the current one.
+  React.useEffect(() => {
+    if (page >= deviceTotalPages) return;
+    void queryClient.prefetchQuery({
+      queryKey: ["coordinator-devices", page + 1, debounced, filter, DEVICE_PAGE_SIZE],
+      queryFn: ({ signal }) =>
+        fetchCoordinatorDevices({
+          q: debounced || undefined,
+          status: filter === "all" ? undefined : filter,
+          page: page + 1,
+          limit: DEVICE_PAGE_SIZE,
+          signal,
+        }),
+      staleTime: 30_000,
+    });
+  }, [queryClient, page, debounced, filter, deviceTotalPages]);
 
   const hasActiveFilters = filter !== "all" || debounced !== "";
   const statusLabel =

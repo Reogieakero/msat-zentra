@@ -1,7 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import styles from "./coordinator-referrals-pager.module.css";
+import { Pagination } from "@/components/shared/pagination";
 
 interface CoordinatorReferralsPagerProps {
   total: number;
@@ -14,39 +13,10 @@ interface CoordinatorReferralsPagerProps {
 
 export function CoordinatorReferralsPager({
   total,
-  start,
-  end,
   page,
-  totalPages,
   onPageChange,
 }: CoordinatorReferralsPagerProps) {
-  if (totalPages <= 1) return null;
   return (
-    <div className={styles.pager}>
-      <p className={styles.range}>
-        Showing {start}–{end} of {total}
-      </p>
-      <div className={styles.pagerButtons}>
-        <Button
-          size="xs"
-          variant="outline"
-          disabled={page <= 1}
-          onClick={() => onPageChange(Math.max(1, page - 1))}
-        >
-          Previous
-        </Button>
-        <span className={styles.pageLabel} aria-live="polite">
-          Page {page} of {totalPages}
-        </span>
-        <Button
-          size="xs"
-          variant="outline"
-          disabled={page >= totalPages}
-          onClick={() => onPageChange(page + 1)}
-        >
-          Next
-        </Button>
-      </div>
-    </div>
+    <Pagination currentPage={page} totalItems={total} onPageChange={onPageChange} />
   );
 }
