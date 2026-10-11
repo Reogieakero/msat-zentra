@@ -84,3 +84,23 @@ export function paginationQuerySchema(maxPageSize = MAX_PAGE_SIZE) {
     q: z.string().trim().max(200).optional().default(""),
   });
 }
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/** One envelope for every list endpoint: { data, total, page, pageSize, totalPages }. */
+export function paginated<T>(items: T[], totalItems: number, page: number, pageSize: number): PaginatedResponse<T> {
+  const meta = buildPaginationMeta(page, pageSize, totalItems);
+  return { data: items, total: totalItems, page: meta.page, pageSize, totalPages: meta.totalPages };
+}
+
+/** Back-compat alias for repositories using the `pagination` key. */
+export function withPagination<T>(items: T[], totalItems: number, page: number, pageSize: number) {
+  const body = paginated(items, totalItems, page, pageSize);
+  return { data: body.data, pagination: { page: body.page, pageSize: body.pageSize, totalItems: body.total, totalPages: body.totalPages } };
+}

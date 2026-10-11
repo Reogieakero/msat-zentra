@@ -30,6 +30,9 @@ export interface CacheOptions {
   ttl?: number;
 
   tags?: string[];
+
+  /** Cache-Control header sent with the response. Defaults to a short private TTL. */
+  cacheControl?: string;
 }
 
 export function cache(options: CacheOptions = {}) {
@@ -37,6 +40,8 @@ export function cache(options: CacheOptions = {}) {
 
     if (req.method !== "GET") return next();
     const redis = getRedis();
+    const cacheControl = options.cacheControl ?? "private, max-age=30";
+    res.setHeader("Cache-Control", cacheControl);
     if (!redis) return next();
 
     const key = buildKey(req);
