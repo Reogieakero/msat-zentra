@@ -85,13 +85,16 @@ router.patch(
             },
           });
         }
-      });
-      await writeAudit({
-        userId: principalId,
-        actionType: "update",
-        sourceTable: "staff_profiles",
-        sourceId: principalId,
-        reason: "Principal updated profile settings",
+        await writeAudit(
+          {
+            userId: principalId,
+            actionType: "update",
+            sourceTable: "staff_profiles",
+            sourceId: principalId,
+            reason: "Principal updated profile settings",
+          },
+          tx,
+        );
       });
       await invalidateTags(["principal", "overview"]);
       res.json(await readPrincipalProfileSettings(principalId));
