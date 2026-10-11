@@ -25,6 +25,7 @@ import { NurseAdmReports } from "./components/NurseAdmReports";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import styles from "./components/nurse-adm.module.css";
 import pageStyles from "../pages.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export default function NurseAdmPage() {
   const { activeTerm, termReady } = useTerm();
@@ -34,7 +35,7 @@ export default function NurseAdmPage() {
     useQuery<NurseAlertsPage>({
       queryKey: ["nurse-alerts", "preview", termKey],
       queryFn: ({ signal }) =>
-        fetchNurseAlerts({ page: 1, pageSize: 15, signal }),
+        fetchNurseAlerts({ page: 1, pageSize: PAGE_SIZE, signal }),
       placeholderData: keepPreviousData,
       staleTime: 60_000,
       enabled: termReady,

@@ -52,6 +52,13 @@ interface NurseMutationOptions<TData, TVariables> {
   sourceId?: string | ((variables: TVariables) => string);
 
   scopes?: NurseScope | NurseScope[];
+
+  /**
+   * Optional optimistic patch applied to every cached query under `scopes`
+   * before the mutation runs. Snapshots are restored on error (rollback)
+   * and the keys are invalidated on success.
+   */
+  optimisticUpdate?: (old: unknown, variables: TVariables) => unknown;
 }
 
 export function useNurseMutation<TData = unknown, TVariables = void>(
@@ -59,8 +66,27 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
 ) {
   const queryClient = useQueryClient();
   const invalidate = () => invalidateNurseQueries(queryClient, options.scopes);
-  return useMutation<TData, Error, TVariables>({
+  const scopeKeys = (
+    !options.scopes
+      ? NURSE_QUERY_KEYS
+      : (Array.isArray(options.scopes) ? options.scopes : [options.scopes]).flatMap(
+          (s) => NURSE_SCOPE_KEYS[s],
+        )
+  ).map((k) => [...k]);
+  return useMutation<TData, Error, TVariables, { snapshots: [readonly string[], unknown][] }>({
     mutationFn: async (variables) => options.mutationFn(variables),
+    onMutate: async (variables) => {
+      if (!options.optimisticUpdate) return { snapshots: [] };
+      const snapshots: [readonly string[], unknown][] = [];
+      for (const key of scopeKeys) {
+        await queryClient.cancelQueries({ queryKey: key });
+        snapshots.push([key, queryClient.getQueryData(key)]);
+        queryClient.setQueryData(key, (old: unknown) =>
+          options.optimisticUpdate!(old, variables),
+        );
+      }
+      return { snapshots };
+    },
     onSuccess: (data, variables) => {
 
       const fromData =
@@ -88,11 +114,14 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
       options.onSuccessExtra?.(data, variables);
     },
 
-    onError: (err) => {
+    onError: (err, _variables, context) => {
+      for (const [key, snapshot] of context?.snapshots ?? []) {
+        queryClient.setQueryData(key, snapshot);
+      }
       if (!options.silentError) {
         toast.error({
           title: "Update failed",
-          description: apiErrorMessage(err, options.errorFallback),
+          description: `${apiErrorMessage(err, options.errorFallback)} Changes were rolled back.`,
         });
       }
     },

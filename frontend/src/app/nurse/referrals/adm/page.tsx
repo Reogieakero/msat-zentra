@@ -17,8 +17,10 @@ import { useNurseInvalidate } from "../../overview/components/use-nurse-mutation
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "../nurse-referrals-page.module.css";
 import pageStyles from "../../pages.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
-const NURSE_ADM_PAGE_SIZE = 15;
+const NURSE_ADM_PAGE_SIZE = PAGE_SIZE;
 
 function NurseAdmReferralsView() {
   const params = useSearchParams();
@@ -27,7 +29,9 @@ function NurseAdmReferralsView() {
   const invalidateNurse = useNurseInvalidate();
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [page, setPage] = React.useState(1);
+  const pager = useUrlPager(0, {});
+  const page = pager.page;
+  const setPage = pager.setPage;
   const [takeover, setTakeover] = React.useState(false);
   const landing = !takeover && highlightId !== null;
 

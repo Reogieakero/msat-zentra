@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
 import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TTLS } from "../../lib/cacheTags.js";
+import { referralsMineQuerySchema, referralsQueueQuerySchema } from "./referrals.schemas.js";
 import { NURSE_CACHE_TAGS, resolveQueuePageSize } from "./referrals.repository.js";
 import { listMine, listQueue } from "../../services/referrals/queues.service.js";
 
@@ -10,6 +14,7 @@ router.get(
   "/",
   requireAuth,
   requireRole("guidance_counselor", "nurse", "adm_coordinator", "principal"),
+  validate("query", referralsQueueQuerySchema),
   cache({
     tags: [
       "referrals",
@@ -20,7 +25,9 @@ router.get(
       "teacher",
       ...NURSE_CACHE_TAGS,
     ],
+    ttl: CACHE_TTLS.list,
   }),
+  etag(),
   async (req, res, next) => {
     try {
 
@@ -62,6 +69,7 @@ router.get(
   "/mine",
   requireAuth,
   requireRole("adviser", "subject_teacher"),
+  validate("query", referralsMineQuerySchema),
   cache({
     tags: [
       "referrals",
@@ -72,7 +80,9 @@ router.get(
       "teacher",
       "teacher-referrals",
     ],
+    ttl: CACHE_TTLS.list,
   }),
+  etag(),
   async (req, res, next) => {
     try {
 

@@ -18,6 +18,7 @@ export const NURSE_SEVERITY_LABELS: Record<NurseAlertSeverity, string> = {
   info: "Info",
   done: "Resolved",
 };
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 const DAY_MS = 86_400_000;
 const RESOLVED_WINDOW_MS = 7 * DAY_MS;
@@ -248,7 +249,7 @@ export async function fetchNurseAlerts(
   const query = new URLSearchParams();
   if (params?.q?.trim()) query.set("q", params.q.trim());
   query.set("page", String(Math.max(1, params?.page ?? 1)));
-  query.set("pageSize", String(params?.pageSize ?? 15));
+  query.set("pageSize", String(params?.pageSize ?? PAGE_SIZE));
   if (params?.track) query.set("track", params.track);
   if (params?.highlight) query.set("highlight", params.highlight);
   const [referralsRes, notificationsRes] = await Promise.all([
@@ -267,7 +268,7 @@ export async function fetchNurseAlerts(
   const total = pager?.total ?? referrals.length;
   const unfilteredTotal =
     pager?.unfilteredTotal ?? pager?.summary?.total ?? referrals.length;
-  const pageSize = pager?.pageSize ?? pager?.limit ?? (params?.pageSize ?? 15);
+  const pageSize = pager?.pageSize ?? pager?.limit ?? (params?.pageSize ?? PAGE_SIZE);
   const totalPages = pager?.totalPages ?? Math.max(1, Math.ceil(Math.max(1, total) / Math.max(1, pageSize)));
   return {
     ...built,

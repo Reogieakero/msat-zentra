@@ -20,6 +20,7 @@ export interface DocEntry {
 
 export type TypeFilter = "" | "ADM" | "Clinic";
 export type SortKey = "referral" | "student" | "date" | "status";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "", label: "All types" },
@@ -27,7 +28,7 @@ const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "Clinic", label: "Clinic" },
 ];
 
-const PAGE_SIZE = 15;
+
 
 export function buildEntries(alerts: NurseAlertItem[]): DocEntry[] {
   const entries: DocEntry[] = [];

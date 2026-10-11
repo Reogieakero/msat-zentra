@@ -1,7 +1,6 @@
 "use client";
 import * as React from "react";
 import { Inbox, SearchX } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
 import type {
   NurseQueueRow,
@@ -13,6 +12,7 @@ import { NurseReferralEntry, type SessionDialogKind } from "./NurseReferralEntry
 import { NurseActionMenu } from "./NurseActionMenu";
 import type { ActionValue, TypeFilter } from "./nurse-referrals-format";
 import { useNurseAlertFilters } from "./use-nurse-alert-filters";
+import { Pagination } from "@/components/shared/pagination";
 import { NurseAlertsDialogsHost } from "./nurse-alerts-dialogs-host";
 import styles from "./NurseAlertsTable.module.css";
 import { useActiveNowTick } from "@/lib/clock";
@@ -63,7 +63,6 @@ export function NurseAlertsTable({
   serverPage,
   serverTotalPages,
   serverTotal,
-  serverUnfilteredTotal,
   onServerPageChange,
 }: {
   alerts: NurseAlertItem[];
@@ -92,7 +91,6 @@ export function NurseAlertsTable({
     filtered,
     actionCounts,
     total,
-    totalPages,
     safePage,
     pageSize,
   } = useNurseAlertFilters({
@@ -147,8 +145,6 @@ export function NurseAlertsTable({
     a.row.sessions.some((s) => s.status === "scheduled")
   );
   const now = useActiveNowTick(hasScheduledOnPage);
-  const start = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const end = Math.min(safePage * pageSize, total);
   const hasActiveFilters =
     actionFilter !== "" || (!lockType && typeFilter !== "");
   function pickAction(value: ActionValue, type: "ADM" | "Clinic") {
@@ -195,52 +191,20 @@ export function NurseAlertsTable({
             ))}
           </ol>
         )}
-        {paginate && totalPages > 1 ? (
-          <nav className={styles.pager} aria-label="Cases pages">
-            <p className={styles.range}>
-              Showing {start}–{end} of {total}
-              {serverDriven &&
-              serverUnfilteredTotal !== undefined &&
-              serverUnfilteredTotal !== total
-                ? ` (of ${serverUnfilteredTotal} on your desk)`
-                : ""}
-            </p>
-            <div className={styles.pagerButtons}>
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={safePage <= 1}
-                onClick={() => {
-                  if (serverDriven) {
-                    onServerPageChange?.(Math.max(1, safePage - 1));
-                  } else {
-                    setPaged(true);
-                    setPage(Math.max(1, safePage - 1));
-                  }
-                }}
-              >
-                Previous
-              </Button>
-              <span className={styles.pageLabel} aria-live="polite">
-                Page {safePage} of {totalPages}
-              </span>
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={safePage >= totalPages}
-                onClick={() => {
-                  if (serverDriven) {
-                    onServerPageChange?.(safePage + 1);
-                  } else {
-                    setPaged(true);
-                    setPage(safePage + 1);
-                  }
-                }}
-              >
-                Next
-              </Button>
-            </div>
-          </nav>
+        {paginate ? (
+          <Pagination
+            currentPage={safePage}
+            totalItems={total}
+            pageSize={pageSize}
+            onPageChange={(p) => {
+              if (serverDriven) {
+                onServerPageChange?.(p);
+              } else {
+                setPaged(true);
+                setPage(p);
+              }
+            }}
+          />
         ) : (
           <ScrollHint count={total} />
         )}

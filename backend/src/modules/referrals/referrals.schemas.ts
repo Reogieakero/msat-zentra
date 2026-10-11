@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationQuerySchema } from "../../lib/pagination.js";
 
 export const statusSchema = z.object({
   status: z.enum(["pending", "in_progress", "resolved", "escalated", "info_requested", "dismissed", "follow_up"]),
@@ -121,3 +122,14 @@ export const reopenSchema = z.object({
   referredToRole: z.enum(["nurse", "guidance_counselor", "adm_coordinator", "principal"]).optional(),
   consultReviewer: z.enum(["nurse", "guidance_counselor", "lrpc"]).optional(),
 }).strict();
+
+/** Queue list-query validation: page/pageSize capped at 15, trimmed filters. */
+export const referralsQueueQuerySchema = paginationQuerySchema().extend({
+  track: z.string().trim().max(40).optional(),
+  status: z.string().trim().max(40).optional(),
+  highlight: z.string().trim().max(120).optional(),
+});
+
+export const referralsMineQuerySchema = paginationQuerySchema().extend({
+  highlight: z.string().trim().max(120).optional(),
+});

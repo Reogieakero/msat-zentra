@@ -22,17 +22,43 @@ import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/nurse-alerts.module.css";
 import pageStyles from "../pages.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 
-const NURSE_ALERTS_PAGE_SIZE = 15;
+const NURSE_ALERTS_PAGE_SIZE = PAGE_SIZE;
 
 export default function NurseAlertsPage() {
+  return (
+    <React.Suspense>
+      <NurseAlertsPageInner />
+    </React.Suspense>
+  );
+}
+
+function NurseAlertsPageInner() {
+  const searchParams = useSearchParams();
   const invalidateNurse = useNurseInvalidate();
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [query, setQuery] = React.useState("");
-  const [page, setPage] = React.useState(1);
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
 
-  const debounced = useDebouncedValue(query.trim(), 300);
+  const query = useDebouncedValue(queryInput.trim(), 300);
+  const debounced = query;
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debounced || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced]);
 
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<NurseAlertsPage>({
@@ -183,10 +209,9 @@ export default function NurseAlertsPage() {
         alerts={Array.isArray(data.alerts) ? data.alerts : []}
         riskByStudent={riskByStudent ?? {}}
         riskLoading={riskLoading}
-        query={query}
+        query={queryInput}
         onQueryChange={(v) => {
-          setQuery(v);
-          setPage(1);
+          setQueryInput(v);
         }}
         page={safePage}
         totalPages={totalPages}

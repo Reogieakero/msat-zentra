@@ -55,6 +55,7 @@ import {
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { deriveActionStatus } from "@/services/nurse/labels";
 import { NurseQueueRowActions } from "../../overview/components/NurseQueueRowActions";
+import { Pagination } from "@/components/shared/pagination";
 import {
   formatActionTime,
   latestActionOf,
@@ -64,8 +65,9 @@ import {
   type NurseRiskLevel,
 } from "@/services/nurse/nurse.types";
 import styles from "./nurse-alerts.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
-const PAGE_SIZE = 15;
+
 
 type RiskFilter = "" | NurseRiskLevel | "none";
 
@@ -173,7 +175,6 @@ export function NurseReferralsTable({
   query: controlledQuery,
   onQueryChange,
   page,
-  totalPages,
   total: totalProp,
   unfilteredTotal,
   onPageChange,
@@ -189,7 +190,6 @@ export function NurseReferralsTable({
 
   page?: number;
   totalPages?: number;
-
   total?: number;
 
   unfilteredTotal?: number;
@@ -597,56 +597,19 @@ export function NurseReferralsTable({
           </Table>
         </div>
       )}
-      <div className="relative mt-auto flex items-center justify-end space-x-2 pt-2">
-        <div className="text-muted-foreground flex-1 text-sm">
-          {serverPaged && page !== undefined && totalPages !== undefined ? (
-            <>
-              Page {page} of {totalPages} — {total} case{total === 1 ? "" : "s"}
-            </>
-          ) : (
-            <>
-              {table.getFilteredRowModel().rows.length} case
-              {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
-            </>
-          )}
-        </div>
-        {(serverPaged ? (totalPages ?? 1) > 1 : table.getPageCount() > 1) && (
-          <div className="space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                serverPaged && onPageChange && page !== undefined
-                  ? onPageChange(Math.max(1, page - 1))
-                  : table.previousPage()
-              }
-              disabled={
-                serverPaged && page !== undefined
-                  ? page <= 1
-                  : !table.getCanPreviousPage()
-              }
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                serverPaged && onPageChange && page !== undefined
-                  ? onPageChange(page + 1)
-                  : table.nextPage()
-              }
-              disabled={
-                serverPaged && page !== undefined && totalPages !== undefined
-                  ? page >= totalPages
-                  : !table.getCanNextPage()
-              }
-            >
-              Next
-            </Button>
-          </div>
-        )}
-      </div>
+      <Pagination
+        currentPage={
+          serverPaged && page !== undefined
+            ? page
+            : table.getState().pagination.pageIndex + 1
+        }
+        totalItems={serverPaged ? total : table.getFilteredRowModel().rows.length}
+        onPageChange={(p) =>
+          serverPaged && onPageChange && page !== undefined
+            ? onPageChange(p)
+            : table.setPageIndex(p - 1)
+        }
+      />
     </div>
   );
 }

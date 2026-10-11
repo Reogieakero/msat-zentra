@@ -282,6 +282,8 @@ model User {
   gradeFlagsRaised    GradeFlag[]            @relation("FlagRaisedBy")
   gradeFlagsOwned     GradeFlag[]            @relation("FlagOwner")
   gradeFlagsResolved  GradeFlag[]            @relation("FlagResolvedBy")
+  // Account approval + role-banded roster reads filter on (role, status).
+  @@index([role, status])
 }
 
 model StudentProfile {
@@ -1275,6 +1277,9 @@ model ReportSnapshot {
   payload      Json
   generatedAt  DateTime  @default(now())
   term         Term      @relation(fields: [termId], references: [id])
+  // Dashboard/report cache lookups by (reportType, scope, termId).
+  @@index([reportType, scope, termId])
+  @@index([termId])
 }
 
 // Adviser request for extra read access to their advisees' SF10 records (Grade
@@ -1299,6 +1304,7 @@ model AdviserSf10AccessRequest {
   @@index([status])
   @@index([adviserId])
   @@index([sectionId])
+  @@index([sectionId, status])
 }
 
 // ---------------------------------------------------------------------------
@@ -1327,4 +1333,7 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Revocation sweeps + per-user session reads.
+  @@index([userId])
+  @@index([expiresAt])
 }

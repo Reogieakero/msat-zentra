@@ -9,7 +9,8 @@ import {
   type ActionValue,
   type TypeFilter,
 } from "./nurse-referrals-format";
-const PAGE_SIZE = 15;
+import { PAGE_SIZE } from "@/components/shared/pagination";
+
 export function useNurseAlertFilters({
   alerts,
   initialType = "",

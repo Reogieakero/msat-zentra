@@ -131,6 +131,33 @@ export function FinishSessionDialog({
     errorFallback: "Could not finish the session. Try again.",
     silentError: true,
     sourceId: referralId,
+    scopes: ["alerts"],
+    // Instant feel: mark the session completed in cached alert pages at
+    // submit time; snapshots roll back automatically on error.
+    optimisticUpdate: (old, fields) => {
+      if (!old || typeof old !== "object" || !Array.isArray((old as { alerts?: unknown }).alerts)) {
+        return old;
+      }
+      const page = old as { alerts: { key: string; row?: { sessions?: { id: string }[] } }[] };
+      const notes = (fields as { sessionNotes: string }).sessionNotes;
+      return {
+        ...page,
+        alerts: page.alerts.map((alert) => {
+          if (!alert.row || !Array.isArray(alert.row.sessions)) return alert;
+          return {
+            ...alert,
+            row: {
+              ...alert.row,
+              sessions: alert.row.sessions.map((s) =>
+                s.id === session.id
+                  ? { ...s, status: "completed", sessionNotes: notes, completedAt: new Date().toISOString() }
+                  : s,
+              ),
+            },
+          };
+        }),
+      };
+    },
     onSuccessExtra: () => {
       onClose();
       setFiles([]);
