@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PAGE_SIZE, shouldShowPagination, totalPagesFor } from "./constants";
 import styles from "./ZentraPagination.module.css";
@@ -38,29 +38,20 @@ export function ZentraPagination({
   return (
     <nav aria-label="Pagination" className={styles.footer}>
       <span className={styles.footerInfo} aria-live="polite">
-        {`Showing ${start}–${end} of ${totalItems} · Page ${safePage} of ${totalPages}`}
+        {`Showing ${start}–${end} of ${totalItems}`}
+      </span>
+      <span className={styles.footerInfo} aria-live="polite">
+        {`Page ${safePage} of ${totalPages}`}
       </span>
       <div className={styles.footerActions}>
-        {!compact && (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage <= 1}
-            onClick={() => go(1)}
-            aria-label="Go to first page"
-          >
-            <ChevronsLeft aria-hidden />
-          </Button>
-        )}
         <Button
           variant="outline"
-          size="sm"
+          size="icon-sm"
           disabled={safePage <= 1}
           onClick={() => go(safePage - 1)}
           aria-label="Go to previous page"
         >
           <ChevronLeft aria-hidden />
-          Previous
         </Button>
         {!compact && pages.length > 0 && (
           <ul className={styles.pageList}>
@@ -82,25 +73,13 @@ export function ZentraPagination({
         )}
         <Button
           variant="outline"
-          size="sm"
+          size="icon-sm"
           disabled={safePage >= totalPages}
           onClick={() => go(safePage + 1)}
           aria-label="Go to next page"
         >
-          Next
           <ChevronRight aria-hidden />
         </Button>
-        {!compact && (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage >= totalPages}
-            onClick={() => go(totalPages)}
-            aria-label="Go to last page"
-          >
-            <ChevronsRight aria-hidden />
-          </Button>
-        )}
       </div>
     </nav>
   );

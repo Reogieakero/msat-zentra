@@ -55,6 +55,10 @@
   }
 }
 
+.footerActions :is(button, a):focus-visible {
+  outline: 2px solid var(--ring, #1d4ed8);
+  outline-offset: 2px;
+}
 @media (prefers-reduced-motion: reduce) {
   .pageButton {
     transition: none;
