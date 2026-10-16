@@ -94,7 +94,7 @@ export function ScheduleConfirmModals({
             {reviewNote}
           </p>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onCloseNote}>
+            <Button variant="outline" onClick={onCloseNote} className="h-6 px-2 text-xs">
               Close
             </Button>
           </div>
@@ -119,13 +119,14 @@ export function ScheduleConfirmModals({
           }
         >
           <div className="flex justify-end gap-2">
-            <Button variant="destructive" onClick={onCloseUnlock} disabled={unlockPending}>
+            <Button variant="destructive" onClick={onCloseUnlock} disabled={unlockPending} className="h-6 px-2 text-xs">
               Cancel
             </Button>
             <Button
               onClick={onConfirmUnlock}
               disabled={unlockPending}
               aria-busy={unlockPending || undefined}
+              className="h-6 px-2 text-xs"
             >
               {unlockPending ? (
                 <>
@@ -156,7 +157,7 @@ export function ScheduleConfirmModals({
           }
         >
           <div className="flex justify-end gap-2">
-            <Button variant="destructive" onClick={onCloseClear} disabled={removeAllPending}>
+            <Button variant="destructive" onClick={onCloseClear} disabled={removeAllPending} className="h-6 px-2 text-xs">
               Cancel
             </Button>
             <Button
@@ -164,6 +165,7 @@ export function ScheduleConfirmModals({
               onClick={onConfirmClear}
               disabled={removeAllPending}
               aria-busy={removeAllPending || undefined}
+              className="h-6 px-2 text-xs"
             >
               {removeAllPending ? (
                 <>

@@ -103,6 +103,13 @@ router.post(
           message: ping.message,
         });
       }
+      void fanoutNotification({
+        userId: ctx.userId,
+        sourceTable: "attendance_records",
+        action: "create",
+        sourceId: `${sectionId}|${(req.body as { date?: string }).date ?? ""}|${(req.body as { session?: string }).session ?? "AM"}`,
+        message: `You saved advisory attendance for ${result.count} students.`,
+      });
     } catch (e) {
       next(e);
     }
@@ -117,6 +124,25 @@ router.post(
     try {
       const result = await sweepAutoAbsent();
       res.json(result);
+      void (async () => {
+        try {
+          const { prisma } = await import("../../lib/prisma.js");
+          const { fanoutNotification } = await import("../../lib/notify.js");
+          if ((result.rows ?? 0) > 0) {
+            const sections = await prisma.section.findMany({ where: { adviserId: { not: null } }, select: { id: true, name: true, adviserId: true } });
+            for (const s of sections) {
+              if (!s.adviserId) continue;
+              await fanoutNotification({
+                userId: s.adviserId,
+                sourceTable: "attendance_records",
+                action: "sweep",
+                message: `Auto-absent sweep marked ${result.rows} absent marks across ${result.meetups} class meetups — check ${s.name} for updates.`,
+                sourceId: s.id,
+              });
+            }
+          }
+        } catch { /* best-effort */ }
+      })();
     } catch (e) {
       next(e);
     }

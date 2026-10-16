@@ -87,13 +87,15 @@ router.patch(
   validate("body", teacherProfileSchema),
   async (req, res, next) => {
     try {
-      const { fullName, primaryColor, secondaryColor } = req.body as {
+      const { fullName, mascot, primaryColor, secondaryColor } = req.body as {
         fullName?: string;
+        mascot?: string | null;
         primaryColor?: string | null;
         secondaryColor?: string | null;
       };
       const result = await updateProfileSettings(ctxOf(req), {
         fullName,
+        mascot,
         primaryColor,
         secondaryColor,
       });

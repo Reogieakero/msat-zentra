@@ -87,7 +87,8 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
 
   const viewableGroups: (typeof rows)[] = [];
   for (const group of byKey.values()) {
-    if (group.length > 0 && group.every((r) => r.lockStatus === "adviser_approved")) {
+    // Show locked stage instantly: every subject locked or adviser-approved (none unlocked).
+    if (group.length > 0 && group.every((r) => r.lockStatus === "locked" || r.lockStatus === "adviser_approved")) {
       viewableGroups.push(group);
     }
   }

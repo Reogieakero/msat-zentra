@@ -1,12 +1,6 @@
 "use client";
 import * as React from "react";
-import {
-  Check,
-  ChevronDown,
-  Loader2,
-  ShieldQuestion,
-  X,
-} from "lucide-react";
+import { ChevronDown, FileSearch, Loader2, ShieldQuestion, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,126 +19,50 @@ import { formatRelativeTime } from "./adviser-access-types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./adviser-access-tables.module.css";
 import { Pager, usePager } from "./table-pager";
-import { AdviseeDetail, initials, sf10Ready } from "./adviser-access-shared";
+import { AdviseeDetail, CheckBanner, initials, sf10Ready } from "./adviser-access-shared";
+import type { AdviserAccessDesk } from "./adviser-access-check-context";
+
 export type ActFn = (id: string, approved: boolean, reason?: string) => Promise<void>;
-function ActDialogs({
-  request,
-  acting,
-  dialog,
-  reason,
-  setReason,
-  closeDialog,
-  confirmApprove,
-  confirmReject,
-}: {
-  request: AdviserAccessRequest;
-  acting: boolean;
-  dialog: null | "reject" | "confirm";
-  reason: string;
-  setReason: (v: string) => void;
-  closeDialog: () => void;
-  confirmApprove: () => void;
-  confirmReject: () => void;
-}) {
-  return (
-    <>
-      <CardModal
-        open={dialog === "reject"}
-        onClose={() => {
-          if (!acting) closeDialog();
-        }}
-        dismissable={!acting}
-        size="sm"
-        title="Deny access request"
-        description={
-          <>
-            Deny <strong>{request.adviserName}</strong> ({request.section})? Add a
-            reason for the denial.
-          </>
-        }
-      >
-          <Textarea
-            placeholder="Reason for denial (required)"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            aria-label="Reason for denial"
-          />
-          <div className={styles.modalActions}>
-            <Button variant="outline" onClick={closeDialog} disabled={acting}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmReject}
-              disabled={acting || !reason.trim()}
-            >
-              {acting ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : null}
-              {acting ? "Denying…" : "Confirm deny"}
-            </Button>
-          </div>
-      </CardModal>
-      <CardModal
-        open={dialog === "confirm"}
-        onClose={() => {
-          if (!acting) closeDialog();
-        }}
-        dismissable={!acting}
-        size="sm"
-        title="Approve SF10 access"
-        description={
-          <>
-            Grant <strong>{request.adviserName}</strong> ({request.section}) SF10
-            read access for {request.affectedAdvisees.length} advisee
-            {request.affectedAdvisees.length === 1 ? "" : "s"}?
-          </>
-        }
-      >
-          <div className={styles.modalActions}>
-            <Button variant="outline" onClick={closeDialog} disabled={acting}>
-              Cancel
-            </Button>
-            <Button onClick={confirmApprove} disabled={acting}>
-              {acting ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : null}
-              {acting ? "Approving…" : "Approve"}
-            </Button>
-          </div>
-      </CardModal>
-    </>
-  );
-}
+
+/**
+ * Pending requests — Check is the only primary row action.
+ * Whole-request Deny lives as a secondary action inside the expanded
+ * detail. Per-student Approve/Report live only in the check dock
+ * (bottom-right), never in this table.
+ */
 export function PendingDecisionTable({
   requests,
   actingId,
   actingApprove,
   onActed,
+  onCheck,
+  checkingId,
+  desk,
   pageSize = 15,
 }: {
   requests: AdviserAccessRequest[];
   actingId: string | null;
   actingApprove?: boolean | null;
   onActed: ActFn;
+  onCheck: (id: string) => Promise<void>;
+  checkingId: string | null;
+  desk: AdviserAccessDesk;
   pageSize?: number;
 }) {
+  void desk;
+  void actingApprove;
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
-  const [dialog, setDialog] = React.useState<null | "reject" | "confirm">(null);
-  const [dialogFor, setDialogFor] = React.useState<string | null>(null);
+  const [denyFor, setDenyFor] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState("");
   const pager = usePager(requests.length, pageSize);
-  const pageRows = requests.slice(
-    (pager.safePage - 1) * pageSize,
-    pager.safePage * pageSize
-  );
-  const closeDialog = () => {
-    setDialog(null);
-    setDialogFor(null);
+  const pageRows = requests.slice((pager.safePage - 1) * pageSize, pager.safePage * pageSize);
+  const denyRequest = requests.find((r) => r.id === denyFor) ?? null;
+  const denying = denyFor !== null && actingId === denyFor;
+  const closeDeny = () => {
+    if (denying) return;
+    setDenyFor(null);
     setReason("");
   };
-  const activeRequest = requests.find((r) => r.id === dialogFor) ?? null;
-  const acting = dialogFor !== null && actingId === dialogFor;
   return (
     <section className={assign.card} aria-labelledby="adviser-pending">
       <span className={assign.glowClip} aria-hidden="true">
@@ -156,7 +74,7 @@ export function PendingDecisionTable({
             Pending Requests
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Adviser SF10 read-access requests awaiting your decision —{" "}
+            Run the SF10 check on each request, then decide per student in the check card.{" "}
             {requests.length} pending.
           </p>
         </div>
@@ -168,9 +86,7 @@ export function PendingDecisionTable({
               <ShieldQuestion />
             </span>
             <p className={styles.emptyTitle}>All caught up</p>
-            <p className={styles.emptyHint}>
-              No adviser access requests awaiting your decision.
-            </p>
+            <p className={styles.emptyHint}>No adviser access requests awaiting your decision.</p>
           </div>
         ) : (
           <div className={styles.tableWrap}>
@@ -195,6 +111,8 @@ export function PendingDecisionTable({
                     r.affectedAdvisees.length === 0
                       ? 0
                       : Math.round((ready / r.affectedAdvisees.length) * 100);
+                  const checking = checkingId === r.id;
+                  const rowBusy = actingId !== null || checkingId !== null;
                   return (
                     <React.Fragment key={r.id}>
                       <TableRow>
@@ -229,16 +147,23 @@ export function PendingDecisionTable({
                             {r.gradeLevel} · {r.section}
                           </span>
                         </TableCell>
-                        <TableCell className={styles.cellMuted}>
-                          {formatRelativeTime(r.requestedAt)}
-                        </TableCell>
+                        <TableCell className={styles.cellMuted}>{formatRelativeTime(r.requestedAt)}</TableCell>
                         <TableCell className={styles.cellMuted}>
                           {r.affectedAdvisees.length} learner{r.affectedAdvisees.length === 1 ? "" : "s"}
                         </TableCell>
                         <TableCell>
-                          <span className={styles.readyPill} title={`${ready} of ${r.affectedAdvisees.length} advisees have SF10 records ready`}>
-                            {pct}%
-                          </span>
+                          {r.checkedAt ? (
+                            <span
+                              className={styles.readyPill}
+                              title={`${ready} of ${r.affectedAdvisees.length} advisees have SF10 records ready`}
+                            >
+                              {pct}%
+                            </span>
+                          ) : (
+                            <span className={styles.cellMuted} title="Run the SF10 check first — no verdict yet">
+                              —
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="amber" className={styles.statusBadge}>
@@ -248,36 +173,20 @@ export function PendingDecisionTable({
                         <TableCell className={styles.actionsCell}>
                           <div className={styles.actions}>
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              disabled={actingId !== null}
+                              disabled={rowBusy}
+                              title="Match requested LRNs against filed SF10 records"
                               onClick={() => {
-                                setDialogFor(r.id);
-                                setDialog("reject");
+                                void onCheck(r.id);
                               }}
                             >
-                              {actingId === r.id && actingApprove === false ? (
+                              {checking ? (
                                 <Loader2 className="size-4 animate-spin" aria-hidden />
                               ) : (
-                                <X aria-hidden />
+                                <FileSearch aria-hidden />
                               )}
-                              {actingId === r.id && actingApprove === false ? "Denying…" : "Deny"}
-                            </Button>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              disabled={actingId !== null}
-                              onClick={() => {
-                                setDialogFor(r.id);
-                                setDialog("confirm");
-                              }}
-                            >
-                              {actingId === r.id && actingApprove !== false ? (
-                                <Loader2 className="size-4 animate-spin" aria-hidden />
-                              ) : (
-                                <Check aria-hidden />
-                              )}
-                              {actingId === r.id && actingApprove !== false ? "Approving…" : "Approve"}
+                              {checking ? "Checking…" : "Check"}
                             </Button>
                           </div>
                         </TableCell>
@@ -285,7 +194,22 @@ export function PendingDecisionTable({
                       {expanded ? (
                         <TableRow className={styles.detailRow}>
                           <TableCell colSpan={8}>
+                            <CheckBanner request={r} checking={checking} />
                             <AdviseeDetail request={r} />
+                            <div className={styles.modalActions}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={rowBusy}
+                                onClick={() => {
+                                  setDenyFor(r.id);
+                                  setReason("");
+                                }}
+                              >
+                                <X aria-hidden />
+                                Deny request
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : null}
@@ -307,28 +231,46 @@ export function PendingDecisionTable({
           setPage={pager.setPage}
         />
       )}
-      {activeRequest ? (
-        <ActDialogs
-          request={activeRequest}
-          acting={acting}
-          dialog={dialog}
-          reason={reason}
-          setReason={setReason}
-          closeDialog={closeDialog}
-          confirmApprove={() => {
-            void (async () => {
-              await onActed(activeRequest.id, true);
-              closeDialog();
-            })();
-          }}
-          confirmReject={() => {
-            if (!reason.trim()) return;
-            void (async () => {
-              await onActed(activeRequest.id, false, reason.trim());
-              closeDialog();
-            })();
-          }}
-        />
+      {denyRequest ? (
+        <CardModal
+          open={denyFor !== null}
+          onClose={closeDeny}
+          dismissable={!denying}
+          size="sm"
+          title="Deny access request"
+          description={
+            <>
+              Deny <strong>{denyRequest.adviserName}</strong> ({denyRequest.section})? Add a reason
+              for the denial.
+            </>
+          }
+        >
+          <Textarea
+            placeholder="Reason for denial (required)"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            aria-label="Reason for denial"
+          />
+          <div className={styles.modalActions}>
+            <Button variant="outline" onClick={closeDeny} disabled={denying}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={denying || !reason.trim()}
+              onClick={() => {
+                if (!reason.trim()) return;
+                void onActed(denyRequest.id, false, reason.trim()).finally(() => {
+                  setDenyFor(null);
+                  setReason("");
+                });
+              }}
+            >
+              {denying ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              {denying ? "Denying…" : "Confirm deny"}
+            </Button>
+          </div>
+        </CardModal>
       ) : null}
     </section>
   );

@@ -1,14 +1,14 @@
 "use client";
 import * as React from "react";
 import { BookOpen, Users } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth/useSession";
 import {
   fetchStudentList,
   studentListKey,
   useStudentList,
 } from "@/services/teacher/studentList.service";
-import type { ClassPick } from "@/services/teacher/studentList.types";
+import type { ClassPick, StudentListResponse } from "@/services/teacher/studentList.types";
 export function useStudentRail() {
   const [picked, setPicked] = React.useState<ClassPick | null>(null);
   const roster = useStudentList(picked);
@@ -27,7 +27,7 @@ export function useStudentRail() {
   const activePick =
     picked && rail.some((r) => r.kind === picked.kind && r.id === picked.id)
       ? picked
-      : (rail[0] ?? null);
+      : null;
   const selectedClass =
     activePick?.kind === "class"
       ? (classes.find((c) => c.id === activePick.id) ?? null)
@@ -103,6 +103,25 @@ export function useStudentRail() {
   const railEmpty = railGroups.length === 0;
   const activeRailValue = activePick ? `${activePick.kind}:${activePick.id}` : "";
   const rows = React.useMemo(() => roster.data?.students ?? [], [roster.data]);
+
+  // Reactive cache reads (no fetching) over every section pick. The idle
+  // prefetch below fills these keys, so each card converges to its real
+  // student-list length instead of the backend headcount.
+  const liveQueries = useQueries({
+    queries: rail.map((pick) => ({
+      queryKey: studentListKey(teacherId, pick),
+      queryFn: (): Promise<StudentListResponse> => fetchStudentList(pick),
+      enabled: false,
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      retry: false,
+    })),
+  });
+  const liveCountByKey = new Map<string, number>();
+  rail.forEach((pick, i) => {
+    const n = liveQueries[i]?.data?.students.length;
+    if (typeof n === "number") liveCountByKey.set(`${pick.kind}:${pick.id}`, n);
+  });
   return {
     picked,
     setPicked,
@@ -119,5 +138,6 @@ export function useStudentRail() {
     railEmpty,
     activeRailValue,
     rows,
+    liveCountByKey,
   };
 }

@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
 import { AppError } from "../../lib/errors.js";
+import { fanoutNotification } from "../../lib/notify.js";
 import { normalizeAdviserBatch, type AdviserBatchInputRow } from "./adviserBatch.js";
 import { assertInScope, mintUniqueAdviserCode, resolveScopeYear, toAdviserResult, toGradeEnum } from "./academics-shared.js";
 
@@ -193,6 +194,25 @@ router.patch(
       await invalidateTags(["academics", "principal", "registrar", "overview"]);
 
       res.json({ updated: updated.map(toAdviserResult) });
+      void (async () => {
+        try {
+          const { teacherForRow } = await teacherPromise;
+          const sectionsById = new Map(updated.map((u) => [u.id, u]));
+          teacherForRow.forEach((teacherId, i) => {
+            if (!teacherId) return;
+            const sectionId = sectionIds[i];
+            const sec = sectionsById.get(sectionId) as { name?: string } | undefined;
+            const label = labelForRow[i] ?? "adviser";
+            void fanoutNotification({
+              userId: teacherId,
+              sourceTable: "sections",
+              action: "adviser_assigned",
+              sourceId: sectionId,
+              message: `You were listed as adviser for ${sec?.name ?? "a section"} (${label}) — claim with your code.`,
+            });
+          });
+        } catch { /* best-effort */ }
+      })();
     } catch (e) {
       next(e);
     }
@@ -262,6 +282,15 @@ router.patch(
       await invalidateTags(["academics", "principal", "registrar", "overview"]);
 
       res.json(toAdviserResult(updated));
+      if (trimmedId && teacher && nextLabel) {
+        void fanoutNotification({
+          userId: teacher.id,
+          sourceTable: "sections",
+          action: "adviser_assigned",
+          sourceId: updated.id,
+          message: `You were listed as adviser for ${section.name} — claim with your code.`,
+        });
+      }
     } catch (e) {
       next(e);
     }

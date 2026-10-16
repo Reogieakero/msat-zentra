@@ -47,6 +47,8 @@ export const SCHEDULE_CONFIG_DEFAULTS = {
   afternoonRecess: { enabled: false, afterPeriod: 6, mins: 15 },
 };
 
+export const SCHEDULE_WORKLOAD_DEFAULTS = { maxDailyPeriods: 6, maxWeeklyPeriods: 30 };
+
 export function toScheduleConfig(row: {
   startTime: string;
   periodMins: number;
@@ -65,6 +67,21 @@ export function toScheduleConfig(row: {
     lunch: { afterPeriod: row.lunchAfter, mins: row.lunchMins },
     morningRecess: { enabled: row.recessAmOn, afterPeriod: row.recessAmAfter, mins: row.recessAmMins },
     afternoonRecess: { enabled: row.recessPmOn, afterPeriod: row.recessPmAfter, mins: row.recessPmMins },
+  };
+}
+
+export function resolveWorkloadCaps(input?: { maxDailyPeriods?: unknown; maxWeeklyPeriods?: unknown }) {
+  const daily = Number(input?.maxDailyPeriods);
+  const weekly = Number(input?.maxWeeklyPeriods);
+  return {
+    maxDailyPeriods:
+      Number.isFinite(daily) && daily >= 1 && daily <= 8
+        ? Math.round(daily)
+        : SCHEDULE_WORKLOAD_DEFAULTS.maxDailyPeriods,
+    maxWeeklyPeriods:
+      Number.isFinite(weekly) && weekly >= 1 && weekly <= 40
+        ? Math.round(weekly)
+        : SCHEDULE_WORKLOAD_DEFAULTS.maxWeeklyPeriods,
   };
 }
 

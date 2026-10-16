@@ -11,6 +11,7 @@ import {
   FileBarChart,
   FileText,
   Settings,
+  Upload,
   type LucideIcon,
 } from "lucide-react";
 
@@ -49,6 +50,7 @@ const NAV: NavGroup[] = [
       },
       { title: "Report Cards", href: "/registrar/report-cards", icon: FileBarChart },
       { title: "SF10 Records", href: "/registrar/sf10", icon: FileText },
+      { title: "Upload SF10", href: "/registrar/sf10/upload", icon: Upload },
     ],
   },
   {

@@ -7,7 +7,8 @@ import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import kanbanStyles from "@/app/teacher/schedule/components/subject-kanban.module.css";
 import { TeacherCodeClaim } from "./TeacherCodeClaim";
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -76,51 +77,54 @@ export function TermAccessCard({
   };
 
   return (
-    <div className={assign.card} style={{ width: "100%", maxWidth: "28rem" }} aria-label={`Enter ${termLabel} with teacher code`}>
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className="relative flex flex-col items-center text-center">
-        <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
-          <KeyRound size={24} className="text-primary" />
-        </span>
-        <h3 className="text-lg font-semibold">Enter {termLabel} with your code</h3>
-        <p className="mt-1 max-w-md text-sm text-muted-foreground">
-          Linked as {linkedName} — type your teacher code to unlock this term&apos;s
-          workspace. Your subjects appear here once the master teacher schedules
-          them; a code alone never creates classes.
-        </p>
-        <div className="mt-4 flex w-full flex-col gap-2">
-          <Input
-            placeholder="Teacher code (e.g. MS-101)…"
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
-              setCodeError(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleVerify();
-            }}
-            aria-label="Teacher code"
-            className="text-center uppercase"
-          />
+    <div className={`${kanbanStyles.column} mx-auto w-full max-w-md`}>
+      <KanbanBoard
+        title={`Enter ${termLabel} with your code`}
+        icon={
+          <span className="text-amber-500" aria-hidden>
+            <KeyRound size={14} />
+          </span>
+        }
+        description={`Linked as ${linkedName} — type your teacher code to unlock this term's workspace. Your subjects appear here once the master teacher schedules them; a code alone never creates classes.`}
+        ariaLabel={`Enter ${termLabel} with teacher code`}
+      >
+        <div className="flex flex-col px-1 py-1">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              placeholder="TEACHER CODE (E.G. MS-101)..."
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value);
+                setCodeError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleVerify();
+              }}
+              aria-label="Teacher code"
+              className="h-8 min-w-0 flex-1 rounded-lg text-center uppercase"
+            />
+            <Button
+              onClick={handleVerify}
+              disabled={verify.isPending}
+              className="h-8 shrink-0 rounded-lg bg-black px-4 text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+            >
+              {verify.isPending ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  <span aria-live="polite">Verifying…</span>
+                </>
+              ) : (
+                "Verify code"
+              )}
+            </Button>
+          </div>
           {codeError ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="mt-2 text-center text-sm text-destructive">
               {codeError}
             </p>
           ) : null}
-          <Button onClick={handleVerify} disabled={verify.isPending}>
-            {verify.isPending ? (
-              <>
-                <Loader2 size={16} className="animate-spin" aria-hidden />
-                <span aria-live="polite">Verifying…</span>
-              </>
-            ) : (
-              "Verify code"
-            )}
-          </Button>
         </div>
-      </div>
+      </KanbanBoard>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 import * as React from "react";
 import { BookOpen, GraduationCap, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { useTeacherProfileSettings } from "@/services/settings/profile-settings";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { GRADE_GRADIENT } from "@/components/schedule/SectionScheduleCard";
@@ -40,6 +41,7 @@ export function TeacherOverviewHeader({
 }: TeacherOverviewHeaderProps) {
   const profile = useTeacherProfileSettings();
   const photoUrl = profile.data?.photoUrl ?? null;
+  const mascot = profile.data?.mascot ?? null;
   const isAdviser = Boolean(advisorySection);
   const initials = React.useMemo(() => {
     const parts = teacherName
@@ -100,7 +102,11 @@ export function TeacherOverviewHeader({
       </Badge>
       <div className="relative flex flex-col gap-1">
         <div className={assign.cardHead}>
-          {photoUrl ? (
+          {mascot ? (
+            <span className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-border bg-muted/40">
+              <StudentMascot name={teacherName} character={mascot} size={44} />
+            </span>
+          ) : photoUrl ? (
             <img
               src={photoUrl}
               alt={`${teacherName} profile photo`}

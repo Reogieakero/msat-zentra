@@ -5,7 +5,7 @@ import { PAGE_SIZE } from "@/components/shared/pagination";
 export default function RegistrarSf10Page() {
   return (
     <React.Suspense>
-      <Sf10Page desk="registrar" pageSize={PAGE_SIZE} gradeRange="11–12" />
+      <Sf10Page desk="registrar" pageSize={PAGE_SIZE} />
     </React.Suspense>
   );
 }

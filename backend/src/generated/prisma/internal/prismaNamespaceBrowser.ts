@@ -142,6 +142,7 @@ export const StudentProfileScalarFieldEnum = {
   gender: 'gender',
   address: 'address',
   photoUrl: 'photoUrl',
+  mascot: 'mascot',
   riskCount: 'riskCount',
   riskLevel: 'riskLevel',
   academicFlag: 'academicFlag',
@@ -183,6 +184,7 @@ export const StaffProfileScalarFieldEnum = {
   handledGradeLevels: 'handledGradeLevels',
   signatureImageUrl: 'signatureImageUrl',
   photoUrl: 'photoUrl',
+  mascot: 'mascot',
   primaryColor: 'primaryColor',
   secondaryColor: 'secondaryColor'
 } as const
@@ -234,6 +236,7 @@ export const StudentRosterScalarFieldEnum = {
   gradeLevel: 'gradeLevel',
   sectionId: 'sectionId',
   schoolYearId: 'schoolYearId',
+  mascot: 'mascot',
   riskCount: 'riskCount',
   riskLevel: 'riskLevel',
   academicFlag: 'academicFlag',
@@ -352,6 +355,7 @@ export type GradeComponentScalarFieldEnum = (typeof GradeComponentScalarFieldEnu
 export const AssessmentScalarFieldEnum = {
   id: 'id',
   gradeComponentId: 'gradeComponentId',
+  sectionId: 'sectionId',
   title: 'title',
   maxScore: 'maxScore',
   dateGiven: 'dateGiven',
@@ -715,6 +719,7 @@ export type AdmFormScalarFieldEnum = (typeof AdmFormScalarFieldEnum)[keyof typeo
 export const Sf10RecordScalarFieldEnum = {
   id: 'id',
   studentId: 'studentId',
+  desk: 'desk',
   source: 'source',
   status: 'status',
   uploadedFileUrl: 'uploadedFileUrl',
@@ -801,6 +806,13 @@ export const AdviserSf10AccessRequestScalarFieldEnum = {
   sectionId: 'sectionId',
   gradeLevel: 'gradeLevel',
   reason: 'reason',
+  requestedLrns: 'requestedLrns',
+  checkedAt: 'checkedAt',
+  checkedBy: 'checkedBy',
+  checkSummary: 'checkSummary',
+  reportedMissingLrns: 'reportedMissingLrns',
+  approvedLrns: 'approvedLrns',
+  approvedLrnAt: 'approvedLrnAt',
   status: 'status',
   decidedBy: 'decidedBy',
   decidedAt: 'decidedAt',

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
-import type { AdviseeDetail, AdviseeRow, AdvisoryRoster } from "./advisory.types";
+import type { AdviseeDetail, AdviseeRow, AdvisoryRoster, AdvisorySectionInfo } from "./advisory.types";
 
 export async function fetchAdvisoryRoster(): Promise<AdvisoryRoster> {
   const { data } = await apiClient.get<AdvisoryRoster>("/api/teacher/advisory/students");
@@ -33,6 +33,35 @@ export function useAdvisoryRoster() {
     retry: false,
     staleTime: ROSTER_STALE_MS,
     gcTime: ROSTER_GC_MS,
+  });
+}
+
+export interface AdvisorySectionsResponse {
+  advisorySections: AdvisorySectionInfo[];
+}
+
+export async function fetchAdvisorySections(): Promise<AdvisorySectionsResponse> {
+  const { data } = await apiClient.get<AdvisorySectionsResponse>("/api/teacher/advisory/sections");
+  return data;
+}
+
+export function advisorySectionsKey(teacherId: string | null | undefined, termKey = "") {
+  return ["advisory-sections", teacherId ?? "anon", termKey] as const;
+}
+
+export function useAdvisorySections() {
+  const session = useSession();
+  const { activeTerm, termReady } = useTerm();
+  const teacherId = session?.sub ?? null;
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  return useQuery<AdvisorySectionsResponse>({
+    queryKey: advisorySectionsKey(teacherId, termKey),
+    queryFn: fetchAdvisorySections,
+    enabled: !!teacherId && termReady,
+    retry: false,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    placeholderData: (previous) => previous,
   });
 }
 

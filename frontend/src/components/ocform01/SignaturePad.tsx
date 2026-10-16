@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Eraser, PenLine } from "lucide-react";
+import { Eraser, Loader2, PenLine } from "lucide-react";
 import styles from "./SignaturePad.module.css";
 
 interface SignaturePadProps {
@@ -124,6 +124,7 @@ export function SignaturePad({ onSave, onCancel, saving, error }: SignaturePadPr
           type="button"
           variant="ghost"
           size="sm"
+          className="h-6 px-2 text-[11px]"
           onClick={onCancel}
           disabled={saving}
         >
@@ -133,6 +134,7 @@ export function SignaturePad({ onSave, onCancel, saving, error }: SignaturePadPr
           type="button"
           variant="outline"
           size="sm"
+          className="h-6 px-2 text-[11px]"
           onClick={handleClear}
           disabled={saving || empty}
         >
@@ -143,9 +145,13 @@ export function SignaturePad({ onSave, onCancel, saving, error }: SignaturePadPr
           type="button"
           variant="default"
           size="sm"
+          className="h-6 px-2 text-[11px]"
           onClick={handleSave}
           disabled={saving || empty}
         >
+          {saving ? (
+            <Loader2 size={14} className="animate-spin" aria-hidden />
+          ) : null}
           {saving ? "Saving…" : "Save signature"}
         </Button>
       </div>

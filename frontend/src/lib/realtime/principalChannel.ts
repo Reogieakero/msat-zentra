@@ -30,7 +30,7 @@ interface PrincipalNotification {
   createdAt?: string;
 }
 
-const FALLBACK_POLL_MS = 15_000;
+const FALLBACK_POLL_MS = 5_000;
 const MAX_TOASTS_PER_POLL = 3;
 
 function currentUserId(): string | null {

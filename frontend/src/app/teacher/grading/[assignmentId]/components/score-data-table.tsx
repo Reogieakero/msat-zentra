@@ -1,120 +1,66 @@
 "use client";
 import * as React from "react";
-import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, flexRender, type ColumnDef, type SortingState } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { RowList, type RowListItem } from "@/components/ui/row-list";
+import { KanbanBoardEmpty } from "@/components/ui/kanban-board";
 import type { ClassAssessment, ClassStudent } from "@/services/teacher/grading.types";
 import { scoreOf } from "./score-input";
-import styles from "./ScoreGrid.module.css";
-import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { assignUniqueMascots } from "./mascot-assignment";
 export function ScoreDataTable({ assessment, students, drafts, nameFilter }: { assessment: ClassAssessment; students: ClassStudent[]; drafts: Record<string, string>; nameFilter: string }) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const columns = React.useMemo<ColumnDef<ClassStudent>[]>(
-    () => [
-      {
-        id: "student",
-        accessorFn: (row) => row.name,
-        header: "Student",
-        size: 220,
-        minSize: 220,
-        maxSize: 220,
-        cell: ({ row }) => (<p className={styles.cellMain}>{row.original.name}</p>),
+  const q = nameFilter.trim().toLowerCase();
+  const filtered = q
+    ? students.filter(
+        (s) => s.name.toLowerCase().includes(q) || s.lrn.toLowerCase().includes(q),
+      )
+    : students;
+
+  // Unique mascot per student — shared with the encode view so sprites
+  // never swap when toggling edit mode.
+  const mascotById = React.useMemo(() => assignUniqueMascots(students), [students]);
+
+  const items: RowListItem[] = filtered.map((s) => {
+    const { num } = scoreOf(assessment, drafts, false, s.id);
+    const pct =
+      num !== null && assessment.maxScore > 0
+        ? (num / assessment.maxScore) * 100
+        : null;
+    return {
+      key: s.id,
+      status:
+        num !== null
+          ? { label: "Scored", tone: "green" as const }
+          : { label: "Missing", tone: "muted" as const },
+      title: s.name,
+      idLabel: s.lrn,
+      avatarMascot: {
+        name: s.name,
+        seed: s.lrn,
+        character: mascotById.get(s.id),
       },
-      {
-        id: "lrn",
-        accessorFn: (row) => row.lrn,
-        header: "LRN",
-        size: 140,
-        minSize: 140,
-        maxSize: 140,
-        cell: ({ row }) => (<span className={styles.lrnCell}>{row.original.lrn}</span>),
-      },
-      {
-        id: "score",
-        accessorFn: (row) => scoreOf(assessment, drafts, false, row.id).num ?? -1,
-        header: `Score / ${assessment.maxScore}`,
-        size: 130,
-        minSize: 130,
-        maxSize: 130,
-        cell: ({ row }) => {
-          const { text } = scoreOf(assessment, drafts, false, row.original.id);
-          return (<span className={styles.scoreValue}>{text.trim() === "" ? "—" : text}</span>);
+      meta: [
+        {
+          label: num !== null ? `${num} / ${assessment.maxScore}` : `— / ${assessment.maxScore}`,
+          tone: "blue" as const,
         },
-      },
-      {
-        id: "pct",
-        accessorFn: (row) => {
-          const { num } = scoreOf(assessment, drafts, false, row.id);
-          return num !== null && assessment.maxScore > 0 ? (num / assessment.maxScore) * 100 : -1;
-        },
-        header: "%",
-        size: 100,
-        minSize: 100,
-        maxSize: 100,
-        cell: ({ row }) => {
-          const { num } = scoreOf(assessment, drafts, false, row.original.id);
-          return (<span className={styles.scorePct}>{num !== null && assessment.maxScore > 0 ? `${((num / assessment.maxScore) * 100).toFixed(1)}%` : "—"}</span>);
-        },
-      },
-    ],
-    [assessment, drafts],
-  );
-  const columnFilters = React.useMemo(() => (nameFilter ? [{ id: "student", value: nameFilter }] : []), [nameFilter]);
-  const table = useReactTable({
-    data: students,
-    columns,
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: PAGE_SIZE } },
-    state: { sorting, columnFilters },
+        { label: pct !== null ? `${pct.toFixed(1)}%` : "—", tone: "amber" as const },
+      ],
+    };
   });
+
   if (students.length === 0) {
-    return <p className={styles.empty}>No students in this section yet.</p>;
+    return <KanbanBoardEmpty>No students in this section yet.</KanbanBoardEmpty>;
   }
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
-      <div className="overflow-x-auto rounded-md border">
-        <Table className="w-full table-fixed" aria-label={`Scores for ${assessment.title}`}>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} style={{ width: header.getSize() }} onClick={header.column.getToggleSortingHandler()} className="h-10 cursor-pointer truncate whitespace-nowrap select-none">
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="truncate">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No students match your search.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        currentPage={table.getState().pagination.pageIndex + 1}
-        totalItems={table.getFilteredRowModel().rows.length}
-        onPageChange={(p) => table.setPageIndex(p - 1)}
-      />
+      {items.length === 0 ? (
+        <KanbanBoardEmpty>No students match your search.</KanbanBoardEmpty>
+      ) : (
+        <RowList
+          bleed
+          gutter="0.625rem"
+          items={items}
+          ariaLabel={`Scores for ${assessment.title}`}
+        />
+      )}
     </div>
   );
 }

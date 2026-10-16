@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient, Role, GradeLevel, ComponentType, AttendanceStatus, Session, Remarks, RiskLevel, Confidentiality, ReferralTarget, ReferralStatus, ApprovalStatus, OutcomeStatus, AdmEligibility, AdmFormType, AdmFormStatus, Sf10Source, ActionType, NotifChannel, LockStatus, GradeFlagReason, GradeFlagStatus } from "../src/generated/prisma/client.js";
 import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 import { recomputeRisk, evaluateRisk } from "../src/services/risk.js";
+import { mascotForUnique } from "../src/services/mascot.js";
 import argon2 from "argon2";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
@@ -152,7 +153,8 @@ async function main() {
   }
 
   const sections: { id: string; gradeLevel: GradeLevel; name: string; adviserId: string }[] = [];
-  const studentProfiles: { userId: string; lrn: string; gradeLevel: GradeLevel; sectionId: string; birthdate: Date; gender: string; address: string }[] = [];
+  const studentProfiles: { userId: string; lrn: string; mascot: string; gradeLevel: GradeLevel; sectionId: string; birthdate: Date; gender: string; address: string }[] = [];
+  const takenBySection = new Map<string, Set<string>>();
   const parentProfiles: { userId: string; address: string; occupation: string }[] = [];
   const parentLinks: { id: string; parentId: string; studentId: string; relationship: string; approvedBy: string }[] = [];
   const sf10: { id: string; studentId: string; source: Sf10Source; verifiedBy: string; validatedBy: string; currentVersion: number }[] = [];
@@ -184,7 +186,11 @@ async function main() {
           create: { email: sEmail, fullName, role: "student" as Role, passwordHash: studentHash, status: "active" },
         });
         const lrn = `20${String(randInt(100000000, 999999999)).padStart(9, "0")}`;
-        studentProfiles.push({ userId: student.id, lrn, gradeLevel: grade, sectionId, birthdate: pickDate(2010, 1, 12), gender, address: `${randInt(1, 999)} ${rand(LAST_NAMES)} St., Quezon City` });
+        const taken = takenBySection.get(sectionId) ?? new Set<string>();
+        takenBySection.set(sectionId, taken);
+        const mascot = mascotForUnique(fullName, lrn, taken);
+        taken.add(mascot);
+        studentProfiles.push({ userId: student.id, lrn, mascot, gradeLevel: grade, sectionId, birthdate: pickDate(2010, 1, 12), gender, address: `${randInt(1, 999)} ${rand(LAST_NAMES)} St., Quezon City` });
 
         const pEmail = `parent.${grade.toLowerCase()}.${secName.toLowerCase()}.${i}@zentra.test`;
         const parent = await prisma.user.upsert({
@@ -206,11 +212,18 @@ async function main() {
     select: { lrn: true, gradeLevel: true, sectionId: true },
   });
   const sectionById = new Map(sections.map((s) => [s.id, s]));
-  const roster: { lrn: string; fullName: string; gradeLevel: GradeLevel; sectionId: string; schoolYearId: string }[] = [];
+  const roster: { lrn: string; fullName: string; mascot: string; gradeLevel: GradeLevel; sectionId: string; schoolYearId: string }[] = [];
   for (const sp of persistedProfiles) {
     const section = sectionById.get(sp.sectionId);
     if (!section) continue;
-    roster.push({ lrn: sp.lrn, fullName: `Roster ${sp.lrn}`, gradeLevel: sp.gradeLevel, sectionId: sp.sectionId, schoolYearId: schoolYear.id });
+    const fullName = `Roster ${sp.lrn}`;
+    const taken = takenBySection.get(sp.sectionId) ?? new Set<string>();
+    takenBySection.set(sp.sectionId, taken);
+    // Seed mirrors reuse the profile's mascot seed space: probe so the
+    // mirror row never duplicates a visible classmate's mascot.
+    const mascot = mascotForUnique(fullName, sp.lrn, taken);
+    taken.add(mascot);
+    roster.push({ lrn: sp.lrn, fullName, mascot, gradeLevel: sp.gradeLevel, sectionId: sp.sectionId, schoolYearId: schoolYear.id });
   }
   await prisma.studentRoster.createMany({ data: roster, skipDuplicates: true });
   await prisma.parentStudentLink.createMany({ data: parentLinks, skipDuplicates: true });

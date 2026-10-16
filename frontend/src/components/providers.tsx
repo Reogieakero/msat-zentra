@@ -6,6 +6,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { TermProvider } from "@/lib/term/TermContext";
 import { TermSelectOverlay } from "@/components/term/TermSelectOverlay";
+import { Sf10BulkUploadProvider } from "@/components/registry/sf10/sf10-bulk-upload-context";
+import { AdviserAccessCheckProvider } from "@/components/shared/adviser-access/adviser-access-check-context";
+import { TeacherSubmitDockProvider } from "@/components/shared/referral-submit/referral-submit-dock-context";
+import { LockGradesDockProvider } from "@/components/shared/lock-grades/lock-grades-dock-context";
+import { DockProvider } from "@/components/dock/dock-store";
+import { SharedDock } from "@/components/dock/SharedDock";
 
 type Theme = "light" | "dark";
 
@@ -146,11 +152,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <FontProvider>
         <QueryClientProvider client={queryClient}>
-          <TermProvider>
-            <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
-            <Toaster position="top-right" />
-            <TermSelectOverlay />
-          </TermProvider>
+          <DockProvider>
+          <Sf10BulkUploadProvider>
+            <AdviserAccessCheckProvider>
+              <TeacherSubmitDockProvider>
+              <LockGradesDockProvider>
+              <TermProvider>
+                <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+                <Toaster position="top-right" />
+                <TermSelectOverlay />
+                <SharedDock />
+              </TermProvider>
+              </LockGradesDockProvider>
+              </TeacherSubmitDockProvider>
+            </AdviserAccessCheckProvider>
+          </Sf10BulkUploadProvider>
+          </DockProvider>
         </QueryClientProvider>
       </FontProvider>
     </ThemeProvider>

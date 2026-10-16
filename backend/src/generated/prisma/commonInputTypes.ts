@@ -722,6 +722,13 @@ export type EnumAdmFormStatusWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumAdmFormStatusFilter<$PrismaModel>
 }
 
+export type EnumSf10DeskFilter<$PrismaModel = never> = {
+  equals?: $Enums.Sf10Desk | Prisma.EnumSf10DeskFieldRefInput<$PrismaModel>
+  in?: $Enums.Sf10Desk[] | Prisma.ListEnumSf10DeskFieldRefInput<$PrismaModel>
+  notIn?: $Enums.Sf10Desk[] | Prisma.ListEnumSf10DeskFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSf10DeskFilter<$PrismaModel> | $Enums.Sf10Desk
+}
+
 export type EnumSf10SourceFilter<$PrismaModel = never> = {
   equals?: $Enums.Sf10Source | Prisma.EnumSf10SourceFieldRefInput<$PrismaModel>
   in?: $Enums.Sf10Source[] | Prisma.ListEnumSf10SourceFieldRefInput<$PrismaModel>
@@ -734,6 +741,16 @@ export type EnumSf10StatusFilter<$PrismaModel = never> = {
   in?: $Enums.Sf10Status[] | Prisma.ListEnumSf10StatusFieldRefInput<$PrismaModel>
   notIn?: $Enums.Sf10Status[] | Prisma.ListEnumSf10StatusFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumSf10StatusFilter<$PrismaModel> | $Enums.Sf10Status
+}
+
+export type EnumSf10DeskWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.Sf10Desk | Prisma.EnumSf10DeskFieldRefInput<$PrismaModel>
+  in?: $Enums.Sf10Desk[] | Prisma.ListEnumSf10DeskFieldRefInput<$PrismaModel>
+  notIn?: $Enums.Sf10Desk[] | Prisma.ListEnumSf10DeskFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSf10DeskWithAggregatesFilter<$PrismaModel> | $Enums.Sf10Desk
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSf10DeskFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSf10DeskFilter<$PrismaModel>
 }
 
 export type EnumSf10SourceWithAggregatesFilter<$PrismaModel = never> = {
@@ -1476,6 +1493,13 @@ export type NestedEnumAdmFormStatusWithAggregatesFilter<$PrismaModel = never> = 
   _max?: Prisma.NestedEnumAdmFormStatusFilter<$PrismaModel>
 }
 
+export type NestedEnumSf10DeskFilter<$PrismaModel = never> = {
+  equals?: $Enums.Sf10Desk | Prisma.EnumSf10DeskFieldRefInput<$PrismaModel>
+  in?: $Enums.Sf10Desk[] | Prisma.ListEnumSf10DeskFieldRefInput<$PrismaModel>
+  notIn?: $Enums.Sf10Desk[] | Prisma.ListEnumSf10DeskFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSf10DeskFilter<$PrismaModel> | $Enums.Sf10Desk
+}
+
 export type NestedEnumSf10SourceFilter<$PrismaModel = never> = {
   equals?: $Enums.Sf10Source | Prisma.EnumSf10SourceFieldRefInput<$PrismaModel>
   in?: $Enums.Sf10Source[] | Prisma.ListEnumSf10SourceFieldRefInput<$PrismaModel>
@@ -1488,6 +1512,16 @@ export type NestedEnumSf10StatusFilter<$PrismaModel = never> = {
   in?: $Enums.Sf10Status[] | Prisma.ListEnumSf10StatusFieldRefInput<$PrismaModel>
   notIn?: $Enums.Sf10Status[] | Prisma.ListEnumSf10StatusFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumSf10StatusFilter<$PrismaModel> | $Enums.Sf10Status
+}
+
+export type NestedEnumSf10DeskWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.Sf10Desk | Prisma.EnumSf10DeskFieldRefInput<$PrismaModel>
+  in?: $Enums.Sf10Desk[] | Prisma.ListEnumSf10DeskFieldRefInput<$PrismaModel>
+  notIn?: $Enums.Sf10Desk[] | Prisma.ListEnumSf10DeskFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSf10DeskWithAggregatesFilter<$PrismaModel> | $Enums.Sf10Desk
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSf10DeskFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSf10DeskFilter<$PrismaModel>
 }
 
 export type NestedEnumSf10SourceWithAggregatesFilter<$PrismaModel = never> = {

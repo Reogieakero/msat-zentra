@@ -4,57 +4,22 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FolderOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { writeLastViewedReferralId } from "../referrals/last-viewed";
-import { AdmCaseCard } from "./components/AdmCaseCard";
-import { AdmCaseRail } from "./components/AdmCaseRail";
+import { AdmCaseTrackDialog } from "./components/AdmCaseTrackDialog";
+import { AdmCasesTable } from "./components/AdmCasesTable";
+import { AdmEmptyKanban } from "./components/AdmEmptyKanban";
 import { fetchMyAdmCases } from "@/services/teacher/admCases.service";
 import type {
   AdmCase,
   MyAdmCasesPage,
 } from "@/services/teacher/admCases.types";
 import { useTerm } from "@/lib/term/TermContext";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import styles from "./components/adm-cases.module.css";
-import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import refStyles from "../referrals/components/referrals.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
 const TEACHER_ADM_CASES_PAGE_SIZE = PAGE_SIZE;
-
-const GRID_STYLE: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(13rem, 1fr))",
-  gap: "0.75rem",
-  minWidth: 0,
-};
-
-function AdmCasesSkeletonGrid({ count }: { count: number }) {
-  return (
-    <div style={GRID_STYLE} aria-busy="true" aria-label="Loading ADM cases">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className={styles.skelCard} aria-hidden>
-          <div className={styles.skelTop}>
-            <Skeleton className={styles.skelMini} />
-            <div className={styles.skelLines}>
-              <Skeleton className={styles.skelLine} />
-              <Skeleton className={styles.skelLineShort} />
-            </div>
-            <Skeleton className={styles.skelDot} />
-          </div>
-          <Skeleton className={styles.skelAvatar} />
-          <Skeleton className={styles.skelName} />
-          <Skeleton className={styles.skelSub} />
-          <Skeleton className={styles.skelBar} />
-          <div className={styles.skelActions}>
-            <Skeleton className={styles.skelBtn} />
-            <Skeleton className={styles.skelBtn} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | null }) {
   const router = useRouter();
@@ -65,15 +30,27 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   const setPage = pager.setPage;
   const [takeover, setTakeover] = useState(false);
   const [detailCase, setDetailCase] = useState<AdmCase | null>(null);
+  // Filter text mirrors the referrals page: typed instantly, synced to ?q
+  // (debounced) so refresh/back-forward keep the filter and page resets.
+  const [queryInput, setQueryInput] = useState(pager.search);
+  const debouncedQuery = useDebouncedValue(queryInput.trim(), 300);
+
+  useEffect(() => {
+    const wanted = debouncedQuery || "";
+    if (wanted === pager.search) return;
+    pager.setFilters({ q: wanted });
+  }, [debouncedQuery, pager]);
 
   const landing = !takeover && highlightId !== null;
 
+  const serverQuery = pager.search.trim() ? pager.search.trim() : undefined;
   const casesQuery = useQuery<MyAdmCasesPage>({
-    queryKey: ["adm-my-cases", takeover || !landing ? page : 1, termKey, landing ? (highlightId ?? "") : ""],
+    queryKey: ["adm-my-cases", takeover || !landing ? page : 1, termKey, landing ? (highlightId ?? "") : "", serverQuery ?? ""],
     queryFn: ({ signal }) =>
       fetchMyAdmCases({
         page: takeover || !landing ? page : 1,
         pageSize: TEACHER_ADM_CASES_PAGE_SIZE,
+        ...(serverQuery ? { q: serverQuery } : {}),
         ...(landing && highlightId ? { highlight: highlightId } : {}),
         signal,
       }),
@@ -110,117 +87,74 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   const totalPages = Math.max(1, casesQuery.data?.totalPages ?? 1);
   const safePage = Math.min(casesQuery.data?.page ?? page, totalPages);
   const pageRows = cases;
-  const isEmpty = !casesQuery.isPending && !casesQuery.isError && total === 0;
-  // Pagination fetch: show skeleton cards (same grid shape) instead of
-  // stacking/keeping stale rows, while cached pages resolve instantly.
-  const isPageFetching =
-    !casesQuery.isPending && !casesQuery.isError && casesQuery.isFetching;
 
-  function handleTrack(caseData: AdmCase) {
-
-    writeLastViewedReferralId(caseData.referralId);
-    setDetailCase(null);
+  function handleReferAdm() {
     router.push("/teacher/advisory/referrals");
   }
 
-  return (
-    <section className={styles.page} aria-label="ADM cases">
-      <div className={styles.body}>
-        {isEmpty ? null : (
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">ADM Cases</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {total === 1 ? "1 referred case" : `${total} referred cases`}
-              {unfilteredTotal !== total ? ` (of ${unfilteredTotal} total)` : ""}.
-            </p>
-          </div>
-        )}
+  // Error state renders inside AdmCasesTable (same Try-again card as the
+  // referrals page), so only the truly-empty cases are handled here.
+  const showEmpty = !casesQuery.isPending && !casesQuery.isError && total === 0;
 
-        {casesQuery.isPending ? (
-          <AdmCasesSkeletonGrid count={TEACHER_ADM_CASES_PAGE_SIZE} />
-        ) : casesQuery.isError ? (
-          <p className={styles.pageError}>
-            No advisory section assigned, or the cases could not be loaded. Contact the
-            school office.
-          </p>
-        ) : total === 0 ? (
-          <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
-            <div className={`${assign.card} w-full max-w-md`}>
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-                <span
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-                  aria-hidden="true"
-                >
-                  <FolderOpen size={24} className="text-muted-foreground" />
-                </span>
-                <p className="font-medium">No ADM cases yet</p>
-                <p className="max-w-sm text-sm text-muted-foreground">
-                  You haven&apos;t referred any ADM cases yet. Cases you refer appear here
-                  as they move forward.
-                </p>
-                <Button size="sm" className="mt-2" onClick={() => router.push("/teacher/advisory/referrals")}>
-                  Refer ADM cases
-                </Button>
+  return (
+    <section className={refStyles.page} aria-label="ADM cases">
+      <div className={refStyles.layout}>
+        <div className={refStyles.body}>
+          {showEmpty ? (
+            unfilteredTotal === 0 ? (
+              <div className="flex min-h-[calc(100dvh-10rem)] w-full items-center justify-center">
+                <div className="w-full">
+                  <AdmEmptyKanban onReferAdm={handleReferAdm} />
+                </div>
               </div>
-            </div>
-          </div>
-        ) : (
-          <div
-            className={`grid flex-1 items-stretch gap-4 transition-[grid-template-columns] duration-300 ease-out motion-reduce:transition-none ${
-              detailCase ? "lg:grid-cols-[minmax(0,1fr)_20rem]" : "lg:grid-cols-[minmax(0,1fr)_0rem]"
-            }`}
-          >
-            <div className="flex min-w-0 flex-col gap-4">
-              {isPageFetching ? (
-                <AdmCasesSkeletonGrid count={Math.max(pageRows.length, 6)} />
-              ) : (
-              <div style={GRID_STYLE} role="group" aria-label="ADM cases">
-                {pageRows.map((c) => {
-                  const highlighted =
-                    highlightId !== null &&
-                    (highlightId === c.id || highlightId === c.referralId);
-                  return (
-                    <div
-                      key={c.id}
-                      id={highlighted ? `teacher-adm-case-${highlightId}` : undefined}
-                      data-highlighted={highlighted || undefined}
-                      className={highlighted ? "rounded-md ring-2 ring-amber-500" : undefined}
+            ) : (
+              <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
+                <div className={`${assign.card} w-full max-w-md`}>
+                  <span className={assign.glowClip} aria-hidden="true">
+                    <span className={assign.cardGlow} />
+                  </span>
+                  <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+                    <span
+                      className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+                      aria-hidden="true"
                     >
-                      <AdmCaseCard
-                        caseData={c}
-                        onDetails={() => setDetailCase(c)}
-                      />
-                    </div>
-                  );
-                })}
+                      <FolderOpen size={24} className="text-muted-foreground" />
+                    </span>
+                    <p className="font-medium">No ADM cases match</p>
+                    <p className="max-w-sm text-sm text-muted-foreground">
+                      Try a different search or filter.
+                    </p>
+                  </div>
+                </div>
               </div>
-              )}
-              <Pagination
+            )
+          ) : (
+            <div className="flex min-w-0 flex-1 flex-col gap-4">
+              <AdmCasesTable
+                cases={pageRows}
+                total={total}
+                unfilteredTotal={unfilteredTotal}
+                query={queryInput}
+                onQueryChange={setQueryInput}
+                highlightId={highlightId}
+                casesQuery={{
+                  isPending: casesQuery.isPending,
+                  isError: casesQuery.isError,
+                  isFetching: casesQuery.isFetching,
+                  refetch: () => void casesQuery.refetch(),
+                }}
+                onDetails={(c) => setDetailCase(c)}
+                onReferAdm={handleReferAdm}
                 currentPage={safePage}
-                totalItems={total}
                 onPageChange={(p) => goToPage(p)}
               />
+              <AdmCaseTrackDialog
+                caseData={detailCase}
+                onClose={() => setDetailCase(null)}
+              />
             </div>
-            <div className={`min-w-0 ${detailCase ? "" : "overflow-hidden"}`} inert={!detailCase}>
-              <div
-                className={`flex w-full max-w-full flex-col gap-4 self-start transition-all duration-300 ease-out motion-reduce:transition-none lg:fixed lg:top-16 lg:right-4 lg:bottom-4 lg:w-[20rem] lg:max-w-[20rem] lg:overflow-y-auto ${
-                  detailCase ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-6 opacity-0"
-                }`}
-              >
-                {detailCase ? (
-                  <AdmCaseRail
-                    caseData={detailCase}
-                    onClose={() => setDetailCase(null)}
-                    onTrack={handleTrack}
-                  />
-                ) : null}
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </section>
   );
@@ -234,7 +168,7 @@ function TeacherAdvisoryAdmCasesPageWithHighlight() {
 
 export default function TeacherAdvisoryAdmCasesPage() {
   return (
-    <Suspense fallback={<section className={styles.page} aria-busy="true" />}>
+    <Suspense fallback={<section className={refStyles.page} aria-busy="true" />}>
       <TeacherAdvisoryAdmCasesPageWithHighlight />
     </Suspense>
   );

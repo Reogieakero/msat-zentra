@@ -4,12 +4,16 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 import { NotebookPen } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import {
+  AnecdotalRecordKanbanCard,
+  humanizeCategory,
+} from "@/components/anecdotal/anecdotal-record-kanban-card";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
-import { FolderCard } from "@/components/ui/FolderCard";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./teacher-overview-advisory.module.css";
 
 interface AnecdoteRow {
@@ -18,29 +22,7 @@ interface AnecdoteRow {
   category: string;
   studentName: string;
   section: string;
-}
-
-const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
-  behavioral: 1,
-  bullying: 2,
-  academic: 3,
-  attendance: 4,
-  health: 5,
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  behavioral: "#f59e0b",
-  bullying: "#ef4444",
-  academic: "#3b82f6",
-  attendance: "#22c55e",
-  health: "#8b5cf6",
-};
-
-function humanize(value: string): string {
-  return value
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  signed?: boolean;
 }
 
 function recordDate(iso: string): string {
@@ -75,77 +57,116 @@ export function TeacherOverviewAnecdotes() {
 
   return (
     <section aria-label="Advisory anecdotal records" className="flex min-w-0 flex-col gap-3">
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
       {anecdotesQuery.isPending ? (
-        <div className="relative flex flex-col gap-2" aria-busy="true" aria-label="Loading anecdotes">
+        <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading anecdotes">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-12 rounded-md bg-muted" />
           ))}
         </div>
       ) : anecdotesQuery.isError ? (
-        <p role="alert" className="relative text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive">
           Could not load anecdotal records.
         </p>
       ) : rows.length === 0 ? (
-        <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-          <span
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-            aria-hidden="true"
+        <>
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className={styles.sectionTitle}>Anecdotal Records</h2>
+              <p className={styles.sectionDesc}>
+                Filings for your advisees will appear here once recorded.
+              </p>
+            </div>
+            <Link
+              href="/teacher/anecdotal"
+              className="shrink-0 text-xs font-medium text-amber-700 underline-offset-4 hover:underline dark:text-amber-400"
+            >
+              Open anecdotal records
+            </Link>
+          </div>
+          <div
+            className="flex w-full max-w-xs min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
+            aria-label="No records yet"
           >
-            <NotebookPen size={24} className="text-muted-foreground" />
-          </span>
-          <p className="font-medium">No anecdotal records yet</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Filings for your advisees will appear here once recorded.
-          </p>
-        </div>
+            <div
+              className="-mx-2.5 flex items-center justify-between gap-2 border-b border-border px-3.5 pb-2"
+              aria-label="No records yet"
+            >
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-[13px] font-semibold">
+                <NotebookPen size={14} aria-hidden className="text-amber-500" />
+                <span className="truncate">No records yet</span>
+              </span>
+            </div>
+            <Link
+              href="/teacher/chat?standalone=1&new=anecdotal"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="File via Chat with Bama (opens in a new tab)"
+              className="flex min-w-0 cursor-pointer flex-col gap-1.5 rounded-lg border bg-white p-3 shadow-sm transition-colors [font-family:var(--font-inter)] hover:border-primary/60 hover:shadow dark:bg-card"
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span
+                  className="truncate text-[11px] font-medium text-muted-foreground"
+                  title="/teacher/chat?standalone=1&new=anecdotal"
+                >
+                  /teacher/chat?standalone=1&amp;new=anecdotal
+                </span>
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-muted-foreground"
+                  aria-hidden
+                >
+                  <StudentMascot name="Bama" character="crt" size={20} />
+                </span>
+              </span>
+              <span className="truncate text-sm font-semibold leading-snug">
+                File via Chat with Bama
+              </span>
+              <span className="text-xs leading-snug text-muted-foreground">
+                Filings for your advisees will appear here once recorded.
+              </span>
+            </Link>
+          </div>
+        </>
       ) : (
         <>
-          <div className="relative">
-            <h2 className={styles.sectionTitle}>Anecdotal Records</h2>
-            <p className={styles.sectionDesc}>
-              Latest filings for your advisees — category only, never the private write-up.
-            </p>
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className={styles.sectionTitle}>Anecdotal Records</h2>
+              <p className={styles.sectionDesc}>
+                Latest filings for your advisees — category only, never the private write-up.
+              </p>
+            </div>
+            <Link
+              href="/teacher/anecdotal"
+              className="shrink-0 text-xs font-medium text-amber-700 underline-offset-4 hover:underline dark:text-amber-400"
+            >
+              Open anecdotal records
+            </Link>
           </div>
-          <ul className="relative grid min-w-0 grid-cols-2 items-start justify-items-center gap-3 sm:grid-cols-3 xl:grid-cols-5">
+          <ul className={styles.kanbanGrid}>
             {rows.map((r) => (
-              <li key={r.id} className="min-w-0">
-                <button
-                  type="button"
-                  onClick={() => setPreviewId(r.id)}
-                  aria-label={`Open ${r.studentName}'s record from ${recordDate(r.observationDate)}`}
-                  className="cursor-pointer"
-                >
-                  <FolderCard
-                    label={r.studentName}
-                    sublabel={r.section}
-                    folderColor={CATEGORY_COLORS[r.category]}
-                    files={[
-                      {
-                        name: `GCForm-01_${recordDate(r.observationDate)}`,
-                        tag: humanize(r.category),
-                        tone: CATEGORY_TONES[r.category] ?? 1,
-                        icon: "doc",
-                      },
-                    ]}
-                  />
-                </button>
+              <li key={r.id} className="flex min-w-0">
+                <AnecdotalRecordKanbanCard
+                  category={r.category}
+                  studentName={r.studentName}
+                  metaText={r.section}
+                  fileName={`GCForm-01_${recordDate(r.observationDate)}`}
+                  fileTag={humanizeCategory(r.category)}
+                  headerRight={
+                    r.signed ? (
+                      <Badge variant="green" className="shrink-0 rounded-md">
+                        Signed
+                      </Badge>
+                    ) : undefined
+                  }
+                  openLabel={`Open ${r.studentName}'s record from ${recordDate(r.observationDate)}`}
+                  onOpen={() => setPreviewId(r.id)}
+                />
               </li>
             ))}
           </ul>
-          <Link
-            href="/teacher/anecdotal"
-            className="relative text-sm font-medium text-primary underline-offset-4 hover:underline"
-          >
-            Open anecdotal records
-          </Link>
           <OcForm01PreviewDialog recordId={previewId} onClose={() => setPreviewId(null)} />
         </>
       )}
-      </div>
     </section>
   );
 }

@@ -14,7 +14,6 @@ import {
   GraduationCap,
   Send,
   Inbox,
-  Cat,
   Settings,
   Users,
   ListChecks,
@@ -24,6 +23,12 @@ import {
 import styles from "./teacher-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   useCachedAdviser,
   useCachedMasterTeacher,
@@ -49,9 +54,6 @@ function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
     { title: "Gradebook", href: "/teacher/grading", icon: ClipboardCheck },
     { title: "Attendance", href: "/teacher/attendance", icon: CalendarClock },
   ];
-  if (isAdviser) {
-    workspaceItems.push({ title: "Chat with Bama", href: "/teacher/chat", icon: Cat });
-  }
   if (isMasterTeacher) {
     workspaceItems.push({ title: "Timeslot", href: "/teacher/schedule", icon: ListChecks });
   }
@@ -72,6 +74,7 @@ function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
         { title: "Referrals", href: "/teacher/advisory/referrals", icon: Send },
         { title: "ADM", href: "/teacher/advisory/adm-cases", icon: Inbox },
         { title: "Class Schedule", href: "/teacher/advisory/schedule", icon: CalendarDays },
+        { title: "SF10 Access", href: "/teacher/advisory/sf10-access", icon: FileText },
       ]},
     );
   }
@@ -82,7 +85,11 @@ function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
   return groups;
 }
 
-export function TeacherSidebar() {
+export function TeacherSidebar({
+  collapsed = false,
+}: {
+  collapsed?: boolean;
+} = {}) {
   const session = useSession();
   const overview = useTeacherOverview();
 
@@ -97,23 +104,75 @@ export function TeacherSidebar() {
 
   return (
     <>
-      <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Teacher sections">
-        <div ref={railScrollRef} className={styles.railScroll}>
-          <TeacherRail groups={nav} />
-        </div>
-        <div className={styles.railHintWrap}>
-          <ScrollDownHint
-            scrollRef={railScrollRef}
-            watchKey={`${isAdviser}:${isMasterTeacher}`}
-            label="Scroll for more"
-            className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
-          />
-        </div>
+      <aside
+        className={`${styles.rail} ${styles.railDesktop} ${collapsed ? styles.railCollapsed : ""}`}
+        aria-label="Teacher sections"
+      >
+        {collapsed ? (
+          <TeacherRailCollapsed groups={nav} />
+        ) : (
+          <>
+            <div ref={railScrollRef} className={styles.railScroll}>
+              <TeacherRail groups={nav} />
+            </div>
+            <div className={styles.railHintWrap}>
+              <ScrollDownHint
+                scrollRef={railScrollRef}
+                watchKey={`${isAdviser}:${isMasterTeacher}`}
+                label="Scroll for more"
+                className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+              />
+            </div>
+          </>
+        )}
       </aside>
       <div className={styles.tabsMobile}>
         <TeacherNavbar tabs={tabs} />
       </div>
     </>
+  );
+}
+
+function TeacherRailCollapsed({ groups }: { groups: NavGroup[] }) {
+  const pathname = usePathname();
+  const isActive = React.useCallback(
+    (href: string) =>
+      href === "/teacher/overview"
+        ? pathname === href
+        : pathname === href || pathname.startsWith(`${href}/`),
+    [pathname],
+  );
+  return (
+    <TooltipProvider delayDuration={100}>
+      <ul className={styles.collapsedList} aria-label="Teacher sections, icon only">
+        {groups.map((group, gi) => (
+          <li key={group.label} className={styles.collapsedGroup}>
+            {gi > 0 ? <span className={styles.collapsedDivider} aria-hidden="true" /> : null}
+            {group.items.map((t) => {
+              const active = isActive(t.href);
+              return (
+                <Tooltip key={t.href}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={t.href}
+                      className={`${styles.iconBtn} ${active ? styles.iconBtnActive : ""}`}
+                      aria-current={active ? "page" : undefined}
+                      aria-label={`${t.title} (${group.label})`}
+                    >
+                      <t.icon size={17} strokeWidth={1.8} aria-hidden="true" />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={10}>
+                    <span className="font-medium">{t.title}</span>
+                    <span className="opacity-60">{group.label}</span>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </li>
+        ))}
+      </ul>
+    </TooltipProvider>
   );
 }
 

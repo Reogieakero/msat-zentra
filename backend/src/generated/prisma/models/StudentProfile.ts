@@ -43,6 +43,7 @@ export type StudentProfileMinAggregateOutputType = {
   gender: string | null
   address: string | null
   photoUrl: string | null
+  mascot: string | null
   riskCount: number | null
   riskLevel: $Enums.RiskLevel | null
   academicFlag: boolean | null
@@ -60,6 +61,7 @@ export type StudentProfileMaxAggregateOutputType = {
   gender: string | null
   address: string | null
   photoUrl: string | null
+  mascot: string | null
   riskCount: number | null
   riskLevel: $Enums.RiskLevel | null
   academicFlag: boolean | null
@@ -77,6 +79,7 @@ export type StudentProfileCountAggregateOutputType = {
   gender: number
   address: number
   photoUrl: number
+  mascot: number
   riskCount: number
   riskLevel: number
   academicFlag: number
@@ -104,6 +107,7 @@ export type StudentProfileMinAggregateInputType = {
   gender?: true
   address?: true
   photoUrl?: true
+  mascot?: true
   riskCount?: true
   riskLevel?: true
   academicFlag?: true
@@ -121,6 +125,7 @@ export type StudentProfileMaxAggregateInputType = {
   gender?: true
   address?: true
   photoUrl?: true
+  mascot?: true
   riskCount?: true
   riskLevel?: true
   academicFlag?: true
@@ -138,6 +143,7 @@ export type StudentProfileCountAggregateInputType = {
   gender?: true
   address?: true
   photoUrl?: true
+  mascot?: true
   riskCount?: true
   riskLevel?: true
   academicFlag?: true
@@ -242,6 +248,7 @@ export type StudentProfileGroupByOutputType = {
   gender: string | null
   address: string | null
   photoUrl: string | null
+  mascot: string | null
   riskCount: number
   riskLevel: $Enums.RiskLevel
   academicFlag: boolean
@@ -282,6 +289,7 @@ export type StudentProfileWhereInput = {
   gender?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
+  mascot?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntFilter<"StudentProfile"> | number
   riskLevel?: Prisma.EnumRiskLevelFilter<"StudentProfile"> | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
@@ -314,6 +322,7 @@ export type StudentProfileOrderByWithRelationInput = {
   gender?: Prisma.SortOrderInput | Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   photoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  mascot?: Prisma.SortOrderInput | Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   academicFlag?: Prisma.SortOrder
@@ -349,6 +358,7 @@ export type StudentProfileWhereUniqueInput = Prisma.AtLeast<{
   gender?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
+  mascot?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntFilter<"StudentProfile"> | number
   riskLevel?: Prisma.EnumRiskLevelFilter<"StudentProfile"> | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
@@ -381,6 +391,7 @@ export type StudentProfileOrderByWithAggregationInput = {
   gender?: Prisma.SortOrderInput | Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   photoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  mascot?: Prisma.SortOrderInput | Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   academicFlag?: Prisma.SortOrder
@@ -406,6 +417,7 @@ export type StudentProfileScalarWhereWithAggregatesInput = {
   gender?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
+  mascot?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntWithAggregatesFilter<"StudentProfile"> | number
   riskLevel?: Prisma.EnumRiskLevelWithAggregatesFilter<"StudentProfile"> | $Enums.RiskLevel
   academicFlag?: Prisma.BoolWithAggregatesFilter<"StudentProfile"> | boolean
@@ -421,6 +433,7 @@ export type StudentProfileCreateInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -453,6 +466,7 @@ export type StudentProfileUncheckedCreateInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -481,6 +495,7 @@ export type StudentProfileUpdateInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -513,6 +528,7 @@ export type StudentProfileUncheckedUpdateInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -543,6 +559,7 @@ export type StudentProfileCreateManyInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -558,6 +575,7 @@ export type StudentProfileUpdateManyMutationInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -575,6 +593,7 @@ export type StudentProfileUncheckedUpdateManyInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -597,6 +616,7 @@ export type StudentProfileCountOrderByAggregateInput = {
   gender?: Prisma.SortOrder
   address?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   academicFlag?: Prisma.SortOrder
@@ -618,6 +638,7 @@ export type StudentProfileMaxOrderByAggregateInput = {
   gender?: Prisma.SortOrder
   address?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   academicFlag?: Prisma.SortOrder
@@ -635,6 +656,7 @@ export type StudentProfileMinOrderByAggregateInput = {
   gender?: Prisma.SortOrder
   address?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   academicFlag?: Prisma.SortOrder
@@ -959,6 +981,7 @@ export type StudentProfileCreateWithoutUserInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -989,6 +1012,7 @@ export type StudentProfileUncheckedCreateWithoutUserInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1033,6 +1057,7 @@ export type StudentProfileUpdateWithoutUserInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1063,6 +1088,7 @@ export type StudentProfileUncheckedUpdateWithoutUserInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1091,6 +1117,7 @@ export type StudentProfileCreateWithoutParentLinksInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1122,6 +1149,7 @@ export type StudentProfileUncheckedCreateWithoutParentLinksInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1165,6 +1193,7 @@ export type StudentProfileUpdateWithoutParentLinksInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1196,6 +1225,7 @@ export type StudentProfileUncheckedUpdateWithoutParentLinksInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1223,6 +1253,7 @@ export type StudentProfileCreateWithoutSectionInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1253,6 +1284,7 @@ export type StudentProfileUncheckedCreateWithoutSectionInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1312,6 +1344,7 @@ export type StudentProfileScalarWhereInput = {
   gender?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
+  mascot?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntFilter<"StudentProfile"> | number
   riskLevel?: Prisma.EnumRiskLevelFilter<"StudentProfile"> | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
@@ -1327,6 +1360,7 @@ export type StudentProfileCreateWithoutStudentGradesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1358,6 +1392,7 @@ export type StudentProfileUncheckedCreateWithoutStudentGradesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1401,6 +1436,7 @@ export type StudentProfileUpdateWithoutStudentGradesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1432,6 +1468,7 @@ export type StudentProfileUncheckedUpdateWithoutStudentGradesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1459,6 +1496,7 @@ export type StudentProfileCreateWithoutFinalGradesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1490,6 +1528,7 @@ export type StudentProfileUncheckedCreateWithoutFinalGradesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1533,6 +1572,7 @@ export type StudentProfileUpdateWithoutFinalGradesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1564,6 +1604,7 @@ export type StudentProfileUncheckedUpdateWithoutFinalGradesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1591,6 +1632,7 @@ export type StudentProfileCreateWithoutGradeFlagsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1622,6 +1664,7 @@ export type StudentProfileUncheckedCreateWithoutGradeFlagsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1665,6 +1708,7 @@ export type StudentProfileUpdateWithoutGradeFlagsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1696,6 +1740,7 @@ export type StudentProfileUncheckedUpdateWithoutGradeFlagsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1723,6 +1768,7 @@ export type StudentProfileCreateWithoutAttendanceRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1754,6 +1800,7 @@ export type StudentProfileUncheckedCreateWithoutAttendanceRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1797,6 +1844,7 @@ export type StudentProfileUpdateWithoutAttendanceRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1828,6 +1876,7 @@ export type StudentProfileUncheckedUpdateWithoutAttendanceRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1855,6 +1904,7 @@ export type StudentProfileCreateWithoutAnecdotalRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1886,6 +1936,7 @@ export type StudentProfileUncheckedCreateWithoutAnecdotalRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1929,6 +1980,7 @@ export type StudentProfileUpdateWithoutAnecdotalRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1960,6 +2012,7 @@ export type StudentProfileUncheckedUpdateWithoutAnecdotalRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1987,6 +2040,7 @@ export type StudentProfileCreateWithoutReferralsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2018,6 +2072,7 @@ export type StudentProfileUncheckedCreateWithoutReferralsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2061,6 +2116,7 @@ export type StudentProfileUpdateWithoutReferralsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2092,6 +2148,7 @@ export type StudentProfileUncheckedUpdateWithoutReferralsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2119,6 +2176,7 @@ export type StudentProfileCreateWithoutInterventionsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2150,6 +2208,7 @@ export type StudentProfileUncheckedCreateWithoutInterventionsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2193,6 +2252,7 @@ export type StudentProfileUpdateWithoutInterventionsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2224,6 +2284,7 @@ export type StudentProfileUncheckedUpdateWithoutInterventionsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2251,6 +2312,7 @@ export type StudentProfileCreateWithoutHealthRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2282,6 +2344,7 @@ export type StudentProfileUncheckedCreateWithoutHealthRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2325,6 +2388,7 @@ export type StudentProfileUpdateWithoutHealthRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2356,6 +2420,7 @@ export type StudentProfileUncheckedUpdateWithoutHealthRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2383,6 +2448,7 @@ export type StudentProfileCreateWithoutHomeVisitationsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2414,6 +2480,7 @@ export type StudentProfileUncheckedCreateWithoutHomeVisitationsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2457,6 +2524,7 @@ export type StudentProfileUpdateWithoutHomeVisitationsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2488,6 +2556,7 @@ export type StudentProfileUncheckedUpdateWithoutHomeVisitationsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2515,6 +2584,7 @@ export type StudentProfileCreateWithoutAdmProfilesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2546,6 +2616,7 @@ export type StudentProfileUncheckedCreateWithoutAdmProfilesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2589,6 +2660,7 @@ export type StudentProfileUpdateWithoutAdmProfilesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2620,6 +2692,7 @@ export type StudentProfileUncheckedUpdateWithoutAdmProfilesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2647,6 +2720,7 @@ export type StudentProfileCreateWithoutSf10RecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2678,6 +2752,7 @@ export type StudentProfileUncheckedCreateWithoutSf10RecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2721,6 +2796,7 @@ export type StudentProfileUpdateWithoutSf10RecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2752,6 +2828,7 @@ export type StudentProfileUncheckedUpdateWithoutSf10RecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2779,6 +2856,7 @@ export type StudentProfileCreateWithoutRiskSnapshotsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2810,6 +2888,7 @@ export type StudentProfileUncheckedCreateWithoutRiskSnapshotsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2853,6 +2932,7 @@ export type StudentProfileUpdateWithoutRiskSnapshotsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2884,6 +2964,7 @@ export type StudentProfileUncheckedUpdateWithoutRiskSnapshotsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2912,6 +2993,7 @@ export type StudentProfileCreateManySectionInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -2927,6 +3009,7 @@ export type StudentProfileUpdateWithoutSectionInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2957,6 +3040,7 @@ export type StudentProfileUncheckedUpdateWithoutSectionInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2986,6 +3070,7 @@ export type StudentProfileUncheckedUpdateManyWithoutSectionInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -3142,6 +3227,7 @@ export type StudentProfileSelect<ExtArgs extends runtime.Types.Extensions.Intern
   gender?: boolean
   address?: boolean
   photoUrl?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
   academicFlag?: boolean
@@ -3175,6 +3261,7 @@ export type StudentProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   gender?: boolean
   address?: boolean
   photoUrl?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
   academicFlag?: boolean
@@ -3194,6 +3281,7 @@ export type StudentProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   gender?: boolean
   address?: boolean
   photoUrl?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
   academicFlag?: boolean
@@ -3213,6 +3301,7 @@ export type StudentProfileSelectScalar = {
   gender?: boolean
   address?: boolean
   photoUrl?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
   academicFlag?: boolean
@@ -3221,7 +3310,7 @@ export type StudentProfileSelectScalar = {
   createdAt?: boolean
 }
 
-export type StudentProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "lrn" | "gradeLevel" | "sectionId" | "birthdate" | "gender" | "address" | "photoUrl" | "riskCount" | "riskLevel" | "academicFlag" | "attendanceFlag" | "behavioralFlag" | "createdAt", ExtArgs["result"]["studentProfile"]>
+export type StudentProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "lrn" | "gradeLevel" | "sectionId" | "birthdate" | "gender" | "address" | "photoUrl" | "mascot" | "riskCount" | "riskLevel" | "academicFlag" | "attendanceFlag" | "behavioralFlag" | "createdAt", ExtArgs["result"]["studentProfile"]>
 export type StudentProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.StudentProfile$sectionArgs<ExtArgs>
@@ -3277,6 +3366,7 @@ export type $StudentProfilePayload<ExtArgs extends runtime.Types.Extensions.Inte
     gender: string | null
     address: string | null
     photoUrl: string | null
+    mascot: string | null
     riskCount: number
     riskLevel: $Enums.RiskLevel
     academicFlag: boolean
@@ -3729,6 +3819,7 @@ export interface StudentProfileFieldRefs {
   readonly gender: Prisma.FieldRef<"StudentProfile", 'String'>
   readonly address: Prisma.FieldRef<"StudentProfile", 'String'>
   readonly photoUrl: Prisma.FieldRef<"StudentProfile", 'String'>
+  readonly mascot: Prisma.FieldRef<"StudentProfile", 'String'>
   readonly riskCount: Prisma.FieldRef<"StudentProfile", 'Int'>
   readonly riskLevel: Prisma.FieldRef<"StudentProfile", 'RiskLevel'>
   readonly academicFlag: Prisma.FieldRef<"StudentProfile", 'Boolean'>

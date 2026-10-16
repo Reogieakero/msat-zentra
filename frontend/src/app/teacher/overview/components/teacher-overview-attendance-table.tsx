@@ -1,35 +1,13 @@
 "use client";
 
 import * as React from "react";
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  flexRender,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type SortingState,
-} from "@tanstack/react-table";
-import { SearchIcon, Users } from "lucide-react";
+import { CalendarClock, type LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
-import { Badge } from "@/components/ui/badge";
-import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import styles from "./teacher-overview-advisory.module.css";
+import { RowList, type RowListItem, type RowTone } from "@/components/ui/row-list";
+import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { useTerm } from "@/lib/term/TermContext";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import { cn } from "@/lib/utils";
 
 interface MatrixSubject {
   id: string;
@@ -41,6 +19,8 @@ interface MatrixStudent {
   studentId: string;
   name: string;
   lrn: string;
+  /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
+  mascot: string | null;
   rates: Record<string, number | null>;
 }
 
@@ -48,6 +28,7 @@ interface AverageRow {
   studentId: string;
   name: string;
   lrn: string;
+  mascot: string | null;
   average: number;
   risk: "Low" | "Moderate" | "High";
 }
@@ -66,18 +47,30 @@ function riskOf(average: number): "Low" | "Moderate" | "High" {
   return "High";
 }
 
-function riskBadge(risk: "Low" | "Moderate" | "High"): {
-  variant: "green" | "amber" | "red";
-} {
-  if (risk === "High") return { variant: "red" };
-  if (risk === "Moderate") return { variant: "amber" };
-  return { variant: "green" };
-}
+const RISK_TONE: Record<AverageRow["risk"], RowTone> = {
+  High: "red",
+  Moderate: "amber",
+  Low: "green",
+};
 
-function rateClass(rate: number): string {
-  if (rate >= 0.9) return "text-green-600 dark:text-green-500";
-  if (rate >= ATTENDANCE_AT_RISK_CUTOFF) return "text-amber-600 dark:text-amber-500";
-  return "text-red-600 dark:text-red-500";
+const AVERAGE_ICON: LucideIcon = CalendarClock;
+
+function toRowListItem(s: AverageRow): RowListItem {
+  return {
+    key: s.studentId,
+    status: { label: s.risk, tone: RISK_TONE[s.risk] },
+    title: s.name,
+    idLabel: s.lrn,
+    meta: [
+      {
+        label: `${Math.round(s.average * 100)}%`,
+        tone: RISK_TONE[s.risk],
+        icon: AVERAGE_ICON,
+        title: "Average present across all subjects this term",
+      },
+    ],
+    avatarMascot: { name: s.name, seed: s.lrn, character: s.mascot },
+  };
 }
 
 export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: string }) {
@@ -107,6 +100,7 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
           studentId: s.studentId,
           name: s.name,
           lrn: s.lrn,
+          mascot: s.mascot,
           average,
           risk: riskOf(average),
         };
@@ -114,182 +108,65 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
     [matrixQuery.data],
   );
 
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [page, setPage] = React.useState(1);
 
-  const columns = React.useMemo<ColumnDef<AverageRow>[]>(() => {
-    const badge = (risk: AverageRow["risk"]) => riskBadge(risk);
-    return [
-      {
-        id: "student",
-        accessorFn: (row) => row.name,
-        header: "Student",
-        size: 220,
-        minSize: 220,
-        maxSize: 220,
-        cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className={styles.cellMain}>{row.original.name}</p>
-            <p className={styles.cellSub}>{row.original.lrn}</p>
-          </div>
-        ),
-      },
-      {
-        id: "average",
-        accessorFn: (row) => row.average,
-        header: "Average",
-        size: 130,
-        minSize: 130,
-        maxSize: 130,
-        cell: ({ row }) => (
-          <div className={cn("font-medium tabular-nums", rateClass(row.original.average))}>
-            {Math.round(row.original.average * 100)}%
-          </div>
-        ),
-      },
-      {
-        id: "risk",
-        accessorFn: (row) => row.risk,
-        header: "Risk",
-        size: 200,
-        minSize: 200,
-        maxSize: 200,
-        cell: ({ row }) => {
-          const b = badge(row.original.risk);
-          return (
-            <Badge variant={b.variant}>
-              {row.original.risk}
-            </Badge>
-          );
-        },
-      },
-    ];
-  }, []);
+  const items = React.useMemo(() => data.map(toRowListItem), [data]);
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const table = useReactTable({
-    data,
-    columns,
-    getRowId: (row) => row.studentId,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: PAGE_SIZE } },
-    state: { sorting, columnFilters },
-  });
+  const title = "Advisory Attendance";
 
-  return (
-    <section aria-label="Advisory attendance" className="flex min-w-0 flex-col gap-3">
-      {matrixQuery.isPending ? (
+  if (matrixQuery.isPending) {
+    return (
+      <section aria-label="Advisory attendance" className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading attendance">
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} className="h-10 rounded-md bg-muted" />
           ))}
         </div>
-      ) : matrixQuery.isError ? (
+      </section>
+    );
+  }
+
+  if (matrixQuery.isError) {
+    return (
+      <section aria-label="Advisory attendance" className="flex min-w-0 flex-col gap-3">
         <p role="alert" className="text-sm text-destructive">
           Could not load advisory attendance.
         </p>
-      ) : data.length === 0 ? (
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-              aria-hidden="true"
-            >
-              <Users size={24} className="text-muted-foreground" />
-            </span>
-            <p className="font-medium">No students in this section yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Attendance for this advisory section will appear here once students are enrolled.
-            </p>
-          </div>
-        </div>
+      </section>
+    );
+  }
+
+  return (
+    <KanbanBoard
+      title={title}
+      icon={<CalendarClock size={14} aria-hidden className="text-amber-500" />}
+      count={data.length}
+      ariaLabel="Advisory attendance"
+      boardLabel={`${title}, ${data.length} students`}
+      footer={
+        <Pagination
+          currentPage={safePage}
+          totalItems={items.length}
+          onPageChange={(p) => setPage(p)}
+        />
+      }
+    >
+      {pageItems.length === 0 ? (
+        <KanbanBoardEmpty>
+          {data.length === 0 ? "No students in this section yet." : "No students match."}
+        </KanbanBoardEmpty>
       ) : (
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className={styles.sectionTitle}>
-                Advisory Attendance{matrixQuery.data ? ` · ${matrixQuery.data.sectionName}` : ""}
-              </h2>
-              <p className={styles.sectionDesc}>
-                General average present across all subjects this term — below 80% is at-risk (same as the engine).
-              </p>
-            </div>
-            <InputGroup className="max-w-40 shrink-0">
-              <InputGroupInput
-                placeholder="Filter students..."
-                value={(table.getColumn("student")?.getFilterValue() as string) ?? ""}
-                onChange={(event) =>
-                  table.getColumn("student")?.setFilterValue(event.target.value)
-                }
-                aria-label="Filter students"
-              />
-              <InputGroupAddon>
-                <SearchIcon />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-          <div className="relative overflow-x-auto rounded-md border">
-            <Table className="w-full table-fixed">
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        style={{ width: header.getSize() }}
-                        onClick={header.column.getToggleSortingHandler()}
-                        className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          style={{ width: cell.column.getSize() }}
-                          className="truncate"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No students match your search.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <Pagination
-            currentPage={table.getState().pagination.pageIndex + 1}
-            totalItems={table.getFilteredRowModel().rows.length}
-            onPageChange={(p) => table.setPageIndex(p - 1)}
-          />
-        </div>
+        <RowList
+          bleed
+          gutter="0.625rem"
+          items={pageItems}
+          emptyText="No students in this section yet."
+          ariaLabel="Advisory attendance"
+        />
       )}
-    </section>
+    </KanbanBoard>
   );
 }

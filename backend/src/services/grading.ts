@@ -240,9 +240,18 @@ export async function recomputeSubjectFinal(
 ) {
   const gradeFilter =
     "studentId" in student ? { studentId: student.studentId } : { rosterId: student.rosterId };
+  // Section-subject scope: a student's final only draws from assessments
+  // added in their own section, plus legacy pre-scope rows (NULL) which
+  // remain shared across sections.
+  const sectionId = "studentId" in student
+    ? (await prisma.studentProfile.findUnique({ where: { userId: student.studentId }, select: { sectionId: true } }))?.sectionId ?? null
+    : (await prisma.studentRoster.findUnique({ where: { id: student.rosterId }, select: { sectionId: true } }))?.sectionId ?? null;
+  const sectionFilter = sectionId
+    ? { OR: [{ sectionId }, { sectionId: null }] }
+    : {};
   const components = await prisma.gradeComponent.findMany({
     where: { subjectId, termId },
-    include: { assessments: { include: { studentGrades: { where: gradeFilter } } } },
+    include: { assessments: { where: sectionFilter, include: { studentGrades: { where: gradeFilter } } } },
   });
   const evidence: CategoryEvidence[] = components.map((c) => {
     const encoded = c.assessments.filter((a) => a.studentGrades.length > 0);

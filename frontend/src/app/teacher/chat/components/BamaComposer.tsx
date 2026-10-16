@@ -68,7 +68,7 @@ export function BamaComposer({
           onClick={onSend}
           aria-label={sendLabel}
         >
-          <ArrowUp aria-hidden />
+          <ArrowUp aria-hidden className="text-amber-500" />
         </Button>
       </div>
       <p className={styles.hint}>{hint}</p>

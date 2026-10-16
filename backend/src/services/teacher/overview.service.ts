@@ -20,6 +20,65 @@ export interface OverviewListOpts {
   advisoryLimit?: number;
 }
 
+/**
+ * Latest RiskSnapshot.snapshotDate per student for a term, keyed by
+ * profile userId or `roster:<id>` — the same _max lookup the
+ * interventions board uses. Missing snapshots yield no entry.
+ */
+async function latestSnapshotDates(
+  termId: string,
+  profileIds: string[],
+  rosterIds: string[],
+): Promise<Map<string, string>> {
+  const [snapP, snapR] = await Promise.all([
+    profileIds.length > 0
+      ? prisma.riskSnapshot.groupBy({
+          by: ["studentId"],
+          where: { termId, studentId: { in: profileIds } },
+          _max: { snapshotDate: true },
+        })
+      : Promise.resolve([] as { studentId: string | null; _max: { snapshotDate: Date | null } }[]),
+    rosterIds.length > 0
+      ? prisma.riskSnapshot.groupBy({
+          by: ["rosterId"],
+          where: { termId, rosterId: { in: rosterIds } },
+          _max: { snapshotDate: true },
+        })
+      : Promise.resolve([] as { rosterId: string | null; _max: { snapshotDate: Date | null } }[]),
+  ]);
+  const byKey = new Map<string, string>();
+  for (const g of snapP) {
+    if (g.studentId && g._max.snapshotDate) byKey.set(g.studentId, g._max.snapshotDate.toISOString());
+  }
+  for (const g of snapR) {
+    if (g.rosterId && g._max.snapshotDate) byKey.set(`roster:${g.rosterId}`, g._max.snapshotDate.toISOString());
+  }
+  return byKey;
+}
+
+/**
+ * Attach each row's latest RiskSnapshot.snapshotDate (ISO string or null).
+ * Row keys are profile userIds or `roster:<id>`.
+ */
+async function attachSnapshotDates<T extends { studentId: string }>(
+  termId: string,
+  rows: T[],
+): Promise<(T & { snapshotDate: string | null })[]> {
+  if (rows.length === 0) return rows.map((r) => ({ ...r, snapshotDate: null }));
+  const profileIds = Array.from(
+    new Set(rows.filter((r) => !r.studentId.startsWith("roster:")).map((r) => r.studentId)),
+  );
+  const rosterIds = Array.from(
+    new Set(
+      rows
+        .filter((r) => r.studentId.startsWith("roster:"))
+        .map((r) => r.studentId.slice("roster:".length)),
+    ),
+  );
+  const byKey = await latestSnapshotDates(termId, profileIds, rosterIds);
+  return rows.map((r) => ({ ...r, snapshotDate: byKey.get(r.studentId) ?? null }));
+}
+
 export async function getOverview(
   ctx: TeacherContext,
   scopeParam: "critical" | "secondary" | "gradebook" | "full",
@@ -88,6 +147,34 @@ export async function getOverview(
     linkedSlots.map((s) => [`${s.subjectId}|${s.sectionId}`, s]),
   ).values()];
 
+  // Grading (gradebook scope) is gated on the class-page link code:
+  // every teacher — master included — only sees subjects with
+  // timetable-linked entries. No linked pairs => no display on /teacher/grading.
+  if (isGradebookOnly && linkedPairs.length === 0) {
+    return {
+      classes: [],
+      assessments: [],
+      standings: [],
+    };
+  }
+
+  // Shared-code gate: entering the code happens only on /teacher/classes,
+  // which writes a per-term grant. Linked but not term-entered => no display
+  // on /teacher/grading (same rule as classes + attendance).
+  if (isGradebookOnly) {
+    const termGrant = await prisma.teacherTermGrant.findUnique({
+      where: { userId_termId: { userId: teacherId, termId } },
+      select: { id: true },
+    });
+    if (!termGrant) {
+      return {
+        classes: [],
+        assessments: [],
+        standings: [],
+      };
+    }
+  }
+
   const handledSectionIds = Array.from(
     new Set(
       (linkedPairs.length > 0
@@ -109,6 +196,7 @@ export async function getOverview(
       select: {
         userId: true,
         lrn: true,
+        mascot: true,
         sectionId: true,
         user: { select: { fullName: true } },
         section: { select: { name: true } },
@@ -123,6 +211,7 @@ export async function getOverview(
             id: true,
             lrn: true,
             fullName: true,
+            mascot: true,
             sectionId: true,
             section: { select: { name: true } },
           },
@@ -131,6 +220,7 @@ export async function getOverview(
           id: string;
           lrn: string;
           fullName: string;
+          mascot: string | null;
           sectionId: string;
           section: { name: string };
         }[]),
@@ -159,11 +249,28 @@ export async function getOverview(
       });
     }
   }
+  // Include timetable-linked pairs so linked-only teachers resolve
+  // assessment sections correctly on the grading page.
+  for (const s of linkedPairs) {
+    if (!subjectSectionIds.has(s.subjectId)) subjectSectionIds.set(s.subjectId, new Set());
+    subjectSectionIds.get(s.subjectId)!.add(s.sectionId);
+    if (!classLookup.has(s.subjectId)) {
+      classLookup.set(s.subjectId, {
+        subject: s.subject.name,
+        section: s.section.name,
+      });
+    }
+  }
 
-  const classes = (linkedPairs.length > 0
+  // Every teacher (master included) is restricted to timetable-linked
+  // subjects on the grading page — registrar assignments alone never appear.
+  const gradebookLinkedOnly = isGradebookOnly;
+
+  const classes = (gradebookLinkedOnly || linkedPairs.length > 0
     ? linkedPairs.map((s) => ({
         id: `${s.subjectId}|${s.sectionId}`,
         subject: s.subject.name,
+        subjectCode: s.subject.code,
         gradeLevel: GRADE_LABELS[s.section.gradeLevel] ?? s.section.gradeLevel,
         section: s.section.name,
         studentCount: countBySection.get(s.sectionId) ?? 0,
@@ -171,6 +278,7 @@ export async function getOverview(
     : assignments.map((a) => ({
         id: a.id,
         subject: a.subject.name,
+        subjectCode: a.subject.code,
         gradeLevel: GRADE_LABELS[a.section.gradeLevel] ?? a.section.gradeLevel,
         section: a.section.name,
         studentCount: countBySection.get(a.section.id) ?? 0,
@@ -206,6 +314,7 @@ export async function getOverview(
     studentId: string;
     name: string;
     lrn: string;
+    mascot: string | null;
     sectionId: string;
     section: string;
     subjects: string[];
@@ -217,6 +326,7 @@ export async function getOverview(
         studentId: p.userId,
         name: p.user.fullName,
         lrn: p.lrn,
+        mascot: p.mascot ?? null,
         sectionId: p.sectionId,
         section: sectionSubjects.get(p.sectionId)?.name ?? p.section?.name ?? "",
         subjects: sectionSubjects.get(p.sectionId)?.subjects ?? [],
@@ -228,6 +338,7 @@ export async function getOverview(
         studentId: `roster:${r.id}`,
         name: r.fullName,
         lrn: r.lrn,
+        mascot: r.mascot ?? null,
         sectionId: r.sectionId,
         section: sectionSubjects.get(r.sectionId)?.name ?? r.section?.name ?? "",
         subjects: sectionSubjects.get(r.sectionId)?.subjects ?? [],
@@ -319,29 +430,48 @@ export async function getOverview(
       });
     }
   }
-  const classStudents = classStudentBases
-    .map((b) => ({
-      ...b,
-      riskLevel: classRiskByKey.get(b.studentId)?.riskLevel ?? ("Low" as const),
-      flags: classRiskByKey.get(b.studentId)?.flags ?? [],
-    }))
-    .sort((a, b) => a.section.localeCompare(b.section) || a.name.localeCompare(b.name));
+  const needSnapshotDates = !isGradebookOnly && !isSecondaryOnly;
+  const classStudents = needSnapshotDates
+    ? await attachSnapshotDates(
+        termId,
+        classStudentBases
+          .map((b) => ({
+            ...b,
+            riskLevel: classRiskByKey.get(b.studentId)?.riskLevel ?? ("Low" as const),
+            flags: classRiskByKey.get(b.studentId)?.flags ?? [],
+          }))
+          .sort((a, b) => a.section.localeCompare(b.section) || a.name.localeCompare(b.name)),
+      )
+    : classStudentBases
+        .map((b) => ({
+          ...b,
+          riskLevel: classRiskByKey.get(b.studentId)?.riskLevel ?? ("Low" as const),
+          flags: classRiskByKey.get(b.studentId)?.flags ?? [],
+        }))
+        .sort((a, b) => a.section.localeCompare(b.section) || a.name.localeCompare(b.name));
 
   // Scoped to the teacher's linked subjects only (assignments + timetable-linked
-  // pairs) — never the whole school catalog.
-  const subjectIds = Array.from(
-    new Set([...assignments.map((a) => a.subject.id), ...linkedPairs.map((s) => s.subjectId)]),
-  );
+  // pairs) — never the whole school catalog. For the grading page, non-master
+  // teachers are restricted to timetable-linked subjects only (class-page link code).
+  const subjectIds = gradebookLinkedOnly
+    ? Array.from(new Set(linkedPairs.map((s) => s.subjectId)))
+    : Array.from(
+        new Set([...assignments.map((a) => a.subject.id), ...linkedPairs.map((s) => s.subjectId)]),
+      );
 
   let assessmentsPayload: {
     id: string;
     subject: string;
+    subjectId: string;
     gradeLevel: string;
     section: string;
+    sectionId: string;
     type: "WW" | "PT" | "E";
     title: string;
     dueDate: string;
     status: string;
+    scored: number;
+    students: number;
   }[] = [];
   let pendingAssessments = 0;
   let standings: {
@@ -363,10 +493,15 @@ export async function getOverview(
   });
   const [assessments, finals, rosterSections] = await Promise.all([
     prisma.assessment.findMany({
-      where: { gradeComponent: { subjectId: { in: subjectIds }, termId } },
+      where: {
+        gradeComponent: { subjectId: { in: subjectIds }, termId },
+        // Section-subject scope: only this teacher's sections plus legacy
+        // shared rows. Scoped rows from other sections never load here.
+        OR: [{ sectionId: { in: handledSectionIds } }, { sectionId: null }],
+      },
       include: {
         gradeComponent: { include: { subject: true } },
-        studentGrades: { select: { studentId: true } },
+        studentGrades: { select: { studentId: true, rosterId: true } },
       },
     }),
     prisma.finalGrade.groupBy({
@@ -381,42 +516,101 @@ export async function getOverview(
   ]);
 
   const rosterSecById = new Map(rosterSections.map((s) => [`roster:${s.id}`, s.sectionId]));
-
-  assessmentsPayload = assessments.map((as) => {
-    const secIds = subjectSectionIds.get(as.gradeComponent.subjectId);
-    const sectionOfAssessment = secIds ? Array.from(secIds)[0] ?? "" : "";
-    const scoredIds = new Set(as.studentGrades.map((g) => g.studentId));
-    let pending = false;
-    for (const st of sectionStudents) {
-      if (sectionOfAssessment && st.sectionId !== sectionOfAssessment) continue;
-      if (!scoredIds.has(st.userId)) {
-        pending = true;
-        break;
-      }
+  // Roster-only enlistments also carry grades — include their section mapping
+  // so per-section scored counts cover students without accounts.
+  for (const r of classRoster) {
+    const key = `roster:${r.id}`;
+    if (!rosterSecById.has(key) && r.sectionId) rosterSecById.set(key, r.sectionId);
+  }
+  // Section display meta (name + grade label) for per-class assessment rows.
+  const sectionMeta = new Map<string, { name: string; gradeLevel: string }>();
+  for (const a of assignments) {
+    if (!sectionMeta.has(a.section.id)) {
+      sectionMeta.set(a.section.id, {
+        name: a.section.name,
+        gradeLevel: GRADE_LABELS[a.section.gradeLevel] ?? a.section.gradeLevel,
+      });
     }
-    return {
-      id: as.id,
-      subject: as.gradeComponent.subject.name,
-      gradeLevel:
-        GRADE_LABELS[as.gradeComponent.subject.gradeLevel] ??
-        as.gradeComponent.subject.gradeLevel,
-      section:
-        classLookup.get(as.gradeComponent.subjectId)?.section ?? "",
-      type: COMPONENT_TYPE_LABEL[as.gradeComponent.componentType] ?? "WW",
-      title: as.title,
-      dueDate: as.dateGiven ? as.dateGiven.toISOString().slice(0, 10) : "",
-      status:
-        as.studentGrades.length === 0
-          ? "draft"
-          : pending
-            ? "published"
-            : "scores_locked",
-    };
-  });
+  }
+  for (const s of linkedPairs) {
+    if (!sectionMeta.has(s.sectionId)) {
+      sectionMeta.set(s.sectionId, {
+        name: s.section.name,
+        gradeLevel: GRADE_LABELS[s.section.gradeLevel] ?? s.section.gradeLevel,
+      });
+    }
+  }
+  // Sections teaching each subject. Gradebook scope only shows
+  // timetable-linked (class-page code) sections — registrar assignments
+  // alone never appear there.
+  const linkedSectionsBySubject = new Map<string, Set<string>>();
+  for (const s of linkedPairs) {
+    if (!linkedSectionsBySubject.has(s.subjectId)) linkedSectionsBySubject.set(s.subjectId, new Set());
+    linkedSectionsBySubject.get(s.subjectId)!.add(s.sectionId);
+  }
 
-  pendingAssessments = assessmentsPayload.filter(
-    (a) => a.status !== "scores_locked"
-  ).length;
+  // Assessments are section-subject scoped: each row lives in exactly one
+  // subject-section class (the section it was added from). Legacy pre-scope
+  // rows (sectionId NULL) remain shared across every section teaching that
+  // subject. Emit one payload row per visible class so each gradebook card
+  // counts its own added assessments.
+  for (const as of assessments) {
+    const subjectId = as.gradeComponent.subjectId;
+    const sectionsForSubject = gradebookLinkedOnly
+      ? (linkedSectionsBySubject.get(subjectId) ?? new Set<string>())
+      : (subjectSectionIds.get(subjectId) ?? new Set<string>());
+    if (sectionsForSubject.size === 0) continue;
+    // Scoped rows are only visible in their own section; legacy NULL rows
+    // stay visible in every section of the subject.
+    const visibleSections = as.sectionId
+      ? (sectionsForSubject.has(as.sectionId) ? [as.sectionId] : [])
+      : [...sectionsForSubject];
+    if (visibleSections.length === 0) continue;
+    const scoredBySection = new Map<string, number>();
+    for (const g of as.studentGrades) {
+      const key = g.studentId ?? (g.rosterId ? `roster:${g.rosterId}` : null);
+      const sec = key
+        ? (key.startsWith("roster:")
+            ? rosterSecById.get(key)
+            : studentSecById.get(key))
+        : undefined;
+      if (!sec || !sectionsForSubject.has(sec)) continue;
+      // Scoped assessments only carry their own section's grades; legacy
+      // shared rows attribute each grade to its student's section.
+      if (as.sectionId && sec !== as.sectionId) continue;
+      scoredBySection.set(sec, (scoredBySection.get(sec) ?? 0) + 1);
+    }
+    for (const sectionId of visibleSections) {
+      const meta = sectionMeta.get(sectionId);
+      const students = countBySection.get(sectionId) ?? 0;
+      const scored = scoredBySection.get(sectionId) ?? 0;
+      assessmentsPayload.push({
+        id: as.id,
+        subject: as.gradeComponent.subject.name,
+        subjectId,
+        gradeLevel: meta?.gradeLevel
+          ?? GRADE_LABELS[as.gradeComponent.subject.gradeLevel]
+          ?? as.gradeComponent.subject.gradeLevel,
+        section: meta?.name ?? classLookup.get(subjectId)?.section ?? "",
+        sectionId,
+        type: COMPONENT_TYPE_LABEL[as.gradeComponent.componentType] ?? "WW",
+        title: as.title,
+        dueDate: as.dateGiven ? as.dateGiven.toISOString().slice(0, 10) : "",
+        status:
+          scored === 0
+            ? "draft"
+            : students > 0 && scored >= students
+              ? "scores_locked"
+              : "published",
+        scored,
+        students,
+      });
+    }
+  }
+
+  pendingAssessments = new Set(
+    assessmentsPayload.filter((a) => a.status !== "scores_locked").map((a) => a.id),
+  ).size;
 
   const aggMap = new Map<
     string,
@@ -426,15 +620,19 @@ export async function getOverview(
       meta: { subject: string; gradeLevel: string; section: string; students: number };
     }
   >();
-  for (const a of assignments) {
-    const secId = a.section.id;
-    const entryMeta = {
-      subject: a.subject.name,
-      gradeLevel: GRADE_LABELS[a.section.gradeLevel] ?? a.section.gradeLevel,
-      section: a.section.name,
-      students: countBySection.get(secId) ?? 0,
-    };
-    aggMap.set(`${a.subjectId}::${secId}`, { sum: 0, count: 0, meta: entryMeta });
+  // For grading, non-master teachers only aggregate timetable-linked
+  // (class-page link code) subjects — registrar assignments alone never appear.
+  if (!gradebookLinkedOnly) {
+    for (const a of assignments) {
+      const secId = a.section.id;
+      const entryMeta = {
+        subject: a.subject.name,
+        gradeLevel: GRADE_LABELS[a.section.gradeLevel] ?? a.section.gradeLevel,
+        section: a.section.name,
+        students: countBySection.get(secId) ?? 0,
+      };
+      aggMap.set(`${a.subjectId}::${secId}`, { sum: 0, count: 0, meta: entryMeta });
+    }
   }
   for (const s of linkedPairs) {
     const key = `${s.subjectId}::${s.sectionId}`;
@@ -482,6 +680,7 @@ export async function getOverview(
     riskLevel: "Low" | "Moderate" | "High";
     flag: "academic" | "attendance" | "behavioral" | "none";
     flags: ("academic" | "attendance" | "behavioral")[];
+    snapshotDate: string | null;
   }[] = [];
 
   if (!isSecondaryOnly && !isGradebookOnly && advisorySection) {
@@ -501,7 +700,7 @@ export async function getOverview(
 
       prisma.studentRoster.findMany({
         where: { sectionId: advisorySection.id },
-        select: { id: true, lrn: true, fullName: true },
+        select: { id: true, lrn: true, fullName: true, mascot: true },
       }),
     ]);
     const registeredLrns = new Set(advisees.map((s) => s.lrn));
@@ -632,10 +831,12 @@ export async function getOverview(
           studentId: s.userId,
           name: s.user.fullName,
           lrn: s.lrn,
+          mascot: s.mascot ?? null,
           section: advisorySection.name,
           riskLevel: levelFromFlags(flags),
           flag,
           flags: activeFlags,
+          snapshotDate: null as string | null,
         };
       }),
       ...rosterOnly.map((r) => {
@@ -654,13 +855,17 @@ export async function getOverview(
           studentId: key,
           name: r.fullName,
           lrn: r.lrn,
+          mascot: r.mascot ?? null,
           section: advisorySection.name,
           riskLevel: levelFromFlags(flags),
           flag,
           flags: activeFlags,
+          snapshotDate: null as string | null,
         };
       }),
     ];
+    // needSnapshotDates is always true inside this block (same scope guard).
+    advisoryStudents = await attachSnapshotDates(termId, advisoryStudents);
   }
 
   const atRiskFactors = {

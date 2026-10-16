@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
+import { mascotForUnique } from "../src/services/mascot.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
@@ -32,11 +33,28 @@ async function main() {
       continue;
     }
     const base = hashNum(sec.id);
+    const taken = new Set<string>();
+    const existingMascots = await prisma.studentProfile.findMany({
+      where: { sectionId: sec.id },
+      select: { mascot: true },
+    });
+    const existingRoster = await prisma.studentRoster.findMany({
+      where: { sectionId: sec.id, schoolYearId: sec.schoolYearId },
+      select: { mascot: true },
+    });
+    for (const row of [...existingMascots, ...existingRoster]) {
+      if (row.mascot) taken.add(row.mascot);
+    }
     const rows = Array.from({ length: need }, (_, k) => {
       const i = existing + k;
+      const lrn = `88${String((base + i * 7919) % 100000000).padStart(8, "0")}`;
+      const fullName = `${FIRST[(base + i) % FIRST.length]} ${MI[(base + i * 5) % MI.length]}. ${LAST[(base + i * 3) % LAST.length]}`;
+      const mascot = mascotForUnique(fullName, lrn, taken);
+      taken.add(mascot);
       return {
-        lrn: `88${String((base + i * 7919) % 100000000).padStart(8, "0")}`,
-        fullName: `${FIRST[(base + i) % FIRST.length]} ${MI[(base + i * 5) % MI.length]}. ${LAST[(base + i * 3) % LAST.length]}`,
+        lrn,
+        fullName,
+        mascot,
         gradeLevel: sec.gradeLevel,
         sectionId: sec.id,
         schoolYearId: sec.schoolYearId,

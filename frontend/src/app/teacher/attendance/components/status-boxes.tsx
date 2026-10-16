@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
+import "@/components/ui/scroll-list.css";
 import type { SheetStatus } from "@/services/teacher/attendance.types";
-import sheetStyles from "./attendance-sheet.module.css";
 export const STATUS_BOXES: { value: SheetStatus; letter: string; activeClass: string; label: string }[] = [
   { value: "present", letter: "P", activeClass: "bg-green-500/70 border-green-500/70 text-white", label: "Present" },
   { value: "absent", letter: "A", activeClass: "bg-red-500/70 border-red-500/70 text-white", label: "Absent" },
@@ -33,7 +33,7 @@ export const StatusBoxes = React.memo(function StatusBoxes({
             aria-pressed={isActive}
             aria-label={isImplied ? "Absent (not logged) — tap to confirm" : `Mark ${b.label}`}
             title={disabled ? `${b.label} — locked` : isImplied ? "Absent — not logged (tap A to confirm)" : b.label}
-            className={`flex h-7 w-7 items-center justify-center rounded-md border text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
               isActive
                 ? isImplied
                   ? `${b.activeClass} border-dashed opacity-70`
@@ -85,7 +85,7 @@ export const MeetupBlocksCell = React.memo(function MeetupBlocksCell({
   // no "+N" collapsing. The row scrolls horizontally when there are many.
   return (
     <div
-      className={`flex items-center gap-[3px] overflow-x-auto py-0.5 ${sheetStyles.blocksScroll}`}
+      className="zentra-scroll flex items-center gap-[3px] overflow-x-auto py-0.5"
       role="img"
       aria-label={`${dates.length} meetup days`}
     >

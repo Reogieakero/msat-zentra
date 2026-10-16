@@ -8,7 +8,8 @@ import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CardModal } from "@/components/ui/CardModal";
-import styles from "../schedule-empty.module.css";
+import { ScrollList } from "@/components/ui/scroll-list";
+import kanbanStyles from "./subject-kanban.module.css";
 function getErrorMessage(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
   const message = data?.error?.message ?? data?.message;
@@ -96,22 +97,29 @@ export function TeacherListDialog({
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground">No matches.</p>
         ) : (
-          <div
-            className={`grid max-h-[50dvh] gap-1.5 overflow-y-auto pr-0.5 ${styles.noScrollbar}`}
+          <ScrollList
+            className="max-h-[50dvh] gap-1.5 pr-0.5"
             role="list"
-            aria-label="Teachers"
+            ariaLabel="Teachers"
           >
-            {filtered.map((t) => (
+            {filtered.map((t, idx) => (
               <div
                 key={t.id}
                 role="listitem"
-                className="flex items-center justify-between gap-2 rounded-lg border border-input px-3 py-2 text-sm"
+                className={kanbanStyles.card}
+                style={{ animationDelay: `${Math.min(idx, 8) * 35}ms` }}
               >
-                <span className="min-w-0 truncate font-medium">{t.name}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">{t.code ?? "—"}</span>
+                <span className={kanbanStyles.name} title={t.name}>
+                  {t.name}
+                </span>
+                <span className={kanbanStyles.meta}>
+                  <span className="shrink-0 rounded-full border border-border bg-muted/40 px-1.5 font-mono text-[10px] text-muted-foreground">
+                    {t.code ?? "—"}
+                  </span>
+                </span>
               </div>
             ))}
-          </div>
+          </ScrollList>
         )}
         <div className="flex justify-end gap-2">
           {confirming ? (
@@ -120,6 +128,7 @@ export function TeacherListDialog({
                 variant="destructive"
                 onClick={() => setConfirming(false)}
                 disabled={deleteAll.isPending}
+                className="h-6 px-2 text-xs"
               >
                 Cancel
               </Button>
@@ -128,6 +137,7 @@ export function TeacherListDialog({
                 onClick={() => deleteAll.mutate()}
                 disabled={deleteAll.isPending}
                 aria-busy={deleteAll.isPending || undefined}
+                className="h-6 px-2 text-xs"
               >
                 {deleteAll.isPending ? (
                   <>
@@ -144,6 +154,7 @@ export function TeacherListDialog({
               variant="destructive"
               onClick={() => setConfirming(true)}
               disabled={teachers.length === 0 || pending}
+              className="h-6 px-2 text-xs"
             >
               Delete all
             </Button>

@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: 1rem;
   padding: 1.5rem 16px 2rem;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 .toolbar {
@@ -33,18 +34,6 @@
   height: 1rem;
 }
 
-.sheet {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 0.75rem);
-  overflow: hidden;
-}
-
-.sheetHead {
-  padding: 1.25rem 1.25rem 1rem;
-  border-bottom: 2px solid var(--border);
-}
-
 .school {
   margin: 0;
   font-size: 0.75rem;
@@ -52,19 +41,8 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted-foreground);
-}
-
-.title {
-  margin: 0.25rem 0 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--foreground);
-}
-
-.meta {
-  margin: 0.25rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
+  text-align: center;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 .tableWrap {
@@ -104,10 +82,68 @@
   background: color-mix(in oklch, var(--muted), transparent 55%);
 }
 
-.groupHead {
-  background: color-mix(in oklch, var(--primary), transparent 90%);
-  color: var(--foreground);
+/* Category color coding — WW blue, PT amber, E red. */
+
+.table th.catHeadWW,
+.table th.catHeadPT,
+.table th.catHeadE {
   font-weight: 700;
+  color: var(--foreground);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.table th.catHeadWW {
+  background: color-mix(in oklch, #3b82f6 16%, transparent);
+  border-bottom: 2px solid #3b82f6;
+}
+
+.table th.catHeadPT {
+  background: color-mix(in oklch, #f59e0b 16%, transparent);
+  border-bottom: 2px solid #f59e0b;
+}
+
+.table th.catHeadE {
+  background: color-mix(in oklch, #ef4444 16%, transparent);
+  border-bottom: 2px solid #ef4444;
+}
+
+.table th.catSubWW {
+  background: color-mix(in oklch, #3b82f6 8%, transparent);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.table th.catSubPT {
+  background: color-mix(in oklch, #f59e0b 8%, transparent);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.table th.catSubE {
+  background: color-mix(in oklch, #ef4444 8%, transparent);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.table td.catAvgWW,
+.table td.catAvgPT,
+.table td.catAvgE {
+  font-weight: 600;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.table td.catAvgWW {
+  background: color-mix(in oklch, #3b82f6 12%, transparent);
+}
+
+.table td.catAvgPT {
+  background: color-mix(in oklch, #f59e0b 12%, transparent);
+}
+
+.table td.catAvgE {
+  background: color-mix(in oklch, #ef4444 12%, transparent);
 }
 
 .stickyCol {
@@ -115,13 +151,47 @@
   left: 0;
   background: var(--card);
   text-align: left;
-  min-width: 11rem;
+  min-width: 13rem;
   z-index: 1;
 }
 
-.avgCol {
-  background: color-mix(in oklch, var(--muted), transparent 55%);
+.studentCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.studentText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.studentName {
+  font-size: 0.875rem;
   font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.lrnPill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--secondary, var(--muted));
+  padding: 0 0.375rem;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--secondary-foreground, var(--muted-foreground));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .finalCol {
@@ -158,11 +228,6 @@
   .page {
     max-width: none;
     padding: 0;
-  }
-
-  .sheet {
-    border: none;
-    border-radius: 0;
   }
 
   .table {

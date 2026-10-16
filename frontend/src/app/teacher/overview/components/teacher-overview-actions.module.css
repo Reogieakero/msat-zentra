@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .head {
@@ -25,126 +26,39 @@
   color: var(--muted-foreground);
 }
 
-.grid {
+/* Kanban board — one column per quick action, mirroring the
+   record-keeper adviser-access request board. */
+.kanbanGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
   gap: 0.75rem;
-}
-
-.iconRow {
-  display: flex;
-}
-
-.cardBtn {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.iconWrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--primary), transparent 80%),
-    color-mix(in oklch, var(--primary), transparent 92%)
-  );
-  border: 1px solid color-mix(in oklch, var(--primary), transparent 80%);
-}
-
-.icon {
-  width: 1.125rem;
-  height: 1.125rem;
-  color: var(--primary);
-}
-
-.text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-  flex: 1;
-}
-
-.cardTitle {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--foreground);
-  line-height: 1.3;
-}
-
-.cardDesc {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  line-height: 1.4;
-}
-
-.arrow {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-  color: var(--muted-foreground);
-}
-
-/* Single row only: all 4 cards across at every width, shrinking to fit
-   instead of wrapping or scrolling. */
-.row .grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.row .card {
-  gap: 0.5rem;
-  padding: 0.75rem;
-}
-
-.row .iconWrap {
-  width: 2rem;
-  height: 2rem;
-}
-
-.row .text {
   min-width: 0;
 }
 
-.row .cardTitle {
-  font-size: 0.8125rem;
-  line-height: 1.25;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.row .cardDesc,
-.row .arrow {
-  display: none;
-}
-
-/* Compact tiles: 2 per row, icon above label, no description/arrow. */
-.compact .grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.compact .card {
-  flex-direction: column;
-  align-items: center;
+.empty {
+  margin: 0;
+  padding: 2rem 1rem;
   text-align: center;
-  gap: 0.5rem;
-  padding: 0.75rem 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
 }
 
-.compact .text {
-  align-items: center;
+@media (max-width: 1280px) {
+  .kanbanGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.compact .cardTitle {
-  font-size: 0.75rem;
-  line-height: 1.3;
+@media (max-width: 640px) {
+  .kanbanGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
-.compact .cardDesc,
-.compact .arrow {
-  display: none;
+@media (prefers-reduced-motion: reduce) {
+  .kanbanGrid {
+    transition: none;
+  }
 }

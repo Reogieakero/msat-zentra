@@ -18,6 +18,7 @@ interface SubmissionEntry {
   day: number;
   period: number;
   status: "DRAFT" | "SUBMITTED" | "APPROVED";
+  reviewNote?: string | null;
   subject: { id: string; name: string; code: string };
   teacherName: { id: string; name: string } | null;
   submittedAt: string | null;

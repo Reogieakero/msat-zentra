@@ -1,0 +1,25 @@
+/* Dock row list — thin amber scrollbar, same language as the
+   assessment rows. Scroll stays contained so the page never moves. */
+
+.rows {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, #f59e0b 65%, transparent) transparent;
+  overscroll-behavior: contain;
+}
+
+.rows::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rows::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rows::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, #f59e0b 65%, transparent);
+  border-radius: 999px;
+}
+
+.rows::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, #f59e0b 85%, transparent);
+}

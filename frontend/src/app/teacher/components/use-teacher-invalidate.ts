@@ -7,6 +7,7 @@ export const TEACHER_QUERY_KEYS = [
   ["teacher-overview-secondary"],
   ["teacher-student-list"],
   ["advisory-students"],
+  ["teacher-sf10-access"],
   ["advisee-academic"],
   ["advisee-attendance"],
   ["adm-my-cases"],
@@ -23,6 +24,7 @@ export const TEACHER_QUERY_KEYS = [
   ["teacher-my-slots"],
   ["teacher-grading-class"],
   ["teacher-settings-adviser-sections"],
+  ["teacher-profile-settings"],
   ["grade-flags"],
   ["attendance-sheet-marks"],
   ["attendance-subject-days"],
@@ -57,6 +59,7 @@ export const TEACHER_SCOPE_KEYS = {
     ["teacher-schedule-subjects"],
     ["teacher-schedule-teachers"],
     ["teacher-schedule-config"],
+    ["teacher-schedule-conflicts"],
     ["teacher-schedule-me"],
     ["teacher-my-slots"],
   ],
@@ -68,6 +71,7 @@ export const TEACHER_SCOPE_KEYS = {
   referrals: [["myReferrals"], ["referableAnecdotal"]],
   advisory: [
     ["advisory-students"],
+    ["teacher-sf10-access"],
     ["advisee-academic"],
     ["advisee-attendance"],
     ["adm-my-cases"],
@@ -75,7 +79,7 @@ export const TEACHER_SCOPE_KEYS = {
   anecdotal: [["anecdotal-mine"], ["teacher-anecdotes"], ["referableAnecdotal"]],
   flags: [["grade-flags"]],
   notifications: [["teacher-notifications"]],
-  settings: [["teacher-settings-adviser-sections"]],
+  settings: [["teacher-settings-adviser-sections"], ["teacher-profile-settings"]],
 } as const;
 
 export type TeacherInvalidateScope = keyof typeof TEACHER_SCOPE_KEYS;

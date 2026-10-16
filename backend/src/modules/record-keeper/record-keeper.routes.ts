@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
 import { etag } from "../../lib/etag.js";
@@ -22,11 +23,18 @@ import {
   buildRecordKeeperBreakdown,
   getAccountBreakdown,
   getAccountsAudit,
+  listBandStudents,
 } from "../../services/registry/accounts.service.js";
 import {
+  approveAccessLrn,
+  approveAllMatched,
+  checkAccessRecords,
+  checkAccessRecordsStream,
   decideAccess,
   getAccessRecords,
   listAccessRequests,
+  reportMissingAccessRecord,
+  type CheckStreamEvent,
 } from "../../services/registry/access.service.js";
 import {
   readProfileSettings,
@@ -169,6 +177,157 @@ router.post(
   }
 );
 
+router.post(
+  "/adviser-access-requests/:id/check",
+  requireAuth,
+  requireRole("record_keeper"),
+  async (req, res, next) => {
+    try {
+      const result = await checkAccessRecords(ctxOf(req), {
+        requestId: String(req.params.id),
+        band: GRADE_BAND_7_10,
+        enforceBand: true,
+      });
+      await invalidateTags(["record-keeper", "record-keeper-access", "adviser-access", "teacher", "overview"]);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+const reportMissingSchema = z.object({
+  lrn: z.string().trim().min(1).max(32),
+});
+
+// Streamed verification: one event per advisee verdict as it is produced,
+// then a done event with the summary — the desk dock flips rows live.
+router.post(
+  "/adviser-access-requests/:id/check-stream",
+  requireAuth,
+  requireRole("record_keeper"),
+  async (req, res, next) => {
+    try {
+      const id = String(req.params.id);
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      let finished = false;
+      req.on("close", () => {
+        finished = true;
+      });
+      const send = (event: CheckStreamEvent) => {
+        if (finished) return;
+        const { type, ...payload } = event;
+        res.write(`event: ${type}\ndata: ${JSON.stringify(payload)}\n\n`);
+      };
+      await checkAccessRecordsStream(
+        ctxOf(req),
+        { requestId: id, band: GRADE_BAND_7_10, enforceBand: true },
+        (event) => send(event),
+        () => finished,
+        async () => {
+          await invalidateTags(["record-keeper", "record-keeper-access", "adviser-access", "teacher", "overview"]);
+        },
+      );
+      await invalidateTags(["record-keeper", "record-keeper-access", "adviser-access", "teacher", "overview"]);
+      finished = true;
+      res.end();
+    } catch (e) {
+      if (!res.headersSent) {
+        next(e);
+        return;
+      }
+      try {
+        const err = e as { message?: unknown; code?: unknown };
+        res.write(
+          `event: error\ndata: ${JSON.stringify({
+            message: typeof err?.message === "string" ? err.message : "Check failed",
+            code: typeof err?.code === "string" ? err.code : "CHECK_FAILED",
+          })}\n\n`,
+        );
+      } catch {
+        // Client already gone — nothing left to send to.
+      }
+      res.end();
+    }
+  }
+);
+
+// "Report as missing" for one requested student: stored mark + adviser notice.
+router.post(
+  "/adviser-access-requests/:id/report-missing",
+  requireAuth,
+  requireRole("record_keeper"),
+  validate("body", reportMissingSchema),
+  async (req, res, next) => {
+    try {
+      const body = req.body as { lrn: string };
+      const result = await reportMissingAccessRecord(ctxOf(req), {
+        requestId: String(req.params.id),
+        lrn: body.lrn,
+        band: GRADE_BAND_7_10,
+        enforceBand: true,
+        deskLabel: "record keeper",
+      });
+      await invalidateTags(["record-keeper", "record-keeper-access", "adviser-access", "teacher"]);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+const approveLrnSchema = z.object({
+  lrn: z.string().trim().min(1).max(32),
+});
+
+// Per-student approval for one matched student (whole request untouched).
+router.post(
+  "/adviser-access-requests/:id/approve-lrn",
+  requireAuth,
+  requireRole("record_keeper"),
+  validate("body", approveLrnSchema),
+  async (req, res, next) => {
+    try {
+      const body = req.body as { lrn: string };
+      const result = await approveAccessLrn(ctxOf(req), {
+        requestId: String(req.params.id),
+        lrn: body.lrn,
+        band: GRADE_BAND_7_10,
+        enforceBand: true,
+      });
+      await invalidateTags(["record-keeper", "record-keeper-access", "adviser-access", "teacher"]);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Bulk "approve all": every matched student, never reported/missing ones.
+router.post(
+  "/adviser-access-requests/:id/approve-all",
+  requireAuth,
+  requireRole("record_keeper"),
+  async (req, res, next) => {
+    try {
+      const result = await approveAllMatched(ctxOf(req), {
+        requestId: String(req.params.id),
+        band: GRADE_BAND_7_10,
+        enforceBand: true,
+      });
+      await invalidateTags(["record-keeper", "record-keeper-access", "adviser-access", "teacher"]);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 async function decideAccessRequestRK(req: any, res: any, next: any, approved: boolean) {
   try {
     const result = await decideAccess(ctxOf(req), {
@@ -184,6 +343,21 @@ async function decideAccessRequestRK(req: any, res: any, next: any, approved: bo
     next(e);
   }
 }
+
+router.get(
+  "/students",
+  requireAuth,
+  requireRole("record_keeper"),
+  cache({ tags: [CACHE_TAGS.recordKeeper, "accounts"], ttl: CACHE_TTLS.list }),
+  etag(),
+  async (_req, res, next) => {
+    try {
+      res.json(await listBandStudents(GRADE_BAND_7_10));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 router.get(
   "/settings/profile",

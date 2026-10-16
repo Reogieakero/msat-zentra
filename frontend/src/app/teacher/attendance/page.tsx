@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { useTopbarCrumb } from "@/app/teacher/layout";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
 import { useTeacherInvalidate } from "../components/use-teacher-invalidate";
@@ -9,7 +8,7 @@ import { apiErrorMessage } from "@/lib/api/errors";
 import { toast } from "@/components/ui/sonner";
 import { AttendanceRosterTable } from "./components/AttendanceRosterTable";
 import { ZentraPageHeaderSkeleton, ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
-import { AttendanceTermGate } from "./components/AttendanceTermGate";
+import { AttendanceTermGate, AttendanceLinkGate } from "./components/AttendanceTermGate";
 import { SheetDatePicker } from "./components/sheet-date-picker";
 import { VerifyCodeCard } from "./components/verify-code-card";
 import { AttendanceSidebar } from "./components/attendance-sidebar";
@@ -23,12 +22,7 @@ import {
   useSheetContext,
 } from "@/services/teacher/attendance.service";
 import type { SheetContext } from "@/services/teacher/attendance.types";
-import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
-import { TermAccessCard } from "@/components/schedule/TermAccessCard";
 import { NoTermRecordsPanel } from "@/components/schedule/NoTermRecordsPanel";
-import { useSession } from "@/lib/auth/useSession";
-import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
-import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useTerm } from "@/lib/term/TermContext";
 import {
   buildTimetable,
@@ -40,6 +34,21 @@ interface TermGrant {
   via: string;
   attendanceVerified: boolean;
 }
+function SheetLiveNotice({ title, message }: { title: string; message: string }) {
+  return (
+    <span
+      className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+      title={`${title} — ${message}`}
+    >
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+      <span className="truncate">
+        <span className="font-medium text-foreground">{title}</span>
+        <span aria-hidden> · </span>
+        {message}
+      </span>
+    </span>
+  );
+}
 export default function TeacherAdvisoryAttendancePage() {
   const invalidateTeacher = useTeacherInvalidate();
   const [now, setNow] = useState(() => new Date());
@@ -50,33 +59,29 @@ export default function TeacherAdvisoryAttendancePage() {
   const [date, setDate] = useState(phTodayKey);
   const [attCode, setAttCode] = useState("");
   const [attCodeError, setAttCodeError] = useState<string | null>(null);
-  const [showCodeVerify, setShowCodeVerify] = useState(false);
+  const [blocksMode, setBlocksMode] = useState(false);
   const { activeTerm } = useTerm();
   const termLabel = activeTerm
     ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
     : "this term";
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const meQuery = useQuery<{ teacherName: LinkedName | null; termGrant: TermGrant | null; isMasterTeacher?: boolean }>({
+  const meQuery = useQuery<{ teacherName: LinkedName | null; termGrant: TermGrant | null }>({
     queryKey: ["teacher-schedule-me", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{
         teacherName: LinkedName | null;
         termGrant: TermGrant | null;
-        isMasterTeacher?: boolean;
       }>("/api/teacher/schedule/teachers/me");
       return data;
     },
+    retry: false,
+    staleTime: 30_000,
   });
   const linked = meQuery.data?.teacherName ?? null;
   const termGrant = meQuery.data?.termGrant ?? null;
-  const session = useSession();
-  const overview = useTeacherOverview();
-  const cachedMaster = useCachedMasterTeacher(session?.sub);
-  const isMasterTeacher =
-    overview.data?.isMasterTeacher ?? meQuery.data?.isMasterTeacher ?? cachedMaster;
-  const { pairs, mySlotsQuery, configQuery } = useAttendancePairs(termKey, linked, isMasterTeacher);
+  // Every teacher — master included — must link a code and enter the term.
+  const { pairs, mySlotsQuery, configQuery } = useAttendancePairs(termKey, linked);
   const sheetContext = useSheetContext();
-  const isAdviser = !!sheetContext.data;
   const advisorySectionId = sheetContext.data?.sectionId ?? null;
   const verify = useMutation({
     mutationFn: async (teacherCode: string) => {
@@ -103,49 +108,42 @@ export default function TeacherAdvisoryAttendancePage() {
       toast.error({ title: "Could not verify code", description: message });
     },
   });
-  const grantTap = useMutation({
-    mutationFn: async () => {
-      const { data } = await apiClient.post<{ termGrant: TermGrant }>(
-        "/api/teacher/schedule/teachers/term-grant",
-        {},
-      );
-      return data;
-    },
-    onSuccess: () => {
-      invalidateTeacher.schedule();
-      toast.success({
-        title: "Term entered",
-        description: `Workspace open as adviser for ${termLabel}.`,
-      });
-    },
-    onError: (err: unknown) => {
-      const message = apiErrorMessage(err, "Could not verify teacher code.");
-      toast.error({ title: "Could not enter term", description: message });
-    },
-  });
   const [pairKey, setPairKey] = useState<string | undefined>(undefined);
   const [slotKey, setSlotKey] = useState<string | null>(null);
   const selectedPair = pairs.find((p) => p.key === pairKey) ?? pairs[0];
   const resolvedSectionId = selectedPair?.section.id;
   const rosterQuery = useSectionRoster(resolvedSectionId);
-  const rosterOverride: {
+  // Memoize the wrapper: rebuilding { ctx } every render gave the roster
+  // table a new effectiveCtx identity per render, which retriggered every
+  // downstream memo/effect and locked the main thread on this page.
+  /* eslint-disable react-hooks/preserve-manual-memoization -- load-bearing manual memo */
+  const rosterOverride = useMemo<{
     ctx: SheetContext | null;
     pending: boolean;
     error: boolean;
     requestedSectionId: string | null;
-  } = {
-    ctx: rosterQuery.data
-      ? {
-          sectionId: rosterQuery.data.sectionId,
-          sectionName: rosterQuery.data.sectionName,
-          termId: rosterQuery.data.termId,
-          students: rosterQuery.data.students,
-        }
-      : null,
-    pending: rosterQuery.isPending,
-    error: rosterQuery.isError,
-    requestedSectionId: resolvedSectionId ?? null,
-  };
+  }>(() => {
+    const data = rosterQuery.data;
+    return {
+      ctx: data
+        ? {
+            sectionId: data.sectionId,
+            sectionName: data.sectionName,
+            termId: data.termId,
+            students: data.students,
+          }
+        : null,
+      pending: rosterQuery.isPending,
+      error: rosterQuery.isError,
+      requestedSectionId: resolvedSectionId ?? null,
+    };
+  }, [
+    rosterQuery.data,
+    rosterQuery.isPending,
+    rosterQuery.isError,
+    resolvedSectionId,
+  ]);
+  /* eslint-enable react-hooks/preserve-manual-memoization */
   const offeredQuery = useOfferedSubjects(resolvedSectionId, rosterQuery.data?.termId);
   const offered = offeredQuery.data ?? [];
   const myOffered = offered.filter((s) => s.canMark && (s.isMine ?? true));
@@ -281,23 +279,34 @@ export default function TeacherAdvisoryAttendancePage() {
   const slot = gate.slot;
   const { slotCards, slotQuery, setSlotQuery } = useSlotCards(pairs, configQuery.data?.config, now);
   const activeSlotKey = slotKey ?? slotCards[0]?.key ?? null;
-  const hasGrant = termGrant !== null || isMasterTeacher;
+  const hasGrant = termGrant !== null;
   const isAdvisoryPair =
     !!advisorySectionId && (selectedPair?.section.id ?? null) === advisorySectionId;
-  const canMarkPair = isMasterTeacher
-    ? true
-    : !!termGrant && (!!termGrant.attendanceVerified || isAdvisoryPair);
-  const needsVerifyForPair = !isMasterTeacher && hasGrant && !canMarkPair;
-  const showSheetPicker = hasGrant && pairs.length > 0;
-  const topbarCrumb = useMemo(
-    () =>
-      showSheetPicker ? (
-        <SheetDatePicker date={date} onChange={setDate} meetupDates={meetupDateKeys} />
-      ) : null,
-    [showSheetPicker, date, meetupDateKeys],
+  const canMarkPair = !!termGrant && (!!termGrant.attendanceVerified || isAdvisoryPair);
+  const needsVerifyForPair = hasGrant && !canMarkPair;
+  // Memoize the live prop: the gate builds a fresh object every render and
+  // the roster table memos on it — an unstable identity re-ran every table
+  // memo/effect per render and wedged the main thread.
+  const liveLocked = gate.live.locked || needsVerifyForPair || takenByOther;
+  const liveMessage = gate.live.message;
+  const liveTone = gate.live.tone;
+  const liveNowMin = gate.live.nowMin;
+  const liveTodayKey = gate.live.todayKey;
+  const liveTodayEnd = gate.live.todayEnd;
+  /* eslint-disable react-hooks/preserve-manual-memoization -- load-bearing manual memo */
+  const live = useMemo<AttendanceLive>(
+    () => ({
+      locked: liveLocked,
+      tone: liveTone,
+      message: liveMessage,
+      nowMin: liveNowMin,
+      todayKey: liveTodayKey,
+      todayEnd: liveTodayEnd,
+    }),
+    [liveLocked, liveTone, liveMessage, liveNowMin, liveTodayKey, liveTodayEnd],
   );
-  useTopbarCrumb(topbarCrumb);
-  if (meQuery.isPending || ((linked || isMasterTeacher) && mySlotsQuery.isPending)) {
+  /* eslint-enable react-hooks/preserve-manual-memoization */
+  if (meQuery.isPending || (linked && mySlotsQuery.isPending)) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading attendance">
         <ZentraPageHeaderSkeleton />
@@ -306,17 +315,8 @@ export default function TeacherAdvisoryAttendancePage() {
       </section>
     );
   }
-  if (!linked && !isMasterTeacher) {
-    return (
-      <section className={styles.page}>
-        <div className={styles.gateBody}>
-          <TeacherCodeClaim
-            title="Link your teacher code"
-            description="Enter the code next to your name in the master teacher's teacher list (e.g. MS-101). Your subjects and each section's students will attach here for per-subject attendance."
-          />
-        </div>
-      </section>
-    );
+  if (!linked) {
+    return <AttendanceLinkGate termLabel={termLabel} />;
   }
   const handleVerify = () => {
     if (verify.isPending) return;
@@ -327,52 +327,14 @@ export default function TeacherAdvisoryAttendancePage() {
     setAttCodeError(null);
     verify.mutate(attCode.trim());
   };
-  if (!hasGrant && !isMasterTeacher) {
+  if (!hasGrant) {
     return (
-      <AttendanceTermGate
-        termLabel={termLabel}
-        isAdviser={isAdviser}
-        sectionName={sheetContext.data?.sectionName ?? null}
-        showCodeVerify={showCodeVerify}
-        attCode={attCode}
-        attCodeError={attCodeError}
-        verifyPending={verify.isPending}
-        grantPending={grantTap.isPending}
-        onAttCodeChange={(value) => {
-          setAttCode(value);
-          setAttCodeError(null);
-        }}
-        onShowCodeVerify={setShowCodeVerify}
-        onBackToAdviser={() => setShowCodeVerify(false)}
-        onVerify={handleVerify}
-        onGrantTap={() => grantTap.mutate()}
-      />
+      <AttendanceTermGate termLabel={termLabel} />
     );
   }
   return (
     <section className={styles.page}>
-      {isMasterTeacher && pairs.length === 0 ? (
-        !linked ? (
-          <TermAccessCard
-            linkedName={null}
-            termLabel={termLabel}
-            claimTitle="Link your teacher code"
-            claimDescription="Enter the code next to your name in the teacher list (e.g. MS-101). Your subjects and each section's students will attach here for per-subject attendance."
-            successTitle="Attendance unlocked"
-            successDescription={`Your code matches — per-subject sheets are now open for ${termLabel}.`}
-          />
-        ) : (
-          <div className="flex min-h-[calc(100dvh-10rem)] items-center justify-center">
-            <div className="w-full max-w-3xl">
-              <NoTermRecordsPanel
-                termLabel={termLabel}
-                isMasterTeacher
-                teacherName={linked.name}
-              />
-            </div>
-          </div>
-        )
-      ) : pairs.length === 0 ? (
+      {pairs.length === 0 ? (
         <div className="flex min-h-[calc(100dvh-10rem)] items-center justify-center">
           <div className="w-full max-w-3xl">
             <NoTermRecordsPanel
@@ -387,6 +349,12 @@ export default function TeacherAdvisoryAttendancePage() {
           <div className={styles.main}>
             <div className="flex flex-wrap items-center justify-start gap-2 lg:hidden" aria-label="Sheet toolbar">
               <SheetDatePicker date={date} onChange={setDate} meetupDates={meetupDateKeys} />
+              {gate.live.message && gate.live.tone !== "lock" ? (
+                <SheetLiveNotice
+                  title={gate.live.message.includes("live now") ? "Live now" : "Editable"}
+                  message={gate.live.message}
+                />
+              ) : null}
             </div>
             <div className={styles.body}>
               {needsVerifyForPair ? (
@@ -415,12 +383,16 @@ export default function TeacherAdvisoryAttendancePage() {
                 slot={slot}
                 roster={resolvedSectionId ? rosterOverride : undefined}
                 meetupDays={resolvedMeetupDays}
-                live={{ ...gate.live, locked: gate.live.locked || needsVerifyForPair || takenByOther }}
-                stretchClassName={styles.tableStretchRail}
+                live={live}
+                blocksMode={blocksMode}
+                onBlocksModeChange={setBlocksMode}
               />
             </div>
           </div>
           <AttendanceSidebar
+            date={date}
+            onDateChange={setDate}
+            meetupDates={meetupDateKeys}
             slotCards={slotCards}
             hasSubjects={pairs.some((p) => p.subject)}
             activeSlotKey={activeSlotKey}
@@ -430,6 +402,8 @@ export default function TeacherAdvisoryAttendancePage() {
               setPairKey(card.pairKey);
               setSlotKey(card.key);
             }}
+            blocksMode={blocksMode}
+            onToggleBlocks={() => setBlocksMode((v) => !v)}
           />
         </div>
       )}

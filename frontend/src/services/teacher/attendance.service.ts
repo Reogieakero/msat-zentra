@@ -121,6 +121,7 @@ export function useSheetMarks(
     queryFn: () =>
       fetchSheetMarks(`${date}T00:00:00Z`, subjectId as string, slot, sectionId ?? null),
     enabled: !!teacherId && !!subjectId && !!sectionId,
+    retry: false,
     staleTime: MARKS_STALE_MS,
     gcTime: MARKS_GC_MS,
     placeholderData: keepPreviousData,
@@ -171,21 +172,34 @@ export function useSubjectDays(
   });
 }
 
+export const DEFAULT_MEETUP_DAYS: readonly number[] = [1, 2, 3, 4, 5];
+
 export function enumerateMeetupDates(
   termStart: string | null,
   termEnd: string | null,
   meetupDays: number[],
 ): string[] {
   if (!termStart) return [];
+  const validDays = new Set(
+    (Array.isArray(meetupDays) ? meetupDays : []).filter(
+      (d) => Number.isInteger(d) && d >= 1 && d <= 7,
+    ),
+  );
+  if (validDays.size === 0) return [];
   const start = new Date(`${termStart.slice(0, 10)}T00:00:00Z`);
   if (Number.isNaN(start.getTime())) return [];
   const endRaw = termEnd ? new Date(`${termEnd.slice(0, 10)}T00:00:00Z`) : new Date();
+  if (Number.isNaN(endRaw.getTime())) return [];
   const end = new Date(`${endRaw.toISOString().slice(0, 10)}T00:00:00Z`);
+  if (start > end) return [];
   const out: string[] = [];
-  for (let d = new Date(start); d <= end && out.length < 90; d = new Date(d.getTime() + 86_400_000)) {
+  // Bound both outputs (90 meetups) and day iterations (~366) so a bad
+  // term range can never spin the main thread (Page Unresponsive).
+  let guard = 0;
+  for (let d = new Date(start); d <= end && out.length < 90 && guard < 400; d = new Date(d.getTime() + 86_400_000), guard += 1) {
     const dow = d.getUTCDay();
     const day = dow === 0 ? 7 : dow;
-    if (meetupDays.includes(day)) out.push(d.toISOString().slice(0, 10));
+    if (validDays.has(day)) out.push(d.toISOString().slice(0, 10));
   }
   return out;
 }

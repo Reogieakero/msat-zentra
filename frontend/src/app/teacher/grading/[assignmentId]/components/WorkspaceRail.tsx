@@ -8,7 +8,7 @@ import type {
 } from "@/services/teacher/grading.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 
-function WeightsDonut({ ww, pt, exam }: { ww: number; pt: number; exam: number }) {
+export function WeightsDonut({ ww, pt, exam }: { ww: number; pt: number; exam: number }) {
   const total = ww + pt + exam;
   const segs = [
     { value: ww, color: "#3b82f6" },

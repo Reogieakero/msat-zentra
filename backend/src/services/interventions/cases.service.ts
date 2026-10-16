@@ -223,6 +223,7 @@ export async function assignIntervention(
       message: "An intervention was assigned to you by guidance",
     });
   }
+  notifyInterventionAdviser(row, ctx.userId, (name) => `Guidance reassigned the follow-up for ${name}.`);
   return updated;
 }
 

@@ -118,6 +118,7 @@ export async function getReferable(query: ReferableQuery) {
         id: true,
         observationDatetime: true,
         category: true,
+        signedAt: true,
         student: {
           select: {
             user: { select: { fullName: true } },
@@ -136,6 +137,7 @@ export async function getReferable(query: ReferableQuery) {
       category: r.category,
       studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
       section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
+      signed: r.signedAt != null,
     }));
   }
 
@@ -148,7 +150,7 @@ export async function getReferable(query: ReferableQuery) {
       confidentialityLevel: true,
       descriptionOfIncident: true,
       notesRecommendationsActions: true,
-      referrals: { select: { id: true } },
+      referrals: { select: { id: true, status: true } },
       student: {
         select: {
           userId: true,
@@ -180,7 +182,9 @@ export async function getReferable(query: ReferableQuery) {
     lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
     section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
     excerpt: r.descriptionOfIncident?.slice(0, 120) ?? "",
-    hasReferral: r.referrals.length > 0,
+    // A record stays referable while it has no OPEN referral: cancelled or
+    // resolved cases can be re-referred from the same record.
+    hasReferral: r.referrals.some((x) => x.status !== "dismissed" && x.status !== "resolved"),
     referralCount: r.referrals.length,
     hasAccount: r.student != null,
   }));

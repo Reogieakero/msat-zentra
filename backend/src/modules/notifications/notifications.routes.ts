@@ -52,6 +52,7 @@ router.get(
       take,
       select: {
         id: true,
+        userId: true,
         type: true,
         message: true,
         isRead: true,

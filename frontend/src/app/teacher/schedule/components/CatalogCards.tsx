@@ -5,7 +5,7 @@ import { BookPlus, UserPlus } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { Button } from "@/components/ui/button";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import type { ScheduleSubject } from "../page";
 import { AddTeacherDialog } from "./add-teacher-dialog";
 import { AddSubjectDialog } from "./add-subject-dialog";
@@ -66,61 +66,65 @@ export function CatalogCards({
   const teachersLoadError = teachersErrorProp ?? teachersQuery.isError;
   return (
     <>
-      <div className={layout === "rail" ? "flex flex-col gap-4" : "grid gap-4 sm:grid-cols-2"}>
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex items-center gap-3">
-            <span
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10"
-              aria-hidden="true"
-            >
-              <BookPlus size={20} className="text-primary" />
+      <div className={layout === "rail" ? "flex flex-col gap-3" : "grid items-stretch gap-3 sm:grid-cols-2"}>
+        <KanbanBoard
+          title="Add Subject"
+          icon={
+            <span className="text-amber-500" aria-hidden>
+              <BookPlus size={14} />
             </span>
-            <div className="min-w-0">
-              <h3 className="font-semibold">Add Subject</h3>
-              <p className="text-xs text-muted-foreground">
-                Create one or more subjects for grades 7–10. Usable immediately.
-              </p>
+          }
+          count={<span className="text-amber-600 dark:text-amber-500">{subjects.length}</span>}
+          description="Create one or more subjects for grades 7–10. Usable immediately."
+          className="h-full"
+          footer={
+            <div className="flex justify-end gap-1.5 px-1 pb-1">
+              <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => setListOpen(true)}>
+                See all
+              </Button>
+              <Button size="sm" className="h-6 px-2 text-xs" onClick={() => setSubjectOpen(true)}>
+                Add subject
+              </Button>
             </div>
-          </div>
-          <div className="relative mt-auto flex gap-2 pt-1">
-            <Button variant="outline" size="sm" onClick={() => setListOpen(true)}>
-              See all
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setSubjectOpen(true)}>
-              Add subject
-            </Button>
-          </div>
-        </div>
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex items-center gap-3">
-            <span
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10"
-              aria-hidden="true"
-            >
-              <UserPlus size={20} className="text-primary" />
+          }
+        >
+          <p className="flex-1 px-1 text-xs text-muted-foreground">
+            {subjectsPending
+              ? "Loading subjects…"
+              : subjectsLoadError
+                ? "Could not load subjects."
+                : `${subjects.length} subject${subjects.length === 1 ? "" : "s"} in catalog.`}
+          </p>
+        </KanbanBoard>
+        <KanbanBoard
+          title="Add Teachers"
+          icon={
+            <span className="text-amber-500" aria-hidden>
+              <UserPlus size={14} />
             </span>
-            <div className="min-w-0">
-              <h3 className="font-semibold">Add Teachers</h3>
-              <p className="text-xs text-muted-foreground">
-                Type a name once, pick it forever. Just a name list.
-              </p>
+          }
+          count={<span className="text-amber-600 dark:text-amber-500">{teacherNames.length}</span>}
+          description="Type a name once, pick it forever. Just a name list."
+          className="h-full"
+          footer={
+            <div className="flex justify-end gap-1.5 px-1 pb-1">
+              <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => setTeacherListOpen(true)}>
+                See all
+              </Button>
+              <Button size="sm" className="h-6 px-2 text-xs" onClick={() => setTeacherOpen(true)}>
+                Add teacher
+              </Button>
             </div>
-          </div>
-          <div className="relative mt-auto flex gap-2 pt-1">
-            <Button variant="outline" size="sm" onClick={() => setTeacherListOpen(true)}>
-              See all
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setTeacherOpen(true)}>
-              Add teacher
-            </Button>
-          </div>
-        </div>
+          }
+        >
+          <p className="flex-1 px-1 text-xs text-muted-foreground">
+            {teachersPending
+              ? "Loading teachers…"
+              : teachersLoadError
+                ? "Could not load teachers."
+                : `${teacherNames.length} teacher${teacherNames.length === 1 ? "" : "s"} in catalog.`}
+          </p>
+        </KanbanBoard>
       </div>
       {subjectOpen ? (
         <AddSubjectDialog

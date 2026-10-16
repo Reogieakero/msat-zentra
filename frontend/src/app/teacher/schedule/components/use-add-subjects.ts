@@ -15,7 +15,12 @@ function getErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message;
   return fallback;
 }
-export function useAddSubjects(onClose: () => void) {
+export type SubjectCreateProgress = {
+  count: number;
+  gradeLabel: string;
+  categoryLabel: string;
+};
+export function useAddSubjects(onClose: () => void, onProgress?: (p: SubjectCreateProgress | null) => void) {
   const invalidateTeacher = useTeacherInvalidate();
   const [rows, setRows] = useState<SubjectRow[]>([{ name: "", code: "" }]);
   const [gradeLevel, setGradeLevel] = useState("G7");
@@ -69,6 +74,9 @@ export function useAddSubjects(onClose: () => void) {
         onClose();
       }
     },
+    onSettled: () => {
+      onProgress?.(null);
+    },
   });
   const handleCreate = () => {
     if (partial.length > 0) {
@@ -84,6 +92,11 @@ export function useAddSubjects(onClose: () => void) {
       return;
     }
     setFormError(null);
+    onProgress?.({
+      count: filled.length,
+      gradeLabel: `Grade ${gradeLevel.replace("G", "")}`,
+      categoryLabel: category === "ELECTIVE" ? "Elective" : "Core",
+    });
     createMany.mutate({ items: filled, category });
   };
   return {

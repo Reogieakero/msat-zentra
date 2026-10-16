@@ -1,23 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
-import { useTeacherInvalidate } from "../components/use-teacher-invalidate";
 import { apiClient } from "@/lib/api/client";
-import { toast } from "@/components/ui/sonner";
 import { useSession } from "@/lib/auth/useSession";
 import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
-import { Inbox, Loader2, Trash2 } from "lucide-react";
+import { ExternalLink, Inbox, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { ScrollList } from "@/components/ui/scroll-list";
 
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import { SectionScheduleCard, type StatusEntry } from "@/components/schedule/SectionScheduleCard";
+import {
+  SECTION_CARD_STATUS_META,
+  sectionCardStatus,
+  sectionInitials,
+} from "@/components/schedule/SectionScheduleCard";
+import type { StatusEntry } from "@/components/schedule/SectionScheduleCard";
 import styles from "./schedule-empty.module.css";
-import { CatalogCards } from "./components/CatalogCards";
-import { WorkspaceCards } from "./components/WorkspaceCards";
+import kanbanStyles from "./components/subject-kanban.module.css";
+import { ScheduleGutter } from "./components/schedule-gutter";
 import { TeacherPageHeader } from "../components/TeacherPageHeader";
 import { TeacherEmptyCard } from "../components/TeacherEmptyCard";
 import { ZentraPageHeaderSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
@@ -69,6 +72,13 @@ interface ScheduleData {
   sections: ScheduleSectionSummary[];
 }
 
+const GRADES = [
+  { key: "G7", label: "Grade 7" },
+  { key: "G8", label: "Grade 8" },
+  { key: "G9", label: "Grade 9" },
+  { key: "G10", label: "Grade 10" },
+] as const;
+
 function ScheduleSkeleton() {
   return (
     <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading schedule">
@@ -98,7 +108,6 @@ function ScheduleSkeleton() {
 }
 
 export default function TeacherSchedulePage() {
-  const invalidateTeacher = useTeacherInvalidate();
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const session = useSession();
@@ -106,7 +115,6 @@ export default function TeacherSchedulePage() {
 
   const cachedMaster = useCachedMasterTeacher(session?.sub);
   const isMasterTeacher = overview.data?.isMasterTeacher ?? cachedMaster;
-  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   const {
     data: schedData,
@@ -119,35 +127,6 @@ export default function TeacherSchedulePage() {
       return data;
     },
     enabled: isMasterTeacher,
-  });
-
-  const clearAll = useMutation({
-    mutationFn: async () => {
-      const { data } = await apiClient.delete("/api/teacher/schedule/entries/clear-all");
-      return data as { deleted: number; skippedApproved?: number };
-    },
-    onSuccess: (data) => {
-      setConfirmClearOpen(false);
-      invalidateTeacher.schedule();
-      const skipped = data.skippedApproved ?? 0;
-      toast.success({
-        title: "Timetables cleared",
-        description:
-          `${data.deleted} slot${data.deleted === 1 ? "" : "s"} removed workspace-wide.` +
-          (skipped > 0
-            ? ` ${skipped} approved slot${skipped === 1 ? "" : "s"} kept — unlock ${skipped === 1 ? "its" : "their"} section to remove ${skipped === 1 ? "it" : "them"}.`
-            : ""),
-      });
-    },
-    onError: (err: unknown) => {
-      const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
-      const serverMessage = data?.error?.message ?? data?.message;
-      const message =
-        typeof serverMessage === "string" && serverMessage
-          ? serverMessage
-          : "Failed to clear timetables.";
-      toast.error({ title: "Could not clear timetables", description: message });
-    },
   });
 
   if (overview.isPending) {
@@ -196,15 +175,29 @@ export default function TeacherSchedulePage() {
   const orderedSections = [...sections].sort(
     (a, b) => gradeNumber(a.gradeLevel) - gradeNumber(b.gradeLevel) || a.name.localeCompare(b.name),
   );
-  const totalSlots = sections.reduce((n, s) => n + s.timetableEntries.length, 0);
+  const byGrade = new Map<string, typeof orderedSections>();
+  for (const g of GRADES) byGrade.set(g.key, []);
+  for (const s of orderedSections) {
+    const bucket = byGrade.get(s.gradeLevel);
+    if (bucket) bucket.push(s);
+    else byGrade.set(s.gradeLevel, [s]);
+  }
 
   return (
     <section className="flex w-full flex-col">
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
         <div className="flex min-w-0 flex-col gap-5">
           <TeacherPageHeader
             title="Schedule"
             description="Master scheduling workspace for grades 7–10 sections, subjects, and timetable slots."
+            actions={
+              <Button asChild size="sm" className="h-8 px-3">
+                <a href="/teacher/schedule/template" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink size={14} aria-hidden />
+                  Open schedule template
+                </a>
+              </Button>
+            }
           />
           {orderedSections.length === 0 ? (
             <TeacherEmptyCard
@@ -215,118 +208,97 @@ export default function TeacherSchedulePage() {
               label="Schedule sections"
             />
           ) : (
-            <div className={assign.grid} role="group" aria-label="Sections">
-              {orderedSections.map((section) => {
-                const scheduled = section.timetableEntries.length > 0;
-                return (
-                  <SectionScheduleCard
-                    key={section.id}
-                    href={`/teacher/schedule/${section.id}`}
-                    ariaLabel={
-                      scheduled
-                        ? `Open schedule for ${section.name}`
-                        : `Set up schedule for ${section.name} — no schedule yet`
-                    }
-                    gradeLevel={section.gradeLevel}
-                    sectionName={section.name}
-                    adviserName={section.adviser?.fullName ?? null}
-                    timetableEntries={section.timetableEntries}
-                    hint={scheduled ? null : "No schedule yet — tap to set up"}
-                  />
-                );
-              })}
+            <div className={kanbanStyles.view} aria-label="Sections by grade level">
+              <div className={kanbanStyles.grid} role="group" aria-label="Sections">
+                {GRADES.map((g, colIdx) => {
+                  const list = byGrade.get(g.key) ?? [];
+                  return (
+                    <div
+                      key={g.key}
+                      role="listitem"
+                      aria-label={`${g.label} sections`}
+                      className={kanbanStyles.column}
+                      style={{ animationDelay: `${colIdx * 70}ms` }}
+                    >
+                      <KanbanBoard
+                        title={g.label}
+                        icon={
+                          <span className="text-amber-500" aria-hidden>
+                            <LayoutGrid size={14} />
+                          </span>
+                        }
+                        count={<span className="text-amber-600 dark:text-amber-500">{list.length}</span>}
+                        className="h-full"
+                      >
+                        {list.length === 0 ? (
+                          <p className={kanbanStyles.empty}>No {g.label} sections.</p>
+                        ) : (
+                          <ScrollList className="max-h-[46dvh] gap-[0.375rem] pr-[2px]" ariaLabel={`${g.label} sections list`}>
+                            {list.map((section, cardIdx) => {
+                              const status = sectionCardStatus(section.timetableEntries);
+                              const meta = SECTION_CARD_STATUS_META[status];
+                              const scheduled = section.timetableEntries.length > 0;
+                              return (
+                                <Link
+                                  key={section.id}
+                                  href={`/teacher/schedule/template?sectionId=${encodeURIComponent(section.id)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={
+                                    scheduled
+                                      ? `Open schedule for ${section.name} in template (new tab)`
+                                      : `Set up schedule for ${section.name} in template (new tab) — no schedule yet`
+                                  }
+                                  className={kanbanStyles.card}
+                                  style={{ animationDelay: `${colIdx * 70 + Math.min(cardIdx, 8) * 35}ms` }}
+                                >
+                                  <span className="flex min-w-0 flex-1 items-center gap-2">
+                                    <span
+                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground"
+                                      aria-hidden="true"
+                                    >
+                                      {sectionInitials(section.name)}
+                                    </span>
+                                    <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                                      <span className="w-full truncate text-[13px] font-medium" title={section.name}>
+                                        {section.name}
+                                      </span>
+                                      <span className="flex flex-wrap items-center gap-1">
+                                        <span className="inline-flex items-center gap-1 rounded border border-border px-1.5 text-[11px] text-muted-foreground">
+                                          <span
+                                            className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                            style={{ backgroundColor: meta.color }}
+                                            aria-hidden="true"
+                                          />
+                                          {meta.label}
+                                        </span>
+                                        <span className="rounded border border-amber-600/45 bg-amber-500/10 px-1.5 text-[11px] font-medium text-amber-700 dark:border-amber-500/45 dark:text-amber-400">
+                                          {section.timetableEntries.length} slot{section.timetableEntries.length === 1 ? "" : "s"}
+                                        </span>
+                                      </span>
+                                      <span className="w-full truncate text-[11px] text-muted-foreground" title={section.adviser?.fullName ?? "No adviser"}>
+                                        {section.adviser?.fullName ?? "No adviser"}
+                                        {scheduled ? null : " · No schedule yet — tap to set up"}
+                                      </span>
+                                    </span>
+                                  </span>
+                                </Link>
+                              );
+                            })}
+                          </ScrollList>
+                        )}
+                      </KanbanBoard>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
-        <div className={`flex min-w-0 flex-col gap-4 ${styles.railSticky}`}>
-          <CatalogCards layout="rail" />
-          <WorkspaceCards />
-          {totalSlots > 0 ? (
-            <div
-              className={assign.card}
-              aria-label="Danger zone"
-              style={{
-                borderColor: "color-mix(in oklch, #ef4444 45%, transparent)",
-                background:
-                  "linear-gradient(135deg, color-mix(in oklch, #ef4444 26%, var(--card)), color-mix(in oklch, #b91c1c 18%, var(--card)))",
-              }}
-            >
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative flex items-center gap-3">
-                <span
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-destructive/10"
-                  aria-hidden="true"
-                >
-                  <Trash2 size={20} className="text-destructive" />
-                </span>
-                <div className="min-w-0">
-                  <h3 className="font-semibold">Clear all timetables</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Removes {totalSlots} slot{totalSlots === 1 ? "" : "s"} workspace-wide.
-                    Approved slots are kept.
-                  </p>
-                </div>
-              </div>
-              <div className="relative mt-auto flex gap-2 pt-1">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setConfirmClearOpen(true)}
-                  disabled={clearAll.isPending}
-                >
-                  Clear all timetables
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <aside className="self-start lg:sticky lg:top-16" aria-label="Schedule tools">
+          <ScheduleGutter />
+        </aside>
       </div>
-      {confirmClearOpen ? (
-        <CardModal
-          open
-          onClose={() => {
-            if (!clearAll.isPending) setConfirmClearOpen(false);
-          }}
-          dismissable={!clearAll.isPending}
-          size="sm"
-          title="Clear all timetables?"
-          description={
-            <>
-              This removes all {totalSlots} scheduled slot{totalSlots === 1 ? "" : "s"}{" "}
-              workspace-wide. Approved slots are kept — unlock their sections to remove
-              them. Subjects and teacher names stay in their lists.
-            </>
-          }
-          watchKey={clearAll.isPending}
-        >
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="destructive"
-              onClick={() => setConfirmClearOpen(false)}
-              disabled={clearAll.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => clearAll.mutate()}
-              disabled={clearAll.isPending}
-              aria-busy={clearAll.isPending || undefined}
-            >
-              {clearAll.isPending ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" aria-hidden />
-                  <span aria-live="polite">Removing…</span>
-                </>
-              ) : (
-                "Remove all"
-              )}
-            </Button>
-          </div>
-        </CardModal>
-      ) : null}
     </section>
   );
 }

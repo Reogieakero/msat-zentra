@@ -41,6 +41,7 @@ export type StudentRosterMinAggregateOutputType = {
   gradeLevel: $Enums.GradeLevel | null
   sectionId: string | null
   schoolYearId: string | null
+  mascot: string | null
   riskCount: number | null
   riskLevel: $Enums.RiskLevel | null
   academicFlag: boolean | null
@@ -55,6 +56,7 @@ export type StudentRosterMaxAggregateOutputType = {
   gradeLevel: $Enums.GradeLevel | null
   sectionId: string | null
   schoolYearId: string | null
+  mascot: string | null
   riskCount: number | null
   riskLevel: $Enums.RiskLevel | null
   academicFlag: boolean | null
@@ -69,6 +71,7 @@ export type StudentRosterCountAggregateOutputType = {
   gradeLevel: number
   sectionId: number
   schoolYearId: number
+  mascot: number
   riskCount: number
   riskLevel: number
   academicFlag: number
@@ -93,6 +96,7 @@ export type StudentRosterMinAggregateInputType = {
   gradeLevel?: true
   sectionId?: true
   schoolYearId?: true
+  mascot?: true
   riskCount?: true
   riskLevel?: true
   academicFlag?: true
@@ -107,6 +111,7 @@ export type StudentRosterMaxAggregateInputType = {
   gradeLevel?: true
   sectionId?: true
   schoolYearId?: true
+  mascot?: true
   riskCount?: true
   riskLevel?: true
   academicFlag?: true
@@ -121,6 +126,7 @@ export type StudentRosterCountAggregateInputType = {
   gradeLevel?: true
   sectionId?: true
   schoolYearId?: true
+  mascot?: true
   riskCount?: true
   riskLevel?: true
   academicFlag?: true
@@ -222,6 +228,7 @@ export type StudentRosterGroupByOutputType = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot: string | null
   riskCount: number
   riskLevel: $Enums.RiskLevel
   academicFlag: boolean
@@ -259,6 +266,7 @@ export type StudentRosterWhereInput = {
   gradeLevel?: Prisma.EnumGradeLevelFilter<"StudentRoster"> | $Enums.GradeLevel
   sectionId?: Prisma.StringFilter<"StudentRoster"> | string
   schoolYearId?: Prisma.StringFilter<"StudentRoster"> | string
+  mascot?: Prisma.StringNullableFilter<"StudentRoster"> | string | null
   riskCount?: Prisma.IntFilter<"StudentRoster"> | number
   riskLevel?: Prisma.EnumRiskLevelFilter<"StudentRoster"> | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
@@ -282,6 +290,7 @@ export type StudentRosterOrderByWithRelationInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   schoolYearId?: Prisma.SortOrder
+  mascot?: Prisma.SortOrderInput | Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   academicFlag?: Prisma.SortOrder
@@ -309,6 +318,7 @@ export type StudentRosterWhereUniqueInput = Prisma.AtLeast<{
   gradeLevel?: Prisma.EnumGradeLevelFilter<"StudentRoster"> | $Enums.GradeLevel
   sectionId?: Prisma.StringFilter<"StudentRoster"> | string
   schoolYearId?: Prisma.StringFilter<"StudentRoster"> | string
+  mascot?: Prisma.StringNullableFilter<"StudentRoster"> | string | null
   riskCount?: Prisma.IntFilter<"StudentRoster"> | number
   riskLevel?: Prisma.EnumRiskLevelFilter<"StudentRoster"> | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
@@ -332,6 +342,7 @@ export type StudentRosterOrderByWithAggregationInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   schoolYearId?: Prisma.SortOrder
+  mascot?: Prisma.SortOrderInput | Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   academicFlag?: Prisma.SortOrder
@@ -354,6 +365,7 @@ export type StudentRosterScalarWhereWithAggregatesInput = {
   gradeLevel?: Prisma.EnumGradeLevelWithAggregatesFilter<"StudentRoster"> | $Enums.GradeLevel
   sectionId?: Prisma.StringWithAggregatesFilter<"StudentRoster"> | string
   schoolYearId?: Prisma.StringWithAggregatesFilter<"StudentRoster"> | string
+  mascot?: Prisma.StringNullableWithAggregatesFilter<"StudentRoster"> | string | null
   riskCount?: Prisma.IntWithAggregatesFilter<"StudentRoster"> | number
   riskLevel?: Prisma.EnumRiskLevelWithAggregatesFilter<"StudentRoster"> | $Enums.RiskLevel
   academicFlag?: Prisma.BoolWithAggregatesFilter<"StudentRoster"> | boolean
@@ -366,6 +378,7 @@ export type StudentRosterCreateInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -389,6 +402,7 @@ export type StudentRosterUncheckedCreateInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -408,6 +422,7 @@ export type StudentRosterUpdateInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -431,6 +446,7 @@ export type StudentRosterUncheckedUpdateInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -452,6 +468,7 @@ export type StudentRosterCreateManyInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -464,6 +481,7 @@ export type StudentRosterUpdateManyMutationInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -478,6 +496,7 @@ export type StudentRosterUncheckedUpdateManyInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -507,6 +526,7 @@ export type StudentRosterCountOrderByAggregateInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   schoolYearId?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   academicFlag?: Prisma.SortOrder
@@ -525,6 +545,7 @@ export type StudentRosterMaxOrderByAggregateInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   schoolYearId?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   academicFlag?: Prisma.SortOrder
@@ -539,6 +560,7 @@ export type StudentRosterMinOrderByAggregateInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   schoolYearId?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   academicFlag?: Prisma.SortOrder
@@ -756,6 +778,7 @@ export type StudentRosterCreateWithoutSchoolYearInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -777,6 +800,7 @@ export type StudentRosterUncheckedCreateWithoutSchoolYearInput = {
   fullName: string
   gradeLevel: $Enums.GradeLevel
   sectionId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -827,6 +851,7 @@ export type StudentRosterScalarWhereInput = {
   gradeLevel?: Prisma.EnumGradeLevelFilter<"StudentRoster"> | $Enums.GradeLevel
   sectionId?: Prisma.StringFilter<"StudentRoster"> | string
   schoolYearId?: Prisma.StringFilter<"StudentRoster"> | string
+  mascot?: Prisma.StringNullableFilter<"StudentRoster"> | string | null
   riskCount?: Prisma.IntFilter<"StudentRoster"> | number
   riskLevel?: Prisma.EnumRiskLevelFilter<"StudentRoster"> | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
@@ -839,6 +864,7 @@ export type StudentRosterCreateWithoutSectionInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -860,6 +886,7 @@ export type StudentRosterUncheckedCreateWithoutSectionInput = {
   fullName: string
   gradeLevel: $Enums.GradeLevel
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -905,6 +932,7 @@ export type StudentRosterCreateWithoutStudentGradesInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -927,6 +955,7 @@ export type StudentRosterUncheckedCreateWithoutStudentGradesInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -961,6 +990,7 @@ export type StudentRosterUpdateWithoutStudentGradesInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -983,6 +1013,7 @@ export type StudentRosterUncheckedUpdateWithoutStudentGradesInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1001,6 +1032,7 @@ export type StudentRosterCreateWithoutFinalGradesInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1023,6 +1055,7 @@ export type StudentRosterUncheckedCreateWithoutFinalGradesInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1057,6 +1090,7 @@ export type StudentRosterUpdateWithoutFinalGradesInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1079,6 +1113,7 @@ export type StudentRosterUncheckedUpdateWithoutFinalGradesInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1097,6 +1132,7 @@ export type StudentRosterCreateWithoutAttendanceRecordsInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1119,6 +1155,7 @@ export type StudentRosterUncheckedCreateWithoutAttendanceRecordsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1153,6 +1190,7 @@ export type StudentRosterUpdateWithoutAttendanceRecordsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1175,6 +1213,7 @@ export type StudentRosterUncheckedUpdateWithoutAttendanceRecordsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1193,6 +1232,7 @@ export type StudentRosterCreateWithoutAnecdotalRecordsInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1215,6 +1255,7 @@ export type StudentRosterUncheckedCreateWithoutAnecdotalRecordsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1249,6 +1290,7 @@ export type StudentRosterUpdateWithoutAnecdotalRecordsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1271,6 +1313,7 @@ export type StudentRosterUncheckedUpdateWithoutAnecdotalRecordsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1289,6 +1332,7 @@ export type StudentRosterCreateWithoutReferralsInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1311,6 +1355,7 @@ export type StudentRosterUncheckedCreateWithoutReferralsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1345,6 +1390,7 @@ export type StudentRosterUpdateWithoutReferralsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1367,6 +1413,7 @@ export type StudentRosterUncheckedUpdateWithoutReferralsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1385,6 +1432,7 @@ export type StudentRosterCreateWithoutInterventionsInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1407,6 +1455,7 @@ export type StudentRosterUncheckedCreateWithoutInterventionsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1441,6 +1490,7 @@ export type StudentRosterUpdateWithoutInterventionsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1463,6 +1513,7 @@ export type StudentRosterUncheckedUpdateWithoutInterventionsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1481,6 +1532,7 @@ export type StudentRosterCreateWithoutRiskSnapshotsInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1503,6 +1555,7 @@ export type StudentRosterUncheckedCreateWithoutRiskSnapshotsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1537,6 +1590,7 @@ export type StudentRosterUpdateWithoutRiskSnapshotsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1559,6 +1613,7 @@ export type StudentRosterUncheckedUpdateWithoutRiskSnapshotsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1578,6 +1633,7 @@ export type StudentRosterCreateManySchoolYearInput = {
   fullName: string
   gradeLevel: $Enums.GradeLevel
   sectionId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1590,6 +1646,7 @@ export type StudentRosterUpdateWithoutSchoolYearInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1611,6 +1668,7 @@ export type StudentRosterUncheckedUpdateWithoutSchoolYearInput = {
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1631,6 +1689,7 @@ export type StudentRosterUncheckedUpdateManyWithoutSchoolYearInput = {
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1644,6 +1703,7 @@ export type StudentRosterCreateManySectionInput = {
   fullName: string
   gradeLevel: $Enums.GradeLevel
   schoolYearId: string
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
   academicFlag?: boolean
@@ -1656,6 +1716,7 @@ export type StudentRosterUpdateWithoutSectionInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1677,6 +1738,7 @@ export type StudentRosterUncheckedUpdateWithoutSectionInput = {
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1697,6 +1759,7 @@ export type StudentRosterUncheckedUpdateManyWithoutSectionInput = {
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1796,6 +1859,7 @@ export type StudentRosterSelect<ExtArgs extends runtime.Types.Extensions.Interna
   gradeLevel?: boolean
   sectionId?: boolean
   schoolYearId?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
   academicFlag?: boolean
@@ -1820,6 +1884,7 @@ export type StudentRosterSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   gradeLevel?: boolean
   sectionId?: boolean
   schoolYearId?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
   academicFlag?: boolean
@@ -1836,6 +1901,7 @@ export type StudentRosterSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   gradeLevel?: boolean
   sectionId?: boolean
   schoolYearId?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
   academicFlag?: boolean
@@ -1852,6 +1918,7 @@ export type StudentRosterSelectScalar = {
   gradeLevel?: boolean
   sectionId?: boolean
   schoolYearId?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
   academicFlag?: boolean
@@ -1859,7 +1926,7 @@ export type StudentRosterSelectScalar = {
   behavioralFlag?: boolean
 }
 
-export type StudentRosterOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "lrn" | "fullName" | "gradeLevel" | "sectionId" | "schoolYearId" | "riskCount" | "riskLevel" | "academicFlag" | "attendanceFlag" | "behavioralFlag", ExtArgs["result"]["studentRoster"]>
+export type StudentRosterOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "lrn" | "fullName" | "gradeLevel" | "sectionId" | "schoolYearId" | "mascot" | "riskCount" | "riskLevel" | "academicFlag" | "attendanceFlag" | "behavioralFlag", ExtArgs["result"]["studentRoster"]>
 export type StudentRosterInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
@@ -1901,6 +1968,7 @@ export type $StudentRosterPayload<ExtArgs extends runtime.Types.Extensions.Inter
     gradeLevel: $Enums.GradeLevel
     sectionId: string
     schoolYearId: string
+    mascot: string | null
     riskCount: number
     riskLevel: $Enums.RiskLevel
     academicFlag: boolean
@@ -2344,6 +2412,7 @@ export interface StudentRosterFieldRefs {
   readonly gradeLevel: Prisma.FieldRef<"StudentRoster", 'GradeLevel'>
   readonly sectionId: Prisma.FieldRef<"StudentRoster", 'String'>
   readonly schoolYearId: Prisma.FieldRef<"StudentRoster", 'String'>
+  readonly mascot: Prisma.FieldRef<"StudentRoster", 'String'>
   readonly riskCount: Prisma.FieldRef<"StudentRoster", 'Int'>
   readonly riskLevel: Prisma.FieldRef<"StudentRoster", 'RiskLevel'>
   readonly academicFlag: Prisma.FieldRef<"StudentRoster", 'Boolean'>

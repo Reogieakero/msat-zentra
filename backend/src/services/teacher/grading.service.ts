@@ -33,6 +33,15 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
   if (!termId) {
     throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
   }
+  // Shared-code gate (same as the gradebook list + classes + attendance):
+  // code entry lives only on /teacher/classes, which writes the per-term grant.
+  const termGrant = await prisma.teacherTermGrant.findUnique({
+    where: { userId_termId: { userId: teacherId, termId } },
+    select: { id: true },
+  });
+  if (!termGrant) {
+    throw new AppError(403, "TERM_NOT_VERIFIED", "Enter this term on the classes page first");
+  }
   const a = await assertAssignment(teacherId, assignmentId, termId);
 
   const [profiles, rosterEntries, components] = await Promise.all([
@@ -54,6 +63,10 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
       where: { subjectId: a.subjectId, termId: a.termId },
       include: {
         assessments: {
+          // Section-subject scope: this class only sees assessments added
+          // from its own section, plus legacy pre-scope rows (sectionId
+          // NULL) which remain shared across sections.
+          where: { OR: [{ sectionId: a.sectionId }, { sectionId: null }] },
           include: {
             studentGrades: { select: { studentId: true, rosterId: true, rawScore: true } },
           },
@@ -67,6 +80,12 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
   const studentIds = profiles.map((p) => p.userId);
   const registeredLrns = new Set(profiles.map((p) => p.lrn));
   const rosterOnly = rosterEntries.filter((r) => !registeredLrns.has(r.lrn));
+  // Scores from legacy shared assessments may include other sections'
+  // students — only this section's learners count here.
+  const sectionStudentKeys = new Set<string>([
+    ...profiles.map((p) => p.userId),
+    ...rosterOnly.map((r) => `roster:${r.id}`),
+  ]);
   const [profileFinals, rosterFinals] = await Promise.all([
     prisma.finalGrade.findMany({
       where: { subjectId: a.subjectId, termId: a.termId, studentId: { in: studentIds } },
@@ -143,10 +162,15 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
         dateGiven: as.dateGiven.toISOString().slice(0, 10),
         createdAt: as.createdAt.toISOString().slice(0, 10),
         scores: Object.fromEntries(
-          as.studentGrades.map((g) => [
-            g.rosterId ? `roster:${g.rosterId}` : (g.studentId as string),
-            g.rawScore,
-          ]),
+          as.studentGrades
+            .filter((g) => {
+              const key = g.rosterId ? `roster:${g.rosterId}` : (g.studentId as string);
+              return sectionStudentKeys.has(key);
+            })
+            .map((g) => [
+              g.rosterId ? `roster:${g.rosterId}` : (g.studentId as string),
+              g.rawScore,
+            ]),
         ),
       })),
     })),
@@ -304,6 +328,9 @@ export async function createAssessment(
   const assessment = await prisma.assessment.create({
     data: {
       gradeComponentId: component.id,
+      // Section-subject scope: this quiz/activity/exam lives only in the
+      // section-subject class it was added from, never across sections.
+      sectionId: a.sectionId,
       title: input.title.trim(),
       maxScore: input.maxScore,
       dateGiven: input.dateGiven ? new Date(input.dateGiven) : new Date(),
@@ -346,7 +373,18 @@ export async function patchAssessment(
     include: { gradeComponent: { select: { subjectId: true, termId: true } } },
   });
   if (!assessment) throw new AppError(404, "ASSESSMENT_NOT_FOUND", "Assessment not found");
-  await assertSubjectAccess(teacherId, assessment.gradeComponent.subjectId, assessment.gradeComponent.termId);
+  // Section-subject scope: a scoped assessment can only be edited from its
+  // own section-subject class. Legacy NULL rows stay editable from any
+  // section teaching the subject.
+  if (assessment.sectionId) {
+    await assertAssignment(
+      teacherId,
+      `${assessment.gradeComponent.subjectId}|${assessment.sectionId}`,
+      assessment.gradeComponent.termId,
+    );
+  } else {
+    await assertSubjectAccess(teacherId, assessment.gradeComponent.subjectId, assessment.gradeComponent.termId);
+  }
 
   const maxChanged =
     input.maxScore !== undefined && input.maxScore !== assessment.maxScore;
@@ -405,7 +443,18 @@ export async function deleteAssessment(ctx: GradingContext, assessmentId: string
     include: { gradeComponent: { select: { subjectId: true, termId: true } } },
   });
   if (!assessment) throw new AppError(404, "ASSESSMENT_NOT_FOUND", "Assessment not found");
-  await assertSubjectAccess(teacherId, assessment.gradeComponent.subjectId, assessment.gradeComponent.termId);
+  // Section-subject scope: a scoped assessment can only be deleted from its
+  // own section-subject class. Legacy NULL rows stay deletable from any
+  // section teaching the subject.
+  if (assessment.sectionId) {
+    await assertAssignment(
+      teacherId,
+      `${assessment.gradeComponent.subjectId}|${assessment.sectionId}`,
+      assessment.gradeComponent.termId,
+    );
+  } else {
+    await assertSubjectAccess(teacherId, assessment.gradeComponent.subjectId, assessment.gradeComponent.termId);
+  }
 
   const scored = await prisma.studentGrade.findMany({
     where: { assessmentId: assessment.id },

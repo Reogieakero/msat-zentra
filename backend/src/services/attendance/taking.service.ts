@@ -252,6 +252,8 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
   const teacherId = ctx.userId;
   const callerRole = ctx.role;
 
+  // Every teacher — master included — must enter the term and link a code:
+  // no automatic access. The subject/section checks after this still apply.
   const grant = await prisma.teacherTermGrant.findUnique({
     where: { userId_termId: { userId: teacherId, termId } },
     select: { via: true, attendanceVerifiedAt: true },
@@ -307,26 +309,28 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
   } else {
 
     const own = offerings.filter((o) => o.teacherId === teacherId);
-    let linked = false;
-    if (own.length === 0) {
-      const linkedSlot = await prisma.sectionTimetableEntry.findFirst({
-        where: {
-          subjectId,
-          sectionId,
-          termId,
-          status: { in: ["APPROVED", "SUBMITTED"] },
-          teacherName: { userId: teacherId },
-        },
-        select: { id: true },
-      });
-      linked = !!linkedSlot;
-      if (!linked) {
-        const occupant = offerings[0]?.teacher?.fullName ?? "another teacher";
-        throw new AppError(
-          403,
-          "SUBJECT_TAKEN",
-          `This subject (${subjectLabel}) is linked to ${occupant} — only their linked students can be marked here`
-        );
+    {
+      let linked = false;
+      if (own.length === 0) {
+        const linkedSlot = await prisma.sectionTimetableEntry.findFirst({
+          where: {
+            subjectId,
+            sectionId,
+            termId,
+            status: { in: ["APPROVED", "SUBMITTED"] },
+            teacherName: { userId: teacherId },
+          },
+          select: { id: true },
+        });
+        linked = !!linkedSlot;
+        if (!linked) {
+          const occupant = offerings[0]?.teacher?.fullName ?? "another teacher";
+          throw new AppError(
+            403,
+            "SUBJECT_TAKEN",
+            `This subject (${subjectLabel}) is linked to ${occupant} — only their linked students can be marked here`
+          );
+        }
       }
     }
     if (assignmentId) {

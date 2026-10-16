@@ -38,6 +38,7 @@ router.get(
               day: true,
               period: true,
               status: true,
+              reviewNote: true,
               subject: { select: { id: true, name: true, code: true } },
               teacherName: { select: { id: true, name: true } },
               submittedAt: true,
@@ -156,7 +157,11 @@ router.post(
             status: "APPROVED",
             reviewedBy: principalId,
             reviewedAt: now,
-            reviewNote: trimmedNote,
+            // Approval must not leave a revision note behind: reviewNote
+            // drives the teacher-side "Returned" card, which is strictly
+            // DRAFT + note. Persisting the approve-dialog text here is what
+            // made approved sections read as returned for teachers.
+            reviewNote: null,
           },
         });
         const owners = new Map<string, string>();
@@ -193,6 +198,29 @@ router.post(
             message: `Principal approved ${submitted.length} timetable slots for ${section.name} — official.`,
           });
         }
+        void (async () => {
+          try {
+            const [assignments, timetableTeachers, sec] = await Promise.all([
+              prisma.teacherSubjectAssignment.findMany({ where: { sectionId, termId }, select: { teacherId: true } }),
+              prisma.sectionTimetableEntry.findMany({ where: { sectionId, termId }, select: { teacherName: { select: { userId: true } } } }),
+              prisma.section.findUnique({ where: { id: sectionId }, select: { adviserId: true } }),
+            ]);
+            const ids = new Set<string>();
+            for (const a of assignments) ids.add(a.teacherId);
+            for (const t of timetableTeachers) { const uid = (t.teacherName as { userId?: string | null } | null)?.userId; if (uid) ids.add(uid); }
+            if (sec?.adviserId) ids.add(sec.adviserId);
+            for (const e of submitted) { if (e.submittedBy) ids.delete(e.submittedBy as string); }
+            for (const uid of ids) {
+              await fanoutNotification({
+                userId: uid,
+                sourceTable: "section_timetable_entries",
+                action: "approve",
+                sourceId: sectionId,
+                message: `Principal approved the timetable for ${section.name} — ${submitted.length} slots official.`,
+              });
+            }
+          } catch { /* best-effort */ }
+        })();
       } else {
         await prisma.sectionTimetableEntry.updateMany({
           where: { sectionId, termId, status: "SUBMITTED" },
@@ -225,6 +253,29 @@ router.post(
             message: `Principal requested revisions on ${section.name}: ${trimmedNote}`,
           });
         }
+        void (async () => {
+          try {
+            const [assignments, timetableTeachers, sec] = await Promise.all([
+              prisma.teacherSubjectAssignment.findMany({ where: { sectionId, termId }, select: { teacherId: true } }),
+              prisma.sectionTimetableEntry.findMany({ where: { sectionId, termId }, select: { teacherName: { select: { userId: true } } } }),
+              prisma.section.findUnique({ where: { id: sectionId }, select: { adviserId: true } }),
+            ]);
+            const ids = new Set<string>();
+            for (const a of assignments) ids.add(a.teacherId);
+            for (const t of timetableTeachers) { const uid = (t.teacherName as { userId?: string | null } | null)?.userId; if (uid) ids.add(uid); }
+            if (sec?.adviserId) ids.add(sec.adviserId);
+            for (const e of submitted) { if (e.submittedBy) ids.delete(e.submittedBy as string); }
+            for (const uid of ids) {
+              await fanoutNotification({
+                userId: uid,
+                sourceTable: "section_timetable_entries",
+                action: "reject",
+                sourceId: sectionId,
+                message: `Principal requested revisions on ${section.name}: ${trimmedNote}`,
+              });
+            }
+          } catch { /* best-effort */ }
+        })();
       }
     } catch (e) {
       next(e);

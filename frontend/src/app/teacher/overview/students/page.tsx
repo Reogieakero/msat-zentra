@@ -1,26 +1,14 @@
 "use client";
 import * as React from "react";
-import { BookOpen } from "lucide-react";
-import { useTopbarCrumb } from "@/app/teacher/layout";
+import { BookOpen, Info, LayoutGrid } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { Button } from "@/components/ui/button";
 import type { ClassPick } from "@/services/teacher/studentList.types";
 import { useStudentRail } from "./components/use-student-rail";
 import { StudentTable } from "./components/student-table";
-import { SectionRail } from "./components/section-rail";
+import { SectionCards } from "./components/section-cards";
 import styles from "./components/student-list.module.css";
 export default function TeacherStudentListPage() {
-  const crumb = React.useMemo(
-    () => (
-      <span className="text-sm">
-        <span className="text-muted-foreground">Overview</span>
-        <span className="text-muted-foreground"> / </span>
-        <span className="font-medium">Student List</span>
-      </span>
-    ),
-    [],
-  );
-  useTopbarCrumb(crumb);
   const {
     setPicked,
     roster,
@@ -28,77 +16,65 @@ export default function TeacherStudentListPage() {
     activePick,
     selectedClass,
     selectedAdvisory,
-    sectionQuery,
-    setSectionQuery,
-    railGroups,
-    railEmpty,
-    activeRailValue,
+    classes,
+    advisorySections,
     rows,
+    liveCountByKey,
   } = useStudentRail();
+  const [cardsVisible, setCardsVisible] = React.useState(true);
   const handleSelect = React.useCallback(
     (pick: ClassPick) => {
       setPicked(pick);
+      // Vanish the kanban cards and reveal the data table.
+      setCardsVisible(false);
     },
     [setPicked],
   );
+  const handleShowCards = React.useCallback(() => {
+    // Vanish the data table and bring the kanban cards back.
+    setCardsVisible(true);
+  }, []);
   if (roster.isPending) {
     return (
-      <section className={`${styles.page} ${styles.pageRail}`} aria-busy="true" aria-label="Loading student list">
-        <div className={styles.body}>
-          <div className={styles.mainCol}>
-            <div className={styles.heading} aria-hidden>
-              <Skeleton className="h-7 w-36" />
-              <Skeleton className="mt-1 h-4 w-72" />
-            </div>
-            <div className={`${assign.card} ${styles.tableCard}`} aria-hidden>
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <Skeleton className="h-6 w-44" />
-                  <Skeleton className="mt-1 h-4 w-64" />
-                </div>
-                <Skeleton className="h-9 w-40 shrink-0" />
-              </div>
-              <div className="relative overflow-x-auto rounded-md border">
-                <div className="flex bg-muted/50" aria-hidden>
-                  <Skeleton className="m-2 h-4 flex-1 rounded" />
-                  <Skeleton className="m-2 h-4 flex-1 rounded" />
-                  <Skeleton className="m-2 h-4 flex-1 rounded" />
-                </div>
-                {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                  <div key={i} className="flex items-center gap-2 border-t px-3 py-2">
-                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                      <Skeleton className="h-4 w-2/3" />
-                      <Skeleton className="h-3 w-1/3" />
-                    </div>
-                    <div className="flex flex-1 gap-1.5">
-                      <Skeleton className="h-5 w-16 rounded-full" />
-                      <Skeleton className="h-5 w-28 rounded-full" />
-                    </div>
-                    <div className="flex flex-1 gap-1.5">
-                      <Skeleton className="h-5 w-14 rounded-full" />
-                      <Skeleton className="h-5 w-24 rounded-full" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="relative flex items-center justify-end space-x-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-8 w-20" />
-              </div>
-            </div>
+      <section className={styles.page} aria-busy="true" aria-label="Loading student list">
+        <div className={styles.mainCol}>
+          <div className={styles.heading} aria-hidden>
+            <Skeleton className="h-7 w-36" />
+            <Skeleton className="mt-1 h-4 w-72" />
           </div>
-          <aside className={styles.sideCol} aria-label="Sections" aria-hidden>
-            <Skeleton className="h-9 w-full shrink-0" />
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className={assign.card}>
-                <Skeleton className="relative h-5 w-3/4" />
-                <Skeleton className="relative mt-1 h-3 w-1/2" />
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-hidden>
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 dark:bg-muted/20"
+              >
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
               </div>
             ))}
-          </aside>
+          </div>
+          <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5" aria-hidden>
+            <div className="-mx-2.5 flex items-center justify-between gap-2 border-b border-border px-3.5 pb-2">
+              <Skeleton className="h-4 w-44" />
+              <Skeleton className="h-7 w-36 shrink-0 sm:w-44" />
+            </div>
+            <div className="flex flex-col">
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <div key={i} className="flex items-center gap-2 border-t border-border px-3 py-2 first:border-t-0">
+                  <Skeleton className="h-5 w-16 shrink-0" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                  <div className="flex gap-1.5">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
     );
@@ -120,10 +96,7 @@ export default function TeacherStudentListPage() {
     return (
       <section className={styles.page} aria-label="Student List">
         <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
-          <div className={`${assign.card} w-full max-w-md`}>
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
+          <div className="w-full max-w-md rounded-xl border border-border p-2.5">
             <div className="relative flex flex-col items-center gap-2 py-6 text-center">
               <span
                 className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
@@ -142,22 +115,27 @@ export default function TeacherStudentListPage() {
       </section>
     );
   }
+  const studentCount = rows.length;
+  const countLabel = `${studentCount} student${studentCount === 1 ? "" : "s"}`;
   const headerTitle = roster.data?.advisorySection ? (
     <>
-      {roster.data.advisorySection.name} · Advisory
+      This is your advisory section{" "}
+      <span className="font-bold text-foreground">{roster.data.advisorySection.name}</span>{" "}
+      with <span className="font-bold text-foreground">{countLabel}</span>
     </>
   ) : (
     <>
-      {roster.data?.class?.subjectName ?? selectedClass?.subject} ·{" "}
-      {roster.data?.class?.sectionName ?? selectedClass?.section}
+      This is your{" "}
+      <span className="font-bold text-foreground">
+        {roster.data?.class?.subjectName ?? selectedClass?.subject}
+      </span>{" "}
+      section{" "}
+      <span className="font-bold text-foreground">
+        {roster.data?.class?.sectionName ?? selectedClass?.section}
+      </span>{" "}
+      with <span className="font-bold text-foreground">{countLabel}</span>
     </>
   );
-  const headerDesc = roster.data
-    ? `${roster.data.students.length} student${roster.data.students.length === 1 ? "" : "s"} · ` +
-      (roster.data.advisorySection
-        ? "attendance + general average"
-        : "attendance + academic grade for this subject")
-    : "Loading students…";
   const emptyName =
     roster.data?.class?.sectionName ??
     roster.data?.advisorySection?.name ??
@@ -165,34 +143,90 @@ export default function TeacherStudentListPage() {
     selectedAdvisory?.name ??
     "";
   return (
-    <section className={`${styles.page} ${styles.pageRail}`}>
-      <div className={styles.body}>
-        <div className={styles.mainCol}>
+    <section className={styles.page}>
+      <div className={styles.mainCol}>
+        <div className="flex min-w-0 items-start justify-between gap-3">
           <div className={styles.heading}>
             <h1>Student List</h1>
             <p>
-              Pick a section card on the right to see its students with
-              attendance percentage and academic grade.
+              {cardsVisible
+                ? "Select an advisory or subject card to see its students with attendance and grades."
+                : "Showing students for the selected card."}
             </p>
           </div>
-          <StudentTable
-            headerTitle={headerTitle}
-            headerDesc={headerDesc}
-            rows={rows}
-            rosterPending={roster.isPending}
-            rosterError={roster.isError}
-            emptySectionName={emptyName}
-            activePickKey={activePick ? `${activePick.kind}:${activePick.id}` : ""}
-          />
+          <div className="flex shrink-0 justify-end pt-1">
+            {!cardsVisible && activePick ? (
+              <div
+                className="transform-gpu transition-all delay-150 duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform motion-reduce:transition-none"
+                aria-hidden={cardsVisible || !activePick}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShowCards}
+                  aria-label="Show section cards"
+                >
+                  <LayoutGrid aria-hidden />
+                  Show cards
+                </Button>
+              </div>
+            ) : cardsVisible ? (
+              <div
+                role="note"
+                aria-label="How to view students"
+                className="flex w-full max-w-[220px] items-start gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-2 text-[11px] leading-snug text-blue-900 sm:max-w-[260px] dark:text-blue-200"
+              >
+                <Info size={13} aria-hidden className="mt-px shrink-0 text-blue-500" />
+                <p className="min-w-0">
+                  Click a subject or advisory card to view its student list.
+                </p>
+              </div>
+            ) : null}
+          </div>
         </div>
-        <SectionRail
-          sectionQuery={sectionQuery}
-          onSectionQuery={setSectionQuery}
-          railGroups={railGroups}
-          railEmpty={railEmpty}
-          activeRailValue={activeRailValue}
-          onSelect={handleSelect}
-        />
+        <div
+          className={`grid transform-gpu transition-[grid-template-rows,opacity,transform] delay-0 duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform motion-reduce:transition-none ${
+            cardsVisible
+              ? "grid-rows-[1fr] translate-y-0 opacity-100"
+              : "pointer-events-none grid-rows-[0fr] -translate-y-3 opacity-0"
+          }`}
+          aria-hidden={!cardsVisible}
+          inert={!cardsVisible ? true : undefined}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <SectionCards
+              advisorySections={advisorySections}
+              classes={classes}
+              activePick={activePick}
+              activeStudentCount={rows.length}
+              liveCountByKey={liveCountByKey}
+              onSelect={handleSelect}
+            />
+          </div>
+        </div>
+        {activePick ? (
+          <div
+            className={`grid transform-gpu transition-[grid-template-rows,opacity,transform] delay-150 duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform motion-reduce:transition-none ${
+              !cardsVisible
+                ? "grid-rows-[1fr] translate-y-0 opacity-100"
+                : "pointer-events-none grid-rows-[0fr] translate-y-3 opacity-0"
+            }`}
+            aria-hidden={cardsVisible}
+            inert={cardsVisible ? true : undefined}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <StudentTable
+                key={`${activePick.kind}:${activePick.id}`}
+                headerTitle={headerTitle}
+                rows={rows}
+                rosterPending={roster.isPending}
+                rosterError={roster.isError}
+                emptySectionName={emptyName}
+              />
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );

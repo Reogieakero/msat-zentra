@@ -18,7 +18,10 @@ export type SectionCardStatus = "submitted" | "returned" | "approved" | "draft" 
 
 export function sectionCardStatus(entries: StatusEntry[]): SectionCardStatus {
   if (entries.some((e) => e.status === "SUBMITTED")) return "submitted";
-  if (entries.some((e) => e.reviewNote)) return "returned";
+  // Returned = sent back for revision: a DRAFT slot carrying the principal's
+  // note. Notes on APPROVED rows are stale (approve used to persist the note
+  // field) and must not flip an approved section back to returned.
+  if (entries.some((e) => e.status === "DRAFT" && e.reviewNote)) return "returned";
   if (entries.length === 0) return "empty";
   if (entries.every((e) => e.status === "APPROVED")) return "approved";
   return "draft";

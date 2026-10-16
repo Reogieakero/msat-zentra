@@ -37,6 +37,39 @@ export function invalidateOcForm01Detail(recordId?: string) {
   else detailCache.clear();
 }
 
+function slugify(value: string): string {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return slug || "record";
+}
+
+export function buildOcForm01ImageFilename(
+  detail: { studentName?: string; observationDate?: string },
+  recordId: string,
+  ext: "png" | "jpg",
+): string {
+  const raw = (detail.observationDate ?? "").trim();
+  let datePart = "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw.slice(0, 10))) {
+    datePart = raw.slice(0, 10);
+  } else if (raw) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+      datePart = parsed.toISOString().slice(0, 10);
+    } else {
+      datePart = slugify(raw.slice(0, 10));
+    }
+  } else {
+    datePart = slugify(recordId);
+  }
+  const namePart = detail.studentName ? slugify(detail.studentName) : slugify(recordId);
+  return `GCForm-01_${namePart}_${datePart}.${ext}`;
+}
+
 export async function downloadOcForm01(recordId: string): Promise<void> {
   const res = await apiClient.get(`/api/anecdotal/${recordId}/export`, {
     responseType: "blob",

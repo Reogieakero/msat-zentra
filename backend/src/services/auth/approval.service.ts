@@ -3,6 +3,7 @@ import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { invalidateTags } from "../../lib/cache.js";
+import { mascotForUnique, sectionTakenMascots } from "../mascot.js";
 import type { GradeLevel, Role } from "../../generated/prisma/client.js";
 import type { AuthContext } from "./auth.types.js";
 
@@ -66,10 +67,16 @@ export async function approveAccount(ctx: AuthContext, targetUserId: string) {
       data: { status: "active", approvedBy: ctx.userId, approvedAt: new Date() },
     });
     if (provisionRoster && target.lrn) {
+      const taken = await sectionTakenMascots(prisma, provisionRoster.sectionId);
+      const mascot =
+        target.fullName && target.lrn
+          ? mascotForUnique(target.fullName, target.lrn, taken)
+          : undefined;
       await tx.studentProfile.create({
         data: {
           userId: target.id,
           lrn: target.lrn,
+          mascot,
           gradeLevel: provisionRoster.gradeLevel,
           sectionId: provisionRoster.sectionId,
         },

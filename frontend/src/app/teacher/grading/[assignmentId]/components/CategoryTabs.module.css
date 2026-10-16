@@ -8,8 +8,9 @@
   appearance: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  height: 2.25rem;
+  height: 32px;
   padding: 0 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -24,10 +25,4 @@
 .tabActive {
   border-color: var(--primary);
   background: color-mix(in oklch, var(--primary), transparent 92%);
-}
-
-.tabCount {
-  font-size: 0.6875rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
 }

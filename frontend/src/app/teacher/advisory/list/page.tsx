@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import {
   getCoreRowModel,
   getFilteredRowModel,
@@ -13,12 +12,11 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Loader2, SearchIcon, Users } from "lucide-react";
+import { KanbanSquare, Loader2, Plus, SearchIcon, Users } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,34 +42,12 @@ import {
 import { StatusBadge } from "@/app/teacher/overview/components/teacher-overview-advisory";
 import { Pagination } from "@/components/shared/pagination";
 import { useAdvisoryRoster } from "@/services/teacher/advisory.service";
-import type {
-  AdviseeRow,
-  AdviseeRiskFlag,
-} from "@/services/teacher/advisory.types";
+import type { AdviseeRow } from "@/services/teacher/advisory.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
-import styles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
+import { AdvisoryInsightBoard } from "./components/advisory-insight-board";
+import { StudentMascot } from "../referrals/components/StudentMascot";
 import listStyles from "./components/advisory-list.module.css";
-
-const FACTOR_BADGE: Record<AdviseeRiskFlag, { variant: "amber" | "green" | "blue"; label: string }> = {
-  academic: { variant: "amber", label: "Academic" },
-  attendance: { variant: "green", label: "Attendance" },
-  behavioral: { variant: "blue", label: "Behavioral" },
-};
-
-function FactorBadges({ flags }: { flags?: AdviseeRiskFlag[] }) {
-  const active = (flags ?? []).filter((f) => f in FACTOR_BADGE);
-  if (active.length === 0) return <span className="text-muted-foreground">—</span>;
-  return (
-    <span className="flex flex-wrap items-center gap-1.5">
-      {active.map((f) => (
-        <Badge key={f} variant={FACTOR_BADGE[f].variant}>
-          {FACTOR_BADGE[f].label}
-        </Badge>
-      ))}
-    </span>
-  );
-}
 
 function getErrorMessage(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
@@ -95,6 +71,23 @@ export default function TeacherAdvisoryListPage() {
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+
+  // Keep a valid selection as the roster loads / changes.
+  React.useEffect(() => {
+    if (students.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+    setSelectedId((prev) =>
+      prev && students.some((s) => s.studentId === prev) ? prev : students[0]!.studentId,
+    );
+  }, [students]);
+
+  const selectedStudent = React.useMemo(
+    () => students.find((s) => s.studentId === selectedId) ?? null,
+    [students, selectedId],
+  );
 
   const columns = React.useMemo<ColumnDef<AdviseeRow>[]>(
     () => [
@@ -102,18 +95,28 @@ export default function TeacherAdvisoryListPage() {
         id: "name",
         accessorFn: (row) => `${row.name} ${row.lrn}`,
         header: "Student",
-        size: 220,
-        minSize: 220,
-        maxSize: 220,
+        size: 170,
+        minSize: 150,
+        maxSize: 200,
         cell: ({ row }) => (
-          <div className="min-w-0">
-            <Link
-              href={`/teacher/advisory/students?highlight=${row.original.studentId}`}
-              className="block truncate text-[13px] font-semibold text-primary underline-offset-4 hover:underline"
-            >
-              {row.original.name}
-            </Link>
-            <p className={styles.cellSub}>{row.original.lrn}</p>
+          <div className="flex min-w-0 items-center gap-2">
+            <StudentMascot
+              name={row.original.name}
+              seed={row.original.lrn}
+              character={row.original.mascot ?? undefined}
+              size={32}
+            />
+            <div className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-semibold text-primary">
+                {row.original.name}
+              </span>
+              <span
+                className="mt-1 inline-flex max-w-full shrink-0 items-center truncate rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground"
+                title={row.original.lrn}
+              >
+                {row.original.lrn}
+              </span>
+            </div>
           </div>
         ),
       },
@@ -121,31 +124,10 @@ export default function TeacherAdvisoryListPage() {
         id: "riskLevel",
         accessorFn: (row) => row.riskLevel,
         header: "Risk",
-        size: 130,
-        minSize: 130,
-        maxSize: 130,
+        size: 100,
+        minSize: 90,
+        maxSize: 120,
         cell: ({ row }) => <StatusBadge level={row.original.riskLevel} />,
-      },
-      {
-        id: "factors",
-        accessorFn: (row) => (row.flags ?? []).join(" "),
-        header: "Factors",
-        size: 180,
-        minSize: 180,
-        maxSize: 180,
-        enableSorting: false,
-        cell: ({ row }) => <FactorBadges flags={row.original.flags} />,
-      },
-      {
-        id: "section",
-        accessorFn: (row) => row.section,
-        header: "Section",
-        size: 140,
-        minSize: 140,
-        maxSize: 140,
-        cell: ({ row }) => (
-          <span className="truncate text-muted-foreground">{row.original.section}</span>
-        ),
       },
     ],
     [],
@@ -245,23 +227,16 @@ export default function TeacherAdvisoryListPage() {
           </div>
           <div className="relative overflow-x-auto rounded-md border">
             <div className="flex bg-muted/50" aria-hidden>
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 220 }} />
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 130 }} />
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 180 }} />
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 140 }} />
+              <Skeleton className="m-2 h-4 rounded" style={{ width: 170 }} />
+              <Skeleton className="m-2 h-4 rounded" style={{ width: 100 }} />
             </div>
             {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
               <div key={i} className="flex items-center gap-2 border-t px-3 py-2">
-                <div className="flex min-w-0 flex-col gap-1.5" style={{ width: 220 }}>
+                <div className="flex min-w-0 flex-col gap-1.5" style={{ width: 170 }}>
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
                 </div>
-                <Skeleton className="h-5 rounded-full" style={{ width: 130 }} />
-                <div className="flex gap-1.5" style={{ width: 180 }}>
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                </div>
-                <Skeleton className="h-4" style={{ width: 140 }} />
+                <Skeleton className="h-5 rounded-full" style={{ width: 100 }} />
               </div>
             ))}
           </div>
@@ -311,111 +286,121 @@ export default function TeacherAdvisoryListPage() {
           </div>
         </div>
       ) : (
-        <div className={listStyles.layout}>
-          <div className="min-w-0">
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className={styles.sectionTitle}>Advisory List</h2>
-              <p className={styles.sectionDesc}>
-                {`Your advisees — ${students.length} student${students.length === 1 ? "" : "s"}${sectionLabel ? ` · ${sectionLabel}` : ""}.`}
+        <div className={listStyles.panel} aria-label="Advisory board">
+          <header className={listStyles.boardHead}>
+            <span className={listStyles.boardIcon} aria-hidden>
+              <KanbanSquare size={18} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className={listStyles.boardTitle}>Advisory board</h2>
+              <p className={listStyles.boardSub}>
+                {`Click a row to inspect — ${students.length} student${students.length === 1 ? "" : "s"}${sectionLabel ? ` · ${sectionLabel}` : ""}.`}
               </p>
             </div>
-            <InputGroup className="max-w-40 shrink-0">
-              <InputGroupInput
-                placeholder="Filter students..."
-                value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-                onChange={(event) =>
-                  table.getColumn("name")?.setFilterValue(event.target.value)
-                }
-                aria-label="Filter students"
-              />
-              <InputGroupAddon>
-                <SearchIcon />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-          <div className="relative overflow-x-auto rounded-md border">
-            <Table className="w-full table-fixed">
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        style={{ width: header.getSize() }}
-                        onClick={header.column.getToggleSortingHandler()}
-                        className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          style={{ width: cell.column.getSize() }}
-                          className="truncate"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No students match your search.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <Pagination
-            currentPage={table.getState().pagination.pageIndex + 1}
-            totalItems={table.getFilteredRowModel().rows.length}
-            onPageChange={(p) => table.setPageIndex(p - 1)}
-          />
-        </div>
-          </div>
-          <aside className={listStyles.sideList} aria-label="Roster actions">
-            <div className={assign.card}>
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative flex items-center gap-3">
-                <span
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10"
-                  aria-hidden="true"
-                >
-                  <Users size={20} className="text-primary" />
-                </span>
-                <div className="min-w-0">
-                  <h2 className={styles.sectionTitle}>Add student</h2>
-                  <p className={styles.sectionDesc}>
-                    Enlist into your advisory.
-                  </p>
+          </header>
+
+          <div className={listStyles.split}>
+            <div className={listStyles.left}>
+              <section className={listStyles.lane} aria-label="Advisory list lane">
+                <header className={listStyles.laneHead}>
+                  <span className={listStyles.laneDot} style={{ background: "#f59e0b" }} aria-hidden />
+                  <h3 className={listStyles.laneTitle}>Advisory list</h3>
+                  <span className={listStyles.laneCount}>
+                    {table.getFilteredRowModel().rows.length}
+                  </span>
+                </header>
+                <div className={listStyles.toolbar}>
+                  <InputGroup className="w-32 min-w-0 flex-1 rounded-[16px]">
+                    <InputGroupInput
+                      placeholder="Filter students..."
+                      value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                      onChange={(event) =>
+                        table.getColumn("name")?.setFilterValue(event.target.value)
+                      }
+                      aria-label="Filter students"
+                    />
+                    <InputGroupAddon>
+                      <SearchIcon />
+                    </InputGroupAddon>
+                  </InputGroup>
+                  <Button size="sm" className="shrink-0" onClick={openAdd}>
+                    <Plus size={14} aria-hidden />
+                    Add student
+                  </Button>
                 </div>
-              </div>
-              <div className="relative flex flex-col gap-2">
-                <Button onClick={openAdd}>
-                  Add student
-                </Button>
-              </div>
+
+                <div className={listStyles.tableWrap}>
+                <Table className="w-full table-fixed">
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
+                        {headerGroup.headers.map((header) => (
+                          <TableHead
+                            key={header.id}
+                            style={{ width: header.getSize() }}
+                            onClick={header.column.getToggleSortingHandler()}
+                            className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => {
+                        const isSelected = row.original.studentId === selectedId;
+                        return (
+                          <TableRow
+                            key={row.id}
+                            onClick={() => setSelectedId(row.original.studentId)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setSelectedId(row.original.studentId);
+                              }
+                            }}
+                            tabIndex={0}
+                            aria-selected={isSelected}
+                            aria-label={`${row.original.name}, ${row.original.riskLevel} risk — open insight`}
+                            className={`${listStyles.row} ${isSelected ? listStyles.selected : ""}`}
+                          >
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell
+                                key={cell.id}
+                                style={{ width: cell.column.getSize() }}
+                                className="truncate"
+                              >
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                          No students match your search.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+                </div>
+                <Pagination
+                  currentPage={table.getState().pagination.pageIndex + 1}
+                  totalItems={table.getFilteredRowModel().rows.length}
+                  onPageChange={(p) => table.setPageIndex(p - 1)}
+                />
+              </section>
             </div>
-          </aside>
+            <div className={listStyles.right} aria-label="Student insight">
+              <AdvisoryInsightBoard student={selectedStudent} bare />
+            </div>
+          </div>
         </div>
       )}
 

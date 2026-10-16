@@ -2,6 +2,8 @@ export interface StudentListRow {
   studentId: string;
   name: string;
   lrn: string;
+  /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
+  mascot: string | null;
   hasAccount: boolean;
 
   attendancePresent: number;

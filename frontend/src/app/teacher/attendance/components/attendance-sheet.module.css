@@ -36,11 +36,11 @@
   }
 }
 
-/* Section sidebar + sheet layout: subject section cards stack in a
-   sticky left rail, the session toolbar and sheet take the right. */
+/* Section gutter + sheet layout: icon-only right rail (same as the
+   grading workspace gutter), the session toolbar and sheet take the rest. */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
   gap: 1.25rem;
   align-items: start;
   min-width: 0;
@@ -85,30 +85,6 @@
 
 .railScroll::-webkit-scrollbar {
   display: none;
-}
-
-/* Meetup Blocks strip: horizontal scroll tinted with the teacher's saved
-   palette (--primary is set site-wide from Settings; theme default otherwise). */
-.blocksScroll {
-  scrollbar-width: thin;
-  scrollbar-color: var(--primary) transparent;
-}
-
-.blocksScroll::-webkit-scrollbar {
-  height: 6px;
-}
-
-.blocksScroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.blocksScroll::-webkit-scrollbar-thumb {
-  background: color-mix(in oklch, var(--primary), transparent 30%);
-  border-radius: 999px;
-}
-
-.blocksScroll::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
 }
 
 .main {

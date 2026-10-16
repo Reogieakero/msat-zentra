@@ -32,22 +32,31 @@ export function useSlotCards(pairs: AttendancePair[], config: DayConfig | undefi
   const todayDow = now.getDay();
   const slotCards = useMemo(() => {
     const rows = config ? buildTimetable(config) : [];
-    const timeFor = (period: number): string | null => {
-      if (!config) return null;
-      const row = buildTimetable(config).find((r) => r.kind === "period" && r.periodIndex === period);
-      return row && row.kind === "period" ? formatRange(row.startMin, row.endMin) : null;
-    };
+    const rowByPeriod = new Map<number, { start: number; end: number; label: string }>();
+    for (const r of rows) {
+      if (r.kind !== "period") continue;
+      if (!rowByPeriod.has(r.periodIndex)) {
+        rowByPeriod.set(r.periodIndex, {
+          start: r.startMin,
+          end: r.endMin,
+          label: formatRange(r.startMin, r.endMin),
+        });
+      }
+    }
+    const timeFor = (period: number): string | null => rowByPeriod.get(period)?.label ?? null;
     const rangeOf = (period: number): { start: number; end: number } | null => {
-      const row = rows.find((r) => r.kind === "period" && r.periodIndex === period);
-      return row && row.kind === "period" ? { start: row.startMin, end: row.endMin } : null;
+      const hit = rowByPeriod.get(period);
+      return hit ? { start: hit.start, end: hit.end } : null;
     };
+    const dayLabelOf = (day: number): string =>
+      WEEK_LABELS_SHORT[day - 1] ?? `Day ${day}`;
     const cards: SlotCard[] = [];
     for (const p of pairs) {
       if (!p.subject) continue;
       for (const s of p.slots) {
         const t = timeFor(s.period);
         const range = rangeOf(s.period);
-        const timeLabel = `${WEEK_LABELS_SHORT[s.day - 1]} ${t ?? `Period ${s.period + 1}`}`;
+        const timeLabel = `${dayLabelOf(s.day)} ${t ?? `Period ${s.period + 1}`}`;
         let rank: number;
         let live = false;
         if (s.day === todayDow && range) {

@@ -5,7 +5,7 @@ import { PAGE_SIZE } from "@/components/shared/pagination";
 export default function RecordKeeperSf10Page() {
   return (
     <React.Suspense>
-      <Sf10Page desk="record-keeper" pageSize={PAGE_SIZE} gradeRange="7–10" />
+      <Sf10Page desk="record-keeper" pageSize={PAGE_SIZE} />
     </React.Suspense>
   );
 }

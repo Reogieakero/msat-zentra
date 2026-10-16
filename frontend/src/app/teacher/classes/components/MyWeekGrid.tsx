@@ -1,9 +1,15 @@
 "use client";
 
-import { Coffee, Utensils } from "lucide-react";
-import { WEEK_LABELS_SHORT } from "@/services/teacher/schedule";
-import { buildTimetable, formatRange, type DayConfig } from "@/app/teacher/schedule/components/schedule-time";
-import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
+import * as React from "react";
+import { BookOpenText, Clock3, Hourglass, Users } from "lucide-react";
+import { WEEK_LABELS_FULL } from "@/services/teacher/schedule";
+import {
+  buildTimetable,
+  formatRange,
+  type DayConfig,
+} from "@/app/teacher/schedule/components/schedule-time";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import kanban from "@/app/teacher/overview/components/advisory-schedule-kanban.module.css";
 
 const DAYS = [1, 2, 3, 4, 5];
 
@@ -24,121 +30,123 @@ export function MyWeekGrid({
   config: DayConfig;
   nowKey?: string | null;
 }) {
-  const rows = buildTimetable(config);
-  const entryByKey = new Map(slots.map((s) => [`${s.day}:${s.period}`, s]));
-  const nowPeriod = nowKey?.split(":")[1] ?? null;
+  const timetable = React.useMemo(() => buildTimetable(config), [config]);
+  const timeByPeriod = React.useMemo(() => {
+    const map = new Map<number, { startMin: number; endMin: number }>();
+    for (const row of timetable) {
+      if (row.kind === "period")
+        map.set(row.periodIndex, { startMin: row.startMin, endMin: row.endMin });
+    }
+    return map;
+  }, [timetable]);
 
   return (
-    <div className={`overflow-x-auto rounded-lg border ${emptyStyles.noScrollbar}`}>
-        <table className="w-full min-w-[40rem] table-fixed border-collapse text-sm">
-          <thead>
-              <tr>
-                <th scope="col" className="w-36 p-2 text-left">
-                  <span className="sr-only">Time</span>
-                </th>
-              {DAYS.map((day) => (
-                <th key={day} scope="col" className="p-2 text-center text-xs font-semibold">
-                  {WEEK_LABELS_SHORT[day - 1]}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, ri) => {
-              if (row.kind !== "period") {
-                const isLunch = row.kind === "lunch";
-                return (
-                  <tr key={`break-${ri}`}>
-                    <td
-                      colSpan={DAYS.length + 1}
-                      className="border-t bg-muted/40 px-2 py-1 text-center text-xs text-muted-foreground"
+    <div
+      className={`grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 ${kanban.view}`}
+      aria-label="Weekly schedule by day"
+    >
+      {DAYS.map((day, colIndex) => {
+        const daySlots = slots
+          .filter((s) => s.day === day)
+          .slice()
+          .sort((a, b) => a.period - b.period || a.section.id.localeCompare(b.section.id));
+
+        return (
+          <KanbanBoard
+            key={day}
+            className={kanban.column}
+            style={{ "--col-index": colIndex } as React.CSSProperties}
+            title={WEEK_LABELS_FULL[day - 1]}
+            count={daySlots.length}
+            ariaLabel={`${WEEK_LABELS_FULL[day - 1]} schedule, ${daySlots.length} classes`}
+          >
+            <div className="flex flex-col gap-2">
+              {daySlots.length === 0 ? (
+                <div
+                  aria-label={`${WEEK_LABELS_FULL[day - 1]}, no classes`}
+                  className="flex min-h-[6rem] items-center justify-center rounded-lg border border-dashed border-input px-2 py-6 text-center text-xs text-muted-foreground"
+                >
+                  No classes
+                </div>
+              ) : (
+                daySlots.map((entry, cardIndex) => {
+                  const t = timeByPeriod.get(entry.period);
+                  const range = t
+                    ? formatRange(t.startMin, t.endMin)
+                    : `Period ${entry.period + 1}`;
+                  const mins = t ? t.endMin - t.startMin : 0;
+                  const isNow = nowKey === `${entry.day}:${entry.period}`;
+                  const sectionLabel = entry.section.name;
+                  const label = `${WEEK_LABELS_FULL[day - 1]} ${range}, ${entry.subject.name} (${entry.subject.code}) with ${sectionLabel}, ${mins} minutes${isNow ? ", current class" : ""}`;
+                  return (
+                    <article
+                      key={`${entry.day}:${entry.period}:${entry.section.id}:${entry.subject.id}:${cardIndex}`}
+                      aria-label={label}
+                      title={`${entry.subject.name} — ${sectionLabel} — ${range}`}
+                      style={
+                        {
+                          "--col-index": colIndex,
+                          "--card-index": cardIndex,
+                        } as React.CSSProperties
+                      }
+                      className={`relative flex flex-col gap-1.5 rounded-lg border p-2.5 text-left ${kanban.card} ${
+                        isNow
+                          ? `border-green-500 bg-green-500/10 ring-2 ring-green-500 ${kanban.cardNow}`
+                          : "border-input bg-card hover:border-amber-500/60"
+                      }`}
                     >
-                      {isLunch ? (
-                        <>
-                          <Utensils size={12} className="mr-1 inline" aria-hidden />
-                          Lunch Break · {formatRange(row.startMin, row.endMin)}
-                        </>
-                      ) : (
-                        <>
-                          <Coffee size={12} className="mr-1 inline" aria-hidden /> {row.label} ·{" "}
-                          {formatRange(row.startMin, row.endMin)}
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                );
-              }
-              return (
-                <tr key={`period-${row.periodIndex}`}>
-                  <th
-                    scope="row"
-                    className="border-t p-2 text-left text-xs font-medium whitespace-nowrap text-muted-foreground"
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      {nowPeriod !== null && String(row.periodIndex) === nowPeriod ? (
-                        <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true" title="Current time">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                      {isNow ? (
+                        <span className="inline-flex w-fit items-center gap-1 rounded-md border border-green-500/40 bg-green-500/10 px-1.5 py-0.5 text-[11px] font-medium text-green-700 dark:text-green-400">
+                          <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
+                          </span>
+                          Now
                         </span>
                       ) : null}
-                      {formatRange(row.startMin, row.endMin)}
-                    </span>
-                  </th>
-                  {DAYS.map((day) => {
-                    const entry = entryByKey.get(`${day}:${row.periodIndex}`) ?? null;
-                    const isNow = nowKey === `${day}:${row.periodIndex}`;
-                    const timeLabel = `${WEEK_LABELS_SHORT[day - 1]} ${formatRange(row.startMin, row.endMin)}`;
-                    if (!entry) {
-                      return (
-                        <td key={day} className="border-t p-1">
-                          <div
-                            aria-label={`${timeLabel}, empty`}
-                            title="Empty slot"
-                            className="flex min-h-14 w-full items-center justify-center rounded-md border border-dashed border-input px-1 text-center text-xs text-muted-foreground"
-                          >
-                            <span aria-hidden="true">—</span>
-                          </div>
-                        </td>
-                      );
-                    }
-                    const approved = entry.status === "APPROVED";
-                    const statusName = approved ? "approved" : "submitted";
-                    const label = `${timeLabel}, ${entry.subject.name} with ${entry.section.name} (${statusName})${isNow ? ", current class" : ""}`;
-                    return (
-                      <td key={day} className="border-t p-1">
-                        <div className="relative">
-                          <div
-                            aria-label={label}
-                            title={`${entry.subject.name} — ${entry.section.name} (${statusName})${isNow ? " — current class" : ""}`}
-                            className={`flex min-h-14 w-full items-center justify-center rounded-md border border-solid px-1 py-1 text-center text-xs transition-colors ${
-                              isNow
-                                ? "border-green-500 bg-green-500/10 ring-2 ring-green-500"
-                                : "bg-primary/5"
-                            }`}
-                          >
-                            <span className="flex min-w-0 max-w-full flex-col items-center leading-tight">
-                              <span className="w-full truncate font-medium">
-                                {entry.subject.name}
-                              </span>
-                              <span className="w-full truncate text-[11px] font-normal text-muted-foreground">
-                                {entry.section.name}
-                              </span>
-                            </span>
-                          </div>
+                      <span className="flex items-start gap-1.5">
+                        <BookOpenText
+                          size={14}
+                          className="mt-0.5 shrink-0 text-amber-500"
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate text-[13px] leading-tight font-semibold">
+                            {entry.subject.name}
+                          </span>
+                        </span>
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock3 size={12} className="shrink-0" aria-hidden="true" />
+                        <span className="truncate">{range}</span>
+                      </span>
+                      <span className="flex flex-col gap-1.5">
+                        <span className="inline-flex w-fit items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                          <Hourglass size={11} aria-hidden="true" />
+                          {mins > 0 ? `${mins} min` : "—"}
+                        </span>
+                        <span className="flex justify-end">
                           <span
-                            aria-hidden="true"
-                            title={statusName}
-                            className={`absolute bottom-1.5 left-1.5 h-1.5 w-1.5 rounded-full ${approved ? "bg-green-500" : "bg-blue-500"}`}
-                          />
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                            className="inline-flex max-w-full items-center gap-1 truncate rounded-md border border-input bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-foreground"
+                            title={sectionLabel}
+                          >
+                            <Users
+                              size={11}
+                              className="shrink-0 text-muted-foreground"
+                              aria-hidden="true"
+                            />
+                            <span className="truncate">{sectionLabel}</span>
+                          </span>
+                        </span>
+                      </span>
+                    </article>
+                  );
+                })
+              )}
+            </div>
+          </KanbanBoard>
+        );
+      })}
     </div>
   );
 }

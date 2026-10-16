@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { fanoutToRole } from "../../lib/notify.js";
+import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 
 export interface AlertGuidanceResult {
   alerted: boolean;
@@ -69,5 +69,32 @@ export async function alertGuidance(
     sourceId: rawId,
     excludeUserId: ctx.userId,
   });
+  void (async () => {
+    try {
+      let adviserId: string | null = null;
+      if (profile) {
+        const s = await prisma.studentProfile.findUnique({
+          where: { userId: rawId },
+          select: { section: { select: { adviserId: true } } },
+        });
+        adviserId = s?.section?.adviserId ?? null;
+      } else if (isRoster) {
+        const r = await prisma.studentRoster.findUnique({
+          where: { id: rawId.slice("roster:".length) },
+          select: { section: { select: { adviserId: true } } },
+        });
+        adviserId = r?.section?.adviserId ?? null;
+      }
+      if (adviserId && adviserId !== ctx.userId) {
+        await fanoutNotification({
+          userId: adviserId,
+          sourceTable: "interventions",
+          action: "principal_alert",
+          message: `Your advisee ${name} was flagged to guidance${trimmedNote ? ` — ${trimmedNote}` : ""}.`,
+          sourceId: rawId,
+        });
+      }
+    } catch { /* best-effort */ }
+  })();
   return { alerted: true };
 }

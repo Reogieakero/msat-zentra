@@ -170,6 +170,11 @@ enum Sf10Status {
   released
 }
 
+enum Sf10Desk {
+  registrar
+  record_keeper
+}
+
 enum ActionType {
   sf10_update
   grade_lock
@@ -295,6 +300,7 @@ model StudentProfile {
   gender       String?
   address      String?
   photoUrl     String?
+  mascot       String?
   riskCount    Int        @default(0)
   riskLevel    RiskLevel  @default(Low)
   academicFlag Boolean @default(false)
@@ -353,6 +359,9 @@ model StaffProfile {
   signatureImageUrl String?
   // Profile photo (PNG/JPEG data URL) shown across the teacher workspace.
   photoUrl String?
+  // Profile mascot (StudentMascot pool, e.g. "cat") picked from Settings.
+  // Takes precedence over photoUrl when set.
+  mascot String?
   // Workspace palette (hex, e.g. "#7c3aed") applied site-wide to cards,
   // buttons, and accents for this teacher. Null = theme default.
   primaryColor String?
@@ -427,6 +436,7 @@ model Section {
   gradeFlags GradeFlag[]
   timetableEntries SectionTimetableEntry[]
   rosterEntries StudentRoster[]
+  assessments Assessment[]
   sf10AccessRequests AdviserSf10AccessRequest[]
   @@index([schoolYearId])
   @@index([gradeLevel])
@@ -444,6 +454,7 @@ model StudentRoster {
   gradeLevel   GradeLevel
   sectionId    String
   schoolYearId String
+  mascot       String?
   riskCount    Int        @default(0)
   riskLevel    RiskLevel  @default(Low)
   academicFlag Boolean @default(false)
@@ -638,13 +649,21 @@ model GradeComponent {
 model Assessment {
   id              String   @id @default(uuid())
   gradeComponentId String
+  // Section-subject scope: an assessment belongs to exactly one
+  // subject-section class (the section it was added from). Nullable so
+  // pre-scope rows stay visible everywhere (legacy shared); all new rows
+  // set this from the workspace assignment.
+  sectionId       String?
   title           String
   maxScore        Float
   dateGiven       DateTime
   createdBy       String
   createdAt       DateTime @default(now())
   gradeComponent  GradeComponent  @relation(fields: [gradeComponentId], references: [id], onDelete: Cascade)
+  section         Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   studentGrades   StudentGrade[]
+  @@index([sectionId])
+  @@index([sectionId, gradeComponentId])
 }
 
 model StudentGrade {
@@ -1187,7 +1206,8 @@ enum AdmFormStatus {
 // ---------------------------------------------------------------------------
 model Sf10Record {
   id                String      @id @default(uuid())
-  studentId         String      @unique
+  studentId         String
+  desk              Sf10Desk
   source            Sf10Source
   status            Sf10Status  @default(attach)
   uploadedFileUrl   String?
@@ -1205,6 +1225,8 @@ model Sf10Record {
   verifiedByUser    User?          @relation("Sf10VerifiedBy", fields: [verifiedBy], references: [id])
   validatedByUser   User?          @relation("Sf10ValidatedBy", fields: [validatedBy], references: [id])
   versions          Sf10RecordVersion[]
+
+  @@unique([studentId, desk])
 }
 
 model Sf10RecordVersion {
@@ -1292,6 +1314,23 @@ model AdviserSf10AccessRequest {
   sectionId      String
   gradeLevel     GradeLevel
   reason         String
+  // LRNs the adviser picked (checkboxes) at request time. Empty = whole section.
+  requestedLrns  String[]            @default([])
+  // Registry verification: the record-keeper/registrar must run the SF10 LRN
+  // check (attached vs missing) before approving. Re-runnable; latest run wins.
+  checkedAt      DateTime?
+  checkedBy      String?
+  checkSummary   Json?
+  // Desk-reported missing LRNs ("report as missing" per requested student):
+  // adviser notification + stored mark, independent of the approve/deny verdict.
+  reportedMissingLrns String[] @default([])
+  // Per-student approvals ("approve" per matched student / "approve all"
+  // matched): adviser notification + stored mark. Whole-request approval
+  // via decideAccess still grants everything, including reported rows.
+  approvedLrns String[] @default([])
+  // Per-LRN approval timestamps, keyed by LRN (ISO strings). Stamped when a
+  // per-student grant (or bulk grant) confirms; shown as the approve date.
+  approvedLrnAt Json?
   status         AccessRequestStatus @default(pending)
   decidedBy      String?
   decidedAt      DateTime?

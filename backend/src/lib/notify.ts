@@ -1,5 +1,7 @@
 import { prisma } from "./prisma.js";
 import { logger } from "./pino.js";
+import { invalidateTags } from "./cache.js";
+import { CACHE_TAGS } from "./cacheTags.js";
 import type { NotifChannel } from "../generated/prisma/client.js";
 
 const TYPE_MAP: Record<string, string> = {
@@ -13,6 +15,7 @@ const TYPE_MAP: Record<string, string> = {
   "interventions:session": "intervention_session",
   "interventions:session_self": "intervention_session_self",
   "interventions:assign": "intervention_assigned",
+  "interventions:principal_alert": "intervention_alert",
   "interventions:assign_self": "intervention_assigned_self",
   "interventions:outcome": "intervention_outcome",
   "interventions:outcome_self": "intervention_outcome_self",
@@ -26,10 +29,14 @@ const TYPE_MAP: Record<string, string> = {
   "adviser_sf10_access_requests:decide_self": "sf10_access_decision",
   "users:pending_signup": "account_pending",
   "final_grades:adviser_approved": "finals_ready",
+  "final_grades:grade_locked": "grade_locked",
   "sf10_records:verified": "sf10_needs_validation",
   "sf10_records:validate_self": "sf10_validated",
   "sf10_records:release_self": "sf10_released",
   "subjects:mutate_self": "academics_updated",
+  "sections:adviser_assigned": "adviser_assigned",
+  "teacher_subject_assignments:assigned": "assignment_created",
+  "teacher_subject_assignments:removed": "assignment_removed",
   "sections:mutate_self": "academics_updated",
   "teacher_subject_assignments:mutate_self": "academics_updated",
   "adm_devices:issue": "device_issued",
@@ -59,6 +66,7 @@ const TYPE_MAP: Record<string, string> = {
   "referrals:form_self": "referral_form_saved_self",
   "referrals:delete_self": "referral_deleted_self",
   "attendance_records:create": "attendance_created",
+  "attendance_records:sweep": "attendance_sweep",
   "student_grades:score": "score_saved",
   "student_grades:score_self": "score_saved_self",
   "student_roster:create": "roster_enlisted",
@@ -86,6 +94,10 @@ const TYPE_MAP: Record<string, string> = {
   "staff_profiles:master_take": "master_teacher_changed",
   "teacher_names:unclaim": "teacher_code_released",
   "teacher_names:attendance_unlock": "attendance_unlocked",
+  "grade_flags:open": "grade_flag_opened",
+  "grade_flags:open_self": "grade_flag_opened_self",
+  "grade_flags:resolve": "grade_flag_resolved",
+  "grade_flags:resolve_self": "grade_flag_resolved_self",
 };
 
 export function deriveNotifType(sourceTable: string, action: string): string {
@@ -136,6 +148,9 @@ export async function fanoutNotification(input: NotifyInput) {
         },
       });
     });
+    // Bust cached notification lists immediately so bell badges, rows, and
+    // realtime fallback polls see the new row without waiting out the TTL.
+    void invalidateTags([CACHE_TAGS.notifications]);
   } catch (e) {
     logger.error({ err: e, userId: input.userId }, "notification fanout failed");
   }

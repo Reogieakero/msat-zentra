@@ -200,9 +200,17 @@ export function teacherNotificationTitle(n: {
   sourceTable: string | null;
   message: string;
 }): string {
+  if (n.type === "finals_ready" || /approved.*for .* \(.*\) —/i.test(n.message ?? "")) {
+    const m = /approved(.*?)for (.+?) \(([^)]+)\)/i.exec(n.message ?? "");
+    if (m) return `Grades approved — ${m[2].trim()} (${m[3].trim()})`;
+    return "Grades approved";
+  }
+  if (n.type === "grade_locked" || /locked \d+ .* grades? for/i.test(n.message ?? ""))
+    return gradeLockedTitle(n.message ?? "");
   if (n.sourceTable === "adm_devices") return "Device update";
   if (n.sourceTable === "section_timetable_entries") {
     if (/sent back/i.test(n.message ?? "")) return "Schedule sent back";
+    if (/you sent .* principal review/i.test(n.message ?? "")) return "Sent to principal";
     return "Schedule approved";
   }
   if (n.sourceTable === "teacher_names") {
@@ -265,8 +273,19 @@ export function teacherNotificationTitle(n: {
     return "Referral update";
   }
   if (n.type === "new_followup") return "New follow-up";
+  if (n.sourceTable === "adviser_sf10_access_requests") {
+    if (/denied/i.test(n.message ?? "")) return "SF10 access denied";
+    if (/approved/i.test(n.message ?? "")) return "SF10 access approved";
+    return "SF10 access update";
+  }
+  if (n.sourceTable === "sf10_records" || n.type === "sf10_needs_validation")
+    return "SF10 update";
   if (n.sourceTable === "interventions") {
     const iMsg = n.message ?? "";
+    if (/flagged to guidance/i.test(iMsg)) return "Advisee flagged to guidance";
+    if (/reassigned the follow-up/i.test(iMsg)) return "Follow-up reassigned";
+    if (/documentation was added/i.test(iMsg)) return "Follow-up documentation added";
+    if (/documentation was removed/i.test(iMsg)) return "Follow-up documentation removed";
     if (/booked an intervention session/i.test(iMsg)) return "Intervention session booked";
     if (/completed an intervention session/i.test(iMsg)) return "Intervention session completed";
     if (/rescheduled an intervention session/i.test(iMsg)) return "Intervention session rescheduled";
@@ -279,13 +298,25 @@ export function teacherNotificationTitle(n: {
     if (/flagged Moderate risk/i.test(n.message ?? "")) return "Advisee flagged Moderate risk";
     return "Advisee flagged High risk";
   }
+  if (/grade flag/i.test(n.message ?? "")) {
+    if (/resolved/i.test(n.message ?? "")) return "Grade flag resolved";
+    return "Grade flag opened";
+  }
+  if (/listed as adviser|assigned to .* in .* — Term/i.test(n.message ?? "")) return "New class assignment";
+  if (/assignment.*removed/i.test(n.message ?? "")) return "Assignment removed";
+  if (/auto-absent sweep/i.test(n.message ?? "")) return "Auto-absent sweep";
+  if (/advisory attendance/i.test(n.message ?? "")) return "Attendance saved";
   return sharedPrettify(n.type);
 }
 export function teacherNotificationTarget(
   n: { sourceTable: string | null; sourceId: string | null; message?: string | null },
 ): BellNotificationTarget {
-  if (n.sourceTable === "section_timetable_entries" && n.sourceId)
-    return { href: `/teacher/schedule/${n.sourceId}` };
+  if (n.sourceTable === "section_timetable_entries" && n.sourceId) {
+    // Workspace-wide submit echoes carry the term id, not a section — land on
+    // the schedule workspace instead of a bogus section URL.
+    if (/you sent .* principal review/i.test(n.message ?? "")) return { href: "/teacher/schedule" };
+    return { href: `/teacher/schedule/template?sectionId=${encodeURIComponent(n.sourceId)}` };
+  }
   if (n.sourceTable === "referrals" && n.sourceId) {
     if (/adm/i.test(n.message ?? "")) {
       return { href: `/teacher/advisory/adm-cases?highlight=${n.sourceId}` };
@@ -295,8 +326,16 @@ export function teacherNotificationTarget(
   if (n.sourceTable === "counseling_sessions" && n.sourceId)
     return { href: `/teacher/advisory/referrals?highlight=${n.sourceId}` };
   if (n.sourceTable === "interventions") return { href: "/teacher/advisory/referrals" };
+  if (n.sourceTable === "adviser_sf10_access_requests")
+    return { href: "/teacher/advisory/sf10-access" };
+  if (n.sourceTable === "sf10_records") return { href: "/teacher/advisory/sf10-access" };
   if (n.sourceTable === "adm_parent_meetings") return { href: "/teacher/advisory/referrals" };
   if (n.sourceTable === "adm_profiles") return { href: "/teacher/advisory/referrals" };
+  if (n.sourceTable === "grade_flags") return { href: "/teacher/grade-flags" };
+  if (n.sourceTable === "sections") return { href: "/teacher/schedule" };
+  if (n.sourceTable === "teacher_subject_assignments") return { href: "/teacher/schedule" };
+  if (n.sourceTable === "final_grades") return { href: "/teacher/grading" };
+  if (n.sourceTable === "attendance_records") return { href: "/teacher/attendance" };
   return null;
 }
 export function principalNotificationTarget(
@@ -307,6 +346,22 @@ export function principalNotificationTarget(
   if (n.sourceTable === "adm_devices") return { href: "/principal/adm" };
   return null;
 }
+/** "…locked 10 Math 9 (MATH9) grades for G9-B — …" → "Math 9 (MATH9) grades locked — G9-B" */
+function gradeLockedTitle(msg: string): string {
+  const subject = /locked \d+ (.+?) grades? for/i.exec(msg)?.[1]?.trim();
+  const section = /grades? for (\S+)/i.exec(msg)?.[1]?.replace(/[.,—–-]+$/, "");
+  if (subject && section) return `${subject} grades locked — ${section}`;
+  if (subject) return `${subject} grades locked`;
+  return "Grades locked";
+}
+
+/** "…approved all subjects for Juan Dela Cruz (G9-B) — …" → "Finals ready — Juan Dela Cruz (G9-B)" */
+function finalsReadyTitle(msg: string): string {
+  const m = /approved all subjects for (.+?) \(([^)]+)\)/i.exec(msg);
+  if (m) return `Finals ready — ${m[1].trim()} (${m[2].trim()})`;
+  return "Finals ready for review";
+}
+
 export function registryNotificationTitle(
   desk: string,
   n: { type: string; sourceTable?: string | null; message: string }
@@ -315,7 +370,9 @@ export function registryNotificationTitle(
   const msg = n.message ?? "";
   if (/sign-up.*awaiting approval/i.test(msg)) return "New student sign-up";
   if (/sf10 access requested/i.test(msg)) return "SF10 access requested";
+  if (/grades locked/i.test(msg) || n.type === "grade_locked") return gradeLockedTitle(msg);
   if (/finals ready/i.test(msg)) return "Finals ready for review";
+  if (n.type === "finals_ready") return finalsReadyTitle(msg);
   if (/needs validation/i.test(msg)) return "SF10 needs validation";
   if (/^you approved/i.test(msg)) return "Account approved";
   if (/^you rejected/i.test(msg)) return "Account rejected";
@@ -332,7 +389,8 @@ export function registryNotificationTitle(
   if (/subject .*created|section .*created|teacher .*assigned/i.test(msg)) return "Academics updated";
   if (n.type === "account_pending") return "New student sign-up";
   if (n.type === "sf10_access_requested") return "SF10 access requested";
-  if (n.type === "finals_ready") return "Finals ready for review";
+  if (n.type === "finals_ready") return finalsReadyTitle(msg);
+  if (n.type === "grade_locked") return gradeLockedTitle(msg);
   if (n.type === "sf10_needs_validation") return "SF10 needs validation";
   return sharedPrettify(n.type);
 }

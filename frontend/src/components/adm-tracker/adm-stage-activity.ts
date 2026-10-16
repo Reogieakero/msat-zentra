@@ -16,6 +16,9 @@ export interface StageTimelineEntry {
 export interface TrackerCaseInput {
   stage?: string | null;
   referralStatus?: string | null;
+  /** Audit-derived dismissal actor. Teacher roles mean the filer withdrew
+      it; anything else means the desk rejected it. */
+  dismissedByRole?: string | null;
   consultReviewer?: string | null;
   referredBy?: string | null;
   anecdotalDate?: string | null;

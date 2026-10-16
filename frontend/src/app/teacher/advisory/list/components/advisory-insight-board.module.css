@@ -1,0 +1,425 @@
+/* Right insight kanban board: factor / attendance / academic / anecdotal cards + timeline. */
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: transparent;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 96%);
+}
+
+/* Bare mode: embedded in the shared single-panel split, so drop the outer
+   card chrome and let the parent panel + vertical divider do the framing. */
+.bare {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  background-color: transparent;
+}
+
+.bare .boardHead {
+  margin-inline: 0;
+}
+
+.boardHead {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  margin-inline: -0.75rem;
+  padding: 0.125rem 0.75rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.boardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.boardTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.boardSub {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  line-height: 1.3;
+}
+
+/* Header pills: fixed 12px, amber outline. */
+.headPill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in oklch, #f59e0b 40%, transparent);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, #f59e0b 15%, transparent);
+  padding: 0.125rem 0.375rem;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #b45309;
+  white-space: nowrap;
+}
+
+:global(.dark) .headPill {
+  background-color: color-mix(in oklch, #f59e0b 20%, transparent);
+  color: #fbbf24;
+}
+
+.lane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+
+:global(.dark) .lane {
+  background-color: color-mix(in oklch, var(--muted) 20%, transparent);
+}
+
+.laneHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.laneDot {
+  width: 0.5625rem;
+  height: 0.5625rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.laneTitle {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.laneCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding-inline: 0.375rem;
+  border-radius: 999px;
+  background-color: var(--muted);
+  color: var(--foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Kanban column head: amber icon + semibold title + muted count.
+   Full-bleed divider — no gap from the lane gutters. */
+.colHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  margin-inline: -0.75rem;
+  padding: 0.125rem 0.75rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.colIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.colIcon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.colTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.colCount {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Kanban card: amber pill + circle icon, muted label, bold title + big number. */
+.kCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+}
+
+.kTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.kPill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid color-mix(in oklch, #f59e0b 45%, transparent);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, #f59e0b 14%, transparent);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #b45309;
+  flex-shrink: 0;
+}
+
+:global(.dark) .kPill {
+  color: #fbbf24;
+}
+
+.kPillRed {
+  border-color: color-mix(in oklch, #ef4444 45%, transparent);
+  background-color: color-mix(in oklch, #ef4444 14%, transparent);
+  color: #b91c1c;
+}
+
+:global(.dark) .kPillRed {
+  color: #f87171;
+}
+
+.kPillGreen {
+  border-color: color-mix(in oklch, #22c55e 45%, transparent);
+  background-color: color-mix(in oklch, #22c55e 14%, transparent);
+  color: #15803d;
+}
+
+:global(.dark) .kPillGreen {
+  color: #4ade80;
+}
+
+.kCircle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.kCircle svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.kLabel {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.kTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.kBig {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.kUnit {
+  margin-left: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.laneBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Parent-free section: no lane box, cards lay directly in a 2-per-row grid. */
+.plainSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  align-items: stretch;
+}
+
+@media (max-width: 80rem) {
+  .cardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 36rem) {
+  .cardGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cardMeta {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+.skel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.empty {
+  margin: 0;
+  padding: 1rem 0.5rem;
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--muted-foreground);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Grid cells stretch so each kanban column fills its 2-per-row slot. */
+.cardGrid > li {
+  min-width: 0;
+  animation: board-card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Staggered slow-mo rise-in so cards display one after another. */
+.cardGrid > li:nth-child(1) { animation-delay: 0.03s; }
+.cardGrid > li:nth-child(2) { animation-delay: 0.12s; }
+.cardGrid > li:nth-child(3) { animation-delay: 0.21s; }
+.cardGrid > li:nth-child(4) { animation-delay: 0.3s; }
+.cardGrid > li:nth-child(5) { animation-delay: 0.39s; }
+.cardGrid > li:nth-child(6) { animation-delay: 0.48s; }
+.cardGrid > li:nth-child(7) { animation-delay: 0.57s; }
+.cardGrid > li:nth-child(8) { animation-delay: 0.66s; }
+.cardGrid > li:nth-child(9) { animation-delay: 0.75s; }
+.cardGrid > li:nth-child(10) { animation-delay: 0.84s; }
+.cardGrid > li:nth-child(11) { animation-delay: 0.93s; }
+.cardGrid > li:nth-child(12) { animation-delay: 1.02s; }
+.cardGrid > li:nth-child(n + 13) { animation-delay: 1.05s; }
+
+@keyframes board-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardGrid > li {
+    animation: none;
+  }
+}
+
+.cardGrid .lane {
+  height: 100%;
+}

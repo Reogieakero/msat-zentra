@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Brush,
   GraduationCap,
   KeyRound,
   Palette,
@@ -28,7 +27,6 @@ export function settingsSections(masterTeacherEligible: boolean): SettingsSectio
   }
   links.push(
     { id: "section-appearance", label: "Appearance", Icon: Palette },
-    { id: "section-palette", label: "Palette", Icon: Brush },
     { id: "section-password", label: "Password", Icon: KeyRound },
   );
   return links;

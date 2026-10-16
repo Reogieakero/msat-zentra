@@ -86,12 +86,19 @@ export async function invalidateTags(tags: string[]): Promise<void> {
   const redis = getRedis();
   if (!redis || tags.length === 0) return;
   try {
-    for (const tag of tags) {
-      const keys = await redis.smembers(tagKey(tag));
-      if (keys.length) {
-        await redis.del(...keys);
-        await redis.del(tagKey(tag));
-      }
+    // Fan the membership reads out in parallel. The old sequential loop
+    // paid up to 3 Upstash REST roundtrips per tag, awaited before the
+    // response — e.g. ~13 tags on refer ≈ 13s of send latency from PH.
+    const members = await Promise.all(tags.map((tag) => redis.smembers(tagKey(tag))));
+    const doomed: string[] = [];
+    for (const [i, tag] of tags.entries()) {
+      const keys = members[i] ?? [];
+      if (keys.length > 0) doomed.push(...keys, tagKey(tag));
+    }
+    // Batched DELs keep REST payloads small; skipped entirely when empty.
+    for (let i = 0; i < doomed.length; i += 500) {
+      const slice = doomed.slice(i, i + 500);
+      if (slice.length > 0) await redis.del(...slice);
     }
   } catch (err) {
     logger.warn({ err, tags }, "cache invalidation failed");

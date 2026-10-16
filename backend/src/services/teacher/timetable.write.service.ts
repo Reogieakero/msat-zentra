@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
-import { cleanupOrphanAssignment, notifyMastersScheduleChanged, requireMasterTeacher, resolveScheduleTarget } from "../../modules/teacher/teacher.repository.js";
+import { cleanupOrphanAssignment, notifyMastersScheduleChanged, notifySectionTeachersScheduleChanged, requireMasterTeacher, resolveScheduleTarget } from "../../modules/teacher/teacher.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 export interface WriteEntryInput {
@@ -26,8 +26,11 @@ export async function writeEntry(ctx: TeacherContext, input: WriteEntryInput) {
     throw new AppError(404, "TEACHER_NOT_FOUND", "Teacher name not found");
   }
 
-  const { entry, status, prevSubjectId } = await prisma.$transaction(async (tx) => {
+  const { entry, status, prevSubjectId, warnings } = await prisma.$transaction(async (tx) => {
 
+  // Warn-allow: a teacher may appear in two sections at the same day/period.
+  // We still save, but return a TEACHER_CONFLICT warning for the UI banner.
+  // One-subject-one-teacher-per-section stays a hard block below.
   const clash = await tx.sectionTimetableEntry.findFirst({
     where: { termId, day, period, teacherNameId, NOT: { sectionId } },
     include: {
@@ -35,12 +38,25 @@ export async function writeEntry(ctx: TeacherContext, input: WriteEntryInput) {
       subject: { select: { name: true } },
     },
   });
+  const warnings: Array<{
+    code: "TEACHER_CONFLICT";
+    message: string;
+    teacherNameId: string;
+    day: number;
+    period: number;
+    otherSection: string | null;
+    otherSubject: string | null;
+  }> = [];
   if (clash) {
-    throw new AppError(
-      409,
-      "TEACHER_DOUBLE_BOOKED",
-      `${teacherName.name} already teaches ${clash.subject.name} in ${clash.section.name} at this time`
-    );
+    warnings.push({
+      code: "TEACHER_CONFLICT",
+      message: `${teacherName.name} also teaches ${clash.subject.name} in ${clash.section.name} at this time — saved with a conflict warning`,
+      teacherNameId,
+      day,
+      period,
+      otherSection: clash.section.name,
+      otherSubject: clash.subject.name,
+    });
   }
 
   const siblings = await tx.sectionTimetableEntry.findMany({
@@ -118,7 +134,7 @@ export async function writeEntry(ctx: TeacherContext, input: WriteEntryInput) {
         "One subject takes one teacher per section — another save just claimed this subject. Reload and retry."
       );
     }
-    return { entry: row, status: code, prevSubjectId: existing?.subjectId ?? null };
+    return { entry: row, status: code, prevSubjectId: existing?.subjectId ?? null, warnings };
   });
   if (prevSubjectId && prevSubjectId !== subjectId) {
     await cleanupOrphanAssignment(teacherId, prevSubjectId, sectionId, termId);
@@ -131,6 +147,7 @@ export async function writeEntry(ctx: TeacherContext, input: WriteEntryInput) {
     reason: "Master Teacher set a timetable slot",
   });
   void notifyMastersScheduleChanged("A timetable slot was set.", teacherId);
+  void notifySectionTeachersScheduleChanged(sectionId, termId, "A timetable slot was set", teacherId);
   return {
     entry: {
       id: entry!.id,
@@ -142,5 +159,6 @@ export async function writeEntry(ctx: TeacherContext, input: WriteEntryInput) {
       period,
     },
     status,
+    warnings,
   };
 }

@@ -78,6 +78,23 @@ export function stageOrder(stage: string): number {
   return ADM_STAGES.find((s) => s.stage === stage)?.order ?? 2;
 }
 
+/** Kanban tint per ADM stage — shared by the empty-state pipeline legend,
+// the filled-board columns, and the case cards' pipeline pill. */
+const ADM_STAGE_COLORS: Record<string, string> = {
+  anecdotal: "#8b5cf6",
+  consultation: "#3b82f6",
+  meeting_parents: "#0ea5e9",
+  home_visitation: "#14b8a6",
+  certification: "#f59e0b",
+  principal_approval: "#f97316",
+  enrollment_monitoring: "#22c55e",
+  completion: "#16a34a",
+};
+
+export function stageColor(stage: string): string {
+  return ADM_STAGE_COLORS[stage] ?? "#f59e0b";
+}
+
 const GRADE_LABELS: Record<string, string> = {
   G7: "Grade 7",
   G8: "Grade 8",

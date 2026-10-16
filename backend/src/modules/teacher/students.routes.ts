@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
 import { etag } from "../../lib/etag.js";
 import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
+import { prisma } from "../../lib/prisma.js";
 import { scopedYearId } from "../../lib/termScope.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { TEACHER_ROLES } from "./advisory.repository.js";
@@ -38,6 +39,27 @@ async function schoolYearCtxOf(req: Request) {
     schoolYearId: req.termScope?.schoolYearId ?? (await scopedYearId(req)),
   };
 }
+
+router.get(
+  "/sections",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  cache({ ttl: CACHE_TTLS.semiStatic, tags: [CACHE_TAGS.teacher, CACHE_TAGS.sections, CACHE_TAGS.roster] }),
+  etag(),
+  async (req, res, next) => {
+    try {
+      const yearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
+      const advisorySections = await prisma.section.findMany({
+        where: { adviserId: req.user!.id, ...(yearId ? { schoolYearId: yearId } : {}) },
+        select: { id: true, name: true, gradeLevel: true },
+        orderBy: { name: "asc" },
+      });
+      res.json({ advisorySections });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 router.get(
   "/students",

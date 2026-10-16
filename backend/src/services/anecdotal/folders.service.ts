@@ -65,6 +65,7 @@ export async function listMine(ownerId: string) {
       category: true,
       confidentialityLevel: true,
       descriptionOfIncident: true,
+      signedAt: true,
       folderId: true,
       student: {
         select: {
@@ -96,6 +97,7 @@ export async function listMine(ownerId: string) {
     studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
     lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
     section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
+    signed: r.signedAt != null,
     folderId: r.folderId,
     folderName: r.folder?.name ?? null,
   }));

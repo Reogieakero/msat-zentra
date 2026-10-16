@@ -21,8 +21,11 @@ import {
   createSubject,
   createTeacherName,
   deleteAssignment,
+  deleteSubject,
+  deleteTeacherName,
   getMySlots,
   getSchedule,
+  getScheduleConflicts,
   getScheduleConfig,
   listScheduleSubjects,
   submitTimetable,
@@ -108,6 +111,24 @@ router.get(
   }
 );
 
+router.get(
+  "/schedule/conflicts",
+  requireAuth,
+  requireRole("subject_teacher", "adviser", "principal"),
+  async (req, res, next) => {
+    try {
+      res.json(
+        await getScheduleConflicts(await termCtxOf(req), {
+          maxDailyPeriods: req.query.maxDailyPeriods,
+          maxWeeklyPeriods: req.query.maxWeeklyPeriods,
+        }),
+      );
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 router.patch(
   "/schedule/config",
   requireAuth,
@@ -121,6 +142,7 @@ router.patch(
         lunch: { afterPeriod: number; mins: number };
         morningRecess: { enabled: boolean; afterPeriod: number; mins: number };
         afternoonRecess: { enabled: boolean; afterPeriod: number; mins: number };
+        workload?: { maxDailyPeriods: number; maxWeeklyPeriods: number };
       };
       const result = await updateScheduleConfig(await termCtxOf(req), body);
       await invalidateTags(["teacher", "schedule", "academics", "principal"]);
@@ -180,7 +202,7 @@ router.post(
         period: number;
       };
       const ctx = await termCtxOf(req);
-      const { entry, status } = await writeEntry(ctx, {
+      const { entry, status, warnings } = await writeEntry(ctx, {
         sectionId,
         subjectId,
         teacherNameId,
@@ -198,6 +220,7 @@ router.post(
           day,
           period,
         },
+        warnings: warnings ?? [],
       });
     } catch (e) {
       next(e);
@@ -272,6 +295,21 @@ router.post(
 );
 
 router.delete(
+  "/schedule/teachers/:id",
+  requireAuth,
+  requireRole("subject_teacher", "adviser"),
+  async (req, res, next) => {
+    try {
+      const result = await deleteTeacherName(ctxOf(req), req.params.id as string);
+      await invalidateTags(["teacher", "schedule", "academics", "principal"]);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+router.delete(
   "/schedule/teachers",
   requireAuth,
   requireRole("subject_teacher", "adviser"),
@@ -306,6 +344,21 @@ router.post(
       next(e);
     }
   }
+);
+
+router.delete(
+  "/schedule/subjects/:id",
+  requireAuth,
+  requireRole("subject_teacher", "adviser"),
+  async (req, res, next) => {
+    try {
+      const result = await deleteSubject(ctxOf(req), req.params.id as string);
+      await invalidateTags(["teacher", "schedule", "academics", "principal"]);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
 );
 
 router.delete("/schedule/:id", requireAuth, requireRole("subject_teacher", "adviser"), async (req, res, next) => {

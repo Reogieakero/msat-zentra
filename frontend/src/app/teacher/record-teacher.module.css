@@ -25,7 +25,23 @@
   .shellWithRail {
     margin-top: 3rem;
     margin-left: 16rem;
+    transition: margin-left 240ms ease-out;
   }
+  .shellWithRailCollapsed {
+    margin-left: 4rem;
+  }
+}
+
+/* Standalone mode (no left rail and no tab navbar, e.g. the Bama chat
+   tab): only the fixed 3rem topbar sits above content, on every
+   breakpoint — no dead gap. */
+.shellStandalone {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  margin-left: 0;
+  margin-top: 3rem;
 }
 
 .main {
@@ -57,26 +73,6 @@
   background-color: var(--background);
 }
 
-/* Per-page breadcrumb slot: hidden on small screens; on desktop it sits
-   fixed at the main panel's left edge (16rem rail + 1rem main padding),
-   vertically centered in the 3rem topbar. */
-.crumb {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .crumb {
-    display: flex;
-    position: fixed;
-    left: 17rem;
-    top: 0;
-    height: 3rem;
-    align-items: center;
-    min-width: 0;
-    z-index: 41;
-  }
-}
-
 .brand {
   display: flex;
   align-items: center;
@@ -99,6 +95,120 @@
 
 .spacer {
   flex: 1;
+}
+
+.bamaPill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2rem;
+  padding: 0 0.75rem 0 0.375rem;
+  border: 1px solid var(--bama-border, var(--border));
+  border-radius: 9999px;
+  background-color: var(--bama-bg, var(--card));
+  color: var(--bama-text, var(--foreground));
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  outline: none;
+  transition: background-color 600ms ease, border-color 600ms ease, color 600ms ease, box-shadow 140ms ease-out, filter 140ms ease-out;
+}
+
+.bamaPill:hover {
+  filter: brightness(0.96);
+}
+
+.bamaPill:focus-visible {
+  box-shadow: 0 0 0 2px var(--bama-border, var(--ring));
+}
+
+.bamaPillActive {
+  box-shadow: 0 0 0 2px var(--bama-border, var(--primary));
+}
+
+/* Rotating accent tones (cycled every 5s by TeacherBamaPill). */
+.bamaToneAmber {
+  --bama-bg: #fef3c7;
+  --bama-border: #f59e0b66;
+  --bama-text: #92400e;
+}
+
+.bamaToneGreen {
+  --bama-bg: #dcfce7;
+  --bama-border: #22c55e66;
+  --bama-text: #166534;
+}
+
+.bamaToneBlue {
+  --bama-bg: #dbeafe;
+  --bama-border: #3b82f666;
+  --bama-text: #1e40af;
+}
+
+.bamaToneViolet {
+  --bama-bg: #ede9fe;
+  --bama-border: #8b5cf666;
+  --bama-text: #5b21b6;
+}
+
+:global(.dark) .bamaToneAmber {
+  --bama-bg: #451a0355;
+  --bama-border: #f59e0b66;
+  --bama-text: #fcd34d;
+}
+
+:global(.dark) .bamaToneGreen {
+  --bama-bg: #052e1655;
+  --bama-border: #22c55e66;
+  --bama-text: #86efac;
+}
+
+:global(.dark) .bamaToneBlue {
+  --bama-bg: #17255455;
+  --bama-border: #3b82f666;
+  --bama-text: #93c5fd;
+}
+
+:global(.dark) .bamaToneViolet {
+  --bama-bg: #2e106555;
+  --bama-border: #8b5cf666;
+  --bama-text: #c4b5fd;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bamaPill {
+    transition: none;
+  }
+}
+
+.bamaMascot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background-color: var(--muted);
+  flex-shrink: 0;
+}
+
+.bamaLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 639px) {
+  .bamaPill {
+    padding: 0 0.375rem;
+  }
+  .bamaLabel {
+    display: none;
+  }
 }
 
 .search {

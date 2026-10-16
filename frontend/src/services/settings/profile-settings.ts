@@ -27,6 +27,7 @@ const PROFILE_ENDPOINT: Record<SettingsDesk, string> = {
 export interface ProfileSettings {
   fullName: string;
   photoUrl: string | null;
+  mascot: string | null;
   primaryColor: string | null;
   secondaryColor: string | null;
 }

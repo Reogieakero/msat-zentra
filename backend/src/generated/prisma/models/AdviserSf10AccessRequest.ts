@@ -30,6 +30,8 @@ export type AdviserSf10AccessRequestMinAggregateOutputType = {
   sectionId: string | null
   gradeLevel: $Enums.GradeLevel | null
   reason: string | null
+  checkedAt: Date | null
+  checkedBy: string | null
   status: $Enums.AccessRequestStatus | null
   decidedBy: string | null
   decidedAt: Date | null
@@ -44,6 +46,8 @@ export type AdviserSf10AccessRequestMaxAggregateOutputType = {
   sectionId: string | null
   gradeLevel: $Enums.GradeLevel | null
   reason: string | null
+  checkedAt: Date | null
+  checkedBy: string | null
   status: $Enums.AccessRequestStatus | null
   decidedBy: string | null
   decidedAt: Date | null
@@ -58,6 +62,13 @@ export type AdviserSf10AccessRequestCountAggregateOutputType = {
   sectionId: number
   gradeLevel: number
   reason: number
+  requestedLrns: number
+  checkedAt: number
+  checkedBy: number
+  checkSummary: number
+  reportedMissingLrns: number
+  approvedLrns: number
+  approvedLrnAt: number
   status: number
   decidedBy: number
   decidedAt: number
@@ -74,6 +85,8 @@ export type AdviserSf10AccessRequestMinAggregateInputType = {
   sectionId?: true
   gradeLevel?: true
   reason?: true
+  checkedAt?: true
+  checkedBy?: true
   status?: true
   decidedBy?: true
   decidedAt?: true
@@ -88,6 +101,8 @@ export type AdviserSf10AccessRequestMaxAggregateInputType = {
   sectionId?: true
   gradeLevel?: true
   reason?: true
+  checkedAt?: true
+  checkedBy?: true
   status?: true
   decidedBy?: true
   decidedAt?: true
@@ -102,6 +117,13 @@ export type AdviserSf10AccessRequestCountAggregateInputType = {
   sectionId?: true
   gradeLevel?: true
   reason?: true
+  requestedLrns?: true
+  checkedAt?: true
+  checkedBy?: true
+  checkSummary?: true
+  reportedMissingLrns?: true
+  approvedLrns?: true
+  approvedLrnAt?: true
   status?: true
   decidedBy?: true
   decidedAt?: true
@@ -189,6 +211,13 @@ export type AdviserSf10AccessRequestGroupByOutputType = {
   sectionId: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns: string[]
+  checkedAt: Date | null
+  checkedBy: string | null
+  checkSummary: runtime.JsonValue | null
+  reportedMissingLrns: string[]
+  approvedLrns: string[]
+  approvedLrnAt: runtime.JsonValue | null
   status: $Enums.AccessRequestStatus
   decidedBy: string | null
   decidedAt: Date | null
@@ -224,6 +253,13 @@ export type AdviserSf10AccessRequestWhereInput = {
   sectionId?: Prisma.StringFilter<"AdviserSf10AccessRequest"> | string
   gradeLevel?: Prisma.EnumGradeLevelFilter<"AdviserSf10AccessRequest"> | $Enums.GradeLevel
   reason?: Prisma.StringFilter<"AdviserSf10AccessRequest"> | string
+  requestedLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  checkedAt?: Prisma.DateTimeNullableFilter<"AdviserSf10AccessRequest"> | Date | string | null
+  checkedBy?: Prisma.StringNullableFilter<"AdviserSf10AccessRequest"> | string | null
+  checkSummary?: Prisma.JsonNullableFilter<"AdviserSf10AccessRequest">
+  reportedMissingLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  approvedLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  approvedLrnAt?: Prisma.JsonNullableFilter<"AdviserSf10AccessRequest">
   status?: Prisma.EnumAccessRequestStatusFilter<"AdviserSf10AccessRequest"> | $Enums.AccessRequestStatus
   decidedBy?: Prisma.StringNullableFilter<"AdviserSf10AccessRequest"> | string | null
   decidedAt?: Prisma.DateTimeNullableFilter<"AdviserSf10AccessRequest"> | Date | string | null
@@ -241,6 +277,13 @@ export type AdviserSf10AccessRequestOrderByWithRelationInput = {
   sectionId?: Prisma.SortOrder
   gradeLevel?: Prisma.SortOrder
   reason?: Prisma.SortOrder
+  requestedLrns?: Prisma.SortOrder
+  checkedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  checkedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  checkSummary?: Prisma.SortOrderInput | Prisma.SortOrder
+  reportedMissingLrns?: Prisma.SortOrder
+  approvedLrns?: Prisma.SortOrder
+  approvedLrnAt?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   decidedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   decidedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -261,6 +304,13 @@ export type AdviserSf10AccessRequestWhereUniqueInput = Prisma.AtLeast<{
   sectionId?: Prisma.StringFilter<"AdviserSf10AccessRequest"> | string
   gradeLevel?: Prisma.EnumGradeLevelFilter<"AdviserSf10AccessRequest"> | $Enums.GradeLevel
   reason?: Prisma.StringFilter<"AdviserSf10AccessRequest"> | string
+  requestedLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  checkedAt?: Prisma.DateTimeNullableFilter<"AdviserSf10AccessRequest"> | Date | string | null
+  checkedBy?: Prisma.StringNullableFilter<"AdviserSf10AccessRequest"> | string | null
+  checkSummary?: Prisma.JsonNullableFilter<"AdviserSf10AccessRequest">
+  reportedMissingLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  approvedLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  approvedLrnAt?: Prisma.JsonNullableFilter<"AdviserSf10AccessRequest">
   status?: Prisma.EnumAccessRequestStatusFilter<"AdviserSf10AccessRequest"> | $Enums.AccessRequestStatus
   decidedBy?: Prisma.StringNullableFilter<"AdviserSf10AccessRequest"> | string | null
   decidedAt?: Prisma.DateTimeNullableFilter<"AdviserSf10AccessRequest"> | Date | string | null
@@ -278,6 +328,13 @@ export type AdviserSf10AccessRequestOrderByWithAggregationInput = {
   sectionId?: Prisma.SortOrder
   gradeLevel?: Prisma.SortOrder
   reason?: Prisma.SortOrder
+  requestedLrns?: Prisma.SortOrder
+  checkedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  checkedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  checkSummary?: Prisma.SortOrderInput | Prisma.SortOrder
+  reportedMissingLrns?: Prisma.SortOrder
+  approvedLrns?: Prisma.SortOrder
+  approvedLrnAt?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   decidedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   decidedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -298,6 +355,13 @@ export type AdviserSf10AccessRequestScalarWhereWithAggregatesInput = {
   sectionId?: Prisma.StringWithAggregatesFilter<"AdviserSf10AccessRequest"> | string
   gradeLevel?: Prisma.EnumGradeLevelWithAggregatesFilter<"AdviserSf10AccessRequest"> | $Enums.GradeLevel
   reason?: Prisma.StringWithAggregatesFilter<"AdviserSf10AccessRequest"> | string
+  requestedLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  checkedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AdviserSf10AccessRequest"> | Date | string | null
+  checkedBy?: Prisma.StringNullableWithAggregatesFilter<"AdviserSf10AccessRequest"> | string | null
+  checkSummary?: Prisma.JsonNullableWithAggregatesFilter<"AdviserSf10AccessRequest">
+  reportedMissingLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  approvedLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  approvedLrnAt?: Prisma.JsonNullableWithAggregatesFilter<"AdviserSf10AccessRequest">
   status?: Prisma.EnumAccessRequestStatusWithAggregatesFilter<"AdviserSf10AccessRequest"> | $Enums.AccessRequestStatus
   decidedBy?: Prisma.StringNullableWithAggregatesFilter<"AdviserSf10AccessRequest"> | string | null
   decidedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AdviserSf10AccessRequest"> | Date | string | null
@@ -310,6 +374,13 @@ export type AdviserSf10AccessRequestCreateInput = {
   id?: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedAt?: Date | string | null
   decisionReason?: string | null
@@ -326,6 +397,13 @@ export type AdviserSf10AccessRequestUncheckedCreateInput = {
   sectionId: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedBy?: string | null
   decidedAt?: Date | string | null
@@ -338,6 +416,13 @@ export type AdviserSf10AccessRequestUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -354,6 +439,13 @@ export type AdviserSf10AccessRequestUncheckedUpdateInput = {
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -368,6 +460,13 @@ export type AdviserSf10AccessRequestCreateManyInput = {
   sectionId: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedBy?: string | null
   decidedAt?: Date | string | null
@@ -380,6 +479,13 @@ export type AdviserSf10AccessRequestUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -393,6 +499,13 @@ export type AdviserSf10AccessRequestUncheckedUpdateManyInput = {
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -411,12 +524,27 @@ export type AdviserSf10AccessRequestOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type StringNullableListFilter<$PrismaModel = never> = {
+  equals?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel> | null
+  has?: string | Prisma.StringFieldRefInput<$PrismaModel> | null
+  hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  isEmpty?: boolean
+}
+
 export type AdviserSf10AccessRequestCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   adviserId?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   gradeLevel?: Prisma.SortOrder
   reason?: Prisma.SortOrder
+  requestedLrns?: Prisma.SortOrder
+  checkedAt?: Prisma.SortOrder
+  checkedBy?: Prisma.SortOrder
+  checkSummary?: Prisma.SortOrder
+  reportedMissingLrns?: Prisma.SortOrder
+  approvedLrns?: Prisma.SortOrder
+  approvedLrnAt?: Prisma.SortOrder
   status?: Prisma.SortOrder
   decidedBy?: Prisma.SortOrder
   decidedAt?: Prisma.SortOrder
@@ -431,6 +559,8 @@ export type AdviserSf10AccessRequestMaxOrderByAggregateInput = {
   sectionId?: Prisma.SortOrder
   gradeLevel?: Prisma.SortOrder
   reason?: Prisma.SortOrder
+  checkedAt?: Prisma.SortOrder
+  checkedBy?: Prisma.SortOrder
   status?: Prisma.SortOrder
   decidedBy?: Prisma.SortOrder
   decidedAt?: Prisma.SortOrder
@@ -445,6 +575,8 @@ export type AdviserSf10AccessRequestMinOrderByAggregateInput = {
   sectionId?: Prisma.SortOrder
   gradeLevel?: Prisma.SortOrder
   reason?: Prisma.SortOrder
+  checkedAt?: Prisma.SortOrder
+  checkedBy?: Prisma.SortOrder
   status?: Prisma.SortOrder
   decidedBy?: Prisma.SortOrder
   decidedAt?: Prisma.SortOrder
@@ -579,6 +711,33 @@ export type AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
   deleteMany?: Prisma.AdviserSf10AccessRequestScalarWhereInput | Prisma.AdviserSf10AccessRequestScalarWhereInput[]
 }
 
+export type AdviserSf10AccessRequestCreaterequestedLrnsInput = {
+  set: string[]
+}
+
+export type AdviserSf10AccessRequestCreatereportedMissingLrnsInput = {
+  set: string[]
+}
+
+export type AdviserSf10AccessRequestCreateapprovedLrnsInput = {
+  set: string[]
+}
+
+export type AdviserSf10AccessRequestUpdaterequestedLrnsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type AdviserSf10AccessRequestUpdatereportedMissingLrnsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type AdviserSf10AccessRequestUpdateapprovedLrnsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
 export type EnumAccessRequestStatusFieldUpdateOperationsInput = {
   set?: $Enums.AccessRequestStatus
 }
@@ -587,6 +746,13 @@ export type AdviserSf10AccessRequestCreateWithoutAdviserInput = {
   id?: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedAt?: Date | string | null
   decisionReason?: string | null
@@ -601,6 +767,13 @@ export type AdviserSf10AccessRequestUncheckedCreateWithoutAdviserInput = {
   sectionId: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedBy?: string | null
   decidedAt?: Date | string | null
@@ -623,6 +796,13 @@ export type AdviserSf10AccessRequestCreateWithoutDecidedByUserInput = {
   id?: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedAt?: Date | string | null
   decisionReason?: string | null
@@ -638,6 +818,13 @@ export type AdviserSf10AccessRequestUncheckedCreateWithoutDecidedByUserInput = {
   sectionId: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedAt?: Date | string | null
   decisionReason?: string | null
@@ -680,6 +867,13 @@ export type AdviserSf10AccessRequestScalarWhereInput = {
   sectionId?: Prisma.StringFilter<"AdviserSf10AccessRequest"> | string
   gradeLevel?: Prisma.EnumGradeLevelFilter<"AdviserSf10AccessRequest"> | $Enums.GradeLevel
   reason?: Prisma.StringFilter<"AdviserSf10AccessRequest"> | string
+  requestedLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  checkedAt?: Prisma.DateTimeNullableFilter<"AdviserSf10AccessRequest"> | Date | string | null
+  checkedBy?: Prisma.StringNullableFilter<"AdviserSf10AccessRequest"> | string | null
+  checkSummary?: Prisma.JsonNullableFilter<"AdviserSf10AccessRequest">
+  reportedMissingLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  approvedLrns?: Prisma.StringNullableListFilter<"AdviserSf10AccessRequest">
+  approvedLrnAt?: Prisma.JsonNullableFilter<"AdviserSf10AccessRequest">
   status?: Prisma.EnumAccessRequestStatusFilter<"AdviserSf10AccessRequest"> | $Enums.AccessRequestStatus
   decidedBy?: Prisma.StringNullableFilter<"AdviserSf10AccessRequest"> | string | null
   decidedAt?: Prisma.DateTimeNullableFilter<"AdviserSf10AccessRequest"> | Date | string | null
@@ -708,6 +902,13 @@ export type AdviserSf10AccessRequestCreateWithoutSectionInput = {
   id?: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedAt?: Date | string | null
   decisionReason?: string | null
@@ -722,6 +923,13 @@ export type AdviserSf10AccessRequestUncheckedCreateWithoutSectionInput = {
   adviserId: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedBy?: string | null
   decidedAt?: Date | string | null
@@ -761,6 +969,13 @@ export type AdviserSf10AccessRequestCreateManyAdviserInput = {
   sectionId: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedBy?: string | null
   decidedAt?: Date | string | null
@@ -775,6 +990,13 @@ export type AdviserSf10AccessRequestCreateManyDecidedByUserInput = {
   sectionId: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedAt?: Date | string | null
   decisionReason?: string | null
@@ -786,6 +1008,13 @@ export type AdviserSf10AccessRequestUpdateWithoutAdviserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -800,6 +1029,13 @@ export type AdviserSf10AccessRequestUncheckedUpdateWithoutAdviserInput = {
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -813,6 +1049,13 @@ export type AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserInput = {
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -825,6 +1068,13 @@ export type AdviserSf10AccessRequestUpdateWithoutDecidedByUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -840,6 +1090,13 @@ export type AdviserSf10AccessRequestUncheckedUpdateWithoutDecidedByUserInput = {
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -853,6 +1110,13 @@ export type AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserInput
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -865,6 +1129,13 @@ export type AdviserSf10AccessRequestCreateManySectionInput = {
   adviserId: string
   gradeLevel: $Enums.GradeLevel
   reason: string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestCreaterequestedLrnsInput | string[]
+  checkedAt?: Date | string | null
+  checkedBy?: string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestCreatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestCreateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: $Enums.AccessRequestStatus
   decidedBy?: string | null
   decidedAt?: Date | string | null
@@ -877,6 +1148,13 @@ export type AdviserSf10AccessRequestUpdateWithoutSectionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   decisionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -891,6 +1169,13 @@ export type AdviserSf10AccessRequestUncheckedUpdateWithoutSectionInput = {
   adviserId?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -904,6 +1189,13 @@ export type AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionInput = {
   adviserId?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  requestedLrns?: Prisma.AdviserSf10AccessRequestUpdaterequestedLrnsInput | string[]
+  checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  checkedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  checkSummary?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportedMissingLrns?: Prisma.AdviserSf10AccessRequestUpdatereportedMissingLrnsInput | string[]
+  approvedLrns?: Prisma.AdviserSf10AccessRequestUpdateapprovedLrnsInput | string[]
+  approvedLrnAt?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   status?: Prisma.EnumAccessRequestStatusFieldUpdateOperationsInput | $Enums.AccessRequestStatus
   decidedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -920,6 +1212,13 @@ export type AdviserSf10AccessRequestSelect<ExtArgs extends runtime.Types.Extensi
   sectionId?: boolean
   gradeLevel?: boolean
   reason?: boolean
+  requestedLrns?: boolean
+  checkedAt?: boolean
+  checkedBy?: boolean
+  checkSummary?: boolean
+  reportedMissingLrns?: boolean
+  approvedLrns?: boolean
+  approvedLrnAt?: boolean
   status?: boolean
   decidedBy?: boolean
   decidedAt?: boolean
@@ -937,6 +1236,13 @@ export type AdviserSf10AccessRequestSelectCreateManyAndReturn<ExtArgs extends ru
   sectionId?: boolean
   gradeLevel?: boolean
   reason?: boolean
+  requestedLrns?: boolean
+  checkedAt?: boolean
+  checkedBy?: boolean
+  checkSummary?: boolean
+  reportedMissingLrns?: boolean
+  approvedLrns?: boolean
+  approvedLrnAt?: boolean
   status?: boolean
   decidedBy?: boolean
   decidedAt?: boolean
@@ -954,6 +1260,13 @@ export type AdviserSf10AccessRequestSelectUpdateManyAndReturn<ExtArgs extends ru
   sectionId?: boolean
   gradeLevel?: boolean
   reason?: boolean
+  requestedLrns?: boolean
+  checkedAt?: boolean
+  checkedBy?: boolean
+  checkSummary?: boolean
+  reportedMissingLrns?: boolean
+  approvedLrns?: boolean
+  approvedLrnAt?: boolean
   status?: boolean
   decidedBy?: boolean
   decidedAt?: boolean
@@ -971,6 +1284,13 @@ export type AdviserSf10AccessRequestSelectScalar = {
   sectionId?: boolean
   gradeLevel?: boolean
   reason?: boolean
+  requestedLrns?: boolean
+  checkedAt?: boolean
+  checkedBy?: boolean
+  checkSummary?: boolean
+  reportedMissingLrns?: boolean
+  approvedLrns?: boolean
+  approvedLrnAt?: boolean
   status?: boolean
   decidedBy?: boolean
   decidedAt?: boolean
@@ -979,7 +1299,7 @@ export type AdviserSf10AccessRequestSelectScalar = {
   createdAt?: boolean
 }
 
-export type AdviserSf10AccessRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "adviserId" | "sectionId" | "gradeLevel" | "reason" | "status" | "decidedBy" | "decidedAt" | "decisionReason" | "requestedAt" | "createdAt", ExtArgs["result"]["adviserSf10AccessRequest"]>
+export type AdviserSf10AccessRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "adviserId" | "sectionId" | "gradeLevel" | "reason" | "requestedLrns" | "checkedAt" | "checkedBy" | "checkSummary" | "reportedMissingLrns" | "approvedLrns" | "approvedLrnAt" | "status" | "decidedBy" | "decidedAt" | "decisionReason" | "requestedAt" | "createdAt", ExtArgs["result"]["adviserSf10AccessRequest"]>
 export type AdviserSf10AccessRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   adviser?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
@@ -1009,6 +1329,13 @@ export type $AdviserSf10AccessRequestPayload<ExtArgs extends runtime.Types.Exten
     sectionId: string
     gradeLevel: $Enums.GradeLevel
     reason: string
+    requestedLrns: string[]
+    checkedAt: Date | null
+    checkedBy: string | null
+    checkSummary: runtime.JsonValue | null
+    reportedMissingLrns: string[]
+    approvedLrns: string[]
+    approvedLrnAt: runtime.JsonValue | null
     status: $Enums.AccessRequestStatus
     decidedBy: string | null
     decidedAt: Date | null
@@ -1446,6 +1773,13 @@ export interface AdviserSf10AccessRequestFieldRefs {
   readonly sectionId: Prisma.FieldRef<"AdviserSf10AccessRequest", 'String'>
   readonly gradeLevel: Prisma.FieldRef<"AdviserSf10AccessRequest", 'GradeLevel'>
   readonly reason: Prisma.FieldRef<"AdviserSf10AccessRequest", 'String'>
+  readonly requestedLrns: Prisma.FieldRef<"AdviserSf10AccessRequest", 'String[]'>
+  readonly checkedAt: Prisma.FieldRef<"AdviserSf10AccessRequest", 'DateTime'>
+  readonly checkedBy: Prisma.FieldRef<"AdviserSf10AccessRequest", 'String'>
+  readonly checkSummary: Prisma.FieldRef<"AdviserSf10AccessRequest", 'Json'>
+  readonly reportedMissingLrns: Prisma.FieldRef<"AdviserSf10AccessRequest", 'String[]'>
+  readonly approvedLrns: Prisma.FieldRef<"AdviserSf10AccessRequest", 'String[]'>
+  readonly approvedLrnAt: Prisma.FieldRef<"AdviserSf10AccessRequest", 'Json'>
   readonly status: Prisma.FieldRef<"AdviserSf10AccessRequest", 'AccessRequestStatus'>
   readonly decidedBy: Prisma.FieldRef<"AdviserSf10AccessRequest", 'String'>
   readonly decidedAt: Prisma.FieldRef<"AdviserSf10AccessRequest", 'DateTime'>

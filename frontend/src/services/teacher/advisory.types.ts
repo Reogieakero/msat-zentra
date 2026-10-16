@@ -26,6 +26,8 @@ export interface AdviseeRow {
   studentId: string;
   name: string;
   lrn: string;
+  /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
+  mascot: string | null;
   birthdate: string | null;
   gender: string | null;
   section: string;

@@ -1,31 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { FolderCard } from "@/components/ui/FolderCard";
+import { Badge } from "@/components/ui/badge";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
+import {
+  AnecdotalRecordKanbanCard,
+  humanizeCategory,
+} from "@/components/anecdotal/anecdotal-record-kanban-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { MyAnecdotalRecord } from "@/components/ocform01/folders";
-import { CATEGORY_COLORS } from "./AnecdotalSideRail";
 import styles from "./anecdotal-repo-folders.module.css";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
-
-const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
-  behavioral: 1,
-  bullying: 2,
-  academic: 3,
-  attendance: 4,
-  health: 5,
-};
-
-function humanize(value: string): string {
-  return value
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
 
 function timeAgo(iso: string): string {
   const then = new Date(iso).getTime();
@@ -47,7 +34,6 @@ function recordDate(iso: string): string {
 }
 
 export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[] }) {
-  const router = useRouter();
   const [page, setPage] = React.useState(1);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
@@ -79,7 +65,7 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
           </div>
           <div className={styles.headerActions}>
             <Input
-              className={styles.search}
+              className={`${styles.search} h-8 rounded-[16px]`}
               placeholder="Search folders…"
               value={query}
               onChange={(e) => {
@@ -98,7 +84,13 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
               <p className={styles.emptyBody}>
                 File your first anecdotal record with Bama and it will land here.
               </p>
-              <Button type="button" size="sm" onClick={() => router.push("/teacher/chat?new=anecdotal")}>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() =>
+                  window.open("/teacher/chat?standalone=1&new=anecdotal", "_blank", "noopener,noreferrer")
+                }
+              >
                 <Plus aria-hidden />
                 New record
               </Button>
@@ -117,27 +109,24 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
           ) : (
             <div className={styles.folderGrid}>
               {pageRows.map((c) => (
-                <button
+                <AnecdotalRecordKanbanCard
                   key={c.id}
-                  type="button"
-                  className={styles.folderBtn}
-                  onClick={() => setPreviewId(c.id)}
-                  aria-label={`Open ${c.studentName}'s record from ${recordDate(c.observationDatetime)}`}
-                >
-                  <FolderCard
-                    label={c.studentName}
-                    sublabel={`${c.lrn} - ${c.section}`}
-                    folderColor={CATEGORY_COLORS[c.category]}
-                    files={[
-                      {
-                        name: `GCForm-01_${recordDate(c.observationDatetime)}`,
-                        tag: `${humanize(c.category)} - ${timeAgo(c.observationDatetime)}`,
-                        tone: CATEGORY_TONES[c.category] ?? 1,
-                        icon: "doc",
-                      },
-                    ]}
-                  />
-                </button>
+                  category={c.category}
+                  studentName={c.studentName}
+                  metaText={c.lrn}
+                  metaTitle={`${c.lrn} · ${c.section}`}
+                  fileName={`GCForm-01_${recordDate(c.observationDatetime)}`}
+                  fileTag={`${humanizeCategory(c.category)} - ${timeAgo(c.observationDatetime)}`}
+                  headerRight={
+                    c.signed ? (
+                      <Badge variant="green" className="shrink-0 rounded-md">
+                        Signed
+                      </Badge>
+                    ) : undefined
+                  }
+                  openLabel={`Open ${c.studentName}'s record from ${recordDate(c.observationDatetime)}`}
+                  onOpen={() => setPreviewId(c.id)}
+                />
               ))}
             </div>
           )}

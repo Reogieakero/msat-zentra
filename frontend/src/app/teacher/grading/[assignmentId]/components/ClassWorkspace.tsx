@@ -1,30 +1,25 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { ArrowLeft, HomeIcon } from "lucide-react";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { useTopbarCrumb } from "@/app/teacher/layout";
+import { ArrowLeft, Scale, SearchIcon } from "lucide-react";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
+import { gradeLabel } from "@/services/teacher/grading.compute";
+import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
+import kanbanStyles from "@/app/teacher/schedule/components/subject-kanban.module.css";
 import { Button } from "@/components/ui/button";
 import { useRefreshAcademic } from "@/services/teacher/grading.service";
 import type {
   ClassDetail,
   ComponentType,
 } from "@/services/teacher/grading.types";
-import { WorkspaceRail, type WorkspaceView } from "./WorkspaceRail";
+import { WorkspaceGutter, type WorkspaceView } from "./WorkspaceGutter";
+import { SubjectRail } from "./SubjectRail";
 import { AssessmentList } from "./AssessmentList";
-import { AddAssessmentDialog } from "./AddAssessmentDialog";
 import { ScoreGrid } from "./ScoreGrid";
 import { FinalsCard } from "./FinalsCard";
-import { WeightsDialog } from "./WeightsDialog";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { WeightsBoard } from "./WeightsBoard";
 import styles from "./ClassWorkspace.module.css";
 
 type Props = {
@@ -37,10 +32,10 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
   const { assignment, students } = detail;
   const refreshAcademic = useRefreshAcademic();
   const [weightsOpen, setWeightsOpen] = React.useState(false);
-  const [addOpen, setAddOpen] = React.useState(false);
   const [view] = React.useState<WorkspaceView>("scores");
   const [encodeCategory, setEncodeCategory] = React.useState<ComponentType>("WRITTEN_WORK");
   const [encodeAssessmentId, setEncodeAssessmentId] = React.useState("");
+  const [assessmentQuery, setAssessmentQuery] = React.useState("");
 
   const selectedAssessment = React.useMemo(
     () =>
@@ -50,80 +45,93 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
     [detail.components, encodeAssessmentId],
   );
 
-  const crumb = React.useMemo(
-    () => (
-      <Breadcrumb aria-label="Gradebook pages" className="text-[13px]">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/teacher/grading" className="inline-flex items-center gap-1.5">
-                <HomeIcon aria-hidden="true" size={16} />
-                Gradebook
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator> / </BreadcrumbSeparator>
-          <BreadcrumbItem>
-            {selectedAssessment ? (
-              <BreadcrumbLink asChild>
-                <Link
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setEncodeAssessmentId("");
-                  }}
-                >
-                  {assignment.subjectName}
-                </Link>
-              </BreadcrumbLink>
-            ) : (
-              <BreadcrumbPage>{assignment.subjectName}</BreadcrumbPage>
-            )}
-          </BreadcrumbItem>
-          {selectedAssessment ? (
-            <>
-              <BreadcrumbSeparator> / </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbPage>{selectedAssessment.title}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </>
-          ) : null}
-        </BreadcrumbList>
-      </Breadcrumb>
-    ),
-    [assignment.subjectName, selectedAssessment],
-  );
-  useTopbarCrumb(crumb);
-
   const weightsConfigured = detail.components.some((c) => (c.weight ?? 0) > 0);
+  const unlockCount = students.filter(
+    (s) => s.final != null && s.final.lockStatus === "unlocked" && s.final.computedAverage != null,
+  ).length;
+  const subjectLabel = `${assignment.subjectName} (${assignment.subjectCode}) — ${assignment.sectionName}`;
 
   return (
     <section className={styles.page}>
-      <div className={styles.layout}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <SubjectRail currentId={queryKeyId} />
+        </div>
+        {weightsConfigured && !selectedAssessment ? (
+          <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
+            <InputGroupInput
+              placeholder="Search assessments..."
+              value={assessmentQuery}
+              onChange={(event) => setAssessmentQuery(event.target.value)}
+              aria-label="Search assessments"
+            />
+            <InputGroupAddon>
+              <SearchIcon />
+            </InputGroupAddon>
+          </InputGroup>
+        ) : null}
+      </div>
+      <div
+        className={styles.layout}
+        style={weightsConfigured ? undefined : { gridTemplateColumns: "minmax(0, 1fr)" }}
+      >
         <div className={styles.main}>
           {!weightsConfigured ? (
-            <div className="flex min-h-[60vh] flex-1 flex-col items-center justify-end pb-8">
-              <div role="alert" className={`${assign.card} w-full max-w-md`}>
-                <span className={assign.glowClip} aria-hidden="true">
-                  <span className={assign.cardGlow} />
-                </span>
-                <div className="relative flex flex-col items-center gap-2 py-4 text-center">
-                  <p className="font-semibold">Subject weights not set up yet</p>
-                  <p className="max-w-sm text-sm text-muted-foreground">
-                    Final grades cannot compute until the WW / PT / E shares are set.
+            <div className={emptyStyles.emptyWrap}>
+              <div
+                key={weightsOpen ? "weights-edit" : "weights-empty"}
+                className={`${kanbanStyles.column} ${styles.weightsSwap} mx-auto w-full max-w-md`}
+              >
+                {weightsOpen ? (
+                  <WeightsBoard
+                    detail={detail}
+                    onCancel={() => setWeightsOpen(false)}
+                    onSaved={() => {
+                      setWeightsOpen(false);
+                      onMutated();
+                      refreshAcademic();
+                    }}
+                  />
+                ) : (
+                <KanbanBoard
+                  title="Subject weights"
+                  icon={
+                    <span className="text-amber-500" aria-hidden>
+                      <Scale size={14} />
+                    </span>
+                  }
+                  actions={
+                    <span className="flex items-center gap-1.5">
+                      <AmberRectPill>{assignment.sectionName}</AmberRectPill>
+                      <AmberRectPill>Grade {gradeLabel(assignment.gradeLevel)}</AmberRectPill>
+                    </span>
+                  }
+                  description="Final grades cannot compute until the WW / PT / E shares are set."
+                  footer={
+                    <div className="flex justify-end px-1 pb-1">
+                      <Button
+                        size="sm"
+                        className="h-6 rounded-lg bg-black px-3 text-xs text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+                        onClick={() => setWeightsOpen(true)}
+                      >
+                        Set up weights
+                      </Button>
+                    </div>
+                  }
+                >
+                  <p className="px-1 text-xs text-muted-foreground">
                     Pick a DepEd preset or enter custom weights.
                   </p>
-                  <Button size="sm" className="mt-1" onClick={() => setWeightsOpen(true)}>
-                    Set up weights
-                  </Button>
-                </div>
+                </KanbanBoard>
+                )}
               </div>
             </div>
           ) : !selectedAssessment ? (
-          <div className="flex min-h-[50vh] flex-1 items-center justify-center">
+          <div className="min-w-0 flex-1">
           <AssessmentList
             students={students}
             components={detail.components}
+            query={assessmentQuery}
             onSelect={(c, id) => {
               setEncodeCategory(c);
               setEncodeAssessmentId(id);
@@ -165,43 +173,26 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
           )}
         </div>
 
-        <aside className={styles.rail} aria-label="Class tools">
-          <WorkspaceRail
+        {weightsConfigured ? (
+        <aside className="self-start lg:sticky lg:top-16" aria-label="Class tools">
+          <WorkspaceGutter
             assignment={assignment}
+            detail={detail}
             studentCount={students.length}
             assignmentId={assignment.id}
             components={detail.components}
-            onOpenWeights={() => setWeightsOpen(true)}
-            onAddAssessment={() => setAddOpen(true)}
+            unlockCount={unlockCount}
+            subjectLabel={subjectLabel}
+            termLabel={`Term ${assignment.termNumber}, ${assignment.schoolYear}`}
+            termId={assignment.termId}
+            onWeightsSaved={() => {
+              onMutated();
+              refreshAcademic();
+            }}
           />
         </aside>
+        ) : null}
       </div>
-
-      {weightsOpen ? (
-        <WeightsDialog
-          detail={detail}
-          onClose={() => setWeightsOpen(false)}
-          onSaved={() => {
-            setWeightsOpen(false);
-            onMutated();
-            refreshAcademic();
-          }}
-        />
-      ) : null}
-
-      {addOpen ? (
-        <AddAssessmentDialog
-          assignmentId={assignment.id}
-          defaultType="WRITTEN_WORK"
-          components={detail.components}
-          onClose={() => setAddOpen(false)}
-          onSaved={() => {
-            setAddOpen(false);
-            onMutated();
-            refreshAcademic();
-          }}
-        />
-      ) : null}
 
     </section>
   );

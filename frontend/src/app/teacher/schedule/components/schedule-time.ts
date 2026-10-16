@@ -9,13 +9,24 @@ export interface LunchConfig {
   mins: number;
 }
 
+export interface WorkloadConfig {
+  maxDailyPeriods: number;
+  maxWeeklyPeriods: number;
+}
+
 export interface DayConfig {
   startTime: string;
   periodMins: number;
   lunch: LunchConfig;
   morningRecess: RecessConfig;
   afternoonRecess: RecessConfig;
+  workload?: WorkloadConfig;
 }
+
+export const DEFAULT_WORKLOAD: WorkloadConfig = {
+  maxDailyPeriods: 6,
+  maxWeeklyPeriods: 30,
+};
 
 export const DEFAULT_DAY_CONFIG: DayConfig = {
   startTime: "07:30",
@@ -23,7 +34,17 @@ export const DEFAULT_DAY_CONFIG: DayConfig = {
   lunch: { afterPeriod: 4, mins: 90 },
   morningRecess: { enabled: false, afterPeriod: 2, mins: 15 },
   afternoonRecess: { enabled: false, afterPeriod: 6, mins: 15 },
+  workload: { ...DEFAULT_WORKLOAD },
 };
+
+export function workloadOf(config: DayConfig | null | undefined): WorkloadConfig {
+  return {
+    maxDailyPeriods:
+      typeof config?.workload?.maxDailyPeriods === "number" ? config.workload.maxDailyPeriods : DEFAULT_WORKLOAD.maxDailyPeriods,
+    maxWeeklyPeriods:
+      typeof config?.workload?.maxWeeklyPeriods === "number" ? config.workload.maxWeeklyPeriods : DEFAULT_WORKLOAD.maxWeeklyPeriods,
+  };
+}
 
 export type TimetableRow =
   | { kind: "period"; periodIndex: number; startMin: number; endMin: number }

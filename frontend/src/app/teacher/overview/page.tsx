@@ -1,16 +1,10 @@
 ﻿"use client";
 
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { BookOpen, CalendarClock, ClipboardCheck, Flag, Send } from "lucide-react";
-import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
-import type { DayConfig } from "@/app/teacher/schedule/components/schedule-time";
-import {
-  TeacherOverviewHeader,
-  TeacherOverviewRisk,
-  TeacherOverviewUpNext,
-} from "./components/teacher-overview-header";
+import { TeacherOverviewKanban } from "./components/teacher-overview-kanban";
 import { TeacherOverviewActions } from "./components/teacher-overview-actions";
 import { TeacherOverviewAnecdotes } from "./components/teacher-overview-anecdotes";
 import { TeacherOverviewAttendanceTable } from "./components/teacher-overview-attendance-table";
@@ -24,14 +18,6 @@ import {
 } from "@/services/teacher/overview.service";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/teacher-overview.module.css";
-
-interface LinkedSlot {
-  day: number;
-  period: number;
-  status: "DRAFT" | "SUBMITTED" | "APPROVED";
-  subject: { id: string; name: string; code: string };
-  section: { id: string; name: string; gradeLevel: string };
-}
 
 const ADVISER_QUICK_ACTIONS = [
   { title: "Take Attendance", description: "Record today's attendance", href: "/teacher/attendance", icon: CalendarClock },
@@ -75,25 +61,6 @@ export default function TeacherOverviewPage() {
       }
     }
   }, [queryClient, prefetchTeacherId, termKey]);
-
-  const mySlotsQuery = useQuery({
-    queryKey: ["teacher-my-slots", termKey],
-    queryFn: async () => {
-      const { data } = await apiClient.get<{ slots: LinkedSlot[] }>(
-        "/api/teacher/schedule/my-slots",
-      );
-      return data;
-    },
-  });
-  const configQuery = useQuery({
-    queryKey: ["teacher-schedule-config", termKey],
-    queryFn: async () => {
-      const { data } = await apiClient.get<{ config: DayConfig }>(
-        "/api/teacher/schedule/config",
-      );
-      return data;
-    },
-  });
 
   if (isPending) {
     return <TeacherOverviewSkeleton actions={ADVISER_QUICK_ACTIONS} />;
@@ -150,24 +117,16 @@ export default function TeacherOverviewPage() {
         </div>
 
         <aside className={styles.sideCol} style={{ top: "4rem" }}>
-          <TeacherOverviewHeader
+          <TeacherOverviewKanban
             teacherName={data.teacherName}
             advisorySection={data.advisorySection}
             classCount={data.kpi.classCount}
             studentCount={studentCount}
-          />
-
-          <TeacherOverviewUpNext
-            slots={mySlotsQuery.data?.slots ?? []}
-            config={configQuery.data?.config ?? null}
-          />
-
-          <TeacherOverviewRisk
             atRiskFactors={atRiskFactors}
             atRiskStudents={atRiskStudents}
-            studentCount={studentCount}
             populationLabel={isAdviser ? "advisees" : "students"}
             hideBehavioral={!isAdviser}
+            storageKey={`teacher-kanban:${prefetchTeacherId ?? data.teacherName}:${termKey}`}
           />
         </aside>
       </div>

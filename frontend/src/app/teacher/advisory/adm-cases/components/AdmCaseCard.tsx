@@ -1,10 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { initialsOf } from "@/services/teacher/admCases.labels";
 import type { AdmCase } from "@/services/teacher/admCases.types";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import cardStyles from "./AdmCaseCard.module.css";
+import { StudentMascot } from "../../referrals/components/StudentMascot";
 
 interface AdmCaseCardProps {
   caseData: AdmCase;
@@ -12,43 +10,41 @@ interface AdmCaseCardProps {
 }
 
 export function AdmCaseCard({ caseData, onDetails }: AdmCaseCardProps) {
-  const initials = initialsOf(caseData.studentName);
-
   return (
     <article
-      className={assign.card}
-      aria-label={`ADM case for ${caseData.studentName}, ${caseData.approved ? "approved" : "pending approval"}`}
+      aria-label={`ADM case for ${caseData.studentName}, ${caseData.stageLabel}`}
+      className="flex min-w-0 flex-col items-center gap-2 rounded-lg border bg-white p-3 text-center shadow-sm transition-colors hover:border-primary/60 hover:shadow dark:bg-card"
     >
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
+      <StudentMascot
+        name={caseData.studentName}
+        seed={caseData.lrn}
+        character={caseData.mascot ?? undefined}
+        size={96}
+      />
+      <button
+        type="button"
+        onClick={onDetails}
+        aria-label={`Track ADM case for ${caseData.studentName}`}
+        className="w-full cursor-pointer truncate text-center text-sm font-semibold text-foreground"
+        title={caseData.studentName}
+      >
+        {caseData.studentName}
+      </button>
+      <span
+        className="inline-flex max-w-full items-center truncate rounded-md border border-border bg-secondary px-2 py-0.5 text-xs font-medium leading-tight text-secondary-foreground"
+        title={`LRN ${caseData.lrn}`}
+      >
+        {caseData.lrn}
       </span>
-      <span className={assign.cardHead}>
-        <span className={assign.avatar} aria-hidden="true">
-          {initials}
-        </span>
-        <span className={`${assign.claimMark} ml-auto self-start`}>
-          <span
-            className={assign.statusDot}
-            style={{ backgroundColor: caseData.approved ? "#22c55e" : "#f59e0b" }}
-            aria-hidden="true"
-          />
-          <span className={assign.claimLabel}>{caseData.approved ? "Approved" : "Pending"}</span>
-        </span>
-      </span>
-      <span className={assign.teacherBlock}>
-        <span className={`${assign.fieldLabel} ${cardStyles.studentName}`}>{caseData.studentName}</span>
-        <span
-          className={`${assign.itemTeacher} ${cardStyles.lrn}`}
-          title={`LRN ${caseData.lrn}`}
+      <div className="flex w-full justify-end">
+        <Button
+          type="button"
+          onClick={onDetails}
+          className="h-6 text-xs"
         >
-          LRN {caseData.lrn}
-        </span>
-      </span>
-      <span className={`${assign.cardActions} justify-end`}>
-        <Button type="button" size="sm" onClick={onDetails}>
           Track case
         </Button>
-      </span>
+      </div>
     </article>
   );
 }

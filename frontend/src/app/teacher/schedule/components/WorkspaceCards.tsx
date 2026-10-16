@@ -9,7 +9,7 @@ import { useTerm } from "@/lib/term/TermContext";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { ScheduleConfigDialog } from "./ScheduleConfigDialog";
 import type { DayConfig } from "./schedule-time";
 import type { ScheduleSectionSummary } from "../page";
@@ -64,52 +64,47 @@ function SendToPrincipalCard() {
   );
 
   return (
-    <div
-      className={assign.card}
-      style={{
-        borderColor: "color-mix(in oklch, #22c55e 45%, transparent)",
-        background:
-          "linear-gradient(135deg, color-mix(in oklch, #22c55e 26%, var(--card)), color-mix(in oklch, #16a34a 18%, var(--card)))",
-      }}
-    >
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className="relative flex items-center gap-3">
-        <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green-500/15"
-          aria-hidden="true"
-        >
-          <Send size={20} className="text-green-500" />
+    <KanbanBoard
+      title="Send to Principal"
+      icon={
+        <span className="text-amber-500" aria-hidden>
+          <Send size={14} />
         </span>
-        <div className="min-w-0">
-          <h3 className="font-semibold">Send to Principal</h3>
-          <p className="text-xs text-muted-foreground">
-            {totalDrafts > 0
-              ? `${totalDrafts} draft slot${totalDrafts === 1 ? "" : "s"} awaiting review.`
-              : "No draft slots right now."}
-          </p>
+      }
+      count={<span className="text-amber-600 dark:text-amber-500">{totalDrafts}</span>}
+      description={
+        totalDrafts > 0
+          ? `${totalDrafts} draft slot${totalDrafts === 1 ? "" : "s"} awaiting review. Submitted slots await principal approval.`
+          : "No draft slots right now."
+      }
+      className="h-full"
+      footer={
+        <div className="flex justify-end gap-1.5 px-1 pb-1">
+          <Button
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={() => submitWeek.mutate()}
+            disabled={totalDrafts === 0 || submitWeek.isPending}
+            aria-busy={submitWeek.isPending || undefined}
+          >
+            {submitWeek.isPending ? (
+              <>
+                <Loader2 size={14} className="animate-spin" aria-hidden />
+                <span aria-live="polite">Sending…</span>
+              </>
+            ) : (
+              `Send to principal${totalDrafts > 0 ? ` (${totalDrafts})` : ""}`
+            )}
+          </Button>
         </div>
-      </div>
-      <div className="relative mt-auto flex gap-2 pt-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => submitWeek.mutate()}
-          disabled={totalDrafts === 0 || submitWeek.isPending}
-          aria-busy={submitWeek.isPending || undefined}
-        >
-          {submitWeek.isPending ? (
-            <>
-              <Loader2 size={16} className="animate-spin" aria-hidden />
-              <span aria-live="polite">Sending…</span>
-            </>
-          ) : (
-            `Send to principal${totalDrafts > 0 ? ` (${totalDrafts})` : ""}`
-          )}
-        </Button>
-      </div>
-    </div>
+      }
+    >
+      <p className="flex-1 px-1 text-xs text-muted-foreground">
+        {totalDrafts > 0
+          ? "Drafts flip to submitted instantly, then confirm in the background."
+          : "Stage timetable cells first — drafts appear here."}
+      </p>
+    </KanbanBoard>
   );
 }
 
@@ -150,43 +145,33 @@ function ConfigureCard() {
 
   return (
     <>
-      <div
-        className={assign.card}
-        style={{
-          borderColor: "color-mix(in oklch, #eab308 45%, transparent)",
-          background:
-            "linear-gradient(135deg, color-mix(in oklch, #eab308 26%, var(--card)), color-mix(in oklch, #ca8a04 18%, var(--card)))",
-        }}
-      >
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className="relative flex items-center gap-3">
-          <span
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-yellow-500/15"
-            aria-hidden="true"
-          >
-            <SlidersHorizontal size={20} className="text-yellow-500" />
+      <KanbanBoard
+        title="Configure"
+        icon={
+          <span className="text-amber-500" aria-hidden>
+            <SlidersHorizontal size={14} />
           </span>
-          <div className="min-w-0">
-            <h3 className="font-semibold">Configure</h3>
-            <p className="text-xs text-muted-foreground">
-              School day shape, breaks and period lengths.
-            </p>
+        }
+        description="School day shape, breaks and period lengths."
+        className="h-full"
+        footer={
+          <div className="flex justify-end gap-1.5 px-1 pb-1">
+            <Button
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => setConfigOpen(true)}
+              aria-label="Configure school day"
+            >
+              <SlidersHorizontal size={14} aria-hidden />
+              Configure
+            </Button>
           </div>
-        </div>
-        <div className="relative mt-auto flex gap-2 pt-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setConfigOpen(true)}
-            aria-label="Configure school day"
-          >
-            <SlidersHorizontal size={16} aria-hidden />
-            Configure
-          </Button>
-        </div>
-      </div>
+        }
+      >
+        <p className="flex-1 px-1 text-xs text-muted-foreground">
+          {configQuery.data ? "General shape for the whole term — saving applies to all sections." : "Loading day shape…"}
+        </p>
+      </KanbanBoard>
       {configOpen && configQuery.data ? (
         <ScheduleConfigDialog
           config={configQuery.data.config}

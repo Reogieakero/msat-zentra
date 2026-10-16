@@ -1,3 +1,4 @@
+import type * as React from "react";
 import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -9,7 +10,7 @@ import styles from "./dropdown-select.module.css";
 
 export type DropdownOption = {
   value: string;
-  label: string;
+  label: React.ReactNode;
 };
 
 type Props = {
@@ -19,15 +20,21 @@ type Props = {
   placeholder?: string;
   id?: string;
   ariaLabel?: string;
+  triggerClassName?: string;
 };
 
-export function DropdownSelect({ value, onValueChange, options, placeholder, id, ariaLabel }: Props) {
+export function DropdownSelect({ value, onValueChange, options, placeholder, id, ariaLabel, triggerClassName }: Props) {
   const selected = options.find((o) => o.value === value);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className={styles.dropdown} id={id} aria-label={ariaLabel}>
+        <button
+          type="button"
+          className={triggerClassName ? `${styles.dropdown} ${triggerClassName}` : styles.dropdown}
+          id={id}
+          aria-label={ariaLabel}
+        >
           <span className={styles.value}>{selected ? selected.label : (placeholder ?? "Select…")}</span>
           <ChevronDown className={styles.chevron} aria-hidden />
         </button>

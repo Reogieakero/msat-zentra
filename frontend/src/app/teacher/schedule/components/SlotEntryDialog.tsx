@@ -109,7 +109,7 @@ export function SlotEntryDialog({
                   <p className="text-sm text-muted-foreground">
                     No subjects for this grade yet — add them first.
                   </p>
-                  <Button variant="outline" size="sm" onClick={onAddSubject}>
+                  <Button variant="outline" size="sm" onClick={onAddSubject} className="h-6 px-2 text-xs">
                     <Plus size={14} aria-hidden />
                     Add subjects
                   </Button>
@@ -131,7 +131,7 @@ export function SlotEntryDialog({
                   <p className="text-sm text-muted-foreground">
                     No teacher names yet — add them first.
                   </p>
-                  <Button variant="outline" size="sm" onClick={onAddTeacher}>
+                  <Button variant="outline" size="sm" onClick={onAddTeacher} className="h-6 px-2 text-xs">
                     <Plus size={14} aria-hidden />
                     Add teachers
                   </Button>
@@ -193,6 +193,7 @@ export function SlotEntryDialog({
               onClick={onRemove}
               disabled={removing || saving}
               aria-busy={removing || undefined}
+              className="h-6 px-2 text-xs"
             >
               {removing ? (
                 <>
@@ -204,7 +205,7 @@ export function SlotEntryDialog({
               )}
             </Button>
           ) : null}
-          <Button variant="destructive" onClick={onClose} disabled={busy}>
+          <Button variant="destructive" onClick={onClose} disabled={busy} className="h-6 px-2 text-xs">
             Cancel
           </Button>
           <Button
@@ -213,6 +214,7 @@ export function SlotEntryDialog({
             }}
             disabled={!canSave}
             aria-busy={saving || undefined}
+            className="h-6 px-2 text-xs"
           >
             {saving ? (
               <>

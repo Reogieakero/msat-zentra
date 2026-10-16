@@ -6,6 +6,7 @@ import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { actorName, ensureAdmForm } from "../../modules/adm/adm.repository.js";
+import { mascotForUnique, sectionTakenMascots } from "../mascot.js";
 import type { AdmContext } from "./adm.types.js";
 
 export interface CreateProfileInput {
@@ -71,10 +72,12 @@ export async function createProfile(ctx: AdmContext, input: CreateProfileInput) 
         });
         userId = user.id;
       }
+      const taken = await sectionTakenMascots(prisma, roster.sectionId);
       await prisma.studentProfile.create({
         data: {
           userId,
           lrn: roster.lrn,
+          mascot: mascotForUnique(roster.fullName, roster.lrn, taken),
           gradeLevel: roster.gradeLevel,
           sectionId: roster.sectionId,
         },

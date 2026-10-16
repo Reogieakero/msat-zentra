@@ -37,14 +37,17 @@ const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "
 
 const inputClass = "rounded-md border border-input bg-transparent px-2 py-1 text-sm";
 
-function TimePicker({
+export function TimePicker({
   value,
   onChange,
   label,
+  triggerClassName,
 }: {
   value: string;
   onChange: (v: string) => void;
   label: string;
+  /** Extra class for the dropdown trigger (e.g. left-align the text). */
+  triggerClassName?: string;
 }) {
   const [h, m] = value.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
@@ -64,6 +67,7 @@ function TimePicker({
           onValueChange={(v) => emit(Number(v), mm, ampm)}
           options={hourOptions}
           ariaLabel="Hour"
+          triggerClassName={triggerClassName}
         />
       </div>
       <div className="flex-1">
@@ -72,6 +76,7 @@ function TimePicker({
           onValueChange={(v) => emit(h12, v, ampm)}
           options={minuteOptions}
           ariaLabel="Minute"
+          triggerClassName={triggerClassName}
         />
       </div>
       <div className="flex-1">
@@ -83,22 +88,26 @@ function TimePicker({
             { value: "PM", label: "PM" },
           ]}
           ariaLabel="AM or PM"
+          triggerClassName={triggerClassName}
         />
       </div>
     </div>
   );
 }
 
-function AfterSelect({
+export function AfterSelect({
   value,
   options,
   onChange,
   label,
+  triggerClassName,
 }: {
   value: number;
   options: number[];
   onChange: (v: number) => void;
   label: string;
+  /** Extra class for the dropdown trigger (e.g. left-align the text). */
+  triggerClassName?: string;
 }) {
   return (
     <DropdownSelect
@@ -106,6 +115,7 @@ function AfterSelect({
       onValueChange={(v) => onChange(Number(v))}
       options={options.map((n) => ({ value: String(n), label: `After ${ord(n)} period` }))}
       ariaLabel={label}
+      triggerClassName={triggerClassName}
     />
   );
 }
@@ -127,6 +137,10 @@ export function ScheduleConfigDialog({ config, onClose, onApply, saving }: Props
     Math.min(max, Math.max(min, Math.round(v) || fallback));
 
   const handleApply = () => {
+    const workload = {
+      maxDailyPeriods: Math.min(8, Math.max(1, Math.round(draft.workload?.maxDailyPeriods ?? 6) || 6)),
+      maxWeeklyPeriods: Math.min(40, Math.max(1, Math.round(draft.workload?.maxWeeklyPeriods ?? 30) || 30)),
+    };
     onApply({
       startTime: draft.startTime || DEFAULT_DAY_CONFIG.startTime,
       periodMins: clampMins(draft.periodMins, DEFAULT_DAY_CONFIG.periodMins, 15, 120),
@@ -144,6 +158,7 @@ export function ScheduleConfigDialog({ config, onClose, onApply, saving }: Props
         ...draft.afternoonRecess,
         mins: clampMins(draft.afternoonRecess.mins, 15, 5, 45),
       },
+      workload,
     });
   };
 
@@ -208,7 +223,7 @@ export function ScheduleConfigDialog({ config, onClose, onApply, saving }: Props
       dismissable={!saving}
       size="md"
       title="Configure school day"
-      description="Breaks, lunch, start time and period length. The timetable below updates on Apply."
+      description="General shape for the whole term — saving applies to all sections. Breaks, lunch, start time and period length reshape every timetable on Apply."
     >
 
         <div className="flex flex-col gap-3">
@@ -268,19 +283,72 @@ export function ScheduleConfigDialog({ config, onClose, onApply, saving }: Props
           {recessField("morningRecess", "Morning recess", [1, 2, 3, 4])}
           {recessField("afternoonRecess", "Afternoon recess", [5, 6, 7, 8])}
 
+          <div className="rounded-lg border border-input p-3">
+            <span className="text-sm font-medium">Teacher workload caps</span>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Warn-allow limits for the conflict detector. Saving still goes through.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                Max periods / day
+                <input
+                  type="number"
+                  min={1}
+                  max={8}
+                  step={1}
+                  value={draft.workload?.maxDailyPeriods ?? 6}
+                  onChange={(e) => {
+                    const v = e.target.valueAsNumber;
+                    if (Number.isFinite(v))
+                      setDraft({
+                        ...draft,
+                        workload: {
+                          maxDailyPeriods: v,
+                          maxWeeklyPeriods: draft.workload?.maxWeeklyPeriods ?? 30,
+                        },
+                      });
+                  }}
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                Max periods / week
+                <input
+                  type="number"
+                  min={1}
+                  max={40}
+                  step={1}
+                  value={draft.workload?.maxWeeklyPeriods ?? 30}
+                  onChange={(e) => {
+                    const v = e.target.valueAsNumber;
+                    if (Number.isFinite(v))
+                      setDraft({
+                        ...draft,
+                        workload: {
+                          maxDailyPeriods: draft.workload?.maxDailyPeriods ?? 6,
+                          maxWeeklyPeriods: v,
+                        },
+                      });
+                  }}
+                  className={inputClass}
+                />
+              </label>
+            </div>
+          </div>
+
           <p className="text-xs text-muted-foreground">
             School day ends {formatClock(lastRow.endMin)}.
           </p>
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setDraft(DEFAULT_DAY_CONFIG)}>
+          <Button variant="ghost" onClick={() => setDraft(DEFAULT_DAY_CONFIG)} className="h-6 px-2 text-xs">
             Reset
           </Button>
-          <Button variant="destructive" onClick={onClose} disabled={saving}>
+          <Button variant="destructive" onClick={onClose} disabled={saving} className="h-6 px-2 text-xs">
             Cancel
           </Button>
-          <Button onClick={handleApply} disabled={saving} aria-busy={saving || undefined}>
+          <Button onClick={handleApply} disabled={saving} aria-busy={saving || undefined} className="h-6 px-2 text-xs">
             {saving ? (
               <>
                 <Loader2 size={16} className="animate-spin" aria-hidden />

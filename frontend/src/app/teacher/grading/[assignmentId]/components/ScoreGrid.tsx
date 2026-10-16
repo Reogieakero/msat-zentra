@@ -1,11 +1,11 @@
 "use client";
 import * as React from "react";
 import { useSession } from "@/lib/auth/useSession";
-import { Loader2, SearchIcon } from "lucide-react";
+import { ClipboardList, FileText, Loader2, PenLine, SearchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import { CardAction, CardContent, CardHeader } from "@/components/ui/card";
+import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
+import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
 import { CardModal } from "@/components/ui/CardModal";
 import { COMPONENT_NAMES } from "@/services/teacher/grading.compute";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,13 +13,26 @@ import { submitScore, submitScores, updateAssessment, classDetailKey } from "@/s
 import { useTerm } from "@/lib/term/TermContext";
 import { apiErrorMessage } from "@/lib/api/errors";
 import type { ClassDetail, ClassStudent, ClassComponent, ComponentType } from "@/services/teacher/grading.types";
-import { sileo } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
+import { useScoreSave } from "./score-save-context";
+import type { ScoreSaveRow } from "./ScoreSaveDock";
 import styles from "./ScoreGrid.module.css";
 import { useScoreDrafts } from "./use-score-drafts";
 import { clearStoredDrafts, typedCache } from "./score-storage";
 import { PlainEncodeTable } from "./encode-table";
 import { ScoreDataTable } from "./score-data-table";
+
+const CATEGORY_COLOR: Record<ComponentType, string> = {
+  WRITTEN_WORK: "#3b82f6",
+  PERFORMANCE_TASK: "#f59e0b",
+  EXAM: "#ef4444",
+};
+
+const CATEGORY_ICON = {
+  WRITTEN_WORK: PenLine,
+  PERFORMANCE_TASK: ClipboardList,
+  EXAM: FileText,
+} as const;
 type Props = {
   queryKeyId: string;
   sectionName: string;
@@ -33,6 +46,7 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
   const queryClient = useQueryClient();
   const { activeTerm } = useTerm();
   const session = useSession();
+  const { reportScorePhase } = useScoreSave();
   const teacherId = session?.sub ?? "anon";
   const [editing, setEditing] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -105,6 +119,17 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
       setEmptyOpen(true);
       return;
     }
+    // Root-level dock opens this tick and keeps settling even if the user
+    // navigates away mid-flight.
+    const dockPills = [COMPONENT_NAMES[category], `Max ${effectiveMax}`, sectionName];
+    const dockRows: ScoreSaveRow[] = dirty.map((j) => ({
+      id: j.studentId,
+      name: students.find((s) => s.id === j.studentId)?.name ?? j.studentId,
+      meta: `${j.raw} / ${effectiveMax}`,
+      state: "saving" as const,
+    }));
+    const dockDetail = { title: selected.title, pills: dockPills, rows: dockRows };
+    reportScorePhase("saving", dockDetail, `Saving scores for "${selected.title}"…`);
     setError(null);
     setSaving(true);
     // Optimistic paint: patch the cached class detail so the read view shows
@@ -141,6 +166,24 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
     // Paint even for max-score-only edits so the header updates instantly.
     if (dirty.length > 0 || maxChanged) applyOptimistic();
     setEditing(false);
+    let failures: string[] = [];
+    const failedIds = new Set<string>();
+    let dockSettled = false;
+    const settleError = (message: string) => {
+      dockSettled = true;
+      reportScorePhase(
+        "error",
+        {
+          title: selected.title,
+          pills: dockPills,
+          rows: dockRows.map((r): ScoreSaveRow => ({
+            ...r,
+            state: failedIds.size === 0 || failedIds.has(r.id) ? "failed" : "saved",
+          })),
+        },
+        message,
+      );
+    };
     try {
       if (effectiveMax !== selected.maxScore) {
         try {
@@ -151,15 +194,15 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
           throw new Error("max");
         }
       }
-      let failures: string[] = [];
       try {
         if (dirty.length > 0) {
           const bulk = await submitScores(
             selected.id,
             dirty.map((j) => ({ studentId: j.studentId, rawScore: j.raw }))
           );
-          failures = (bulk.results ?? [])
-            .filter((r) => !r.ok)
+          const bad = (bulk.results ?? []).filter((r) => !r.ok);
+          for (const r of bad) failedIds.add(r.studentId);
+          failures = bad
             .map((r) => {
               const name = students.find((s) => s.id === r.studentId)?.name ?? r.studentId;
               return `${name}: ${r.error ?? "save failed"}`;
@@ -169,9 +212,11 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
         // Fallback for transport-level errors: retry per-item so a single
         // bad row can't sink the whole batch without a per-student reason.
         const results = await Promise.allSettled(dirty.map((j) => submitScore(selected.id, { studentId: j.studentId, rawScore: j.raw })));
-        failures = results
+        const rejected = results
           .map((r, i) => ({ result: r, job: dirty[i] as { studentId: string; raw: number } }))
-          .filter((x): x is { result: PromiseRejectedResult; job: { studentId: string; raw: number } } => x.result.status === "rejected")
+          .filter((x): x is { result: PromiseRejectedResult; job: { studentId: string; raw: number } } => x.result.status === "rejected");
+        for (const { job } of rejected) failedIds.add(job.studentId);
+        failures = rejected
           .map(({ result, job }) => {
             const name = students.find((s) => s.id === job.studentId)?.name ?? job.studentId;
             return `${name}: ${apiErrorMessage(result.reason, "save failed")}`;
@@ -184,7 +229,9 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
         setEditing(true);
         const shown = failures.slice(0, 5).join("; ");
         const more = failures.length > 5 ? ` (+${failures.length - 5} more)` : "";
-        throw new Error(`${failures.length} score${failures.length === 1 ? "" : "s"} failed to save (${shown}${more})`);
+        const message = `${failures.length} score${failures.length === 1 ? "" : "s"} failed to save (${shown}${more})`;
+        settleError(message);
+        throw new Error(message);
       }
       markSelfNotified(selected.id);
       typedCache.clear();
@@ -193,42 +240,116 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
       // Background reconcile only — the UI already shows the saved values.
       // Single targeted invalidation, not the whole academic overview.
       onChanged();
-      // Toast fires only after the server confirms, never before.
-      sileo.success({ title: "Scores saved", description: dirty.length > 0 ? `${dirty.length} score${dirty.length === 1 ? "" : "s"} saved for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.` : `Max score updated for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.` });
+      reportScorePhase(
+        "saved",
+        {
+          title: selected.title,
+          pills: dockPills,
+          rows: dockRows.map((r) => ({ ...r, state: "saved" as const })),
+        },
+        dirty.length > 0 ? `${dirty.length} score${dirty.length === 1 ? "" : "s"} saved for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.` : `Max score updated for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.`,
+      );
     } catch (e) {
-      const message = e instanceof Error && e.message === "max" ? "Failed to update max score." : e instanceof Error ? `${e.message} — the rest were saved.` : "Could not save scores.";
+      const message = e instanceof Error && e.message === "max" ? "The max score was not updated — the encoded scores are unchanged." : e instanceof Error ? `${e.message} — the rest were saved.` : "The scores were not saved — check your connection.";
       setError(message);
-      sileo.warning({ title: "Scores not fully saved", description: `${message} Review and save again.` });
+      // Partial failures already settled the dock above — settle anything
+      // else here so the dock never sticks on "saving".
+      if (!dockSettled) settleError(message);
     } finally {
       setSaving(false);
     }
   };
   return (
-    <div className={assign.card} aria-label="Encode scores">
-      <span className={assign.glowClip} aria-hidden="true"><span className={assign.cardGlow} /></span>
-      <CardHeader className={`${styles.header} relative`}>
-        {assessments.length > 0 && selected ? (
-          <CardAction className={`${styles.headerActions} w-full justify-between`}>
+    <div key={selected?.id ?? "empty"} className={styles.enter}>
+    <KanbanBoard
+      title={selected ? selected.title : COMPONENT_NAMES[category]}
+      icon={(() => {
+        const Icon = CATEGORY_ICON[category] ?? ClipboardList;
+        return (
+          <span aria-hidden style={{ color: CATEGORY_COLOR[category] ?? "#f59e0b" }}>
+            <Icon size={14} />
+          </span>
+        );
+      })()}
+      count={
+        selected ? `${students.filter((s) => selected.scores[s.id] != null).length}/${students.length} scored` : undefined
+      }
+      description={
+        selected ? (
+          <span className="flex items-center justify-between gap-2">
+            <span className="flex flex-wrap items-center gap-1">
+              <AmberRectPill>{COMPONENT_NAMES[category]}</AmberRectPill>
+              <AmberRectPill>Max {selected.maxScore}</AmberRectPill>
+              <AmberRectPill>{sectionName}</AmberRectPill>
+            </span>
+            <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
+              <InputGroupInput
+                placeholder="Search..."
+                value={nameFilter}
+                onChange={(event) => setNameFilter(event.target.value)}
+                aria-label="Filter students"
+              />
+              <InputGroupAddon>
+                <SearchIcon />
+              </InputGroupAddon>
+            </InputGroup>
+          </span>
+        ) : null
+      }
+      actions={
+        selected ? (
+          <span className="flex flex-wrap items-center gap-2">
             {editing ? (
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 Max
                 <input ref={maxRef} key={selected.id} className={styles.maxInput} inputMode="numeric" aria-label="Max score" defaultValue={restoredMax ?? selected.maxScore} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ""); e.target.value = v; writeMax(v === "" ? null : v); }} />
               </label>
-            ) : (<span />)}
-            <span className="ml-auto flex flex-wrap items-center gap-2">
-              <InputGroup className="max-w-40"><InputGroupInput placeholder="Search..." value={nameFilter} onChange={(event) => setNameFilter(event.target.value)} aria-label="Filter students" /><InputGroupAddon><SearchIcon /></InputGroupAddon></InputGroup>
-              {editing ? (<><Button onClick={() => void handleSaveAll()} disabled={saving} aria-busy={saving || undefined}>{saving ? (<><Loader2 className="animate-spin" aria-hidden />Saving scores…</>) : ("Save")}</Button><Button variant="destructive" onClick={cancelEdit} disabled={saving}>Cancel</Button></>) : saving ? (<Button disabled aria-busy="true"><Loader2 className="animate-spin" aria-hidden />Saving…</Button>) : (<Button variant="outline" onClick={startEdit}>Edit scores</Button>)}
-            </span>
-          </CardAction>
-        ) : null}
-      </CardHeader>
+            ) : null}
+            {editing ? (
+              <>
+                <Button size="sm" className="h-6 px-3 text-xs" onClick={() => void handleSaveAll()} disabled={saving} aria-busy={saving || undefined}>
+                  {saving ? (<><Loader2 className="animate-spin" aria-hidden size={14} />Saving scores…</>) : ("Save")}
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-6 bg-red-500 px-3 text-xs text-white hover:bg-red-600"
+                  onClick={cancelEdit}
+                  disabled={saving}
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : saving ? (
+              <Button size="sm" className="h-6 px-3 text-xs" disabled aria-busy="true">
+                <Loader2 className="animate-spin" aria-hidden size={14} />Saving…
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" className="h-6 px-3 text-xs" onClick={startEdit}>
+                Edit scores
+              </Button>
+            )}
+          </span>
+        ) : null
+      }
+      ariaLabel={selected ? `Encode scores for ${selected.title}` : undefined}
+      boardLabel={
+        selected
+          ? `${selected.title}, ${students.filter((s) => selected.scores[s.id] != null).length} of ${students.length} scored`
+          : undefined
+      }
+    >
       <CardModal open={emptyOpen} onClose={() => setEmptyOpen(false)} size="sm" title="No scores to save" description="Enter at least one score before saving."><div className="flex justify-end gap-2"><Button onClick={() => setEmptyOpen(false)}>Got it</Button></div></CardModal>
       <CardModal open={rangeError !== null} onClose={() => setRangeError(null)} size="sm" title="Check scores" description={rangeError ?? undefined}><div className="flex justify-end gap-2"><Button onClick={() => setRangeError(null)}>Got it</Button></div></CardModal>
-      <CardContent className={`${styles.content} relative`}>
-        {error ? <p className={styles.errorText}>{error}</p> : null}
-        {recovered && editing ? (<p className={styles.recovered} role="status">Recovered unsaved entries from your last visit — review and save.</p>) : null}
-        {assessments.length === 0 || !selected ? (<p className={styles.empty}>No {COMPONENT_NAMES[category].toLowerCase()} assessments yet — use the Add assessment card.</p>) : editing ? (<PlainEncodeTable assessment={selected} students={students} drafts={scores} nameFilter={nameFilter} onDraftChange={onDraft} />) : (<ScoreDataTable assessment={selected} students={students} drafts={scores} nameFilter={nameFilter} />)}
-      </CardContent>
+      {error ? <p className={styles.errorText}>{error}</p> : null}
+      {recovered && editing ? (<p className={styles.recovered} role="status">Recovered unsaved entries from your last visit — review and save.</p>) : null}
+      {assessments.length === 0 || !selected ? (
+        <KanbanBoardEmpty>No {COMPONENT_NAMES[category].toLowerCase()} assessments yet — use the Add assessment card.</KanbanBoardEmpty>
+      ) : editing ? (
+        <PlainEncodeTable assessment={selected} students={students} drafts={scores} nameFilter={nameFilter} onDraftChange={onDraft} />
+      ) : (
+        <ScoreDataTable assessment={selected} students={students} drafts={scores} nameFilter={nameFilter} />
+      )}
+    </KanbanBoard>
     </div>
   );
 }

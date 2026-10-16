@@ -1,249 +1,166 @@
 "use client";
 import * as React from "react";
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  flexRender,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type SortingState,
-} from "@tanstack/react-table";
-import { SearchIcon, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { motion, useReducedMotion } from "motion/react";
+import { BookOpen, CalendarClock, SearchIcon, Users, type LucideIcon } from "lucide-react";
+import { RowList, type RowListItem, type RowTone } from "@/components/ui/row-list";
+import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import type { StudentListRow } from "@/services/teacher/studentList.types";
-import styles from "./student-list.module.css";
-import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
-function attendanceVariant(pct: number | null): "green" | "amber" | "red" | "outline" {
-  if (pct === null) return "outline";
+
+function attendanceTone(pct: number | null): RowTone {
+  if (pct === null) return "amber";
   if (pct >= 90) return "green";
   if (pct >= 80) return "amber";
   return "red";
 }
-function gradeVariant(grade: number | null): "green" | "blue" | "red" | "outline" {
-  if (grade === null) return "outline";
+
+function gradeTone(grade: number | null): RowTone {
+  if (grade === null) return "amber";
   if (grade >= 90) return "green";
   if (grade >= 75) return "blue";
   return "red";
 }
+
+const META_ICON: Record<string, LucideIcon> = {
+  attendance: CalendarClock,
+  academic: BookOpen,
+};
+
+function toRowListItem(row: StudentListRow): RowListItem {
+  const pct = row.attendancePercentage;
+  const grade = row.academicGrade;
+  const hasMeetups = row.attendanceTotal > 0;
+  const attendanceLabel = hasMeetups
+    ? `${row.attendancePresent}/${row.attendanceTotal} present`
+    : "No meetups yet";
+  return {
+    key: row.studentId,
+    status: {
+      label: pct === null ? "No record" : `${pct}%`,
+      tone: attendanceTone(pct),
+    },
+    title: row.name,
+    idLabel: row.lrn,
+    meta: [
+      {
+        label: attendanceLabel,
+        tone: hasMeetups ? ("muted" as RowTone) : ("amber" as RowTone),
+        icon: META_ICON.attendance,
+        title: hasMeetups
+          ? `${row.attendancePresent} of ${row.attendanceTotal} meetups present`
+          : "No attendance meetups yet",
+        // Present count renders amber; denominator stays muted so the
+        // two parts never share one color.
+        labelNode: hasMeetups ? (
+          <span className="inline-flex items-baseline gap-0.5">
+            <span className="font-semibold text-amber-700 dark:text-amber-400">
+              {row.attendancePresent}
+            </span>
+            <span className="text-muted-foreground">/{row.attendanceTotal} present</span>
+          </span>
+        ) : undefined,
+      },
+      {
+        label: grade === null ? "No grade" : `${grade}`,
+        tone: gradeTone(grade),
+        icon: META_ICON.academic,
+        title: grade === null ? "Academic grade not yet encoded" : `Academic grade ${grade}`,
+      },
+      {
+        label:
+          row.computedAverage !== null
+            ? `Avg ${Math.round(row.computedAverage * 10) / 10}`
+            : "Not encoded",
+        tone: row.computedAverage !== null ? ("muted" as RowTone) : ("amber" as RowTone),
+        title:
+          row.computedAverage !== null
+            ? `Computed average ${row.computedAverage}`
+            : "Computed average not yet encoded",
+      },
+    ],
+    avatarMascot: { name: row.name, seed: row.lrn, character: row.mascot },
+  };
+}
+
 export function StudentTable({
   headerTitle,
-  headerDesc,
   rows,
   rosterPending,
   rosterError,
   emptySectionName,
-  activePickKey,
 }: {
   headerTitle: React.ReactNode;
-  headerDesc: string;
   rows: StudentListRow[];
   rosterPending: boolean;
   rosterError: boolean;
   emptySectionName: string;
-  activePickKey: string;
 }) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const columns = React.useMemo<ColumnDef<StudentListRow>[]>(
-    () => [
-      {
-        id: "name",
-        accessorFn: (row) => row.name,
-        header: "Student",
-        cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className={styles.cellMain}>{row.original.name}</p>
-            <p className={styles.cellSub}>{row.original.lrn}</p>
-          </div>
-        ),
-      },
-      {
-        id: "attendance",
-        accessorFn: (row) => row.attendancePercentage ?? -1,
-        header: "Attendance",
-        cell: ({ row }) => {
-          const pct = row.original.attendancePercentage;
-          return (
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <span>
-                <Badge variant={attendanceVariant(pct)}>
-                  {pct === null ? "No record" : `${pct}%`}
-                </Badge>
-              </span>
-              <span>
-                <Badge variant="outline">
-                  {row.original.attendanceTotal > 0
-                    ? `${row.original.attendancePresent}/${row.original.attendanceTotal} present`
-                    : "No meetups yet"}
-                </Badge>
-              </span>
-            </div>
-          );
-        },
-      },
-      {
-        id: "grade",
-        accessorFn: (row) => row.academicGrade ?? -1,
-        header: "Academic Grade",
-        cell: ({ row }) => {
-          const grade = row.original.academicGrade;
-          return (
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <span>
-                <Badge variant={gradeVariant(grade)}>
-                  {grade === null ? "No grade" : grade}
-                </Badge>
-              </span>
-              <span>
-                <Badge variant="outline">
-                  {row.original.computedAverage !== null
-                    ? `Avg ${Math.round(row.original.computedAverage * 10) / 10}`
-                    : "Not yet encoded"}
-                </Badge>
-              </span>
-            </div>
-          );
-        },
-      },
-    ],
-    [],
-  );
-  const table = useReactTable({
-    data: rows,
-    columns,
-    getRowId: (row) => row.studentId,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: PAGE_SIZE } },
-    state: { sorting, columnFilters },
-  });
-  React.useEffect(() => {
-    table.getColumn("name")?.setFilterValue("");
-    table.setPageIndex(0);
-  }, [activePickKey, table]);
+  const [query, setQuery] = React.useState("");
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (r) => r.name.toLowerCase().includes(q) || r.lrn.toLowerCase().includes(q),
+    );
+  }, [rows, query]);
+
+  const items = React.useMemo(() => filtered.map(toRowListItem), [filtered]);
+
+  const reduceMotion = useReducedMotion() ?? false;
+
   return (
-    <div className={`${assign.card} ${styles.tableCard}`}>
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className="relative flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className={styles.sectionTitle}>
-            {headerTitle}
-          </h2>
-          <p className={styles.sectionDesc}>
-            {headerDesc}
-          </p>
-        </div>
-        <InputGroup className="max-w-40 shrink-0">
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.992 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.45, ease: "easeOut" }}
+      style={{ willChange: "transform, opacity" }}
+    >
+    <KanbanBoard
+      title={headerTitle}
+      icon={<Users size={14} aria-hidden className="text-blue-500" />}
+      actions={
+        <InputGroup className="w-36 rounded-[16px] sm:w-44">
           <InputGroupInput
             placeholder="Filter students..."
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("name")?.setFilterValue(event.target.value)
-            }
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
             aria-label="Filter students"
           />
           <InputGroupAddon>
             <SearchIcon />
           </InputGroupAddon>
         </InputGroup>
-      </div>
+      }
+      ariaLabel="Student list"
+      boardLabel="Student list"
+    >
       {rosterPending ? (
-        <p className="relative text-sm text-muted-foreground" aria-busy="true">
-          Loading students…
-        </p>
+        <KanbanBoardEmpty>Loading students…</KanbanBoardEmpty>
       ) : rosterError ? (
-        <p role="alert" className="relative text-sm text-destructive">
+        <p role="alert" className="flex min-h-24 flex-1 items-center justify-center px-1 py-8 text-center text-xs text-destructive">
           Could not load students for this class.
         </p>
       ) : rows.length === 0 ? (
-        <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-          <span
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-            aria-hidden="true"
-          >
-            <Users size={24} className="text-muted-foreground" />
-          </span>
-          <p className="font-medium">No students in this section yet</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Students will appear here once they are enlisted in{" "}
-            {emptySectionName}.
-          </p>
-        </div>
+        <KanbanBoardEmpty>
+          {emptySectionName
+            ? `No students in ${emptySectionName} yet.`
+            : "No students in this section yet."}
+        </KanbanBoardEmpty>
+      ) : items.length === 0 ? (
+        <KanbanBoardEmpty>No students match your search.</KanbanBoardEmpty>
       ) : (
-        <>
-          <div className={styles.tableScrollWrap}>
-            <div className={styles.tableScroll}>
-              <div className="overflow-x-auto rounded-md border">
-                <Table className="w-full table-fixed">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow
-                        key={headerGroup.id}
-                        className="bg-muted/50 [&>th]:border-t-0"
-                      >
-                        {headerGroup.headers.map((header) => (
-                          <TableHead
-                            key={header.id}
-                            onClick={header.column.getToggleSortingHandler()}
-                            className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                          >
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(header.column.columnDef.header, header.getContext())}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id}>
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} className="truncate">
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={columns.length} className="h-24 text-center">
-                          No students match your search.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </div>
-          <Pagination
-            currentPage={table.getState().pagination.pageIndex + 1}
-            totalItems={table.getFilteredRowModel().rows.length}
-            onPageChange={(p) => table.setPageIndex(p - 1)}
-          />
-        </>
+        <RowList
+          bleed
+          gutter="0.625rem"
+          items={items}
+          emptyText="No students match your search."
+          ariaLabel="Student list"
+        />
       )}
-    </div>
+    </KanbanBoard>
+    </motion.div>
   );
 }

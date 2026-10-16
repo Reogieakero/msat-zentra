@@ -3,7 +3,7 @@ import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { clinicSessionObjectPath, getReferralBucket, uploadFile } from "../../lib/storage.js";
-import { ensureDocsUnlocked, formatSessionDoc, getIntervention, getInterventionSession } from "../../modules/interventions/interventions.repository.js";
+import { ensureDocsUnlocked, formatSessionDoc, getIntervention, getInterventionSession, notifyInterventionAdviser } from "../../modules/interventions/interventions.repository.js";
 import type { InterventionContext } from "./intervention.types.js";
 
 export async function listAttachments(ctx: InterventionContext, interventionId: string, sessionId: string) {
@@ -80,6 +80,7 @@ export async function addAttachments(
       sourceId: row.id,
     });
   }
+  notifyInterventionAdviser(row, ctx.userId, () => "Session documentation was added to your advisee's follow-up.");
   void fanoutNotification({
     userId: ctx.userId,
     sourceTable: "session_attachments",
@@ -127,6 +128,7 @@ export async function removeAttachment(
       sourceId: row.id,
     });
   }
+  notifyInterventionAdviser(row, ctx.userId, () => "Session documentation was removed from your advisee's follow-up.");
   void fanoutNotification({
     userId: ctx.userId,
     sourceTable: "session_attachments",

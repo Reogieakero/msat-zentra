@@ -48,7 +48,13 @@ export function useUrlPager(
   }, [searchParams, extraParams]);
 
   const totalPages = Math.max(1, Math.ceil(Math.max(0, totalItems) / Math.max(1, pageSize)));
-  const safePage = Math.min(Math.max(1, page), totalPages);
+  // When the caller doesn't know the total yet (totalItems <= 0, e.g. before
+  // the first fetch resolves), do NOT clamp the URL page down to 1.
+  // Clamping here froze `pager.page` at 1 forever for every `useUrlPager(0)`
+  // call site: the query key never changed, so React Query never refetched
+  // while the URL said ?page=4. Only clamp once a real total is known.
+  const hasKnownTotal = totalItems > 0;
+  const safePage = hasKnownTotal ? Math.min(Math.max(1, page), totalPages) : page;
 
   const write = useCallback(
     (next: Record<string, string | number | undefined | null>) => {

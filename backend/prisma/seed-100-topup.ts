@@ -550,7 +550,7 @@ async function main() {
         if (rows.length >= need) break;
         if (taken.has(p.userId)) continue;
         taken.add(p.userId);
-        rows.push({ id: keyId("s100_sf10", p.userId.slice(-8)), studentId: p.userId, source: (["auto_populated", "ocr_upload", "manual"] as const)[rows.length % 3] });
+        rows.push({ id: keyId("s100_sf10", p.userId.slice(-8)), studentId: p.userId, desk: (p.gradeLevel === "G11" || p.gradeLevel === "G12") ? "registrar" : "record_keeper", source: (["auto_populated", "ocr_upload", "manual"] as const)[rows.length % 3] });
       }
       for (let i = 0; i < rows.length; i += 500) await prisma.sf10Record.createMany({ data: rows.slice(i, i + 500), skipDuplicates: true });
     }

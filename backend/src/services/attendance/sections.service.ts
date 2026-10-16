@@ -75,6 +75,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
         select: {
           userId: true,
           lrn: true,
+          mascot: true,
           user: { select: { fullName: true } },
           attendanceRecords: {
             where: { termId, session },
@@ -90,6 +91,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
           id: true,
           lrn: true,
           fullName: true,
+          mascot: true,
           attendanceRecords: {
             where: { termId, session },
             select: { status: true },
@@ -104,6 +106,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
       id: string,
       lrn: string,
       name: string,
+      mascot: string | null,
       records: { status: string }[],
       hasAccount: boolean,
     ) => {
@@ -122,6 +125,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
         id,
         lrn,
         name,
+        mascot,
         present: counts.present,
         late: counts.late,
         absent: counts.absent,
@@ -133,11 +137,11 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
 
     const result = [
       ...students.map((st) =>
-        toRow(st.userId, st.lrn, st.user.fullName, st.attendanceRecords, true),
+        toRow(st.userId, st.lrn, st.user.fullName, st.mascot ?? null, st.attendanceRecords, true),
       ),
       ...rosterEntries
         .filter((r) => !registeredLrns.has(r.lrn))
-        .map((r) => toRow(`roster:${r.id}`, r.lrn, r.fullName, r.attendanceRecords, false)),
+        .map((r) => toRow(`roster:${r.id}`, r.lrn, r.fullName, r.mascot ?? null, r.attendanceRecords, false)),
     ];
 
     return {
@@ -163,13 +167,14 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
       select: {
         userId: true,
         lrn: true,
+        mascot: true,
         user: { select: { fullName: true } },
       },
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
       where: { sectionId },
-      select: { id: true, lrn: true, fullName: true },
+      select: { id: true, lrn: true, fullName: true, mascot: true },
       orderBy: { fullName: "asc" },
     }),
   ]);
@@ -190,6 +195,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
     id: string;
     lrn: string;
     name: string;
+    mascot: string | null;
     hasAccount: boolean;
   };
   const enrolled: Enrolled[] = [];
@@ -201,6 +207,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
       id: st.userId,
       lrn: st.lrn,
       name: st.user.fullName,
+      mascot: st.mascot ?? null,
       hasAccount: true,
     });
   }
@@ -211,6 +218,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
       id: `roster:${r.id}`,
       lrn: r.lrn,
       name: r.fullName,
+      mascot: r.mascot ?? null,
       hasAccount: false,
     });
   }
@@ -233,6 +241,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
       id: e.id,
       lrn: e.lrn,
       name: e.name,
+      mascot: e.mascot,
       present: o.present,
       late: o.late,
       absent: o.absent,
@@ -270,6 +279,7 @@ export async function getSectionRoster(
       select: {
         userId: true,
         lrn: true,
+        mascot: true,
         user: { select: { fullName: true } },
         attendanceRecords: { where: { termId }, select: { status: true } },
       },
@@ -277,7 +287,7 @@ export async function getSectionRoster(
     }),
     prisma.studentRoster.findMany({
       where: { sectionId },
-      select: { id: true, lrn: true, fullName: true },
+      select: { id: true, lrn: true, fullName: true, mascot: true },
       orderBy: { fullName: "asc" },
     }),
   ]);
@@ -290,12 +300,13 @@ export async function getSectionRoster(
         studentId: p.userId,
         name: p.user.fullName,
         lrn: p.lrn,
+        mascot: p.mascot ?? null,
         attendanceRate: total === 0 ? 1 : present / total,
       };
     }),
     ...rosterRows
       .filter((r) => !registeredLrns.has(r.lrn))
-      .map((r) => ({ studentId: `roster:${r.id}`, name: r.fullName, lrn: r.lrn, attendanceRate: 1 })),
+      .map((r) => ({ studentId: `roster:${r.id}`, name: r.fullName, lrn: r.lrn, mascot: r.mascot ?? null, attendanceRate: 1 })),
   ];
 
   const surnameOf = (name: string) => {
@@ -343,12 +354,12 @@ export async function getSectionSummary(
   const [profiles, rosterRows, records] = await Promise.all([
     prisma.studentProfile.findMany({
       where: { sectionId },
-      select: { userId: true, lrn: true, user: { select: { fullName: true } } },
+      select: { userId: true, lrn: true, mascot: true, user: { select: { fullName: true } } },
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
       where: { sectionId },
-      select: { id: true, lrn: true, fullName: true },
+      select: { id: true, lrn: true, fullName: true, mascot: true },
       orderBy: { fullName: "asc" },
     }),
     prisma.attendanceRecord.findMany({
@@ -378,6 +389,7 @@ export async function getSectionSummary(
         studentId: p.userId,
         name: p.user.fullName,
         lrn: p.lrn,
+        mascot: p.mascot ?? null,
         ...agg,
         total,
         rate: total === 0 ? 1 : agg.present / total,
@@ -392,6 +404,7 @@ export async function getSectionSummary(
           studentId: `roster:${r.id}`,
           name: r.fullName,
           lrn: r.lrn,
+          mascot: r.mascot ?? null,
           ...agg,
           total,
           rate: total === 0 ? 1 : agg.present / total,
@@ -427,12 +440,12 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
   const [profiles, rosterRows, records, timetabled, offered] = await Promise.all([
     prisma.studentProfile.findMany({
       where: { sectionId },
-      select: { userId: true, lrn: true, user: { select: { fullName: true } } },
+      select: { userId: true, lrn: true, mascot: true, user: { select: { fullName: true } } },
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
       where: { sectionId },
-      select: { id: true, lrn: true, fullName: true },
+      select: { id: true, lrn: true, fullName: true, mascot: true },
       orderBy: { fullName: "asc" },
     }),
     prisma.attendanceRecord.findMany({
@@ -543,10 +556,10 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
     return n / recorded;
   };
   const students = [
-    ...profiles.map((p) => ({ studentId: p.userId, name: p.user.fullName, lrn: p.lrn })),
+    ...profiles.map((p) => ({ studentId: p.userId, name: p.user.fullName, lrn: p.lrn, mascot: p.mascot ?? null })),
     ...rosterRows
       .filter((r) => !registeredLrns.has(r.lrn))
-      .map((r) => ({ studentId: `roster:${r.id}`, name: r.fullName, lrn: r.lrn })),
+      .map((r) => ({ studentId: `roster:${r.id}`, name: r.fullName, lrn: r.lrn, mascot: r.mascot ?? null })),
   ];
   const surnameOf = (name: string) => {
     const parts = name.trim().split(/\s+/);
@@ -564,6 +577,7 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
       studentId: s.studentId,
       name: s.name,
       lrn: s.lrn,
+      mascot: s.mascot,
       rates: Object.fromEntries(
         [...subjects.keys()].map((sid) => [sid, rateOf(s.studentId, sid)]),
       ) as Record<string, number | null>,

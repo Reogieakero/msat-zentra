@@ -133,6 +133,37 @@ export async function submitScores(
   return data;
 }
 
-export async function lockFinalGrade(id: string): Promise<void> {
-  await apiClient.post(`/api/grades/final-grades/${id}/lock`, {});
+export async function lockFinalGrade(id: string, code?: string): Promise<void> {
+  await apiClient.post(`/api/grades/final-grades/${id}/lock`, code ? { code } : {});
+}
+
+export interface LockBatchResponse {
+  locked: number;
+  skipped: number;
+}
+
+export async function lockBatchGrades(assignmentId: string, code: string, termId?: string): Promise<LockBatchResponse> {
+  const { data } = await apiClient.post<LockBatchResponse>(`/api/grades/final-grades/lock-batch`, {
+    assignmentId,
+    code,
+    ...(termId ? { termId } : {}),
+  });
+  return data;
+}
+
+export function lockErrorMessage(err: unknown): string {
+  const data = (err as { response?: { status?: number; data?: unknown } })?.response?.data as
+    | { error?: { code?: string; message?: string }; code?: string; message?: string }
+    | undefined;
+  const code = data?.error?.code ?? data?.code;
+  const serverMessage = data?.error?.message ?? data?.message;
+  if (code === "CODE_MISMATCH") return "That code does not match the code you linked in My Classes. Copy the exact code from My Classes and try again.";
+  if (code === "NOT_LINKED") return "No link code found — link your code in My Classes first.";
+  if (code === "CODE_REQUIRED") return "Enter your subject teacher code.";
+  if (code === "FORBIDDEN") return "Your login role cannot lock grades (needs subject teacher or adviser).";
+  if (code === "ALREADY_LOCKED") return "Already locked.";
+  if (code === "NOTHING_TO_LOCK") return "Nothing to lock — all grades are already locked or have no average yet.";
+  if (code === "NO_ACTIVE_TERM") return "No active term selected — pick a school year and term first.";
+  if (code === "CLASS_NOT_FOUND") return "Class not found in the active term — switch your term picker to the class term and try again.";
+  return serverMessage ?? "Could not lock grades. Try again.";
 }

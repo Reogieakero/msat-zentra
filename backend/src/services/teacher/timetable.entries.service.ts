@@ -2,7 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
-import { cleanupOrphanAssignment, findSubjectTeacherSplits, notifyMastersScheduleChanged, requireMasterTeacher, resolveScheduleTarget } from "../../modules/teacher/teacher.repository.js";
+import { cleanupOrphanAssignment, findSubjectTeacherSplits, notifyMastersScheduleChanged, notifySectionTeachersScheduleChanged, requireMasterTeacher, resolveScheduleTarget } from "../../modules/teacher/teacher.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 export async function unlockSection(ctx: TeacherContext, sectionId: string) {
@@ -38,6 +38,7 @@ export async function unlockSection(ctx: TeacherContext, sectionId: string) {
     `The approved timetable for ${section.name} was unlocked for editing (${unlocked.count} slots back to draft).`,
     teacherId
   );
+  void notifySectionTeachersScheduleChanged(sectionId, termId, `The approved timetable was unlocked for editing (${unlocked.count} slots back to draft)`, teacherId);
   return { drafted: unlocked.count };
 }
 
@@ -114,6 +115,9 @@ export async function submitTimetable(ctx: TeacherContext, sectionId?: string) {
       ? `You sent ${updated.count} timetable slots for ${sectionName} for principal review.`
       : `You sent ${updated.count} timetable slots workspace-wide for principal review.`,
   });
+  if (sectionId) {
+    void notifySectionTeachersScheduleChanged(sectionId, termId, `Timetable sent for principal review (${updated.count} slots)`, teacherId);
+  }
   return { submitted: updated.count };
 }
 
@@ -155,6 +159,7 @@ export async function clearEntry(
     reason: "Master Teacher cleared a timetable slot",
   });
   void notifyMastersScheduleChanged("A timetable slot was cleared.", teacherId);
+  void notifySectionTeachersScheduleChanged(sectionId, termId, "A timetable slot was cleared", teacherId);
   return { deleted: true };
 }
 
@@ -195,6 +200,7 @@ export async function clearSection(ctx: TeacherContext, sectionId: string) {
     `A section timetable was cleared (${removed.count} slots).`,
     teacherId
   );
+  void notifySectionTeachersScheduleChanged(sectionId, termId, `Section timetable was cleared (${removed.count} slots)`, teacherId);
   return { deleted: removed.count, skippedApproved: lockedCount };
 }
 

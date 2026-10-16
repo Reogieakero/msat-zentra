@@ -19,7 +19,7 @@
 /* KPI tiles inside the summary glow card. */
 .tiles {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
   margin: 0;
   padding: 0;
@@ -130,6 +130,54 @@
 .tableWrap {
   min-width: 0;
   overflow-x: auto;
+}
+
+/* Folder grid (one folder per filed record): 5 per row on wide screens,
+   breathing room between folders. */
+.folderGrid {
+  margin: 0;
+  padding: 0.25rem;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 1280px) {
+  .folderGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .folderGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .folderGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.folderBtn {
+  min-width: 0;
+  padding: 0.25rem;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md, 0.375rem);
+  background: none;
+  cursor: pointer;
+  transition: border-color 150ms ease-out;
+  text-align: left;
+}
+
+.folderBtn:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+}
+
+.folderBtn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 /* Flush table — no gutters */
@@ -513,4 +561,12 @@
   .clickableRow {
     transition: none;
   }
+}
+
+/* Grade-by-grade / add-on report tables: fixed columns so Q1-Q4,
+   Final and Remarks line up vertically across every grade section. */
+.reportTable {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 620px;
 }

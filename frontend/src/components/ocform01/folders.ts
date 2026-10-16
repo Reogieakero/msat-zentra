@@ -17,6 +17,7 @@ export interface MyAnecdotalRecord {
   studentName: string;
   lrn: string;
   section: string;
+  signed?: boolean;
   folderId: string | null;
   folderName: string | null;
 }

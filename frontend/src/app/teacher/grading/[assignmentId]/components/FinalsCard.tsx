@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { lockFinalGrade, useRefreshAcademic } from "@/services/teacher/grading.service";
+import { lockFinalGrade, lockErrorMessage, useRefreshAcademic } from "@/services/teacher/grading.service";
 import type { ClassStudent } from "@/services/teacher/grading.types";
 import { sileo } from "@/components/ui/sonner";
 import styles from "./FinalsCard.module.css";
@@ -34,10 +34,11 @@ export function FinalsCard({ assignmentId, students, onChanged }: Props) {
       await lockFinalGrade(finalId);
       onChanged();
       refreshAcademic();
-      sileo.success({ title: "Final grade locked", description: `${studentName}'s grade was submitted for adviser approval.` });
-    } catch {
-      setError("Failed to lock final grade.");
-      sileo.error({ title: "Could not lock final grade", description: "Try again." });
+      sileo.success({ title: "Final grade locked", description: `${studentName}'s final grade is now locked and waiting for adviser approval.` });
+    } catch (err) {
+      const message = lockErrorMessage(err);
+      setError(message);
+      sileo.error({ title: "Could not lock final grade", description: message });
     } finally {
       setLockingIds((prev) => ({ ...prev, [finalId]: false }));
     }

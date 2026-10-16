@@ -1,0 +1,72 @@
+/* Assessment rows — horizontal scroll per category section.
+   Thin amber scrollbar, revealed only while its section is hovered. */
+
+.row {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.row::-webkit-scrollbar {
+  height: 6px;
+}
+
+.row::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.row::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.section:hover .row {
+  scrollbar-color: color-mix(in oklch, #f59e0b 65%, transparent) transparent;
+}
+
+.section:hover .row::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, #f59e0b 65%, transparent);
+}
+
+.section:hover .row::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, #f59e0b 85%, transparent);
+}
+
+/* Smooth enter: sections fade/rise in stagger, boards slide in stagger.
+   Same motion language as the schedule kanban. Respects reduced motion. */
+
+.section {
+  animation: section-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.item {
+  animation: item-in 300ms ease-out both;
+}
+
+@keyframes section-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section,
+  .item {
+    animation: none;
+  }
+}

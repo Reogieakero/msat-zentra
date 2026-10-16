@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { requireAdvisorySections } from "../src/modules/teacher/advisory.repository.js";
+import { isSf10ProvisionedEmail } from "../src/services/advisory/roster.service.js";
 import { AppError } from "../src/lib/errors.js";
 
 describe("Adviser gate (Phase 1)", () => {
@@ -16,5 +17,18 @@ describe("Adviser gate (Phase 1)", () => {
       expect(e).toBeInstanceOf(AppError);
       expect((e as AppError).status).toBe(404);
     }
+  });
+});
+
+describe("Advisory enlist gate (SF10-provisioned LRNs)", () => {
+  it("treats the SF10 placeholder email as provisioned (never gates enlist)", () => {
+    expect(isSf10ProvisionedEmail("716385485599@sf10-provisioned.local")).toBe(true);
+    expect(isSf10ProvisionedEmail("716385485599@SF10-PROVISIONED.LOCAL")).toBe(true);
+  });
+
+  it("treats real and ADM-provisioned accounts as registered (still gated)", () => {
+    expect(isSf10ProvisionedEmail("student@zentra.test")).toBe(false);
+    expect(isSf10ProvisionedEmail("716385485599@adm-provisioned.local")).toBe(false);
+    expect(isSf10ProvisionedEmail("not-an-email")).toBe(false);
   });
 });

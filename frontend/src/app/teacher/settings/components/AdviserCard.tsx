@@ -1,13 +1,14 @@
 "use client";
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { KeyRound, Loader2, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import sectionStyles from "./settings-section.module.css";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useTerm } from "@/lib/term/TermContext";
@@ -143,82 +144,133 @@ export function AdviserCard() {
       setSaving(false);
     }
   };
-  return (
-    <section id="section-adviser" aria-labelledby="settings-adviser" className={`${assign.card} scroll-mt-24`}>
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <h2 id="settings-adviser" className="relative text-base font-semibold">
-        Adviser
-      </h2>
-      <p className="relative mt-1 text-sm text-muted-foreground">
-        Are you an adviser? Pick your section and enter the advisory code your principal shared.
-      </p>
-      <div className="relative mt-4">
-        <p className="text-sm font-medium">Adviser status</p>
-        <p className="text-xs text-muted-foreground">
-          {isAdviser || mine.length > 0
-            ? currentName
-              ? `Adviser of ${currentName}`
-              : "Adviser"
-            : "Not an adviser"}
-        </p>
-        {!isAdviser && mine.length === 0 ? (
-          <p className="mt-1 text-xs text-muted-foreground">
-            Only Overview, Workspace and Settings show until you claim a section — the Advisory
-            branch unlocks once you are an adviser.
-          </p>
-        ) : null}
-      </div>
-      {isAdviser || mine.length > 0 ? (
-        <div className="relative mt-4 flex flex-col gap-3">
-          {mine.length > 1 ? (
-            <div className="flex flex-col gap-2">
-              {mine.map((s) => (
-                <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg border border-input px-3 py-2">
-                  <span className="text-sm font-medium">{s.name}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={saving}
-                    onClick={() => void handleRelease(s.id)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    Release
-                  </Button>
-                </div>
-              ))}
-            </div>
+  const isCurrent = isAdviser || mine.length > 0;
+  const statusText = isCurrent
+    ? currentName
+      ? `Adviser of ${currentName}`
+      : "Adviser"
+    : "Not an adviser";
+
+  let footer: React.ReactNode = null;
+  if (isCurrent && mine.length <= 1 && !picking) {
+    footer = (
+      <div className="flex justify-end gap-2 px-1 pb-1">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={saving}
+          onClick={() => setPicking((v) => !v)}
+          className={sectionStyles.btn}
+        >
+          Change section
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={saving}
+          onClick={() => void handleRelease(mine[0]?.id ?? advisorySection?.id ?? null)}
+          className={`${sectionStyles.btn} text-destructive hover:text-destructive`}
+        >
+          {saving ? (
+            <>
+              <Loader2 size={12} className="animate-spin" aria-hidden />
+              <span aria-live="polite">Saving</span>
+            </>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={saving}
-                onClick={() => setPicking((v) => !v)}
-              >
-                {picking ? "Close section list" : "Change section"}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={saving}
-                onClick={() => void handleRelease(mine[0]?.id ?? advisorySection?.id ?? null)}
-                className="text-destructive hover:text-destructive"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
-                    <span aria-live="polite">Saving</span>
-                  </>
-                ) : (
-                  "I'm not an adviser"
-                )}
-              </Button>
-            </div>
+            "I'm not an adviser"
           )}
-          {picking ? (
+        </Button>
+      </div>
+    );
+  } else if (!isCurrent && !picking && !answeredNo) {
+    footer = (
+      <div className="flex justify-end gap-2 px-1 pb-1">
+        <Button type="button" variant="outline" onClick={() => setAnsweredNo(true)} className={sectionStyles.btn}>
+          No
+        </Button>
+        <Button type="button" onClick={() => setPicking(true)} className={sectionStyles.btn}>
+          Yes, I&apos;m an adviser
+        </Button>
+      </div>
+    );
+  } else if (!isCurrent && !picking && answeredNo) {
+    footer = (
+      <div className="flex justify-end gap-2 px-1 pb-1">
+        <Button type="button" variant="outline" onClick={() => { setAnsweredNo(false); setPicking(true); }} className={sectionStyles.btn}>
+          Actually, I&apos;m an adviser
+        </Button>
+      </div>
+    );
+  } else if (!isCurrent && picking) {
+    footer = (
+      <div className="flex justify-end gap-2 px-1 pb-1">
+        <Button type="button" variant="ghost" onClick={() => { setPicking(false); setSelectedId(null); }} className={sectionStyles.btn}>
+          Back
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div id="section-adviser" className={sectionStyles.boardWrap}>
+      <KanbanBoard
+        title="Adviser"
+        icon={<Users size={14} aria-hidden="true" />}
+        count={overview.isPending ? undefined : statusText}
+        description="Are you an adviser? Pick your section and enter the advisory code your principal shared."
+        ariaLabel="Adviser settings"
+        footer={overview.isPending ? null : footer}
+      >
+        {overview.isPending ? (
+          <div className="flex flex-col gap-2 px-1" aria-busy="true" aria-label="Loading adviser status">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-2/3" />
+          </div>
+        ) : (
+        <div className="flex flex-col gap-2 px-1">
+          {!isCurrent && !picking && !answeredNo ? (
+            <p className="text-xs text-muted-foreground">
+              Only Overview, Workspace and Settings show until you claim a section — the Advisory
+              branch unlocks once you are an adviser.
+            </p>
+          ) : null}
+          {isCurrent ? (
+            <>
+              {mine.length > 1 ? (
+                <div className="flex flex-col gap-2">
+                  {mine.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg border border-input bg-card p-2.5">
+                      <span className="text-sm font-medium">{s.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={saving}
+                        onClick={() => void handleRelease(s.id)}
+                        className={`${sectionStyles.btn} text-destructive hover:text-destructive`}
+                      >
+                        Release
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {picking ? (
+                <AdviserPicker
+                  ordered={ordered}
+                  loading={sectionsQuery.isPending}
+                  loadError={sectionsQuery.isError}
+                  effectiveSelected={effectiveSelected}
+                  saving={saving}
+                  code={code}
+                  codeRequired={codeRequired}
+                  onCodeChange={setCode}
+                  onSelect={(id) => setSelectedId(id)}
+                  onDeselect={() => setSelectedId(null)}
+                  onClaim={() => void handleClaim()}
+                />
+              ) : null}
+            </>
+          ) : picking ? (
             <AdviserPicker
               ordered={ordered}
               loading={sectionsQuery.isPending}
@@ -229,53 +281,21 @@ export function AdviserCard() {
               codeRequired={codeRequired}
               onCodeChange={setCode}
               onSelect={(id) => setSelectedId(id)}
+              onDeselect={() => setSelectedId(null)}
               onClaim={() => void handleClaim()}
             />
+          ) : answeredNo ? (
+            <p className="text-xs text-muted-foreground">
+              No problem — Overview, Workspace and Settings stay available. You can claim a section any time.
+            </p>
           ) : null}
         </div>
-      ) : picking ? (
-        <div className="relative mt-4 flex flex-col gap-3">
-          <AdviserPicker
-            ordered={ordered}
-            loading={sectionsQuery.isPending}
-            loadError={sectionsQuery.isError}
-            effectiveSelected={effectiveSelected}
-            saving={saving}
-            code={code}
-            codeRequired={codeRequired}
-            onCodeChange={setCode}
-            onSelect={(id) => setSelectedId(id)}
-            onClaim={() => void handleClaim()}
-          />
-          <div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setPicking(false); setSelectedId(null); }}>
-              Back
-            </Button>
-          </div>
-        </div>
-      ) : answeredNo ? (
-        <div className="relative mt-4 flex flex-wrap items-center gap-2">
-          <p className="w-full text-xs text-muted-foreground">
-            No problem — Overview, Workspace and Settings stay available. You can claim a section any time.
-          </p>
-          <Button type="button" variant="outline" onClick={() => { setAnsweredNo(false); setPicking(true); }}>
-            Actually, I&apos;m an adviser
-          </Button>
-        </div>
-      ) : (
-        <div className="relative mt-4 flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => setAnsweredNo(true)}>
-            No
-          </Button>
-          <Button type="button" onClick={() => setPicking(true)}>
-            Yes, I&apos;m an adviser
-          </Button>
-        </div>
-      )}
-    </section>
+        )}
+      </KanbanBoard>
+    </div>
   );
 }
-export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, saving, code, codeRequired, onCodeChange, onSelect, onClaim }: { ordered: AdviserSectionOption[]; loading: boolean; loadError: boolean; effectiveSelected: string | null; saving: boolean; code: string; codeRequired: boolean; onCodeChange: (v: string) => void; onSelect: (id: string) => void; onClaim: () => void }) {
+export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, saving, code, codeRequired, onCodeChange, onSelect, onDeselect, onClaim }: { ordered: AdviserSectionOption[]; loading: boolean; loadError: boolean; effectiveSelected: string | null; saving: boolean; code: string; codeRequired: boolean; onCodeChange: (v: string) => void; onSelect: (id: string) => void; onDeselect: () => void; onClaim: () => void }) {
   if (loading) {
     return (
       <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading sections">
@@ -287,7 +307,7 @@ export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, 
   }
   if (loadError) {
     return (
-      <p role="alert" className="text-sm text-destructive">
+      <p role="alert" className={`text-sm text-destructive ${sectionStyles.reveal}`}>
         Could not load sections from the master teacher&apos;s schedule.
       </p>
     );
@@ -295,16 +315,18 @@ export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, 
   const claimableCount = ordered.filter((s) => s.claimable || s.advisedByMe).length;
   if (claimableCount === 0) {
     return (
-      <p role="status" className="rounded-xl border border-dashed border-input p-4 text-sm text-muted-foreground">
+      <p role="status" className="rounded-lg border border-dashed border-input p-4 text-sm text-muted-foreground">
         No unclaimed sections left in the master teacher&apos;s schedule. Ask your principal to add a
         section first, then come back here.
       </p>
     );
   }
   const selectedTarget = ordered.find((s) => s.id === effectiveSelected) ?? null;
+  const showCodeOverlay = !!selectedTarget && (!!selectedTarget.hasCode || !!selectedTarget.adviserLabel);
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Your section">
+    <div className={`flex flex-col gap-2 ${sectionStyles.reveal}`}>
+      <div className={sectionStyles.codeOverlayWrap}>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Your section">
         {ordered.map((s) => {
           const selectable = s.claimable || s.advisedByMe;
           const selected = effectiveSelected === s.id;
@@ -317,11 +339,11 @@ export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, 
               aria-checked={selected}
               disabled={!selectable}
               onClick={() => onSelect(s.id)}
-              className={`flex min-h-20 flex-col rounded-xl border bg-card p-3 text-left shadow-sm transition-all ${
+              className={`flex min-h-20 flex-col rounded-lg border bg-card p-2.5 text-left transition-all ${
                 selected
                   ? "border-primary ring-2 ring-primary/40"
                   : selectable
-                    ? "border-input hover:border-primary/50 hover:shadow"
+                    ? "border-input hover:border-primary/50"
                     : "cursor-not-allowed border-input opacity-60"
               }`}
             >
@@ -356,36 +378,82 @@ export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, 
             </button>
           );
         })}
-      </div>
-      {selectedTarget && (selectedTarget.hasCode || selectedTarget.adviserLabel) ? (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="settings-adviser-code">Advisory code</Label>
-          <Input
-            id="settings-adviser-code"
-            value={code}
-            onChange={(e) => onCodeChange(e.target.value.toUpperCase())}
-            placeholder="ADV-XXXXX"
-            autoComplete="off"
-            spellCheck={false}
-            maxLength={16}
-            style={{ textTransform: "uppercase", fontFamily: "ui-monospace, monospace" }}
-          />
-          <p className="text-xs text-muted-foreground">
-            Ask your principal for the code for {selectedTarget.name} — it proves you are the
-            listed adviser.
-          </p>
         </div>
-      ) : null}
-      <div>
+        {showCodeOverlay && selectedTarget ? (
+          <div
+            className={sectionStyles.codeOverlay}
+            role="dialog"
+            aria-label={`Enter advisory code for ${selectedTarget.name}`}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") onDeselect();
+            }}
+          >
+            <div className={sectionStyles.codeOverlayCard}>
+              <KanbanBoard
+                title={`Code for ${selectedTarget.name}`}
+                icon={<KeyRound size={14} aria-hidden="true" className="text-amber-500" />}
+                description={`Ask your principal for the code for ${selectedTarget.name} — it proves you are the listed adviser.`}
+                ariaLabel={`Advisory code for ${selectedTarget.name}`}
+                footer={
+                  <div className="flex items-center justify-end gap-2 px-1 pb-1">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={onDeselect}
+                      className={`${sectionStyles.btn} ${sectionStyles.btnDanger}`}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={onClaim}
+                      disabled={(codeRequired && !code.trim()) || saving}
+                      aria-busy={saving || undefined}
+                      className={sectionStyles.btn}
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin" aria-hidden />
+                          <span aria-live="polite">Saving…</span>
+                        </>
+                      ) : (
+                        "Save advisory section"
+                      )}
+                    </Button>
+                  </div>
+                }
+              >
+                <div className="flex flex-col gap-1.5 px-1">
+                  <Label htmlFor="settings-adviser-code">Advisory code</Label>
+                  <Input
+                    id="settings-adviser-code"
+                    value={code}
+                    onChange={(e) => onCodeChange(e.target.value.toUpperCase())}
+                    placeholder="ADV-XXXXX"
+                    autoComplete="off"
+                    spellCheck={false}
+                    autoFocus
+                    maxLength={16}
+                    style={{ textTransform: "uppercase", fontFamily: "ui-monospace, monospace" }}
+                  />
+                </div>
+              </KanbanBoard>
+            </div>
+          </div>
+        ) : null}
+      </div>
+      {!showCodeOverlay ? (
+      <div className="flex justify-end">
         <Button
           type="button"
           onClick={onClaim}
           disabled={!effectiveSelected || (codeRequired && !code.trim()) || saving}
           aria-busy={saving || undefined}
+          className={sectionStyles.btn}
         >
           {saving ? (
             <>
-              <Loader2 size={16} className="animate-spin" aria-hidden />
+              <Loader2 size={12} className="animate-spin" aria-hidden />
               <span aria-live="polite">Saving…</span>
             </>
           ) : (
@@ -393,6 +461,7 @@ export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, 
           )}
         </Button>
       </div>
+      ) : null}
     </div>
   );
 }

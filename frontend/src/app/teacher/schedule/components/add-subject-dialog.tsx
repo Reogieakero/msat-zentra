@@ -82,6 +82,7 @@ export function AddSubjectDialog({
                     size="sm"
                     onClick={() => setRows((prev) => prev.filter((_, j) => j !== i))}
                     aria-label={`Remove subject row ${i + 1}`}
+                    className="h-6 px-2 text-xs"
                   >
                     <Trash2 size={14} aria-hidden />
                   </Button>
@@ -107,7 +108,7 @@ export function AddSubjectDialog({
             variant="outline"
             size="sm"
             onClick={() => setRows((prev) => [...prev, { name: "", code: "" }])}
-            className="self-start"
+            className="h-6 px-2 text-xs self-start"
           >
             <Plus size={14} aria-hidden />
             Add another
@@ -164,6 +165,7 @@ export function AddSubjectDialog({
             variant="destructive"
             onClick={onClose}
             disabled={createMany.isPending}
+            className="h-6 px-2 text-xs"
           >
             Cancel
           </Button>
@@ -171,6 +173,7 @@ export function AddSubjectDialog({
             onClick={handleCreate}
             disabled={createMany.isPending || filled.length === 0}
             aria-busy={createMany.isPending || undefined}
+            className="h-6 px-2 text-xs"
           >
             {createMany.isPending ? (
               <>

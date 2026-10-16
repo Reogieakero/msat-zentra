@@ -1,30 +1,39 @@
 "use client";
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { ReferStudentCard } from "./components/ReferStudentCard";
 import {
   ReferralCancelDialog,
 } from "./components/ReferralActionDialogs";
+import { ReferralFormDialog } from "./components/ReferralFormDialog";
+import { useReferralSubmitDock } from "@/components/shared/referral-submit/referral-submit-dock-context";
 import {
   ReferralTrackDialog,
   type TrackableReferral,
 } from "./components/ReferralTrackDialog";
 import { useReopenReferral } from "./components/use-reopen-referral";
-import { typeForDesk } from "./components/referral-types";
+import { typeForDesk, findStaff } from "./components/referral-types";
+import type { ReferFormSeed } from "./components/refer-form";
 import { useMyReferrals, type ReferralRow } from "./components/use-my-referrals";
 import { useReferralCancel } from "./components/use-referral-cancel";
-import { ReferralsTable, STATUS_BADGE } from "./components/referrals-table";
+import { ReferralsTable, statusBadge } from "./components/referrals-table";
 import refStyles from "./components/referrals.module.css";
+function seedForReferAgain(row: ReferralRow): ReferFormSeed {
+  const typeKey = row.targetRole === "adm_coordinator" ? "adm" : "other";
+  let staffValue = "";
+  if (typeKey === "adm" && row.consultReviewer) {
+    const candidate = `adm:${row.consultReviewer}`;
+    if (findStaff(candidate)) staffValue = candidate;
+  } else if (typeKey === "other") {
+    const candidate = `other:${row.targetRole}`;
+    if (findStaff(candidate)) staffValue = candidate;
+  }
+  return { anecdotalId: row.anecdotalId ?? null, typeKey, staffValue };
+}
 function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | null }) {
   const {
     query,
     setQuery,
-    setPage,
-    setTakeover,
     referralsQuery,
-    totalPages,
-    safePage,
-    goToPage,
     referrals,
     total,
     unfilteredTotal,
@@ -43,16 +52,14 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
     requestCancel,
     confirmCancel,
   } = useReferralCancel();
-  const [newReferralOpen, setNewReferralOpen] = React.useState(false);
-  const [admResubmitSignal, setAdmResubmitSignal] = React.useState(0);
-  const isEmpty =
-    !referralsQuery.isPending && !referralsQuery.isError && unfilteredTotal === 0;
-  const handleAdmReferAgain = React.useCallback(() => {
-    setNewReferralOpen(true);
-    setAdmResubmitSignal((s) => s + 1);
+  const [referralSeed, setReferralSeed] = React.useState<ReferFormSeed | null>(null);
+  // Bottom-right submit dock lives at root level (survives page navigation).
+  const submitDock = useReferralSubmitDock();
+  const handleAdmReferAgain = React.useCallback((row: ReferralRow) => {
+    setReferralSeed(seedForReferAgain(row));
   }, []);
   const handleTrack = React.useCallback((r: ReferralRow) => {
-    const meta = STATUS_BADGE[r.status];
+    const meta = statusBadge(r.status, r.dismissedByRole);
     const type = typeForDesk(r.targetRole);
     setTrackTarget({
       id: r.id,
@@ -70,6 +77,7 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
       timeline: r.timeline ?? [],
       consultReviewer: r.consultReviewer ?? null,
       admStage: r.admStage ?? null,
+      dismissedByRole: r.dismissedByRole ?? null,
       observationDate: r.observationDate ?? null,
       meetingAttended: r.meetingAttended ?? null,
       lastMeetingAt: r.lastMeetingAt ?? null,
@@ -86,7 +94,7 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
   }, []);
   const handleReferAgain = React.useCallback((r: ReferralRow) => {
     if (r.track === "adm") {
-      handleAdmReferAgain();
+      handleAdmReferAgain(r);
     } else {
       setReopenRowId(r.id);
       void reopenReferral(r).finally(() => {
@@ -96,10 +104,7 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
   }, [handleAdmReferAgain, reopenReferral]);
   return (
     <section className={refStyles.page}>
-      <div
-        className={refStyles.layout}
-        style={isEmpty && !newReferralOpen ? { gridTemplateColumns: "minmax(0, 1fr)" } : undefined}
-      >
+      <div className={refStyles.layout}>
         <div className={refStyles.body}>
           <ReferralsTable
             referrals={referrals}
@@ -108,12 +113,7 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
             query={query}
             onQueryChange={(v) => {
               setQuery(v);
-              setTakeover(true);
-              setPage(1);
             }}
-            safePage={safePage}
-            totalPages={totalPages}
-            goToPage={goToPage}
             highlightId={highlightId}
             referralsQuery={{
               isPending: referralsQuery.isPending,
@@ -126,20 +126,18 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
             reopenPending={reopenPending}
             reopenRowId={reopenRowId}
             onReferAgain={handleReferAgain}
-            onNewReferral={() => setNewReferralOpen(true)}
+            onNewReferral={() => setReferralSeed({})}
           />
         </div>
-        {isEmpty && !newReferralOpen ? null : (
-          <aside className={refStyles.sideList} aria-label="Refer a student">
-            <ReferStudentCard
-              open={newReferralOpen}
-              onOpenChange={setNewReferralOpen}
-              resubmitHintSignal={admResubmitSignal}
-            />
-          </aside>
-        )}
       </div>
       <ReferralTrackDialog referral={trackTarget} onClose={() => setTrackTarget(null)} />
+      <ReferralFormDialog
+        open={referralSeed !== null}
+        onClose={() => setReferralSeed(null)}
+        seed={referralSeed}
+        onSubmitStart={submitDock.startSubmit}
+        onSubmitEnd={submitDock.finishSubmit}
+      />
       <ReferralCancelDialog
         target={cancelTarget}
         reason={cancelReason}

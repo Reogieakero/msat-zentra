@@ -5,21 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShieldQuestion } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sonner";
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  HistoryTable,
-  PendingDecisionTable,
-  TableSkeleton,
-} from "./components/AdviserAccessTables";
+import { AdviserAccessKanban } from "./components/AdviserAccessTables";
 import { apiClient } from "@/lib/api/client";
 import { markSelfNotified } from "@/lib/realtime/registrarChannel";
 import type { AdviserAccessRequest } from "./components/types";
+import { getStudentListStats, mergeConfirmedMarks } from "@/components/shared/adviser-access/adviser-access-types";
+import { useAdviserAccessCheck } from "@/components/shared/adviser-access/adviser-access-check-context";
 import { RegistrarEmptyCard } from "../components/RegistrarEmptyCard";
 import { RegistrarPageHeader } from "../components/RegistrarPageHeader";
 import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
@@ -33,7 +24,7 @@ const QUERY_KEY = ["registrar-adviser-access"];
 async function fetchRequests() {
   return apiClient
     .get<RequestsResponse>("/api/registrar/adviser-access-requests")
-    .then((res) => res.data.requests);
+    .then((res) => mergeConfirmedMarks(res.data.requests));
 }
 
 export default function AdviserAccessPage() {
@@ -42,39 +33,33 @@ export default function AdviserAccessPage() {
     queryKey: QUERY_KEY,
     queryFn: fetchRequests,
     staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
 
   const requests = React.useMemo(() => data ?? [], [data]);
 
-  const act = useMutation({
-    mutationFn: ({ id, approve, reason }: { id: string; approve: boolean; reason?: string }) =>
-      apiClient.post(
-        `/api/registrar/adviser-access-requests/${id}/${approved(approve)}`,
-        approve ? {} : { reason: reason ?? "Denied by registrar" }
-      ),
-
+  // Whole-request Deny only — kept as a secondary action in the kanban.
+  // Whole-request Approve is removed; grants come only from the check dock.
+  const deny = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      apiClient.post(`/api/registrar/adviser-access-requests/${id}/deny`, {
+        reason: reason ?? "Denied by registrar",
+      }),
     onError: (err) => {
       const message =
-        (err as { response?: { data?: { error?: { message?: string } } } })?.response
-          ?.data?.error?.message ?? "Could not decide this request.";
+        (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message ??
+        "Could not deny this request.";
       toast.error({ title: "Action failed", description: message });
     },
-    onSuccess: (_data, { id, approve }) => {
-
+    onSuccess: (_data, { id }) => {
       markSelfNotified(id);
-
       const target = qc
         .getQueriesData<RequestsResponse>({ queryKey: QUERY_KEY })
         .flatMap(([, d]) => d?.requests ?? [])
         .find((r) => r.id === id);
       const name = target?.adviserName ?? "Adviser";
       const section = target?.section ? ` (${target.section})` : "";
-      toast.success({
-        title: approve ? "Access granted" : "Access denied",
-        description: approve
-          ? `${name}${section} can now read the SF10 set.`
-          : `${name}${section} was denied.`,
-      });
+      toast.success({ title: "Access denied", description: `${name}${section} was denied.` });
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
@@ -83,34 +68,34 @@ export default function AdviserAccessPage() {
     },
   });
 
-  const [acting, setActing] = React.useState<{ id: string; approve: boolean } | null>(null);
+  const [denyingId, setDenyingId] = React.useState<string | null>(null);
+  // Verification runs in the root-level dock (survives page navigation).
+  const accessCheck = useAdviserAccessCheck();
+  const checkingId = accessCheck.checkingId;
 
-  const handleActed = React.useCallback(
-    async (id: string, approved: boolean, reason?: string) => {
-      setActing({ id, approve: approved });
+  const handleCheck = React.useCallback(
+    (id: string) => {
+      accessCheck.startCheck("registrar", id);
+    },
+    [accessCheck],
+  );
+
+  const handleDeny = React.useCallback(
+    async (id: string, reason: string) => {
+      setDenyingId(id);
       try {
-        await act.mutateAsync({ id, approve: approved, reason });
+        await deny.mutateAsync({ id, reason });
       } finally {
-        setActing(null);
+        setDenyingId(null);
       }
     },
-    [act],
+    [deny],
   );
 
-  const grouped = React.useMemo(() => {
-    const g: Record<"pending" | "approved" | "denied", AdviserAccessRequest[]> = {
-      pending: [],
-      approved: [],
-      denied: [],
-    };
-    requests.forEach((r) => g[r.status].push(r));
-    return g;
-  }, [requests]);
+  const pendingRequests = React.useMemo(() => requests.filter((r) => r.status === "pending"), [requests]);
 
-  const history = React.useMemo(
-    () => [...grouped.approved, ...grouped.denied],
-    [grouped]
-  );
+  // KPI is pure student-list counts over pending requests.
+  const stats = React.useMemo(() => getStudentListStats(pendingRequests), [pendingRequests]);
 
   if (isError) {
     return (
@@ -143,24 +128,14 @@ export default function AdviserAccessPage() {
             <span className={assign.glowClip} aria-hidden="true">
               <span className={assign.cardGlow} />
             </span>
-            <div className="relative overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead />
-                    <TableHead>Adviser</TableHead>
-                    <TableHead>Section</TableHead>
-                    <TableHead>Requested</TableHead>
-                    <TableHead>Advisees</TableHead>
-                    <TableHead>SF10 Ready</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableSkeleton columns={8} />
-                </TableBody>
-              </Table>
+            <div className="relative grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ))}
             </div>
           </section>
         </div>
@@ -187,49 +162,47 @@ export default function AdviserAccessPage() {
       <div className={styles.stack}>
         <RegistrarPageHeader
           title="Adviser Access Requests"
-          description="Grant or deny adviser SF10 read access for grades 11–12."
+          description="Check requests, then approve or report per student in the check card."
         />
         <section className={assign.card} aria-label="Access requests summary">
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />
           </span>
           <ul className={`${styles.tiles} relative`}>
-            <li className={styles.tile}>
-              <span className={styles.tileValue}>{grouped.pending.length}</span>
-              <span className={styles.tileLabel}>Pending</span>
-              <span className={styles.tileHint}>Awaiting your decision</span>
+            <li className={styles.tile} title="Students in requests not yet checked">
+              <span className={styles.tileValue}>{stats.pendingChecking}</span>
+              <span className={styles.tileLabel}>Pending checking</span>
+              <span className={styles.tileHint}>Students awaiting Check</span>
             </li>
-            <li className={styles.tile}>
-              <span className={styles.tileValue}>{grouped.approved.length}</span>
+            <li
+              className={styles.tile}
+              title="Students granted from the check card (bottom-right) after verification"
+            >
+              <span className={styles.tileValue}>{stats.approved}</span>
               <span className={styles.tileLabel}>Approved</span>
-              <span className={styles.tileHint}>SF10 read access granted</span>
+              <span className={styles.tileHint}>Decided in the check card</span>
             </li>
-            <li className={styles.tile}>
-              <span className={styles.tileValue}>{grouped.denied.length}</span>
-              <span className={styles.tileLabel}>Denied</span>
-              <span className={styles.tileHint}>SF10 read access not granted</span>
+            <li className={styles.tile} title="Students with no record, reported from the check card">
+              <span className={styles.tileValue}>{stats.reportedMissing}</span>
+              <span className={styles.tileLabel}>Reported missing</span>
+              <span className={styles.tileHint}>Decided in the check card</span>
             </li>
-            <li className={styles.tile}>
-              <span className={styles.tileValue}>{requests.length}</span>
-              <span className={styles.tileLabel}>Total requests</span>
+            <li className={styles.tile} title="All students across pending requests">
+              <span className={styles.tileValue}>{stats.totalRequested}</span>
+              <span className={styles.tileLabel}>Total requested</span>
               <span className={styles.tileHint}>Grades 11–12 this school year</span>
             </li>
           </ul>
         </section>
 
-        <PendingDecisionTable
-          requests={grouped.pending}
-          actingId={acting?.id ?? null}
-          actingApprove={acting?.approve ?? null}
-          onActed={handleActed}
+        <AdviserAccessKanban
+          requests={pendingRequests}
+          onCheck={handleCheck}
+          checkingId={checkingId}
+          onDeny={handleDeny}
+          denyingId={denyingId}
         />
-
-        <HistoryTable requests={history} />
       </div>
     </section>
   );
-}
-
-function approved(approve: boolean) {
-  return approve ? "approve" : "deny";
 }

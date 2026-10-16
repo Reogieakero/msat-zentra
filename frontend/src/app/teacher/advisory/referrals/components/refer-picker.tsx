@@ -14,6 +14,7 @@ export function ReferPicker({
   label,
   placeholder,
   value,
+  valueNode,
   title,
   disabled,
   children,
@@ -22,6 +23,8 @@ export function ReferPicker({
   label?: string;
   placeholder: string;
   value: string | null;
+  /** Rich trigger content shown when an option is selected (mirrors the row layout). */
+  valueNode?: React.ReactNode;
   title?: string;
   disabled?: boolean;
   children: (close: () => void) => React.ReactNode;
@@ -40,11 +43,13 @@ export function ReferPicker({
             aria-label={label ?? placeholder}
             title={title ?? value ?? undefined}
             className={cn(
-              "flex w-full items-center justify-start font-normal",
-              !value && "text-muted-foreground",
+              "flex w-full items-center justify-start text-left font-normal",
+              !value && !valueNode && "text-muted-foreground",
             )}
           >
-            <span className="min-w-0 truncate">{value ?? placeholder}</span>
+            <span className="min-w-0 flex-1">
+              {valueNode ?? <span className="block truncate">{value ?? placeholder}</span>}
+            </span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

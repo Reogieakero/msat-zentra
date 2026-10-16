@@ -1,17 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Cat, FolderOpen, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchMyRecords, type MyAnecdotalRecord } from "@/components/ocform01/folders";
 import { useTerm } from "@/lib/term/TermContext";
+import { AnecdotalEmptyKanban } from "./components/AnecdotalEmptyKanban";
 import { AnecdotalRepoFolders } from "./components/AnecdotalRepoFolders";
-import { TeacherPageHeader } from "../components/TeacherPageHeader";
-import { FolderLegendCard, TopAttentionCard } from "./components/AnecdotalSideRail";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { AnecdotalSidebar, ChatWithBamaCard, FolderLegendCard } from "./components/AnecdotalSideRail";
 import styles from "./components/anecdotal-repo.module.css";
 
 export default function TeacherAnecdotalPage() {
@@ -32,7 +30,7 @@ export default function TeacherAnecdotalPage() {
   if (recordsQuery.isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading filed records">
-        <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
           <div className={`${styles.main} flex min-w-0 flex-col`}>
             <div className={styles.skelPanel} aria-hidden>
               <Skeleton className={styles.skelPanelTitle} />
@@ -52,23 +50,9 @@ export default function TeacherAnecdotalPage() {
               </div>
             </div>
           </div>
-          <div className="hidden min-w-0 flex-col gap-4 lg:flex" aria-hidden>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendDot} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelBar} />
-            </div>
+          <div className="hidden min-w-0 flex-col items-end gap-2 lg:flex" aria-hidden>
+            <Skeleton className="h-9 w-9 rounded-xl" />
+            <Skeleton className="h-9 w-9 rounded-xl" />
           </div>
         </div>
         <div className="flex min-w-0 flex-col gap-4 lg:hidden" aria-hidden>
@@ -107,29 +91,9 @@ export default function TeacherAnecdotalPage() {
   if (records.length === 0) {
     return (
       <section className={styles.page} aria-label="Anecdotal records">
-        <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
-          <div className={`${assign.card} w-full max-w-md`}>
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
-            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-                aria-hidden="true"
-              >
-                <FolderOpen size={24} className="text-muted-foreground" />
-              </span>
-              <p className="font-medium">No files stored yet</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                Files you file through Chat with Bama will appear here once stored.
-              </p>
-              <Button asChild size="sm" className="mt-2">
-                <Link href="/teacher/chat">
-                  <Cat size={16} aria-hidden="true" />
-                  Chat with Bama
-                </Link>
-              </Button>
-            </div>
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <div className="w-full">
+            <AnecdotalEmptyKanban />
           </div>
         </div>
       </section>
@@ -138,21 +102,14 @@ export default function TeacherAnecdotalPage() {
 
   return (
     <section className={styles.page}>
-      <TeacherPageHeader
-        title="Anecdotal Records"
-        description="Every anecdotal record filed for your advisory — with category folders, GCForm-01 previews, and follow-ups."
-      />
-      <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
         <div className={`${styles.main} flex min-w-0 flex-col`}>
           <AnecdotalRepoFolders records={records} />
         </div>
-        <div className="hidden min-w-0 flex-col gap-4 lg:flex">
-          <TopAttentionCard records={records} />
-          <FolderLegendCard />
-        </div>
+        <AnecdotalSidebar />
       </div>
       <div className="flex min-w-0 flex-col gap-4 lg:hidden">
-        <TopAttentionCard records={records} />
+        <ChatWithBamaCard />
         <FolderLegendCard />
       </div>
     </section>

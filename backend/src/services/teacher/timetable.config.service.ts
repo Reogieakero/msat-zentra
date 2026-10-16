@@ -200,6 +200,33 @@ export async function clearTeacherNames(ctx: TeacherContext) {
   return { deleted: removed.count };
 }
 
+export async function deleteTeacherName(ctx: TeacherContext, teacherNameId: string) {
+  const teacherId = ctx.userId;
+  await requireMasterTeacher(teacherId, "delete teacher names");
+  const row = await prisma.teacherName.findUnique({
+    where: { id: teacherNameId },
+    select: { id: true, name: true, code: true },
+  });
+  if (!row) {
+    throw new AppError(404, "TEACHER_NOT_FOUND", "Teacher name not found");
+  }
+  // Timetable entries cascade off the row (onDelete: Cascade); term grants
+  // and linked logins are set to null, never deleted.
+  await prisma.teacherName.delete({ where: { id: teacherNameId } });
+  await writeAudit({
+    userId: teacherId,
+    actionType: "delete",
+    sourceTable: "teacher_names",
+    sourceId: row.id,
+    reason: `Master Teacher deleted teacher name ${row.name}`,
+  });
+  void notifyMastersScheduleChanged(
+    `Teacher name ${row.name}${row.code ? ` (${row.code})` : ""} was deleted from the catalog.`,
+    teacherId
+  );
+  return { deleted: true, teacher: row };
+}
+
 export interface CreateSubjectInput {
   name: string;
   code: string;
@@ -239,6 +266,50 @@ export async function createSubject(ctx: TeacherContext, input: CreateSubjectInp
     teacherId
   );
   return subject;
+}
+
+export async function deleteSubject(ctx: TeacherContext, subjectId: string) {
+  const teacherId = ctx.userId;
+  await requireMasterTeacher(teacherId, "delete subjects");
+  const subject = await prisma.subject.findUnique({
+    where: { id: subjectId },
+    select: { id: true, name: true, code: true, gradeLevel: true },
+  });
+  if (!subject) {
+    throw new AppError(404, "SUBJECT_NOT_FOUND", "Subject not found");
+  }
+  // Never silently wipe grading history — block when the subject is
+  // referenced outside the template (gradebook, flags, attendance).
+  const [gradeComponents, finalGrades, gradeFlags, attendanceRecords] = await Promise.all([
+    prisma.gradeComponent.count({ where: { subjectId } }),
+    prisma.finalGrade.count({ where: { subjectId } }),
+    prisma.gradeFlag.count({ where: { subjectId } }),
+    prisma.attendanceRecord.count({ where: { subjectId } }),
+  ]);
+  if (gradeComponents + finalGrades + gradeFlags + attendanceRecords > 0) {
+    throw new AppError(
+      409,
+      "SUBJECT_IN_USE",
+      `${subject.name} (${subject.code}) already has gradebook records and cannot be deleted`,
+    );
+  }
+  await prisma.$transaction([
+    prisma.teacherSubjectAssignment.deleteMany({ where: { subjectId } }),
+    prisma.sectionTimetableEntry.deleteMany({ where: { subjectId } }),
+    prisma.subject.delete({ where: { id: subjectId } }),
+  ]);
+  await writeAudit({
+    userId: teacherId,
+    actionType: "delete",
+    sourceTable: "subjects",
+    sourceId: subject.id,
+    reason: `Master Teacher deleted subject ${subject.name} (${subject.code})`,
+  });
+  void notifyMastersScheduleChanged(
+    `Subject ${subject.name} (${subject.code}) was deleted from the catalog.`,
+    teacherId
+  );
+  return { deleted: true, subject };
 }
 
 export async function deleteAssignment(ctx: TeacherContext, assignmentId: string) {

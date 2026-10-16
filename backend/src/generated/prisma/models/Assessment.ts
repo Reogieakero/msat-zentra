@@ -37,6 +37,7 @@ export type AssessmentSumAggregateOutputType = {
 export type AssessmentMinAggregateOutputType = {
   id: string | null
   gradeComponentId: string | null
+  sectionId: string | null
   title: string | null
   maxScore: number | null
   dateGiven: Date | null
@@ -47,6 +48,7 @@ export type AssessmentMinAggregateOutputType = {
 export type AssessmentMaxAggregateOutputType = {
   id: string | null
   gradeComponentId: string | null
+  sectionId: string | null
   title: string | null
   maxScore: number | null
   dateGiven: Date | null
@@ -57,6 +59,7 @@ export type AssessmentMaxAggregateOutputType = {
 export type AssessmentCountAggregateOutputType = {
   id: number
   gradeComponentId: number
+  sectionId: number
   title: number
   maxScore: number
   dateGiven: number
@@ -77,6 +80,7 @@ export type AssessmentSumAggregateInputType = {
 export type AssessmentMinAggregateInputType = {
   id?: true
   gradeComponentId?: true
+  sectionId?: true
   title?: true
   maxScore?: true
   dateGiven?: true
@@ -87,6 +91,7 @@ export type AssessmentMinAggregateInputType = {
 export type AssessmentMaxAggregateInputType = {
   id?: true
   gradeComponentId?: true
+  sectionId?: true
   title?: true
   maxScore?: true
   dateGiven?: true
@@ -97,6 +102,7 @@ export type AssessmentMaxAggregateInputType = {
 export type AssessmentCountAggregateInputType = {
   id?: true
   gradeComponentId?: true
+  sectionId?: true
   title?: true
   maxScore?: true
   dateGiven?: true
@@ -194,6 +200,7 @@ export type AssessmentGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inter
 export type AssessmentGroupByOutputType = {
   id: string
   gradeComponentId: string
+  sectionId: string | null
   title: string
   maxScore: number
   dateGiven: Date
@@ -227,24 +234,28 @@ export type AssessmentWhereInput = {
   NOT?: Prisma.AssessmentWhereInput | Prisma.AssessmentWhereInput[]
   id?: Prisma.StringFilter<"Assessment"> | string
   gradeComponentId?: Prisma.StringFilter<"Assessment"> | string
+  sectionId?: Prisma.StringNullableFilter<"Assessment"> | string | null
   title?: Prisma.StringFilter<"Assessment"> | string
   maxScore?: Prisma.FloatFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   createdBy?: Prisma.StringFilter<"Assessment"> | string
   createdAt?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   gradeComponent?: Prisma.XOR<Prisma.GradeComponentScalarRelationFilter, Prisma.GradeComponentWhereInput>
+  section?: Prisma.XOR<Prisma.SectionNullableScalarRelationFilter, Prisma.SectionWhereInput> | null
   studentGrades?: Prisma.StudentGradeListRelationFilter
 }
 
 export type AssessmentOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   gradeComponentId?: Prisma.SortOrder
+  sectionId?: Prisma.SortOrderInput | Prisma.SortOrder
   title?: Prisma.SortOrder
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   gradeComponent?: Prisma.GradeComponentOrderByWithRelationInput
+  section?: Prisma.SectionOrderByWithRelationInput
   studentGrades?: Prisma.StudentGradeOrderByRelationAggregateInput
 }
 
@@ -254,18 +265,21 @@ export type AssessmentWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.AssessmentWhereInput[]
   NOT?: Prisma.AssessmentWhereInput | Prisma.AssessmentWhereInput[]
   gradeComponentId?: Prisma.StringFilter<"Assessment"> | string
+  sectionId?: Prisma.StringNullableFilter<"Assessment"> | string | null
   title?: Prisma.StringFilter<"Assessment"> | string
   maxScore?: Prisma.FloatFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   createdBy?: Prisma.StringFilter<"Assessment"> | string
   createdAt?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   gradeComponent?: Prisma.XOR<Prisma.GradeComponentScalarRelationFilter, Prisma.GradeComponentWhereInput>
+  section?: Prisma.XOR<Prisma.SectionNullableScalarRelationFilter, Prisma.SectionWhereInput> | null
   studentGrades?: Prisma.StudentGradeListRelationFilter
 }, "id">
 
 export type AssessmentOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   gradeComponentId?: Prisma.SortOrder
+  sectionId?: Prisma.SortOrderInput | Prisma.SortOrder
   title?: Prisma.SortOrder
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
@@ -284,6 +298,7 @@ export type AssessmentScalarWhereWithAggregatesInput = {
   NOT?: Prisma.AssessmentScalarWhereWithAggregatesInput | Prisma.AssessmentScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Assessment"> | string
   gradeComponentId?: Prisma.StringWithAggregatesFilter<"Assessment"> | string
+  sectionId?: Prisma.StringNullableWithAggregatesFilter<"Assessment"> | string | null
   title?: Prisma.StringWithAggregatesFilter<"Assessment"> | string
   maxScore?: Prisma.FloatWithAggregatesFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeWithAggregatesFilter<"Assessment"> | Date | string
@@ -299,12 +314,14 @@ export type AssessmentCreateInput = {
   createdBy: string
   createdAt?: Date | string
   gradeComponent: Prisma.GradeComponentCreateNestedOneWithoutAssessmentsInput
+  section?: Prisma.SectionCreateNestedOneWithoutAssessmentsInput
   studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutAssessmentInput
 }
 
 export type AssessmentUncheckedCreateInput = {
   id?: string
   gradeComponentId: string
+  sectionId?: string | null
   title: string
   maxScore: number
   dateGiven: Date | string
@@ -321,12 +338,14 @@ export type AssessmentUpdateInput = {
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   gradeComponent?: Prisma.GradeComponentUpdateOneRequiredWithoutAssessmentsNestedInput
+  section?: Prisma.SectionUpdateOneWithoutAssessmentsNestedInput
   studentGrades?: Prisma.StudentGradeUpdateManyWithoutAssessmentNestedInput
 }
 
 export type AssessmentUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   gradeComponentId?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -338,6 +357,7 @@ export type AssessmentUncheckedUpdateInput = {
 export type AssessmentCreateManyInput = {
   id?: string
   gradeComponentId: string
+  sectionId?: string | null
   title: string
   maxScore: number
   dateGiven: Date | string
@@ -357,6 +377,7 @@ export type AssessmentUpdateManyMutationInput = {
 export type AssessmentUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   gradeComponentId?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -377,6 +398,7 @@ export type AssessmentOrderByRelationAggregateInput = {
 export type AssessmentCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   gradeComponentId?: Prisma.SortOrder
+  sectionId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
@@ -391,6 +413,7 @@ export type AssessmentAvgOrderByAggregateInput = {
 export type AssessmentMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   gradeComponentId?: Prisma.SortOrder
+  sectionId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
@@ -401,6 +424,7 @@ export type AssessmentMaxOrderByAggregateInput = {
 export type AssessmentMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   gradeComponentId?: Prisma.SortOrder
+  sectionId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
@@ -415,6 +439,48 @@ export type AssessmentSumOrderByAggregateInput = {
 export type AssessmentScalarRelationFilter = {
   is?: Prisma.AssessmentWhereInput
   isNot?: Prisma.AssessmentWhereInput
+}
+
+export type AssessmentCreateNestedManyWithoutSectionInput = {
+  create?: Prisma.XOR<Prisma.AssessmentCreateWithoutSectionInput, Prisma.AssessmentUncheckedCreateWithoutSectionInput> | Prisma.AssessmentCreateWithoutSectionInput[] | Prisma.AssessmentUncheckedCreateWithoutSectionInput[]
+  connectOrCreate?: Prisma.AssessmentCreateOrConnectWithoutSectionInput | Prisma.AssessmentCreateOrConnectWithoutSectionInput[]
+  createMany?: Prisma.AssessmentCreateManySectionInputEnvelope
+  connect?: Prisma.AssessmentWhereUniqueInput | Prisma.AssessmentWhereUniqueInput[]
+}
+
+export type AssessmentUncheckedCreateNestedManyWithoutSectionInput = {
+  create?: Prisma.XOR<Prisma.AssessmentCreateWithoutSectionInput, Prisma.AssessmentUncheckedCreateWithoutSectionInput> | Prisma.AssessmentCreateWithoutSectionInput[] | Prisma.AssessmentUncheckedCreateWithoutSectionInput[]
+  connectOrCreate?: Prisma.AssessmentCreateOrConnectWithoutSectionInput | Prisma.AssessmentCreateOrConnectWithoutSectionInput[]
+  createMany?: Prisma.AssessmentCreateManySectionInputEnvelope
+  connect?: Prisma.AssessmentWhereUniqueInput | Prisma.AssessmentWhereUniqueInput[]
+}
+
+export type AssessmentUpdateManyWithoutSectionNestedInput = {
+  create?: Prisma.XOR<Prisma.AssessmentCreateWithoutSectionInput, Prisma.AssessmentUncheckedCreateWithoutSectionInput> | Prisma.AssessmentCreateWithoutSectionInput[] | Prisma.AssessmentUncheckedCreateWithoutSectionInput[]
+  connectOrCreate?: Prisma.AssessmentCreateOrConnectWithoutSectionInput | Prisma.AssessmentCreateOrConnectWithoutSectionInput[]
+  upsert?: Prisma.AssessmentUpsertWithWhereUniqueWithoutSectionInput | Prisma.AssessmentUpsertWithWhereUniqueWithoutSectionInput[]
+  createMany?: Prisma.AssessmentCreateManySectionInputEnvelope
+  set?: Prisma.AssessmentWhereUniqueInput | Prisma.AssessmentWhereUniqueInput[]
+  disconnect?: Prisma.AssessmentWhereUniqueInput | Prisma.AssessmentWhereUniqueInput[]
+  delete?: Prisma.AssessmentWhereUniqueInput | Prisma.AssessmentWhereUniqueInput[]
+  connect?: Prisma.AssessmentWhereUniqueInput | Prisma.AssessmentWhereUniqueInput[]
+  update?: Prisma.AssessmentUpdateWithWhereUniqueWithoutSectionInput | Prisma.AssessmentUpdateWithWhereUniqueWithoutSectionInput[]
+  updateMany?: Prisma.AssessmentUpdateManyWithWhereWithoutSectionInput | Prisma.AssessmentUpdateManyWithWhereWithoutSectionInput[]
+  deleteMany?: Prisma.AssessmentScalarWhereInput | Prisma.AssessmentScalarWhereInput[]
+}
+
+export type AssessmentUncheckedUpdateManyWithoutSectionNestedInput = {
+  create?: Prisma.XOR<Prisma.AssessmentCreateWithoutSectionInput, Prisma.AssessmentUncheckedCreateWithoutSectionInput> | Prisma.AssessmentCreateWithoutSectionInput[] | Prisma.AssessmentUncheckedCreateWithoutSectionInput[]
+  connectOrCreate?: Prisma.AssessmentCreateOrConnectWithoutSectionInput | Prisma.AssessmentCreateOrConnectWithoutSectionInput[]
+  upsert?: Prisma.AssessmentUpsertWithWhereUniqueWithoutSectionInput | Prisma.AssessmentUpsertWithWhereUniqueWithoutSectionInput[]
+  createMany?: Prisma.AssessmentCreateManySectionInputEnvelope
+  set?: Prisma.AssessmentWhereUniqueInput | Prisma.AssessmentWhereUniqueInput[]
+  disconnect?: Prisma.AssessmentWhereUniqueInput | Prisma.AssessmentWhereUniqueInput[]
+  delete?: Prisma.AssessmentWhereUniqueInput | Prisma.AssessmentWhereUniqueInput[]
+  connect?: Prisma.AssessmentWhereUniqueInput | Prisma.AssessmentWhereUniqueInput[]
+  update?: Prisma.AssessmentUpdateWithWhereUniqueWithoutSectionInput | Prisma.AssessmentUpdateWithWhereUniqueWithoutSectionInput[]
+  updateMany?: Prisma.AssessmentUpdateManyWithWhereWithoutSectionInput | Prisma.AssessmentUpdateManyWithWhereWithoutSectionInput[]
+  deleteMany?: Prisma.AssessmentScalarWhereInput | Prisma.AssessmentScalarWhereInput[]
 }
 
 export type AssessmentCreateNestedManyWithoutGradeComponentInput = {
@@ -481,6 +547,68 @@ export type AssessmentUpdateOneRequiredWithoutStudentGradesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.AssessmentUpdateToOneWithWhereWithoutStudentGradesInput, Prisma.AssessmentUpdateWithoutStudentGradesInput>, Prisma.AssessmentUncheckedUpdateWithoutStudentGradesInput>
 }
 
+export type AssessmentCreateWithoutSectionInput = {
+  id?: string
+  title: string
+  maxScore: number
+  dateGiven: Date | string
+  createdBy: string
+  createdAt?: Date | string
+  gradeComponent: Prisma.GradeComponentCreateNestedOneWithoutAssessmentsInput
+  studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutAssessmentInput
+}
+
+export type AssessmentUncheckedCreateWithoutSectionInput = {
+  id?: string
+  gradeComponentId: string
+  title: string
+  maxScore: number
+  dateGiven: Date | string
+  createdBy: string
+  createdAt?: Date | string
+  studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutAssessmentInput
+}
+
+export type AssessmentCreateOrConnectWithoutSectionInput = {
+  where: Prisma.AssessmentWhereUniqueInput
+  create: Prisma.XOR<Prisma.AssessmentCreateWithoutSectionInput, Prisma.AssessmentUncheckedCreateWithoutSectionInput>
+}
+
+export type AssessmentCreateManySectionInputEnvelope = {
+  data: Prisma.AssessmentCreateManySectionInput | Prisma.AssessmentCreateManySectionInput[]
+  skipDuplicates?: boolean
+}
+
+export type AssessmentUpsertWithWhereUniqueWithoutSectionInput = {
+  where: Prisma.AssessmentWhereUniqueInput
+  update: Prisma.XOR<Prisma.AssessmentUpdateWithoutSectionInput, Prisma.AssessmentUncheckedUpdateWithoutSectionInput>
+  create: Prisma.XOR<Prisma.AssessmentCreateWithoutSectionInput, Prisma.AssessmentUncheckedCreateWithoutSectionInput>
+}
+
+export type AssessmentUpdateWithWhereUniqueWithoutSectionInput = {
+  where: Prisma.AssessmentWhereUniqueInput
+  data: Prisma.XOR<Prisma.AssessmentUpdateWithoutSectionInput, Prisma.AssessmentUncheckedUpdateWithoutSectionInput>
+}
+
+export type AssessmentUpdateManyWithWhereWithoutSectionInput = {
+  where: Prisma.AssessmentScalarWhereInput
+  data: Prisma.XOR<Prisma.AssessmentUpdateManyMutationInput, Prisma.AssessmentUncheckedUpdateManyWithoutSectionInput>
+}
+
+export type AssessmentScalarWhereInput = {
+  AND?: Prisma.AssessmentScalarWhereInput | Prisma.AssessmentScalarWhereInput[]
+  OR?: Prisma.AssessmentScalarWhereInput[]
+  NOT?: Prisma.AssessmentScalarWhereInput | Prisma.AssessmentScalarWhereInput[]
+  id?: Prisma.StringFilter<"Assessment"> | string
+  gradeComponentId?: Prisma.StringFilter<"Assessment"> | string
+  sectionId?: Prisma.StringNullableFilter<"Assessment"> | string | null
+  title?: Prisma.StringFilter<"Assessment"> | string
+  maxScore?: Prisma.FloatFilter<"Assessment"> | number
+  dateGiven?: Prisma.DateTimeFilter<"Assessment"> | Date | string
+  createdBy?: Prisma.StringFilter<"Assessment"> | string
+  createdAt?: Prisma.DateTimeFilter<"Assessment"> | Date | string
+}
+
 export type AssessmentCreateWithoutGradeComponentInput = {
   id?: string
   title: string
@@ -488,11 +616,13 @@ export type AssessmentCreateWithoutGradeComponentInput = {
   dateGiven: Date | string
   createdBy: string
   createdAt?: Date | string
+  section?: Prisma.SectionCreateNestedOneWithoutAssessmentsInput
   studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutAssessmentInput
 }
 
 export type AssessmentUncheckedCreateWithoutGradeComponentInput = {
   id?: string
+  sectionId?: string | null
   title: string
   maxScore: number
   dateGiven: Date | string
@@ -527,19 +657,6 @@ export type AssessmentUpdateManyWithWhereWithoutGradeComponentInput = {
   data: Prisma.XOR<Prisma.AssessmentUpdateManyMutationInput, Prisma.AssessmentUncheckedUpdateManyWithoutGradeComponentInput>
 }
 
-export type AssessmentScalarWhereInput = {
-  AND?: Prisma.AssessmentScalarWhereInput | Prisma.AssessmentScalarWhereInput[]
-  OR?: Prisma.AssessmentScalarWhereInput[]
-  NOT?: Prisma.AssessmentScalarWhereInput | Prisma.AssessmentScalarWhereInput[]
-  id?: Prisma.StringFilter<"Assessment"> | string
-  gradeComponentId?: Prisma.StringFilter<"Assessment"> | string
-  title?: Prisma.StringFilter<"Assessment"> | string
-  maxScore?: Prisma.FloatFilter<"Assessment"> | number
-  dateGiven?: Prisma.DateTimeFilter<"Assessment"> | Date | string
-  createdBy?: Prisma.StringFilter<"Assessment"> | string
-  createdAt?: Prisma.DateTimeFilter<"Assessment"> | Date | string
-}
-
 export type AssessmentCreateWithoutStudentGradesInput = {
   id?: string
   title: string
@@ -548,11 +665,13 @@ export type AssessmentCreateWithoutStudentGradesInput = {
   createdBy: string
   createdAt?: Date | string
   gradeComponent: Prisma.GradeComponentCreateNestedOneWithoutAssessmentsInput
+  section?: Prisma.SectionCreateNestedOneWithoutAssessmentsInput
 }
 
 export type AssessmentUncheckedCreateWithoutStudentGradesInput = {
   id?: string
   gradeComponentId: string
+  sectionId?: string | null
   title: string
   maxScore: number
   dateGiven: Date | string
@@ -584,9 +703,53 @@ export type AssessmentUpdateWithoutStudentGradesInput = {
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   gradeComponent?: Prisma.GradeComponentUpdateOneRequiredWithoutAssessmentsNestedInput
+  section?: Prisma.SectionUpdateOneWithoutAssessmentsNestedInput
 }
 
 export type AssessmentUncheckedUpdateWithoutStudentGradesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeComponentId?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
+  dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type AssessmentCreateManySectionInput = {
+  id?: string
+  gradeComponentId: string
+  title: string
+  maxScore: number
+  dateGiven: Date | string
+  createdBy: string
+  createdAt?: Date | string
+}
+
+export type AssessmentUpdateWithoutSectionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
+  dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  gradeComponent?: Prisma.GradeComponentUpdateOneRequiredWithoutAssessmentsNestedInput
+  studentGrades?: Prisma.StudentGradeUpdateManyWithoutAssessmentNestedInput
+}
+
+export type AssessmentUncheckedUpdateWithoutSectionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeComponentId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
+  dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutAssessmentNestedInput
+}
+
+export type AssessmentUncheckedUpdateManyWithoutSectionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   gradeComponentId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
@@ -598,6 +761,7 @@ export type AssessmentUncheckedUpdateWithoutStudentGradesInput = {
 
 export type AssessmentCreateManyGradeComponentInput = {
   id?: string
+  sectionId?: string | null
   title: string
   maxScore: number
   dateGiven: Date | string
@@ -612,11 +776,13 @@ export type AssessmentUpdateWithoutGradeComponentInput = {
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  section?: Prisma.SectionUpdateOneWithoutAssessmentsNestedInput
   studentGrades?: Prisma.StudentGradeUpdateManyWithoutAssessmentNestedInput
 }
 
 export type AssessmentUncheckedUpdateWithoutGradeComponentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -627,6 +793,7 @@ export type AssessmentUncheckedUpdateWithoutGradeComponentInput = {
 
 export type AssessmentUncheckedUpdateManyWithoutGradeComponentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -668,12 +835,14 @@ export type AssessmentCountOutputTypeCountStudentGradesArgs<ExtArgs extends runt
 export type AssessmentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   gradeComponentId?: boolean
+  sectionId?: boolean
   title?: boolean
   maxScore?: boolean
   dateGiven?: boolean
   createdBy?: boolean
   createdAt?: boolean
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
+  section?: boolean | Prisma.Assessment$sectionArgs<ExtArgs>
   studentGrades?: boolean | Prisma.Assessment$studentGradesArgs<ExtArgs>
   _count?: boolean | Prisma.AssessmentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["assessment"]>
@@ -681,28 +850,33 @@ export type AssessmentSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
 export type AssessmentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   gradeComponentId?: boolean
+  sectionId?: boolean
   title?: boolean
   maxScore?: boolean
   dateGiven?: boolean
   createdBy?: boolean
   createdAt?: boolean
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
+  section?: boolean | Prisma.Assessment$sectionArgs<ExtArgs>
 }, ExtArgs["result"]["assessment"]>
 
 export type AssessmentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   gradeComponentId?: boolean
+  sectionId?: boolean
   title?: boolean
   maxScore?: boolean
   dateGiven?: boolean
   createdBy?: boolean
   createdAt?: boolean
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
+  section?: boolean | Prisma.Assessment$sectionArgs<ExtArgs>
 }, ExtArgs["result"]["assessment"]>
 
 export type AssessmentSelectScalar = {
   id?: boolean
   gradeComponentId?: boolean
+  sectionId?: boolean
   title?: boolean
   maxScore?: boolean
   dateGiven?: boolean
@@ -710,28 +884,33 @@ export type AssessmentSelectScalar = {
   createdAt?: boolean
 }
 
-export type AssessmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "gradeComponentId" | "title" | "maxScore" | "dateGiven" | "createdBy" | "createdAt", ExtArgs["result"]["assessment"]>
+export type AssessmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "gradeComponentId" | "sectionId" | "title" | "maxScore" | "dateGiven" | "createdBy" | "createdAt", ExtArgs["result"]["assessment"]>
 export type AssessmentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
+  section?: boolean | Prisma.Assessment$sectionArgs<ExtArgs>
   studentGrades?: boolean | Prisma.Assessment$studentGradesArgs<ExtArgs>
   _count?: boolean | Prisma.AssessmentCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AssessmentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
+  section?: boolean | Prisma.Assessment$sectionArgs<ExtArgs>
 }
 export type AssessmentIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
+  section?: boolean | Prisma.Assessment$sectionArgs<ExtArgs>
 }
 
 export type $AssessmentPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Assessment"
   objects: {
     gradeComponent: Prisma.$GradeComponentPayload<ExtArgs>
+    section: Prisma.$SectionPayload<ExtArgs> | null
     studentGrades: Prisma.$StudentGradePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     gradeComponentId: string
+    sectionId: string | null
     title: string
     maxScore: number
     dateGiven: Date
@@ -1132,6 +1311,7 @@ readonly fields: AssessmentFieldRefs;
 export interface Prisma__AssessmentClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   gradeComponent<T extends Prisma.GradeComponentDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.GradeComponentDefaultArgs<ExtArgs>>): Prisma.Prisma__GradeComponentClient<runtime.Types.Result.GetResult<Prisma.$GradeComponentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  section<T extends Prisma.Assessment$sectionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Assessment$sectionArgs<ExtArgs>>): Prisma.Prisma__SectionClient<runtime.Types.Result.GetResult<Prisma.$SectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   studentGrades<T extends Prisma.Assessment$studentGradesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Assessment$studentGradesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StudentGradePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1164,6 +1344,7 @@ export interface Prisma__AssessmentClient<T, Null = never, ExtArgs extends runti
 export interface AssessmentFieldRefs {
   readonly id: Prisma.FieldRef<"Assessment", 'String'>
   readonly gradeComponentId: Prisma.FieldRef<"Assessment", 'String'>
+  readonly sectionId: Prisma.FieldRef<"Assessment", 'String'>
   readonly title: Prisma.FieldRef<"Assessment", 'String'>
   readonly maxScore: Prisma.FieldRef<"Assessment", 'Float'>
   readonly dateGiven: Prisma.FieldRef<"Assessment", 'DateTime'>
@@ -1567,6 +1748,25 @@ export type AssessmentDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * Limit how many Assessments to delete.
    */
   limit?: number
+}
+
+/**
+ * Assessment.section
+ */
+export type Assessment$sectionArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Section
+   */
+  select?: Prisma.SectionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Section
+   */
+  omit?: Prisma.SectionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SectionInclude<ExtArgs> | null
+  where?: Prisma.SectionWhereInput
 }
 
 /**

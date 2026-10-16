@@ -143,7 +143,10 @@ export async function referRecord(
       guidance_counselor: "Guidance Counselor",
       principal: "Principal",
     };
-    void fanoutNotification({
+    // Awaited (not fire-and-forget like the desk fanouts): the filing
+    // teacher's bell refetches the moment the 201 lands, so this row must
+    // already be committed or the bump is missed until the next poll.
+    await fanoutNotification({
       userId: actorId,
       sourceTable: "referrals",
       action: "status",

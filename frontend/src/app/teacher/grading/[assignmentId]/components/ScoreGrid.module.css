@@ -1,6 +1,28 @@
 /* Encode-scores card — outer Card shell with the advisory-students
    table pattern inside: header row, plain table, status footer. */
 
+/* Smooth enter: board fades/slides in when switching assessments. */
+.enter {
+  animation: score-view-in 320ms ease-out both;
+}
+
+@keyframes score-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter {
+    animation: none;
+  }
+}
+
 .card {
   min-width: 0;
   border-radius: var(--radius-lg);

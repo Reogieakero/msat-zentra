@@ -1,42 +1,29 @@
 "use client";
 import * as React from "react";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
-  Eye,
   FolderOpen,
   Search,
   SearchX,
+  Upload,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Sf10UploadPanel } from "@/components/registry/sf10/Sf10UploadPanel";
 import { RecordKeeperEmptyState } from "@/app/record-keeper/components/RecordKeeperEmptyCard";
 import { RecordKeeperPageHeader } from "@/app/record-keeper/components/RecordKeeperPageHeader";
 import { RegistrarEmptyState } from "@/app/registrar/components/RegistrarEmptyCard";
 import { RegistrarPageHeader } from "@/app/registrar/components/RegistrarPageHeader";
 import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
-import { Sf10DetailSheet as RegistrarDetailSheet } from "@/app/registrar/sf10/components/Sf10DetailSheet";
-import { Sf10DetailSheet as RecordKeeperDetailSheet } from "@/app/record-keeper/sf10/components/Sf10DetailSheet";
-import { StatusBadge, formatRelativeTime } from "@/components/registry/sf10/shared";
-import { toast } from "@/components/ui/sonner";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { Pagination } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { fetchSf10Records } from "@/services/registry/sf10.service";
+import { Sf10FolderGrid } from "@/components/registry/sf10/sf10-folders";
 import {
-  GRADE_LABEL,
-  SF10_SOURCE_LABEL,
   type Sf10Record,
   type Sf10Status,
 } from "@/services/registry/sf10.types";
@@ -45,19 +32,16 @@ import styles from "@/components/registry/sf10/sf10.module.css";
 const STATUS_FILTERS: { key: Sf10Status | "all"; label: string }[] = [
   { key: "all", label: "All" },
   { key: "attach", label: "Attached" },
-  { key: "available", label: "Available" },
   { key: "released", label: "Released" },
 ];
 export function Sf10Page({
   desk,
   pageSize,
-  gradeRange,
 }: {
   desk: "registrar" | "record-keeper";
   pageSize: number;
-  gradeRange: string;
 }) {
-  const qc = useQueryClient();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
   const query = useDebouncedValue(queryInput.trim(), 300);
@@ -86,8 +70,10 @@ export function Sf10Page({
     pager.setFilters({ q: query || undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
-  const [selected, setSelected] = React.useState<Sf10Record | null>(null);
-  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const openRecord = (r: Sf10Record) => {
+    router.push(`/${desk}/sf10/${r.id}`);
+  };
+  const EmptyState = desk === "registrar" ? RegistrarEmptyState : RecordKeeperEmptyState;
   const {
     data,
     isPending,
@@ -116,32 +102,15 @@ export function Sf10Page({
   const safePage = Math.min(page, totalPages);
   const filtering = query.length > 0 || status !== "all";
   const isSyncing = isFetching && !isPending;
-  const openRecord = (r: Sf10Record) => {
-    setSelected(r);
-    setSheetOpen(true);
-  };
-  const refresh = () => {
-    qc.invalidateQueries({ queryKey: [`${desk}-sf10`] });
-    qc.invalidateQueries({ queryKey: [`${desk}-overview`] });
-    qc.invalidateQueries({ queryKey: [`${desk}-notifications`] });
-  };
-  const handleUpload = async () => {
-    toast.info({
-      title: "Upload paused",
-      description: "Learner matching via OCR lands in a future build.",
-    });
-  };
-  const DetailSheet = desk === "registrar" ? RegistrarDetailSheet : RecordKeeperDetailSheet;
-  const EmptyState = desk === "registrar" ? RegistrarEmptyState : RecordKeeperEmptyState;
   const DeskPageHeader = desk === "registrar" ? RegistrarPageHeader : RecordKeeperPageHeader;
   const headerTitle = "SF10 Records";
-  const headerDescription = `Learner SF10 files for grades ${gradeRange} — validated, attached, and released.`;
+  const deskLabel = desk === "registrar" ? "registrar" : "record keeper";
+  const headerDescription = `SF10 files filed by the ${deskLabel} — validated, attached, and released.`;
   if (!isPending && !isError && counts.total === 0) {
     return (
       <section className={styles.page}>
         <div className={styles.emptyWrap}>
           <div className={styles.emptyStack}>
-            <Sf10UploadPanel onUpload={handleUpload} />
             <section className={`${assign.card} ${styles.emptyCard}`} aria-label="No SF10 records">
               <span className={assign.glowClip} aria-hidden="true">
                 <span className={assign.cardGlow} />
@@ -149,8 +118,16 @@ export function Sf10Page({
               <EmptyState
                 icon={FolderOpen}
                 title="No SF10 records yet"
-                hint={`Upload a file above to attach the first SF10 record for grades ${gradeRange}.`}
+                hint={`Upload a file to attach the first SF10 record filed by the ${deskLabel}.`}
               />
+              <div className="relative mt-3 flex justify-center">
+                <Button asChild size="sm">
+                  <Link href={`/${desk}/sf10/upload`}>
+                    <Upload aria-hidden />
+                    Upload SF10
+                  </Link>
+                </Button>
+              </div>
             </section>
           </div>
         </div>
@@ -182,12 +159,7 @@ export function Sf10Page({
               <li className={styles.tile}>
                 <span className={styles.tileValue}>{counts.attach}</span>
                 <span className={styles.tileLabel}>Attached</span>
-                <span className={styles.tileHint}>Files pulled in, awaiting validation</span>
-              </li>
-              <li className={styles.tile}>
-                <span className={styles.tileValue}>{counts.available}</span>
-                <span className={styles.tileLabel}>Available</span>
-                <span className={styles.tileHint}>Validated and on hand</span>
+                <span className={styles.tileHint}>Uploaded files, stored as-is</span>
               </li>
               <li className={styles.tile}>
                 <span className={styles.tileValue}>{counts.released}</span>
@@ -197,27 +169,29 @@ export function Sf10Page({
               <li className={styles.tile}>
                 <span className={styles.tileValue}>{counts.total}</span>
                 <span className={styles.tileLabel}>Total records</span>
-                <span className={styles.tileHint}>Grades {gradeRange} SF10 files</span>
+                <span className={styles.tileHint}>SF10 files filed by this desk</span>
               </li>
             </ul>
           )}
         </section>
-        <Sf10UploadPanel onUpload={handleUpload} />
-        <section className={assign.card} aria-labelledby="sf10-records">
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
+        <section aria-labelledby="sf10-records">
           <div className={`${styles.listHead} relative`}>
             <div className={styles.listHeadText}>
               <h2 id="sf10-records" className="text-base font-semibold">
                 SF10 Records
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Learner SF10 files for grades {gradeRange} —{" "}
+                Learner SF10 files filed by the {deskLabel} —{" "}
                 {isPending ? "…" : `${filteredTotal} shown${isSyncing ? " · Syncing…" : ""}`}.
               </p>
             </div>
             <div className={styles.headerActions}>
+              <Button asChild variant="outline" size="sm" className="h-8">
+                <Link href={`/${desk}/sf10/upload`}>
+                  <Upload aria-hidden />
+                  Upload
+                </Link>
+              </Button>
               <div className={styles.searchWrap}>
                 <Search className={styles.searchIcon} aria-hidden />
                 <Input
@@ -263,38 +237,10 @@ export function Sf10Page({
           </div>
           <div className={`${styles.content} relative`}>
             {isPending ? (
-              <div className={styles.tableWrap}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Grade · Section</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead>Version</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {Array.from({ length: pageSize }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell>
-                          <div className={styles.studentCell}>
-                            <Skeleton className={styles.skelName} />
-                            <Skeleton className={styles.skelLrn} />
-                          </div>
-                        </TableCell>
-                        <TableCell><Skeleton className={styles.skelCell} style={{ width: "60%" }} /></TableCell>
-                        <TableCell><Skeleton className={styles.skelCell} style={{ width: "50%" }} /></TableCell>
-                        <TableCell><Skeleton className={styles.skelCell} style={{ width: "50%" }} /></TableCell>
-                        <TableCell><Skeleton className={styles.skelCell} style={{ width: "50%" }} /></TableCell>
-                        <TableCell><Skeleton className={styles.skelCell} style={{ width: "40%" }} /></TableCell>
-                        <TableCell />
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className={styles.folderGrid} aria-hidden="true">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Skeleton key={i} className="h-44 w-full rounded-xl" />
+                ))}
               </div>
             ) : isError ? (
               <p className={styles.empty}>Could not load SF10 records.</p>
@@ -305,68 +251,7 @@ export function Sf10Page({
                 hint="No SF10 records match the current search or filter."
               />
             ) : (
-              <div className={styles.tableWrap}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Grade · Section</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead>Version</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pageRows.map((r) => (
-                      <TableRow
-                        key={r.id}
-                        className={styles.clickableRow}
-                        onClick={() => openRecord(r)}
-                      >
-                        <TableCell>
-                          <div className={styles.studentCell}>
-                            <span className={styles.studentName}>{r.fullName}</span>
-                            <span className={styles.studentLrn}>{r.lrn}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className={styles.gradeTag}>
-                            {GRADE_LABEL[r.gradeLevel] ?? r.gradeLevel} · {r.section}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={r.status} />
-                        </TableCell>
-                        <TableCell className={styles.cellMuted}>
-                          {SF10_SOURCE_LABEL[r.source]}
-                        </TableCell>
-                        <TableCell className={styles.cellMuted}>
-                          {formatRelativeTime(r.updatedAt)}
-                        </TableCell>
-                        <TableCell>
-                          <span className={styles.versionTag}>v{r.currentVersion}</span>
-                        </TableCell>
-                        <TableCell className={styles.menuCell}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            aria-label={`View ${r.fullName} SF10 details`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openRecord(r);
-                            }}
-                          >
-                            <Eye aria-hidden />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <Sf10FolderGrid records={pageRows} onOpen={openRecord} />
             )}
           </div>
           {filteredTotal > pageSize && (
@@ -379,12 +264,6 @@ export function Sf10Page({
           )}
         </section>
       </div>
-      <DetailSheet
-        record={selected}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        onChanged={refresh}
-      />
     </section>
   );
 }

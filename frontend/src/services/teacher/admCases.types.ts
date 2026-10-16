@@ -3,6 +3,8 @@ export interface AdmCase {
   studentId: string;
   studentName: string;
   lrn: string;
+  /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
+  mascot: string | null;
   gradeLevel: string;
   section: string;
   photoUrl: string | null;

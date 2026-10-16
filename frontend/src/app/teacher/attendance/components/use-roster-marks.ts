@@ -7,10 +7,17 @@ export function useRosterMarks(sheetKey: string, serverMarks: Record<string, She
   const [marks, setMarks] = React.useState<Record<string, SheetStatus>>(() =>
     loadStoredMarks(sheetKey),
   );
-  if (seenKey !== sheetKey) {
-    setSeenKey(sheetKey);
-    setMarks(loadStoredMarks(sheetKey));
-  }
+  // Render-phase setState caused an infinite render loop whenever the key
+  // identity was unstable (new roster ctx object per render). Sync in an
+  // effect instead so a changing key settles after paint.
+  /* eslint-disable react-hooks/set-state-in-effect -- sheet-key reset must settle after paint; render-phase setState wedged the main thread (RESULT_CODE_HUNG) */
+  React.useEffect(() => {
+    if (seenKey !== sheetKey) {
+      setSeenKey(sheetKey);
+      setMarks(loadStoredMarks(sheetKey));
+    }
+  }, [seenKey, sheetKey]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   React.useEffect(() => {
     persistStoredMarks(sheetKey, marks);
   }, [sheetKey, marks]);

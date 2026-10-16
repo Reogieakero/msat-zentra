@@ -37,13 +37,15 @@ interface FolderCardProps {
   files: FolderFile[];
 
   cornerTag?: string;
+  /** Optional inline style for the corner tag pill (e.g. emerald approved). */
+  cornerTagStyle?: React.CSSProperties;
 
   folderColor?: string;
 
   onFileClick?: (index: number) => void;
 }
 
-export function FolderCard({ label, sublabel, files, cornerTag, folderColor, onFileClick }: FolderCardProps) {
+export function FolderCard({ label, sublabel, files, cornerTag, cornerTagStyle, folderColor, onFileClick }: FolderCardProps) {
   const count = files.length;
 
   return (
@@ -110,7 +112,7 @@ export function FolderCard({ label, sublabel, files, cornerTag, folderColor, onF
           })}
 
           {cornerTag && (
-            <div className={styles.cornerTag} aria-label={`Record type: ${cornerTag}`}>
+            <div className={styles.cornerTag} style={cornerTagStyle} aria-label={`Record type: ${cornerTag}`}>
               {cornerTag}
             </div>
           )}

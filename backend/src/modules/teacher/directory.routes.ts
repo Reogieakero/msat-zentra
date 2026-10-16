@@ -9,7 +9,7 @@ import {
   claimCode,
   enterTermGrant,
   getMyLink,
-  leaveTerm,
+  unlinkCode,
   listTeachers,
   verifyAttendance,
 } from "../../services/teacher/directory.service.js";
@@ -79,7 +79,7 @@ router.post(
   async (req, res, next) => {
     try {
       const result = await claimCode(ctxOf(req), (req.body as { code?: string }).code ?? "");
-      await invalidateTags(["teacher", "schedule"]);
+      await invalidateTags(["teacher", "schedule", "overview", "attendance", "grades", "academics", "risk", "directory"]);
       res.json(result);
     } catch (e) {
       next(e);
@@ -109,8 +109,8 @@ router.delete(
   requireRole("subject_teacher", "adviser"),
   async (req, res, next) => {
     try {
-      const result = await leaveTerm(ctxOf(req));
-      await invalidateTags(["teacher", "schedule"]);
+      const result = await unlinkCode(ctxOf(req));
+      await invalidateTags(["teacher", "schedule", "overview", "attendance", "grades", "academics", "risk", "directory"]);
       res.json(result);
     } catch (e) {
       next(e);

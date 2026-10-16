@@ -43,6 +43,7 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
       student: {
         select: {
           lrn: true,
+          mascot: true,
           user: { select: { fullName: true } },
           section: { select: { name: true } },
         },
@@ -51,6 +52,7 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
         select: {
           lrn: true,
           fullName: true,
+          mascot: true,
           section: { select: { name: true } },
         },
       },
@@ -110,6 +112,27 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
     for (const a of approvers) approverRoles.set(a.id, String(a.role));
   }
 
+  // Who dismissed each referral (latest referral_dismissed audit actor):
+  // teacher roles mean withdrawn by the filer, anything else means the
+  // receiving desk rejected it. Same derivation as the desk queues.
+  const dismissedByRole = new Map<string, string>();
+  if (referralIds.length > 0) {
+    const dismissalLogs = await prisma.auditLog.findMany({
+      where: {
+        sourceTable: "referrals",
+        sourceId: { in: referralIds },
+        actionType: "referral_dismissed",
+      },
+      select: { sourceId: true, user: { select: { role: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+    for (const log of dismissalLogs) {
+      if (!dismissedByRole.has(log.sourceId)) {
+        dismissedByRole.set(log.sourceId, String(log.user?.role ?? ""));
+      }
+    }
+  }
+
   const admLabelByStage = new Map(ADM_STAGE_FLOW.map((s) => [s.stage, s.label]));
 
   const formatted = referrals.map((r) => {
@@ -164,11 +187,13 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
       id: r.id,
       studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
       lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+      mascot: r.student?.mascot ?? r.roster?.mascot ?? null,
       section: r.student?.section?.name ?? r.roster?.section?.name ?? "",
       targetRole: r.referredToRole,
       referredBy: r.referredBy,
       reason: r.reason,
       status: r.status,
+      dismissedByRole: dismissedByRole.get(r.id) ?? null,
       referredAt,
       resolvedAt: r.status === "resolved" ? (timeline[timeline.length - 1]?.at ?? new Date().toISOString()) : null,
       anecdotalId: r.anecdotalRecordId,

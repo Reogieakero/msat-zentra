@@ -21,7 +21,7 @@ import styles from "./adviser-access-tables.module.css";
 import { Pager, usePager } from "./table-pager";
 import { AdviseeDetail, initials } from "./adviser-access-shared";
 function historyBadge(status: AccessRequestStatus) {
-  if (status === "approved") return <Badge variant="default">Approved</Badge>;
+  if (status === "approved") return <Badge variant="green">Approved</Badge>;
   return <Badge variant="destructive">Denied</Badge>;
 }
 export function HistoryTable({

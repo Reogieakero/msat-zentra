@@ -19,6 +19,13 @@
     "prisma:gradebook-audit": "tsx prisma/audit-gradebook-coverage.ts",
     "prisma:seed100": "tsx prisma/seed-100-topup.ts",
     "prisma:seed100-fix": "tsx prisma/fix-seed100-gaps.ts",
+    "prisma:seed:school": "tsx prisma/seed-school.ts",
+    "prisma:seed:school:small": "tsx prisma/seed-school.ts --small",
+    "prisma:seed:school:dry": "tsx prisma/seed-school.ts --dry-run",
+    "prisma:sections-scientists16": "tsx prisma/seed-sections-scientists-16.ts",
+    "prisma:schedule-scientists": "tsx prisma/seed-scientist-schedule.ts",
+    "prisma:timetable-names": "tsx prisma/seed-scientist-timetable-names.ts",
+    "prisma:seed:wipe": "tsx prisma/seed/wipe.ts",
     "test": "vitest run --testTimeout=15000",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -42,6 +49,7 @@
     "pino": "^9.6.0",
     "pino-http": "^11.0.0",
     "pino-pretty": "^13.0.0",
+    "tesseract.js": "^7.0.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

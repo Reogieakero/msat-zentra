@@ -21,7 +21,7 @@ export interface AttendancePair {
   subject: { id: string; name: string; code: string } | null;
   slots: { day: number; period: number; status: "DRAFT" | "SUBMITTED" | "APPROVED" }[];
 }
-export function useAttendancePairs(termKey: string, linked: LinkedName | null, isMaster: boolean | undefined) {
+export function useAttendancePairs(termKey: string, linked: LinkedName | null) {
   const mySlotsQuery = useQuery<{ slots: MySlot[] }>({
     queryKey: ["teacher-my-slots", termKey],
     queryFn: async () => {
@@ -30,7 +30,10 @@ export function useAttendancePairs(termKey: string, linked: LinkedName | null, i
       );
       return data;
     },
-    enabled: linked !== null || isMaster,
+    enabled: linked !== null,
+    retry: false,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
   });
   const configQuery = useQuery<{ config: DayConfig }>({
     queryKey: ["teacher-schedule-config", termKey],
@@ -40,6 +43,9 @@ export function useAttendancePairs(termKey: string, linked: LinkedName | null, i
       );
       return data;
     },
+    retry: false,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
   });
   const pairs = useMemo<AttendancePair[]>(() => {
     const list: AttendancePair[] = [];

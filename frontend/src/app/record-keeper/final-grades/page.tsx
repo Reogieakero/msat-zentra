@@ -82,34 +82,27 @@ function FinalGradeApprovalsPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
-  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
-  const page = pager.page;
-  const setPage = pager.setPage;
+  // Read the URL page directly so the query key changes on navigation.
+  // (Previously `pager.page` was clamped to 1 because the pager was
+  // constructed with a hardcoded total of 0, so the query never refetched.)
+  const rawPage = React.useMemo(() => {
+    const raw = Number(searchParams.get("page") ?? "1");
+    return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : 1;
+  }, [searchParams]);
   const query = useDebouncedValue(queryInput.trim(), 300);
   const debouncedQuery = query;
-
-  // Sync debounced search to the URL and reset to page 1 when it changes.
-  const firstSearchSync = React.useRef(true);
-  React.useEffect(() => {
-    if (firstSearchSync.current) {
-      firstSearchSync.current = false;
-      return;
-    }
-    pager.setFilters({ q: debouncedQuery || undefined });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery]);
 
   const setQuery = React.useCallback((value: string) => {
     setQueryInput(value);
   }, []);
 
   const { data, isPending, isError } = useQuery<GradesResponse>({
-    queryKey: ["record-keeper-final-grades", page, debouncedQuery],
+    queryKey: ["record-keeper-final-grades", rawPage, debouncedQuery],
     queryFn: ({ signal }) =>
       apiClient
         .get<GradesResponse>("/api/record-keeper/final-grades", {
           params: {
-            page,
+            page: rawPage,
             pageSize: PAGE_SIZE,
             ...(debouncedQuery ? { q: debouncedQuery } : {}),
           },
@@ -129,9 +122,23 @@ function FinalGradeApprovalsPageInner() {
   const pageRows = React.useMemo(() => data?.students ?? [], [data]);
   const filteredTotal = data?.total ?? pageRows.length;
 
-  const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
+  // Pager gets the live total so it can clamp out-of-range pages and drive
+  // the <Pagination /> highlight. Data fetching uses rawPage above to avoid
+  // a page <-> total circular dependency.
+  const pager = useUrlPager(filteredTotal, {}, { searchParam: "q", extraParams: ["q"] });
+  const setPage = pager.setPage;
+  const safePage = pager.page;
 
-  const safePage = Math.min(page, totalPages);
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debouncedQuery || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery]);
   const hasRecords = (data?.complete ?? 0) > 0;
   const searching = debouncedQuery.length > 0;
   // True empty (no records at all, not a search with no matches):

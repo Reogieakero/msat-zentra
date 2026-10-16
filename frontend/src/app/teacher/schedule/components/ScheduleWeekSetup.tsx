@@ -87,7 +87,7 @@ export function ScheduleWeekSetup({ section }: Props) {
     >
       <div className="flex min-w-0 flex-col gap-5">
         <div>
-          <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2">
+          <Button asChild variant="ghost" size="sm" className="h-6 px-2 text-xs mb-2 -ml-2">
             <Link href="/teacher/schedule">
               <ArrowLeft size={16} aria-hidden />
               Sections
@@ -108,6 +108,7 @@ export function ScheduleWeekSetup({ section }: Props) {
                 aria-label={railOpen ? "Hide sidebar" : "Show sidebar"}
                 title={railOpen ? "Hide sidebar" : "Show sidebar"}
                 aria-expanded={railOpen}
+                className="h-6 px-2 text-xs"
               >
                 {railOpen ? (
                   <PanelRightClose size={16} aria-hidden />
@@ -121,6 +122,7 @@ export function ScheduleWeekSetup({ section }: Props) {
                   size="sm"
                   onClick={() => cellsHook.setConfirmUnlockOpen(true)}
                   disabled={cellsHook.unlock.isPending}
+                  className="h-6 px-2 text-xs"
                 >
                   <Pencil size={16} aria-hidden />
                   Edit schedule
@@ -131,7 +133,7 @@ export function ScheduleWeekSetup({ section }: Props) {
                   size="sm"
                   onClick={() => cellsHook.setConfirmClearOpen(true)}
                   disabled={cellsHook.filledCount === 0 || cellsHook.removeAll.isPending}
-                  className="text-destructive hover:text-destructive"
+                  className="h-6 px-2 text-xs text-destructive hover:text-destructive"
                 >
                   <Trash2 size={16} aria-hidden />
                   Remove all
@@ -151,7 +153,10 @@ export function ScheduleWeekSetup({ section }: Props) {
           sectionName={section.name}
           listsError={catalog.subjectsQuery.isError || catalog.teachersQuery.isError}
           statusOf={cellsHook.statusOf}
-          serverHasReviewNote={(key) => !!cellsHook.serverStatus.get(key)?.reviewNote}
+          serverHasReviewNote={(key) => {
+            const s = cellsHook.serverStatus.get(key);
+            return !!s?.reviewNote && s.status === "DRAFT";
+          }}
           onEdit={(day, period) => {
             cellsHook.setSlotModal({ day, period });
             cellsHook.setSlotError(null);

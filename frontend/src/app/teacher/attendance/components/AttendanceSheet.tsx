@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import {
   Card,
@@ -66,16 +66,23 @@ export function AttendanceSheet({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (sheetKey !== `${date}|${subjectId ?? "none"}|${slot}`) {
-    setSheetKey(`${date}|${subjectId ?? "none"}|${slot}`);
-    setMarks({});
-    setQuery("");
-    setSubmitted(false);
-    setEditing(false);
-    setConfirmOpen(false);
-    setEditConfirmOpen(false);
-    setSubmitError(null);
-  }
+  // Render-phase setState here locked the main thread (Page Unresponsive →
+  // RESULT_CODE_HUNG) whenever props churned. Reset in an effect instead.
+  /* eslint-disable react-hooks/set-state-in-effect -- sheet-key reset must settle after paint; render-phase setState wedged the main thread */
+  useEffect(() => {
+    const nextKey = `${date}|${subjectId ?? "none"}|${slot}`;
+    if (sheetKey !== nextKey) {
+      setSheetKey(nextKey);
+      setMarks({});
+      setQuery("");
+      setSubmitted(false);
+      setEditing(false);
+      setConfirmOpen(false);
+      setEditConfirmOpen(false);
+      setSubmitError(null);
+    }
+  }, [date, subjectId, slot, sheetKey]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const contextQuery = useSheetContext();
   const effectiveCtx = roster ? roster.ctx : (contextQuery.data ?? null);

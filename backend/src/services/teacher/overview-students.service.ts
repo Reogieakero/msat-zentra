@@ -135,13 +135,14 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
         select: {
           userId: true,
           lrn: true,
+          mascot: true,
           user: { select: { fullName: true } },
         },
         orderBy: { user: { fullName: "asc" } },
       }),
       prisma.studentRoster.findMany({
         where: { sectionId: pair.sectionId },
-        select: { id: true, lrn: true, fullName: true },
+        select: { id: true, lrn: true, fullName: true, mascot: true },
         orderBy: { fullName: "asc" },
       }),
     ]);
@@ -318,12 +319,14 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
       studentId: p.userId,
       name: p.user.fullName,
       lrn: p.lrn,
+      mascot: p.mascot ?? null,
       hasAccount: true as const,
     })),
     ...rosterOnly.map((r) => ({
       studentId: `roster:${r.id}`,
       name: r.fullName,
       lrn: r.lrn,
+      mascot: r.mascot ?? null,
       hasAccount: false as const,
     })),
   ]

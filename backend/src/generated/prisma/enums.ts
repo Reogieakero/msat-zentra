@@ -232,6 +232,14 @@ export const Sf10Status = {
 export type Sf10Status = (typeof Sf10Status)[keyof typeof Sf10Status]
 
 
+export const Sf10Desk = {
+  registrar: 'registrar',
+  record_keeper: 'record_keeper'
+} as const
+
+export type Sf10Desk = (typeof Sf10Desk)[keyof typeof Sf10Desk]
+
+
 export const ActionType = {
   sf10_update: 'sf10_update',
   grade_lock: 'grade_lock',

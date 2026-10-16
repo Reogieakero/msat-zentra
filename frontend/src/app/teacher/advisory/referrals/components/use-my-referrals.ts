@@ -1,16 +1,16 @@
 "use client";
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
-import { PAGE_SIZE } from "@/components/shared/pagination";
-import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
-import { useSearchParams } from "next/navigation";
 export interface ReferralRow {
   id: string;
   studentName: string;
   lrn: string;
+  /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
+  mascot: string | null;
   targetRole: string;
   status:
     | "pending"
@@ -22,6 +22,10 @@ export interface ReferralRow {
     | "follow_up";
   referredAt: string;
   reason: string;
+  anecdotalId: string | null;
+  /** Role that dismissed the referral (audit-derived). Teacher roles mean
+      the filer withdrew it; anything else means the desk rejected it. */
+  dismissedByRole?: string | null;
   timeline: { label: string; detail?: string | null; date: string }[];
   track: "adm" | "general";
   consultReviewer?: string | null;
@@ -43,49 +47,53 @@ export interface MyReferralsPage {
   referrals: ReferralRow[];
   total: number;
   unfilteredTotal: number;
-  page: number;
-  totalPages: number;
-  pageSize: number;
 }
-export const TEACHER_REFERRALS_PAGE_SIZE = PAGE_SIZE;
+/** A dismissed referral counts as withdrawn by the filer when the
+    dismissal actor is a teacher role (or unknown — both writers audit,
+    so a missing actor predates the distinction). Anything else means the
+    receiving desk rejected it. */
+export function isWithdrawnDismissal(role?: string | null): boolean {
+  return !role || role === "adviser" || role === "subject_teacher";
+}
 export function useMyReferrals(highlightId: string | null) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
-  const query = useDebouncedValue(queryInput.trim(), 300);
-  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
-  const page = pager.page;
-  const setPage = pager.setPage;
-  const [takeover, setTakeover] = React.useState(false);
-  const debounced = query;
+  const debounced = useDebouncedValue(queryInput.trim(), 300);
 
-  // Sync debounced search to the URL and reset to page 1 when it changes.
-  const firstSearchSync = React.useRef(true);
+  // Keep ?q in the URL for refresh/back-forward without any ?page param.
+  // Also strips the legacy ?page param left over from the old paged view.
   React.useEffect(() => {
-    if (firstSearchSync.current) {
-      firstSearchSync.current = false;
-      return;
-    }
-    pager.setFilters({ q: debounced || undefined });
+    const wantedQ = debounced || "";
+    const currentQ = searchParams.get("q") ?? "";
+    const hasPage = searchParams.has("page");
+    if (!hasPage && wantedQ === currentQ) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (wantedQ) params.set("q", wantedQ);
+    else params.delete("q");
+    params.delete("page");
+    router.replace(
+      params.toString() ? `${pathname}?${params.toString()}` : pathname,
+      { scroll: false },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debounced]);
+  }, [debounced, searchParams]);
 
   const setQuery = React.useCallback((value: string) => {
     setQueryInput(value);
   }, []);
-  const landing = !takeover && highlightId !== null;
+  // No pagination params: the backend returns the full list when no
+  // page/pageSize/q/highlight params are sent, and the kanban filters
+  // client-side so every referral stays visible on one screen.
   const referralsQuery = useQuery<MyReferralsPage>({
-    queryKey: ["myReferrals", takeover || !landing ? page : 1, debounced, termKey, landing ? (highlightId ?? "") : ""],
+    queryKey: ["myReferrals", termKey],
     queryFn: async ({ signal }) => {
-      const search = new URLSearchParams();
-      if (debounced) search.set("q", debounced);
-      search.set("page", String(takeover || !landing ? page : 1));
-      search.set("pageSize", String(TEACHER_REFERRALS_PAGE_SIZE));
-      if (landing && highlightId) search.set("highlight", highlightId);
       const { data } = await apiClient.get<
         MyReferralsPage | ReferralRow[] | { referrals: ReferralRow[] }
-      >(`/api/referrals/mine${search.toString() ? `?${search.toString()}` : ""}`, {
+      >(`/api/referrals/mine`, {
         signal,
       });
       if (Array.isArray(data)) {
@@ -93,9 +101,6 @@ export function useMyReferrals(highlightId: string | null) {
           referrals: data,
           total: data.length,
           unfilteredTotal: data.length,
-          page,
-          totalPages: 1,
-          pageSize: TEACHER_REFERRALS_PAGE_SIZE,
         };
       }
       const referrals = Array.isArray(
@@ -104,29 +109,16 @@ export function useMyReferrals(highlightId: string | null) {
         ? (data as { referrals: ReferralRow[] }).referrals
         : [];
       const fallback = data as Partial<MyReferralsPage>;
-      const total = fallback.total ?? referrals.length;
-      const unfilteredTotal = fallback.unfilteredTotal ?? referrals.length;
-      const totalPages =
-        fallback.totalPages ?? Math.max(1, Math.ceil(total / TEACHER_REFERRALS_PAGE_SIZE));
       return {
         referrals,
-        total,
-        unfilteredTotal,
-        page: fallback.page ?? page,
-        totalPages,
-        pageSize: fallback.pageSize ?? TEACHER_REFERRALS_PAGE_SIZE,
+        total: fallback.total ?? referrals.length,
+        unfilteredTotal: fallback.unfilteredTotal ?? referrals.length,
       };
     },
     placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
     gcTime: 5 * 60_000,
   });
-  const totalPages = Math.max(1, referralsQuery.data?.totalPages ?? 1);
-  const safePage = Math.min(referralsQuery.data?.page ?? page, totalPages);
-  const goToPage = (next: number) => {
-    setTakeover(true);
-    setPage(next);
-  };
   React.useEffect(() => {
     if (!highlightId) return;
     const t = window.setTimeout(() => {
@@ -136,26 +128,33 @@ export function useMyReferrals(highlightId: string | null) {
     }, 150);
     return () => window.clearTimeout(t);
   }, [highlightId, referralsQuery.data]);
-  const referrals = React.useMemo(
+  const allReferrals = React.useMemo(
     () =>
       Array.isArray(referralsQuery.data?.referrals)
         ? referralsQuery.data.referrals
         : [],
     [referralsQuery.data],
   );
-  const total = referralsQuery.data?.total ?? referrals.length;
-  const unfilteredTotal = referralsQuery.data?.unfilteredTotal ?? referrals.length;
+  const needle = queryInput.trim().toLowerCase();
+  const referrals = React.useMemo(() => {
+    if (!needle) return allReferrals;
+    return allReferrals.filter((r) => {
+      const displayStatus =
+        r.status === "dismissed" ? (isWithdrawnDismissal(r.dismissedByRole) ? "cancelled" : "rejected") : "";
+      return [r.studentName, r.lrn, r.reason, r.status, displayStatus, r.targetRole]
+        .filter((v): v is string => typeof v === "string")
+        .join(" ")
+        .toLowerCase()
+        .includes(needle);
+    });
+  }, [allReferrals, needle]);
+  const total = referrals.length;
+  const unfilteredTotal =
+    referralsQuery.data?.unfilteredTotal ?? allReferrals.length;
   return {
     query: queryInput,
     setQuery,
-    page,
-    setPage,
-    takeover,
-    setTakeover,
     referralsQuery,
-    totalPages,
-    safePage,
-    goToPage,
     referrals,
     total,
     unfilteredTotal,

@@ -5,12 +5,12 @@ export async function advisoryRoster(termId: string, sectionId: string) {
   const [profiles, rosterEntries, assignSubs, entrySubs] = await Promise.all([
     prisma.studentProfile.findMany({
       where: { sectionId },
-      select: { userId: true, lrn: true, user: { select: { fullName: true } } },
+      select: { userId: true, lrn: true, mascot: true, user: { select: { fullName: true } } },
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
       where: { sectionId },
-      select: { id: true, lrn: true, fullName: true },
+      select: { id: true, lrn: true, fullName: true, mascot: true },
       orderBy: { fullName: "asc" },
     }),
     prisma.teacherSubjectAssignment.findMany({
@@ -132,12 +132,14 @@ export async function advisoryRoster(termId: string, sectionId: string) {
       studentId: p.userId,
       name: p.user.fullName,
       lrn: p.lrn,
+      mascot: p.mascot ?? null,
       hasAccount: true as const,
     })),
     ...rosterOnly.map((r) => ({
       studentId: `roster:${r.id}`,
       name: r.fullName,
       lrn: r.lrn,
+      mascot: r.mascot ?? null,
       hasAccount: false as const,
     })),
   ]

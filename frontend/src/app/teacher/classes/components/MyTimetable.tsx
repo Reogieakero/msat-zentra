@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
@@ -8,24 +8,24 @@ import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTerm } from "@/lib/term/TermContext";
-import { useSheetContext } from "@/services/teacher/attendance.service";
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
-import { CardModal } from "@/components/ui/CardModal";
+import { UnlinkCodeDialog, AmberRectPill } from "./UnlinkCodeDialog";
+import { useDock } from "@/components/dock/dock-store";
 import {
+  buildTimetable,
   type DayConfig,
 } from "@/app/teacher/schedule/components/schedule-time";
 import { getErrorMessage } from "./get-error-message";
 import { buildTimetableReminder, getReminderMeta } from "./my-timetable-reminder";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import kanbanStyles from "@/app/teacher/schedule/components/subject-kanban.module.css";
+import advisoryKanban from "@/app/teacher/overview/components/advisory-schedule-kanban.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { TimetableSidebar, type LinkedName } from "./timetable-sidebar";
 import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
 import { TermAccessCard } from "@/components/schedule/TermAccessCard";
 import { NoTermRecordsPanel } from "@/components/schedule/NoTermRecordsPanel";
 import { MyWeekGrid } from "./MyWeekGrid";
 import { ZentraPageHeaderSkeleton, ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
-import { TimetableSidebar, type LinkedName } from "./timetable-sidebar";
-import { useSession } from "@/lib/auth/useSession";
-import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
-import { useTeacherOverview } from "@/services/teacher/overview.service";
 
 interface TermGrant {
   via: string;
@@ -43,7 +43,14 @@ interface MySlot {
 
 export function MyTimetable() {
   const queryClient = useQueryClient();
+  const dock = useDock();
+  const dockRef = useRef(dock);
+  useEffect(() => {
+    dockRef.current = dock;
+  }, [dock]);
   const [confirmReleaseOpen, setConfirmReleaseOpen] = useState(false);
+  // Unlink progress now lives in the single shared Dock.
+  const unlinkTaskRef = useRef<string | null>(null);
   const { activeTerm } = useTerm();
   const termLabel = activeTerm
     ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
@@ -52,11 +59,10 @@ export function MyTimetable() {
 
   const [attCode, setAttCode] = useState("");
   const [attCodeError, setAttCodeError] = useState<string | null>(null);
-  const [showCodeVerify, setShowCodeVerify] = useState(false);
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 60_000);
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(id);
   }, []);
 
@@ -75,15 +81,6 @@ export function MyTimetable() {
   const linked = meQuery.data?.teacherName ?? null;
   const termGrant = meQuery.data?.termGrant ?? null;
 
-  const session = useSession();
-  const overview = useTeacherOverview();
-  const cachedMaster = useCachedMasterTeacher(session?.sub);
-  const isMasterTeacher =
-    overview.data?.isMasterTeacher ?? meQuery.data?.isMasterTeacher ?? cachedMaster;
-
-  const sheetContext = useSheetContext();
-  const isAdviser = !!sheetContext.data;
-
   const slotsQuery = useQuery<{ slots: MySlot[] }>({
     queryKey: ["teacher-my-slots", termKey],
     queryFn: async () => {
@@ -92,7 +89,7 @@ export function MyTimetable() {
       );
       return data;
     },
-    enabled: linked !== null || isMasterTeacher,
+    enabled: linked !== null,
   });
 
   const configQuery = useQuery<{ config: DayConfig }>({
@@ -101,12 +98,50 @@ export function MyTimetable() {
       const { data } = await apiClient.get<{ config: DayConfig }>("/api/teacher/schedule/config");
       return data;
     },
-    enabled: linked !== null || isMasterTeacher,
+    enabled: linked !== null,
   });
+
+  const nowKey = useMemo(() => {
+    const config = configQuery.data?.config ?? null;
+    if (!config) return null;
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Manila",
+      weekday: "short",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    }).formatToParts(now);
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+    const dayMap: Record<string, number> = {
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+      Sun: 7,
+    };
+    const day = dayMap[get("weekday")] ?? 0;
+    if (day < 1 || day > 5) return null;
+    const mins = Number(get("hour")) * 60 + Number(get("minute"));
+    const row = buildTimetable(config).find(
+      (r) => r.kind === "period" && mins >= r.startMin && mins < r.endMin,
+    );
+    if (!row || row.kind !== "period") return null;
+    return `${day}:${row.periodIndex}`;
+  }, [configQuery.data?.config, now]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-me"] });
     void queryClient.invalidateQueries({ queryKey: ["teacher-my-slots"] });
+    // Unlinking clears classes + grading + attendance together.
+    void queryClient.invalidateQueries({ queryKey: ["teacher-overview"] });
+    void queryClient.invalidateQueries({ queryKey: ["teacher-overview-gradebook"] });
+    void queryClient.invalidateQueries({ queryKey: ["teacher-overview-secondary"] });
+    void queryClient.invalidateQueries({ queryKey: ["offered-subjects"] });
+    void queryClient.invalidateQueries({ queryKey: ["attendance-sheet-marks"] });
+    void queryClient.invalidateQueries({ queryKey: ["attendance-section-roster"] });
+    void queryClient.invalidateQueries({ queryKey: ["teacher-grading-class"] });
   };
 
   const release = useMutation({
@@ -115,18 +150,42 @@ export function MyTimetable() {
       return data;
     },
     onSuccess: () => {
-      setConfirmReleaseOpen(false);
+      const id = unlinkTaskRef.current;
+      unlinkTaskRef.current = null;
+      try {
+        if (id) dockRef.current.completeTask(id, "Code unlinked · classes, grading, attendance cleared");
+      } catch {
+        /* ignore */
+      }
       refresh();
       toast.success({
-        title: `Left ${termLabel}`,
-        description: "Only this term's entry was cleared — your link and other terms are untouched.",
+        title: "Code unlinked",
+        description: "Your link code was removed — classes, grading, and attendance are now cleared.",
       });
     },
     onError: (err: unknown) => {
-      const message = getErrorMessage(err, "Failed to leave this term.");
-      toast.error({ title: "Could not leave term", description: message });
+      const message = getErrorMessage(err, "Failed to unlink code.");
+      const id = unlinkTaskRef.current;
+      unlinkTaskRef.current = null;
+      try {
+        if (id) dockRef.current.failTask(id, message);
+      } catch {
+        /* ignore */
+      }
+      toast.error({ title: "Could not unlink code", description: message });
     },
   });
+
+  const handleUnlinkConfirm = () => {
+    if (!linked || release.isPending) return;
+    try {
+      unlinkTaskRef.current = dockRef.current.startTask({ kind: "unlink-code", title: "Unlinking code", description: linked.code ? `Unlinking ${linked.code}…` : "Unlinking code…" });
+    } catch {
+      unlinkTaskRef.current = null;
+    }
+    setConfirmReleaseOpen(false);
+    release.mutate();
+  };
 
   const verify = useMutation({
     mutationFn: async (teacherCode: string) => {
@@ -149,28 +208,6 @@ export function MyTimetable() {
       const message = getErrorMessage(err, "Could not verify teacher code.");
       setAttCodeError(message);
       toast.error({ title: "Could not verify code", description: message });
-    },
-  });
-
-  const grantTap = useMutation({
-    mutationFn: async () => {
-      const { data } = await apiClient.post<{ termGrant: TermGrant }>(
-        "/api/teacher/schedule/teachers/term-grant",
-        {},
-      );
-      return data;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-me"] });
-      void queryClient.invalidateQueries({ queryKey: ["teacher-notifications"] });
-      toast.success({
-        title: "Term entered",
-        description: `Workspace open as adviser for ${termLabel}.`,
-      });
-    },
-    onError: (err: unknown) => {
-      const message = getErrorMessage(err, "Could not enter term.");
-      toast.error({ title: "Could not enter term", description: message });
     },
   });
 
@@ -202,91 +239,82 @@ export function MyTimetable() {
     );
   }
 
-  if (!linked && !isMasterTeacher) {
+  // Every teacher — master included — must link a code first.
+  if (!linked) {
     return (
-      <div aria-label="Link teacher code">
-        <TeacherCodeClaim
-          title="Link your teacher code"
-          description="Enter the code next to your name in the master teacher's teacher list (e.g. MS-101). Your assigned subjects and their timeslots will attach to this calendar."
-        />
-      </div>
+      <>
+        <div aria-label="Link teacher code">
+          <TeacherCodeClaim
+            title="Link your teacher code"
+            description="Enter the code next to your name in the master teacher's teacher list (e.g. MS-101). Your assigned subjects and their timeslots will attach to this calendar."
+          />
+        </div>
+      </>
     );
   }
 
-  if (!termGrant && !isMasterTeacher) {
+  if (!termGrant) {
     return (
       <>
         <div className={emptyStyles.emptyWrap}>
-          <div className={assign.card} style={{ width: "100%", maxWidth: "28rem" }}>
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
-            <div className="relative flex flex-col items-center text-center">
-              <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
-                <KeyRound size={32} className="text-primary" />
-              </span>
-              <h3 className="text-lg font-semibold">Enter {termLabel}</h3>
-              <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                {isAdviser
-                  ? `You advise ${sheetContext.data?.sectionName ?? "a section"} — continue as adviser to open your classes for ${termLabel}, or verify with your teacher code instead.`
-                  : `Enter the same teacher code you linked to open your classes for ${termLabel}. Codes never carry across terms.`}
-              </p>
-              <div className="mt-4 flex w-full flex-col gap-2">
-                {isAdviser && !showCodeVerify ? (
-                  <>
-                    <Button onClick={() => grantTap.mutate()} disabled={grantTap.isPending}>
-                      {grantTap.isPending ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" aria-hidden />
-                          <span aria-live="polite">Entering…</span>
-                        </>
-                      ) : (
-                        "Continue as adviser"
-                      )}
-                    </Button>
-                    <Button variant="ghost" onClick={() => setShowCodeVerify(true)}>
-                      Verify with teacher code instead
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Input
-                      placeholder="Teacher code (e.g. MS-101)…"
-                      value={attCode}
-                      onChange={(e) => {
-                        setAttCode(e.target.value);
-                        setAttCodeError(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleVerify();
-                      }}
-                      aria-label="Teacher code"
-                      className="text-center uppercase"
-                    />
-                    {attCodeError ? (
-                      <p role="alert" className="text-sm text-destructive">
-                        {attCodeError}
-                      </p>
-                    ) : null}
-                    <Button onClick={handleVerify} disabled={verify.isPending}>
-                      {verify.isPending ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" aria-hidden />
-                          <span aria-live="polite">Verifying…</span>
-                        </>
-                      ) : (
-                        "Verify code"
-                      )}
-                    </Button>
-                    {isAdviser ? (
-                      <Button variant="ghost" onClick={() => setShowCodeVerify(false)}>
-                        Back to adviser entry
-                      </Button>
-                    ) : null}
-                  </>
-                )}
+          <div className={`${kanbanStyles.column} mx-auto w-full max-w-md`}>
+            <KanbanBoard
+              title="Enter"
+              icon={
+                <span className="text-amber-500" aria-hidden>
+                  <KeyRound size={14} />
+                </span>
+              }
+              actions={
+                <span className="flex items-center gap-1.5">
+                  {termLabel
+                    .split("·")
+                    .map((part) => part.trim())
+                    .filter(Boolean)
+                    .map((part) => (
+                      <AmberRectPill key={part}>{part}</AmberRectPill>
+                    ))}
+                </span>
+              }
+              description="Enter your teacher code to open your classes. Codes never carry across terms."
+            >
+              <div className="flex flex-col px-1 py-1">
+                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                  <Input
+                    placeholder="TEACHER CODE (E.G. MS-101)..."
+                    value={attCode}
+                    onChange={(e) => {
+                      setAttCode(e.target.value);
+                      setAttCodeError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleVerify();
+                    }}
+                    aria-label="Teacher code"
+                    className="h-6 min-w-0 flex-1 rounded-lg text-center text-xs uppercase placeholder:text-[12px]"
+                  />
+                  <Button
+                    onClick={handleVerify}
+                    disabled={verify.isPending}
+                    className="h-6 shrink-0 rounded-lg bg-black px-3 text-xs text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+                  >
+                    {verify.isPending ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" aria-hidden />
+                        <span aria-live="polite">Verifying…</span>
+                      </>
+                    ) : (
+                      "Verify code"
+                    )}
+                  </Button>
+                </div>
+                {attCodeError ? (
+                  <p role="alert" className="text-center text-sm text-destructive">
+                    {attCodeError}
+                  </p>
+                ) : null}
               </div>
-            </div>
+            </KanbanBoard>
           </div>
         </div>
       </>
@@ -316,7 +344,7 @@ export function MyTimetable() {
         <div className="w-full max-w-3xl">
           <NoTermRecordsPanel
             termLabel={termLabel}
-            isMasterTeacher={isMasterTeacher}
+            isMasterTeacher={false}
             teacherName={linked.name}
           />
         </div>
@@ -330,73 +358,66 @@ export function MyTimetable() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">My Classes</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {isMasterTeacher
-            ? "Master Teacher — no code needed. Your student and subject records open directly."
-            : "Your attached timetable for the week."}
-        </p>
-      </div>
-      {loadingSlots ? (
-        <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading timetable">
-          <div className="h-72 rounded-lg border bg-muted/40" />
-        </div>
-      ) : slotsQuery.isError || !config ? (
-        <p role="alert" className="text-sm text-destructive">
-          Could not load your timetable slots.
-        </p>
-      ) : (
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="flex min-w-0 flex-col gap-4">
           <div className="min-w-0">
-            <MyWeekGrid slots={slots} config={config} />
+            <h1 className="text-2xl font-semibold tracking-tight">My Classes</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your attached timetable for the week.
+            </p>
           </div>
-        <TimetableSidebar
-          linked={linked}
-          isMasterTeacher={isMasterTeacher}
-          reminder={reminder}
-          reminderMeta={reminderMeta}
-          onReleaseRequest={() => setConfirmReleaseOpen(true)}
-        />
+          {loadingSlots ? (
+            <div
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+              aria-busy="true"
+              aria-label="Loading timetable"
+            >
+              {[1, 2, 3, 4, 5].map((day, colIndex) => (
+                <div
+                  key={day}
+                  className={`flex flex-col gap-2 rounded-xl border border-border p-2.5 ${advisoryKanban.skeletonColumn}`}
+                  style={{ "--col-index": colIndex } as CSSProperties}
+                >
+                  <div className={`h-5 w-24 rounded-md bg-muted ${advisoryKanban.skeleton}`} />
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className={`h-24 rounded-lg bg-muted ${advisoryKanban.skeleton}`}
+                      style={{ animationDelay: `${i * 120}ms` }}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : slotsQuery.isError || !config ? (
+            <p role="alert" className="text-sm text-destructive">
+              Could not load your timetable slots.
+            </p>
+          ) : (
+            <div className="min-w-0">
+              <MyWeekGrid slots={slots} config={config} nowKey={nowKey} />
+            </div>
+          )}
         </div>
-      )}
+        {!loadingSlots && !slotsQuery.isError && config ? (
+          <TimetableSidebar
+            linked={linked}
+            reminder={reminder}
+            reminderMeta={reminderMeta}
+            onReleaseRequest={() => setConfirmReleaseOpen(true)}
+          />
+        ) : null}
+      </div>
 
       {confirmReleaseOpen && linked ? (
-        <CardModal
-          open
-          onClose={() => setConfirmReleaseOpen(false)}
-          dismissable={!release.isPending}
-          size="sm"
-          title={<>Leave {termLabel}?</>}
-          description={
-            <>
-              This clears only this term&apos;s entry for {linked.name}
-              {linked.code ? ` (${linked.code})` : ""} — your link and other
-              terms stay attached. Re-enter your code any time to come back.
-            </>
-          }
-        >
-          <div className="flex justify-end gap-2">
-            <Button variant="destructive" onClick={() => setConfirmReleaseOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => release.mutate()}
-              disabled={release.isPending}
-              aria-busy={release.isPending || undefined}
-            >
-              {release.isPending ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" aria-hidden />
-                  <span aria-live="polite">Leaving…</span>
-                </>
-              ) : (
-                "Leave term"
-              )}
-            </Button>
-          </div>
-        </CardModal>
+        <UnlinkCodeDialog
+          linked={linked}
+          pending={release.isPending}
+          onClose={() => {
+            if (!release.isPending) setConfirmReleaseOpen(false);
+          }}
+          onConfirm={handleUnlinkConfirm}
+        />
       ) : null}
     </div>
   );

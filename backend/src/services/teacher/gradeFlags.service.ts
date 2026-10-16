@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
+import { fanoutNotification } from "../../lib/notify.js";
 import { runEscalation } from "../gradeFlags.js";
 import {
   flagInclude,
@@ -297,6 +298,22 @@ export async function raiseFlag(ctx: TeacherContext, input: RaiseFlagInput) {
     reason: `${input.reason} — ${subject.name} / ${section.name}`,
   });
 
+  void (async () => {
+    try {
+      const studentName = (await prisma.studentProfile.findUnique({ where: { userId: input.studentId }, select: { user: { select: { fullName: true } }, section: { select: { adviserId: true } } } }));
+      const adviserId = studentName?.section?.adviserId ?? (await prisma.section.findUnique({ where: { id: input.sectionId }, select: { adviserId: true } }))?.adviserId ?? null;
+      const displayName = studentName?.user.fullName ?? "A student";
+      const message = `${displayName}: grade flag opened in ${subject.name} (${section.name}) — ${input.reason}.`;
+      if (flag.ownerId && flag.ownerId !== teacherId) {
+        await fanoutNotification({ userId: flag.ownerId, sourceTable: "grade_flags", action: "open", message, sourceId: flag.id });
+      }
+      if (adviserId && adviserId !== teacherId && adviserId !== flag.ownerId) {
+        await fanoutNotification({ userId: adviserId, sourceTable: "grade_flags", action: "open", message, sourceId: flag.id });
+      }
+      await fanoutNotification({ userId: teacherId, sourceTable: "grade_flags", action: "open_self", message: `You opened a grade flag for ${displayName} in ${subject.name}.`, sourceId: flag.id });
+    } catch { /* best-effort */ }
+  })();
+
   return serializeFlag(flag);
 }
 
@@ -332,6 +349,20 @@ export async function resolveFlag(ctx: TeacherContext, flagId: string, resolutio
     sourceId: flag.id,
     reason: resolutionNote,
   });
+
+  void (async () => {
+    try {
+      const message = `A grade flag was resolved — ${resolutionNote.slice(0, 140)}.`;
+      if (flag.raisedBy !== teacherId) {
+        await fanoutNotification({ userId: flag.raisedBy, sourceTable: "grade_flags", action: "resolve", message, sourceId: flag.id });
+      }
+      const sectionAdviser = flag.sectionId ? (await prisma.section.findUnique({ where: { id: flag.sectionId }, select: { adviserId: true } }))?.adviserId ?? null : null;
+      if (sectionAdviser && sectionAdviser !== teacherId && sectionAdviser !== flag.raisedBy) {
+        await fanoutNotification({ userId: sectionAdviser, sourceTable: "grade_flags", action: "resolve", message, sourceId: flag.id });
+      }
+      await fanoutNotification({ userId: teacherId, sourceTable: "grade_flags", action: "resolve_self", message: `You resolved a grade flag — ${resolutionNote.slice(0, 140)}.`, sourceId: flag.id });
+    } catch { /* best-effort */ }
+  })();
 
   return serializeFlag(updated);
 }

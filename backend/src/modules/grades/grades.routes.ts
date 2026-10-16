@@ -10,6 +10,8 @@ import { computeSubjectGrade, recomputeSubjectFinal } from "../../services/gradi
 import { recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
+import { assertAssignment } from "../teacher/grading.repository.js";
+import { verifyTeacherCode } from "../../services/teacher/directory.service.js";
 
 const router = Router();
 
@@ -43,14 +45,27 @@ router.post(
         throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
       }
 
+      const profileEntry = isRoster
+        ? null
+        : await prisma.studentProfile.findUnique({
+            where: { userId: rawStudentId },
+            select: { sectionId: true, section: { select: { name: true } } },
+          });
+      if (!isRoster && !profileEntry) {
+        throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
+      }
+
       const sectionName = isRoster
         ? (rosterEntry!.section?.name ?? "")
-        : (
-            await prisma.studentProfile.findUnique({
-              where: { userId: rawStudentId },
-              select: { section: { select: { name: true } } },
-            })
-          )?.section?.name ?? "";
+        : (profileEntry?.section?.name ?? "");
+      // Section-subject scope: a scoped assessment only accepts students
+      // from its own section.
+      if (assessment.sectionId) {
+        const studentSection = isRoster ? rosterEntry!.sectionId : profileEntry!.sectionId;
+        if (studentSection !== assessment.sectionId) {
+          throw new AppError(403, "FORBIDDEN", "Student is not in this section's class for this assessment");
+        }
+      }
       const gc = assessment.gradeComponent;
       if (isRoster) {
         const coverage = await prisma.teacherSubjectAssignment.findFirst({
@@ -187,17 +202,29 @@ router.post(
         profileIds.length > 0
           ? prisma.studentProfile.findMany({
               where: { userId: { in: profileIds } },
-              select: { userId: true, section: { select: { name: true } } },
+              select: { userId: true, sectionId: true, section: { select: { name: true } } },
             })
           : Promise.resolve([]),
       ]);
       const rosterById = new Map(rosterEntries.map((r) => [r.id, r]));
+      const profileById = new Map(profiles.map((p) => [p.userId, p]));
       const profileSet = new Set(profiles.map((p) => p.userId));
       for (const it of candidates) {
         if (it.rosterId) {
           if (!rosterById.has(it.rosterId)) { it.ok = false; it.error = "Student not found"; }
         } else if (!profileSet.has(it.studentId)) {
           it.ok = false; it.error = "Student not found";
+        }
+        // Section-subject scope: a scoped assessment only accepts students
+        // from its own section.
+        if (it.ok && assessment.sectionId) {
+          const studentSection = it.rosterId
+            ? rosterById.get(it.rosterId)?.sectionId
+            : profileById.get(it.studentId)?.sectionId;
+          if (studentSection !== assessment.sectionId) {
+            it.ok = false;
+            it.error = "Student is not in this section's class for this assessment";
+          }
         }
       }
 
@@ -280,12 +307,24 @@ router.post(
         );
 
         // Shared recompute read: all components + grades for changed students, once.
+        // Section-subject scope: each student's evidence only draws from
+        // assessments in their own section plus legacy NULL rows.
         const vRosterIds = changed.filter((i) => i.rosterId).map((i) => i.rosterId as string);
         const vProfileIds = changed.filter((i) => !i.rosterId).map((i) => i.studentId);
+        const studentSectionOf = (studentKey: string): string | null => {
+          if (studentKey.startsWith("roster:")) {
+            return rosterById.get(studentKey.slice("roster:".length))?.sectionId ?? null;
+          }
+          return profileById.get(studentKey)?.sectionId ?? null;
+        };
+        const scopedSectionIds = [...new Set(changed.map((i) => studentSectionOf(i.studentId)).filter((s): s is string => !!s))];
         const components = await prisma.gradeComponent.findMany({
           where: { subjectId: gc.subjectId, termId: gc.termId },
           include: {
             assessments: {
+              where: scopedSectionIds.length > 0
+                ? { OR: [{ sectionId: { in: scopedSectionIds } }, { sectionId: null }] }
+                : {},
               include: {
                 studentGrades: {
                   where: {
@@ -301,17 +340,22 @@ router.post(
         });
         const gradeKey = (g: { studentId: string | null; rosterId: string | null }) =>
           g.rosterId ? `roster:${g.rosterId}` : (g.studentId as string);
+        const assessmentVisible = (a: { sectionId: string | null }, studentKey: string): boolean => {
+          if (!a.sectionId) return true;
+          return studentSectionOf(studentKey) === a.sectionId;
+        };
         const finalsOps = [];
         for (const it of changed) {
           const key = it.studentId;
           const evidence = components.map((c) => {
-            const encoded = c.assessments.filter((a) => a.studentGrades.some((g) => gradeKey(g) === key));
+            const visible = c.assessments.filter((a) => assessmentVisible(a, key));
+            const encoded = visible.filter((a) => a.studentGrades.some((g) => gradeKey(g) === key));
             return {
               componentType: c.componentType,
               weightPercentage: c.weightPercentage,
               earned: encoded.reduce((s, a) => s + a.studentGrades.filter((g) => gradeKey(g) === key).reduce((x, g) => x + g.rawScore, 0), 0),
               possible: encoded.reduce((s, a) => s + a.maxScore, 0),
-              assessmentCount: c.assessments.length,
+              assessmentCount: visible.length,
               encodedCount: encoded.length,
             };
           });
@@ -422,14 +466,145 @@ router.post(
       if (req.termScope?.termId && fg.termId !== req.termScope.termId) {
         throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found in the active term");
       }
+      const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+      if (code) await verifyTeacherCode(req.user!.id, code);
       if (fg.lockStatus !== "unlocked") throw new AppError(409, "ALREADY_LOCKED", "Final already locked");
       const updated = await prisma.finalGrade.update({
         where: { id: fg.id },
         data: { lockStatus: "locked", lockedBy: req.user!.id, lockedAt: new Date() },
       });
       await writeAudit({ userId: req.user!.id, actionType: "grade_lock", sourceTable: "final_grades", sourceId: fg.id, reason: "Subject teacher submitted final grade for adviser approval" });
-      await invalidateTags(["registrar", "registrar-finals", "registrar-overview", "academics", "overview", "principal", "risk", "teacher"]);
+      await invalidateTags(["registrar", "registrar-finals", "registrar-overview", "record-keeper", "record-keeper-finals", "academics", "overview", "principal", "risk", "teacher"]);
       res.json(updated);
+      void (async () => {
+        try {
+          const full = await prisma.finalGrade.findUnique({
+            where: { id: fg.id },
+            select: {
+              subject: { select: { name: true, code: true, gradeLevel: true } },
+              term: { select: { termNumber: true, schoolYear: { select: { name: true } } } },
+              student: { select: { gradeLevel: true, section: { select: { id: true, name: true, adviserId: true } }, user: { select: { fullName: true } } } },
+              roster: { select: { gradeLevel: true, fullName: true, section: { select: { id: true, name: true, adviserId: true } } } },
+            },
+          });
+          if (full) {
+            const gradeLevel = full.student?.gradeLevel ?? full.roster?.gradeLevel ?? full.subject.gradeLevel ?? null;
+            const bandRole = gradeLevel === "G7" || gradeLevel === "G8" || gradeLevel === "G9" || gradeLevel === "G10" ? "record_keeper" : "registrar";
+            const name = full.student?.user.fullName ?? full.roster?.fullName ?? "A student";
+            const sectionName = full.student?.section?.name ?? full.roster?.section?.name ?? "—";
+            const termSentence = `Term ${full.term.termNumber}, ${full.term.schoolYear.name}`;
+            const subjectNoun = `${full.subject.name} (${full.subject.code})`;
+            const locker = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { fullName: true } });
+            const lockerName = locker?.fullName ?? "A subject teacher";
+            const message = `${lockerName} locked ${subjectNoun} for ${name} (${sectionName}) — ${termSentence}. Awaiting adviser approval.`;
+            await fanoutToRole(bandRole, { sourceTable: "final_grades", action: "grade_locked", message, sourceId: fg.id, excludeUserId: req.user!.id });
+            const adviserId = full.student?.section?.adviserId ?? full.roster?.section?.adviserId ?? null;
+            if (adviserId && adviserId !== req.user!.id) {
+              await fanoutNotification({ userId: adviserId, sourceTable: "final_grades", action: "grade_locked", message: `${message} Review it in your advisory queue.`, sourceId: fg.id });
+            }
+          }
+        } catch { /* best-effort */ }
+      })();
+    } catch (e) { next(e); }
+  }
+);
+
+const lockBatchSchema = z.object({
+  assignmentId: z.string().min(1),
+  code: z.string().trim().min(1).max(32),
+  termId: z.string().min(1).optional(),
+});
+
+router.post(
+  "/final-grades/lock-batch",
+  requireAuth,
+  requireRole("subject_teacher", "adviser"),
+  validate("body", lockBatchSchema),
+  async (req, res, next) => {
+    try {
+      const teacherId = req.user!.id;
+      const requestedTermId = typeof req.body.termId === "string" && req.body.termId.trim()
+        ? String(req.body.termId)
+        : null;
+      const scopeTermId = req.termScope?.termId ?? null;
+      const termId = requestedTermId ?? scopeTermId;
+      if (!termId) throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
+      await verifyTeacherCode(teacherId, String(req.body.code));
+      const rawAssignmentId = String(req.body.assignmentId);
+      // The printable record URL carries a composite `subjectId|sectionId` id.
+      // Some clients send the pipe percent-encoded (`%7C`) inside the JSON
+      // body (path params get decoded by Express, JSON bodies do not).
+      let assignmentId = rawAssignmentId;
+      try {
+        if (rawAssignmentId.includes("%")) assignmentId = decodeURIComponent(rawAssignmentId);
+      } catch { assignmentId = rawAssignmentId; }
+      let assignment;
+      try {
+        assignment = await assertAssignment(teacherId, assignmentId, termId);
+      } catch (e) {
+        // Header scope may point at a different term than the class on screen
+        // (e.g. record tab opened from an older workspace state). Fall back to
+        // the term where this teacher actually owns the class.
+        if (!(e instanceof AppError) || e.code !== "CLASS_NOT_FOUND" || assignmentId.indexOf("|") < 0) throw e;
+        const sep = assignmentId.indexOf("|");
+        const subjectId = assignmentId.slice(0, sep);
+        const sectionId = assignmentId.slice(sep + 1);
+        const [altAssignment, altLink] = await Promise.all([
+          prisma.teacherSubjectAssignment.findFirst({
+            where: { teacherId, subjectId, sectionId },
+            orderBy: { termId: "asc" },
+            select: { termId: true },
+          }),
+          prisma.sectionTimetableEntry.findFirst({
+            where: { subjectId, sectionId, status: { in: ["APPROVED", "SUBMITTED"] }, teacherName: { userId: teacherId } },
+            orderBy: { termId: "asc" },
+            select: { termId: true },
+          }),
+        ]);
+        const altTermId = altAssignment?.termId ?? altLink?.termId;
+        if (!altTermId) throw e;
+        assignment = await assertAssignment(teacherId, assignmentId, altTermId);
+      }
+      const effectiveTermId: string = assignment.termId;
+      const targets = await prisma.finalGrade.findMany({
+        where: {
+          subjectId: assignment.subjectId,
+          termId: effectiveTermId,
+          lockStatus: "unlocked",
+          NOT: { computedAverage: null },
+          OR: [
+            { student: { sectionId: assignment.sectionId } },
+            { roster: { sectionId: assignment.sectionId } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (targets.length === 0) throw new AppError(409, "NOTHING_TO_LOCK", "Nothing to lock — all grades are already locked or have no average yet");
+      await prisma.finalGrade.updateMany({
+        where: { id: { in: targets.map((t) => t.id) } },
+        data: { lockStatus: "locked", lockedBy: teacherId, lockedAt: new Date() },
+      });
+      await writeAudit({ userId: teacherId, actionType: "grade_lock", sourceTable: "final_grades", sourceId: assignmentId, reason: `Subject teacher locked ${targets.length} grades ${assignment.subject.code} ${assignment.section.name}` });
+      await invalidateTags(["registrar", "registrar-finals", "registrar-overview", "record-keeper", "record-keeper-finals", "academics", "overview", "principal", "risk", "teacher"]);
+      res.json({ locked: targets.length, skipped: 0 });
+      void (async () => {
+        try {
+          const gradeLevel = assignment.subject.gradeLevel ?? assignment.section.gradeLevel ?? null;
+          const bandRole = gradeLevel === "G7" || gradeLevel === "G8" || gradeLevel === "G9" || gradeLevel === "G10" ? "record_keeper" : "registrar";
+          const termSentence = `Term ${assignment.term.termNumber}, ${assignment.term.schoolYear.name}`;
+          const teacher = await prisma.user.findUnique({ where: { id: teacherId }, select: { fullName: true } });
+          const teacherName = teacher?.fullName ?? "A subject teacher";
+          const unit = targets.length === 1 ? "grade" : "grades";
+          const subjectNoun = `${assignment.subject.name} (${assignment.subject.code})`;
+          const message = `${teacherName} locked ${targets.length} ${subjectNoun} ${unit} for ${assignment.section.name} — ${termSentence}. They are awaiting adviser approval.`;
+          const adviserMessage = `${message} Review them in your advisory queue.`;
+          await fanoutToRole(bandRole, { sourceTable: "final_grades", action: "grade_locked", message, sourceId: assignmentId, excludeUserId: teacherId });
+          const section = await prisma.section.findUnique({ where: { id: assignment.sectionId }, select: { adviserId: true } });
+          if (section?.adviserId && section.adviserId !== teacherId) {
+            await fanoutNotification({ userId: section.adviserId, sourceTable: "final_grades", action: "grade_locked", message: adviserMessage, sourceId: assignmentId });
+          }
+        } catch { /* best-effort */ }
+      })();
     } catch (e) { next(e); }
   }
 );
@@ -467,6 +642,8 @@ router.post(
               termId: true,
               studentId: true,
               rosterId: true,
+              lockedBy: true,
+              subject: { select: { name: true, code: true } },
               term: { select: { termNumber: true, schoolYear: { select: { name: true } } } },
               student: {
                 select: {
@@ -495,11 +672,26 @@ router.post(
             gradeLevel === "G7" || gradeLevel === "G8" || gradeLevel === "G9" || gradeLevel === "G10"
               ? "record_keeper"
               : "registrar";
-          const termLabel = `${full.term.schoolYear.name.split(" ")[0]} T${full.term.termNumber}`;
+          const termSentence = `Term ${full.term.termNumber}, ${full.term.schoolYear.name}`;
+          const approver = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { fullName: true } });
+          const approverName = approver?.fullName ?? "The adviser";
+          const subjectNoun = full.subject ? ` ${full.subject.name} (${full.subject.code})` : "";
+          if (full.lockedBy && full.lockedBy !== req.user!.id) {
+            try {
+              await fanoutNotification({
+                userId: full.lockedBy,
+                sourceTable: "final_grades",
+                action: "adviser_approved",
+                message: `${approverName} approved${subjectNoun} for ${name} (${section}) — ${termSentence}.`,
+                sourceId: fg.id,
+              });
+            } catch { /* best-effort */ }
+          }
+          if (remaining > 0) return;
           await fanoutToRole(bandRole, {
             sourceTable: "final_grades",
             action: "adviser_approved",
-            message: `Finals ready: ${name} (${section}) — ${termLabel}, all subjects adviser-approved.`,
+            message: `${approverName} approved all subjects for ${name} (${section}) — ${termSentence}. The record is complete and ready for your review.`,
             sourceId: fg.id,
             excludeUserId: req.user!.id,
           });

@@ -1,6 +1,7 @@
 export interface TeacherClassRow {
   id: string;
   subject: string;
+  subjectCode: string;
   gradeLevel: string;
   section: string;
   studentCount: number;
@@ -23,21 +24,28 @@ export interface AdvisoryStatusRow {
   studentId: string;
   name: string;
   lrn: string;
+  /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
+  mascot: string | null;
   section: string;
   riskLevel: "Low" | "Moderate" | "High";
   flag: "academic" | "attendance" | "behavioral" | "none";
   flags: ("academic" | "attendance" | "behavioral")[];
+  snapshotDate: string | null;
 }
 
 export interface SubjectAssessmentRow {
   id: string;
   subject: string;
+  subjectId?: string;
   gradeLevel: string;
   section: string;
+  sectionId?: string;
   type: "WW" | "PT" | "E";
   title: string;
   dueDate: string;
   status: string;
+  scored?: number;
+  students?: number;
 }
 
 export interface ClassAverageRow {
@@ -59,6 +67,8 @@ export interface ClassStudentRow {
   studentId: string;
   name: string;
   lrn: string;
+  /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
+  mascot: string | null;
   sectionId: string;
   section: string;
 
@@ -66,6 +76,7 @@ export interface ClassStudentRow {
   riskLevel: "Low" | "Moderate" | "High";
 
   flags: ("academic" | "attendance")[];
+  snapshotDate: string | null;
 }
 
 export interface TeacherOverviewData {

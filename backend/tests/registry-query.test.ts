@@ -5,6 +5,7 @@ import {
   registryFinalGradesQuerySchema,
 } from "../src/modules/registry/registry.schemas.js";
 import { pendingAccountsQuerySchema } from "../src/modules/auth/auth.schemas.js";
+import { buildAdvisoryIdentity } from "../src/services/registry/access.service.js";
 
 describe("Registry list query validation (pageSize capped at 15)", () => {
   it("rejects oversized pages on finals and audit lists", () => {
@@ -20,6 +21,39 @@ describe("Registry list query validation (pageSize capped at 15)", () => {
   });
 
   it("trims long free-text queries", () => {
-    expect(registryFinalGradesQuerySchema.safeParse({ q: "x".repeat(201) }).success).toBe(false);
+    expect(registryAccessRequestsQuerySchema.safeParse({ q: "x".repeat(201) }).success).toBe(false);
+  });
+});
+
+describe("Adviser access advisory identity (profiles + roster-only)", () => {
+  it("keeps roster-only sections visible even with zero registered profiles", () => {
+    const bySection = buildAdvisoryIdentity(
+      [],
+      [
+        { sectionId: "sec-1", lrn: "111", name: "Roster One" },
+        { sectionId: "sec-1", lrn: "222", name: "Roster Two" },
+      ],
+    );
+    expect([...(bySection.get("sec-1")?.keys() ?? [])].sort()).toEqual(["111", "222"]);
+  });
+
+  it("prefers the section profile name over the roster name for the same LRN", () => {
+    const bySection = buildAdvisoryIdentity(
+      [{ sectionId: "sec-1", lrn: "111", name: "Profile Name" }],
+      [{ sectionId: "sec-1", lrn: "111", name: "Roster Name" }],
+    );
+    expect(bySection.get("sec-1")?.get("111")).toEqual({ name: "Profile Name" });
+  });
+
+  it("keeps profile-only and mixed sections intact", () => {
+    const bySection = buildAdvisoryIdentity(
+      [
+        { sectionId: "sec-1", lrn: "111", name: "Profile One" },
+        { sectionId: "sec-2", lrn: "333", name: "Profile Other" },
+      ],
+      [{ sectionId: "sec-1", lrn: "222", name: "Roster Two" }],
+    );
+    expect([...(bySection.get("sec-1")?.keys() ?? [])].sort()).toEqual(["111", "222"]);
+    expect([...(bySection.get("sec-2")?.keys() ?? [])]).toEqual(["333"]);
   });
 });

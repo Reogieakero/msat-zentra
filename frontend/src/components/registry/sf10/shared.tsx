@@ -17,13 +17,22 @@ export function formatRelativeTime(iso: string | null): string {
 }
 
 export function StatusBadge({ status }: { status: Sf10Status }) {
-  const variant =
-    status === "released" ? "secondary" : status === "available" ? "default" : "warning";
-  const label =
-    status === "released" ? "Released" : status === "available" ? "Available" : "Attached";
+  const variant = status === "released" ? "secondary" : "warning";
+  const label = status === "released" ? "Released" : "Attached";
   return (
     <Badge variant={variant} className="font-normal">
       {label}
     </Badge>
   );
+}
+
+/**
+ * Display a subject name without its grade tag: "English 8" → "English".
+ * Matching already ignores these tags; display should too.
+ */
+export function displaySubjectName(name: string): string {
+  const stripped = name
+    .replace(/\s+(g\s*)?(7|8|9|10|11|12|vii|viii|ix|x|xi|xii)\s*$/i, "")
+    .trim();
+  return stripped || name;
 }

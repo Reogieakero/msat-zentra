@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../lib/pagination.js";
+import { MASCOT_CHARACTERS } from "../../services/mascot.js";
 
 export const masterTeacherSchema = z.object({ isMasterTeacher: z.boolean() });
 
@@ -9,6 +10,7 @@ export const HEX_COLOR = z
 
 export const teacherProfileSchema = z.object({
   fullName: z.string().trim().min(1).max(100).optional(),
+  mascot: z.enum(MASCOT_CHARACTERS).nullable().optional(),
   primaryColor: HEX_COLOR.nullable().optional(),
   secondaryColor: HEX_COLOR.nullable().optional(),
 });
@@ -54,7 +56,7 @@ export const scheduleConfigBodySchema = z.object({
   }),
   morningRecess: recessBodySchema(1, 4),
   afternoonRecess: recessBodySchema(5, 8),
-});
+}).passthrough();
 
 export const unlockSchema = z.object({ sectionId: z.string() });
 

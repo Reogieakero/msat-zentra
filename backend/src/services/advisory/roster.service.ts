@@ -3,6 +3,7 @@ import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { mascotForUnique, sectionTakenMascots } from "../mascot.js";
 import {
   adviserSectionsOr404,
   teachableSectionIds,
@@ -13,6 +14,19 @@ export interface EnlistInput {
   fullName: string;
   lrn: string;
   sectionId?: string;
+}
+
+/** Marker email domain for placeholder accounts auto-created by SF10 upload. */
+const SF10_PROVISIONED_SUFFIX = "@sf10-provisioned.local";
+
+/**
+ * Pure helper (unit-tested): an SF10 upload auto-provisions a placeholder
+ * account (`<lrn>@sf10-provisioned.local`) so the LRN exists before any
+ * real enrollment. That placeholder must NOT gate advisory enlistment —
+ * the advisory list is ungated, so a provisioned LRN enlists like roster-only.
+ */
+export function isSf10ProvisionedEmail(email: string): boolean {
+  return email.toLowerCase().endsWith(SF10_PROVISIONED_SUFFIX);
 }
 
 export async function enlistRoster(
@@ -41,16 +55,21 @@ export async function enlistRoster(
   }
   const alreadyRegistered = await prisma.studentProfile.findUnique({
     where: { lrn: input.lrn },
-    select: { userId: true },
+    select: { userId: true, user: { select: { email: true } } },
   });
-  if (alreadyRegistered) {
+  // The advisory list is ungated: an LRN saved only as an SF10-upload
+  // placeholder account is not a real enrollment, so it never blocks
+  // enlistment. Only a real (non-provisioned) account does.
+  if (alreadyRegistered && !isSf10ProvisionedEmail(alreadyRegistered.user.email)) {
     throw new AppError(409, "LRN_REGISTERED", "This LRN already has an account");
   }
 
+  const taken = await sectionTakenMascots(prisma, section.id);
   const entry = await prisma.studentRoster.create({
     data: {
       lrn: input.lrn,
       fullName: input.fullName,
+      mascot: mascotForUnique(input.fullName, input.lrn, taken),
       gradeLevel: section.gradeLevel,
       sectionId: section.id,
       schoolYearId: yearId,
@@ -62,6 +81,7 @@ export async function enlistRoster(
     studentId: `roster:${entry.id}`,
     name: entry.fullName,
     lrn: entry.lrn,
+    mascot: entry.mascot,
     birthdate: null,
     gender: null,
     section: entry.section.name,

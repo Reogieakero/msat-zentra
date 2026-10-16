@@ -127,6 +127,22 @@ export async function claimCode(ctx: TeacherContext, code: string) {
     data: { userId: teacherId },
     select: { id: true, name: true, code: true },
   });
+  // Merged entry: linking also enters the current term (same as verifying),
+  // so one code entry opens classes, grading, and attendance together.
+  // No active term selected => link only; the term gate still applies later.
+  if (ctx.termId) {
+    await prisma.teacherTermGrant.upsert({
+      where: { userId_termId: { userId: teacherId, termId: ctx.termId } },
+      update: { via: "code", teacherNameId: linked.id, attendanceVerifiedAt: new Date() },
+      create: {
+        userId: teacherId,
+        termId: ctx.termId,
+        via: "code",
+        teacherNameId: linked.id,
+        attendanceVerifiedAt: new Date(),
+      },
+    });
+  }
   await writeAudit({
     userId: teacherId,
     actionType: "update",
@@ -145,6 +161,32 @@ export async function claimCode(ctx: TeacherContext, code: string) {
     message: `You linked code ${linked.code ?? "—"} (${linked.name}) to your login.`,
   });
   return { teacherName: linked };
+}
+
+export async function verifyTeacherCode(userId: string, code: string) {
+  const cleaned = (code ?? "").trim();
+  if (!cleaned) {
+    throw new AppError(400, "CODE_REQUIRED", "Enter your subject teacher code to lock grades");
+  }
+  const mine = await prisma.teacherName.findUnique({
+    where: { userId },
+    select: { id: true, name: true, code: true },
+  });
+  if (!mine) {
+    throw new AppError(
+      409,
+      "NOT_LINKED",
+      "No schedule link code found — link your code in My Classes first"
+    );
+  }
+  if (!mine.code || mine.code.trim().toUpperCase() !== cleaned.toUpperCase()) {
+    throw new AppError(
+      403,
+      "CODE_MISMATCH",
+      "This code is not the same as your schedule link code. Check My Classes for the code you linked and try again"
+    );
+  }
+  return mine;
 }
 
 export async function verifyAttendance(ctx: TeacherContext, code: string) {
@@ -221,29 +263,48 @@ export async function verifyAttendance(ctx: TeacherContext, code: string) {
   return result;
 }
 
-export async function leaveTerm(ctx: TeacherContext) {
+export async function unlinkCode(ctx: TeacherContext) {
   const teacherId = ctx.userId;
-  const termId = ctx.termId;
-  if (!termId) {
-    throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
-  }
   const mine = await prisma.teacherName.findUnique({
     where: { userId: teacherId },
     select: { id: true, name: true, code: true },
   });
   if (!mine) {
-    throw new AppError(404, "NOT_LINKED", "This login is not linked to any teacher list entry");
+    throw new AppError(404, "NOT_LINKED", "This login is not linked to any teacher code");
   }
 
+  await prisma.teacherName.update({
+    where: { id: mine.id },
+    data: { userId: null, attendanceVerifiedAt: null },
+  });
+  // Clear all per-term grants so classes, grading, and attendance all
+  // unlink together — no per-term residue keeps old subjects visible.
   await prisma.teacherTermGrant.deleteMany({
-    where: { userId: teacherId, termId },
+    where: { userId: teacherId },
   });
   await writeAudit({
     userId: teacherId,
     actionType: "update",
-    sourceTable: "teacher_term_grants",
+    sourceTable: "teacher_names",
     sourceId: mine.id,
-    reason: "Teacher left the active term (per-term leave; link and other terms kept)",
+    reason: `Teacher unlinked code ${mine.code ?? "—"} (${mine.name}) from their login`,
   });
-  return { released: true };
+
+  void notifyMastersTeacherLinkChanged(mine.id, mine.name, mine.code, "unclaim");
+
+  void fanoutNotification({
+    userId: teacherId,
+    sourceTable: "teacher_names",
+    action: "unclaim_self",
+    sourceId: mine.id,
+    message: `You unlinked code ${mine.code ?? "—"} (${mine.name}) — classes, grading, and attendance are now cleared.`,
+  });
+  return { unlinked: true, teacherName: mine };
+}
+
+export async function leaveTerm(ctx: TeacherContext) {
+  // Legacy per-term leave kept for reference — the classes sidebar now
+  // unlinks the code entirely (see unlinkCode), so grading + attendance
+  // clear together instead of keeping the link.
+  return unlinkCode(ctx);
 }

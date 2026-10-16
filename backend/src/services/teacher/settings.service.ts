@@ -3,6 +3,7 @@ import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { gradeToNumber } from "../../modules/teacher/teacher.repository.js";
+import { isMascotCharacter } from "../mascot.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 const MASTER_TEACHER_GRADES = new Set([7, 8, 9, 10]);
@@ -117,9 +118,17 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
         where: { isMasterTeacher: true, userId: { not: teacherId } },
         data: { isMasterTeacher: false },
       });
-      await tx.staffProfile.updateMany({
+      // Use upsert (not updateMany): teachers without a StaffProfile row yet
+      // would otherwise get a silent 0-row update — success response, no DB
+      // change, Timeslot link never appears.
+      await tx.staffProfile.upsert({
         where: { userId: teacherId },
-        data: { isMasterTeacher: true },
+        update: { isMasterTeacher: true },
+        create: {
+          userId: teacherId,
+          employeeId: `T-${teacherId.slice(0, 8)}`,
+          isMasterTeacher: true,
+        },
       });
     });
   } else {
@@ -167,12 +176,13 @@ export async function readProfileSettings(teacherId: string) {
     }),
     prisma.staffProfile.findUnique({
       where: { userId: teacherId },
-      select: { photoUrl: true, primaryColor: true, secondaryColor: true },
+      select: { photoUrl: true, mascot: true, primaryColor: true, secondaryColor: true },
     }),
   ]);
   return {
     fullName: user?.fullName ?? "",
     photoUrl: profile?.photoUrl ?? null,
+    mascot: profile?.mascot ?? null,
     primaryColor: profile?.primaryColor ?? null,
     secondaryColor: profile?.secondaryColor ?? null,
   };
@@ -180,13 +190,17 @@ export async function readProfileSettings(teacherId: string) {
 
 export interface UpdateProfileSettingsInput {
   fullName?: string;
+  mascot?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
 }
 
 export async function updateProfileSettings(ctx: TeacherContext, input: UpdateProfileSettingsInput) {
   const teacherId = ctx.userId;
-  const { fullName, primaryColor, secondaryColor } = input;
+  const { fullName, mascot, primaryColor, secondaryColor } = input;
+  if (mascot !== undefined && mascot !== null && !isMascotCharacter(mascot)) {
+    throw new AppError(400, "INVALID_MASCOT", "Unknown mascot character.");
+  }
   await prisma.$transaction(async (tx) => {
     if (fullName !== undefined) {
       await tx.user.update({
@@ -194,9 +208,10 @@ export async function updateProfileSettings(ctx: TeacherContext, input: UpdatePr
         data: { fullName },
       });
     }
-    const palette: { primaryColor?: string | null; secondaryColor?: string | null } = {};
+    const palette: { primaryColor?: string | null; secondaryColor?: string | null; mascot?: string | null } = {};
     if (primaryColor !== undefined) palette.primaryColor = primaryColor;
     if (secondaryColor !== undefined) palette.secondaryColor = secondaryColor;
+    if (mascot !== undefined) palette.mascot = mascot;
     if (Object.keys(palette).length > 0) {
       await tx.staffProfile.upsert({
         where: { userId: teacherId },

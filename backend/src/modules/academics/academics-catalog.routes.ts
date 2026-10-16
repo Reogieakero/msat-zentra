@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
 import { AppError } from "../../lib/errors.js";
+import { fanoutNotification } from "../../lib/notify.js";
 import { gradeToNumber } from "../../lib/grades.js";
 import { toCategoryLabel } from "./academics-shared.js";
 
@@ -260,6 +261,13 @@ router.post(
         teacherName: assignment.teacher.fullName,
         term: `Term ${assignment.term.termNumber}`,
       });
+      void fanoutNotification({
+        userId: teacherId,
+        sourceTable: "teacher_subject_assignments",
+        action: "assigned",
+        sourceId: assignment.id,
+        message: `You were assigned to ${assignment.subject.name} (${assignment.subject.code}) in ${section.name} — Term ${assignment.term.termNumber}.`,
+      });
     } catch (e) {
       next(e);
     }
@@ -273,7 +281,10 @@ router.delete(
   async (req, res, next) => {
     try {
       const id = String(req.params.id);
-      const existing = await prisma.teacherSubjectAssignment.findUnique({ where: { id } });
+      const existing = await prisma.teacherSubjectAssignment.findUnique({
+        where: { id },
+        include: { subject: { select: { name: true, code: true } }, section: { select: { name: true } } },
+      });
       if (!existing) throw new AppError(404, "ASSIGNMENT_NOT_FOUND", "Assignment not found");
 
       await prisma.teacherSubjectAssignment.delete({ where: { id } });
@@ -287,6 +298,15 @@ router.delete(
       await invalidateTags(["academics", "principal", "registrar", "overview"]);
 
       res.json({ id, deleted: true });
+      if (existing.teacherId) {
+        void fanoutNotification({
+          userId: existing.teacherId,
+          sourceTable: "teacher_subject_assignments",
+          action: "removed",
+          sourceId: id,
+          message: `Your assignment to ${existing.subject?.name ?? "a subject"} in ${existing.section?.name ?? "a section"} was removed.`,
+        });
+      }
     } catch (e) {
       next(e);
     }

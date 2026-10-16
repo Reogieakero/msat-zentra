@@ -16,6 +16,7 @@ const TEACHER_KEYS = [
   ["referableAnecdotal"],
   ["advisory-students"],
   ["advisory-students-archived"],
+  ["teacher-sf10-access"],
   ["advisee-academic"],
   ["advisee-attendance"],
   ["anecdotal-mine"],
@@ -90,7 +91,6 @@ export function useTeacherRealtime(enabled = true) {
 
   React.useEffect(() => {
     if (!enabled) return;
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
     if (!userId) return;
     seenIds.current = new Set();
     let channel: { unsubscribe: () => void } | null = null;
@@ -143,13 +143,17 @@ export function useTeacherRealtime(enabled = true) {
       if (table.startsWith("attendance")) return ATTENDANCE;
       if (table.startsWith("student_grade") || table.startsWith("final_grade"))
         return GRADING;
-      if (table.startsWith("section_timetable") || table.startsWith("teacher_"))
+      if (table.startsWith("section_timetable") || table.startsWith("teacher_") || table.startsWith("section") || table.startsWith("subject"))
         return SCHEDULE;
       if (table.startsWith("referral")) return REFERRAL;
       if (table.startsWith("anecdotal")) return ANECDOTAL;
       if (table.startsWith("student_roster") || table.startsWith("intervention"))
         return ADVISORY;
-      if (type.includes("grade-flag") || type.includes("grade_flag"))
+      if (table.startsWith("adviser_sf10_access_request"))
+        return [["teacher-sf10-access"]];
+      if (table.startsWith("sf10_record"))
+        return [["teacher-sf10-access"]];
+      if (type.includes("grade-flag") || type.includes("grade_flag") || table.startsWith("grade_flag"))
         return [["grade-flags"]];
       return [];
     }
@@ -176,29 +180,33 @@ export function useTeacherRealtime(enabled = true) {
       void invalidate(row);
     }
 
-    try {
-      const supabase = createClient();
-      const ch = supabase
-        .channel(`teacher-desk-${userId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "Notification",
-            filter: `userId=eq.${userId}`,
-          },
-          (payload) => {
-            notify((payload as unknown as { new?: TeacherNotification }).new as TeacherNotification);
-          },
-        )
-        .subscribe((status) => {
-          if (!cancelled && status !== "SUBSCRIBED") {
-            console.warn(`[teacher-realtime] channel status: ${status}`);
-          }
-        });
-      if (!cancelled) channel = ch as unknown as { unsubscribe: () => void };
-    } catch {
+    // Realtime needs Supabase env; the HTTP fallback poll below runs
+    // regardless so the bell still updates live without it.
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      try {
+        const supabase = createClient();
+        const ch = supabase
+          .channel(`teacher-desk-${userId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "Notification",
+              filter: `userId=eq.${userId}`,
+            },
+            (payload) => {
+              notify((payload as unknown as { new?: TeacherNotification }).new as TeacherNotification);
+            },
+          )
+          .subscribe((status) => {
+            if (!cancelled && status !== "SUBSCRIBED") {
+              console.warn(`[teacher-realtime] channel status: ${status}`);
+            }
+          });
+        if (!cancelled) channel = ch as unknown as { unsubscribe: () => void };
+      } catch {
+      }
     }
 
     let seeded = false;
