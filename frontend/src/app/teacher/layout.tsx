@@ -83,15 +83,19 @@ function TeacherChrome({
 
   const isDark = resolvedTheme === "dark";
 
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(true);
   React.useEffect(() => {
     try {
-      if (window.localStorage.getItem("zentra.teacher.sidebar.collapsed") === "1") {
+      const stored = window.localStorage.getItem("zentra.teacher.sidebar.collapsed");
+      if (stored === "0") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate persisted rail state after mount
+        setSidebarCollapsed(false);
+      } else if (stored === "1") {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate persisted rail state after mount
         setSidebarCollapsed(true);
       }
     } catch {
-      /* private mode — stay expanded */
+      /* private mode — stay collapsed */
     }
   }, []);
   const handleSidebarToggle = React.useCallback(() => {

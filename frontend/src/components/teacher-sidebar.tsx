@@ -86,7 +86,7 @@ function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
 }
 
 export function TeacherSidebar({
-  collapsed = false,
+  collapsed = true,
 }: {
   collapsed?: boolean;
 } = {}) {
