@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { CardModal } from "@/components/ui/CardModal";
+import { Pill } from "@/components/ui/pill";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import type { AdmReferralForm } from "@/services/principal/adm.types";
 import styles from "../all.module.css";
 const FORM_TYPE_LABELS: Record<string, string> = {
@@ -35,14 +35,14 @@ export function AdmPreviewModal({
   onOpenOfficial: (anecdotalRecordId: string) => void;
 }) {
   return (
-    <CardModal
+    <KanbanOverlay
       open={preview !== null}
       onClose={onClose}
       title={preview?.form.title ?? "Report"}
       description={
         preview ? `${preview.student} · ${preview.lrn}` : undefined
       }
-      watchKey={preview?.form.id}
+      width="lg"
     >
       {preview ? (
         <div className={styles.previewBody}>
@@ -56,7 +56,9 @@ export function AdmPreviewModal({
             <div className={styles.previewRow}>
               <dt>Status</dt>
               <dd>
-                <Badge variant="outline">{preview.form.status}</Badge>
+                <Pill tone="neutral" label="Form status">
+                  {preview.form.status}
+                </Pill>
               </dd>
             </div>
             <div className={styles.previewRow}>
@@ -118,6 +120,6 @@ export function AdmPreviewModal({
           )}
         </div>
       ) : null}
-    </CardModal>
+    </KanbanOverlay>
   );
 }

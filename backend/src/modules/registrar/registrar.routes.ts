@@ -18,7 +18,7 @@ import {
 import { getOverview } from "../../services/registry/overview.service.js";
 import { listFinalGrades } from "../../services/registry/finals.service.js";
 import {
-  buildRegistrarBreakdown,
+  buildAccountBreakdown,
   getAccountBreakdown,
   getAccountsAudit,
   listBandStudents,
@@ -101,7 +101,7 @@ router.get(
         ctxOf(req),
         { schoolYearId },
       );
-      res.json({ data: buildRegistrarBreakdown(roster, statusByLrn, profilesWithoutRoster) });
+      res.json({ data: buildAccountBreakdown(roster, statusByLrn, profilesWithoutRoster) });
     } catch (e) {
       next(e);
     }
@@ -388,13 +388,15 @@ router.patch(
   validate("body", registryProfileSchema),
   async (req, res, next) => {
     try {
-      const { fullName, primaryColor, secondaryColor } = req.body as {
+      const { fullName, mascot, primaryColor, secondaryColor } = req.body as {
         fullName?: string;
+        mascot?: string | null;
         primaryColor?: string | null;
         secondaryColor?: string | null;
       };
       const result = await updateProfileSettings(ctxOf(req), REGISTRAR_IDENTITY, {
         fullName,
+        mascot,
         primaryColor,
         secondaryColor,
       });

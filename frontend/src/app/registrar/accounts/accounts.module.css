@@ -1,13 +1,26 @@
+/* Main stack + icon-only KPI rail on the right (same two-column shell as
+   the registrar overview). The rail renders the shared registry KPI icons
+   with their kanban flyout panels. */
 .page {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  align-items: start;
   gap: 1rem;
   /* 0 padding: shell .main already gives exactly 16px gutters. */
   padding: 0;
   min-width: 0;
+  /* Pin every board, pill, row and control on the page to Inter (the
+     flyout rail declares it explicitly too). */
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Stacked layout: KPI tiles, queue table, breakdown, audit trail. */
+@media (max-width: 1023px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Stacked layout: KPI board, queue table, breakdown, audit trail. */
 .stack {
   display: flex;
   flex-direction: column;
@@ -15,8 +28,8 @@
   min-width: 0;
 }
 
-/* True-empty state: hide the page header, tiles, and queue/breakdown cards
-   entirely and center a single card (center + center) with no page scroll.
+/* True-empty state: hide the KPI board and queue/breakdown cards entirely
+   and center a single card (center + center) with no page scroll.
    Math mirrors registrar.module.css shell offsets (main keeps 1rem
    gutters on mobile): 3rem topbar + 2rem main padding on desktop,
    6rem + 2rem below 1024px. Doubled selector beats .page regardless of
@@ -24,6 +37,8 @@
    sub-pixel/glow overflow without creating a scroll container.
    Must stay after .page. */
 .pageEmpty.pageEmpty {
+  display: flex;
+  flex-direction: column;
   justify-content: center;
   min-height: calc(100vh - 3rem - 2rem);
   min-height: calc(100dvh - 3rem - 2rem);
@@ -38,59 +53,106 @@
   }
 }
 
-/* KPI tiles inside the summary glow card. */
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  width: 100%;
-}
-
-.tile {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.875rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--card);
+/* KPI strip — kanban columns mirroring the registrar overview stats board:
+   column shell + kanban header + number-first stat card with mascot chip. */
+.kpiBoard {
   min-width: 0;
 }
 
-.tileSkel {
-  height: 5.5rem;
-  width: 100%;
-  border-radius: var(--radius-md);
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
 }
 
-.tileValue {
-  font-size: 1.5rem;
+.kpiColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+
+:global(.dark) .kpiColumn {
+  background-color: color-mix(in oklch, var(--muted) 20%, transparent);
+}
+
+.kpiStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
+}
+
+.kpiStatTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Column mascot — decorative sprite chip (same framing as the overview
+   stats columns). */
+.kpiMascot {
+  display: inline-flex;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background-color: color-mix(in oklch, var(--muted) 40%, transparent);
+}
+
+.kpiNumber {
+  font-size: 1.75rem;
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  line-height: 1;
   color: var(--foreground);
   font-variant-numeric: tabular-nums;
 }
 
-.tileLabel {
-  font-weight: 600;
-  font-size: 0.8125rem;
-  letter-spacing: -0.005em;
-  color: var(--foreground);
-}
-
-.tileHint {
-  font-size: 0.6875rem;
+/* Zeroed queues read calm; any pending count stands out. */
+.kpiNumberZero {
   color: var(--muted-foreground);
 }
 
-.card {
+.kpiHint {
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.kpiHeadSkeleton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-inline: -0.625rem;
+  padding: 0 0.875rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.kpiSkelTitle {
+  height: 1rem;
+  width: 8rem;
   min-width: 0;
+  border-radius: var(--radius-md);
+}
+
+.kpiSkelCard {
+  height: 4.6875rem;
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
 }
 
 .header {
@@ -126,16 +188,20 @@
 .searchIcon {
   position: absolute;
   left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
   width: 1rem;
   height: 1rem;
   color: var(--muted-foreground);
   pointer-events: none;
 }
 
+/* Board-header search — 16px radius like the final-grades board search. */
 .search {
-  width: 220px;
+  width: 240px;
   height: 2rem;
   padding-left: 2rem;
+  border-radius: 1rem;
 }
 
 .clearBtn {
@@ -152,50 +218,8 @@
   padding: 0;
 }
 
-.tableWrap {
-  min-width: 0;
-  overflow-x: auto;
-}
-
-.studentCell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-}
-
-.studentName {
-  font-weight: 600;
-  font-size: 0.8125rem;
-  color: var(--foreground);
-  letter-spacing: -0.005em;
-}
-
-.studentLrn {
-  font-size: 0.6875rem;
-  color: var(--muted-foreground);
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-
-.requested {
-  font-size: 0.6875rem;
-  white-space: nowrap;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.statusBadge {
-  font-size: 0.6875rem;
-  font-weight: 600;
-}
-
-.menuCell {
-  text-align: right;
-}
-
-/* Flush table — no gutters */
+/* Flush table — no gutters (kept for the AccountsAudit card, which reuses
+   this module's .content/.header shells). */
 .content :global(table) {
   font-size: 0.8125rem;
   border-collapse: collapse;
@@ -241,71 +265,6 @@
   font-size: 0.8125rem;
 }
 
-.emptyBlock {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  margin: 0;
-  padding: 2.5rem 1rem;
-  text-align: center;
-}
-
-.emptyIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 9999px;
-  background-color: var(--muted);
-  color: var(--muted-foreground);
-  margin-bottom: 0.375rem;
-}
-
-.emptyIcon svg {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.emptyTitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--foreground);
-}
-
-.emptyHint {
-  margin: 0;
-  max-width: 26rem;
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  color: var(--muted-foreground);
-}
-
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.footerInfo {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-}
-
-.footerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .skelName {
   width: 55%;
   height: 0.875rem;
@@ -320,91 +279,43 @@
   height: 0.75rem;
 }
 
-/* Queue header + pager. */
-.queueHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+/* Scroll anchor for the section rail's "Review accounts" jump — clears the
+   3rem sticky topbar. */
+.queueAnchor {
+  scroll-margin-top: 4.5rem;
 }
 
-.queueHeadText {
-  min-width: 0;
-  flex: 1;
+/* Columns cascade in so the number-first board settles instead of popping
+   (same ~1s glide as the overview stats board). */
+@keyframes kpi-column-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.queueActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.kpiGrid > .kpiColumn {
+  animation: kpi-column-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
-.qSearchWrap {
-  position: relative;
-  width: 16rem;
-  max-width: 100%;
-  display: flex;
-  align-items: center;
+.kpiGrid > .kpiColumn:nth-child(2) {
+  animation-delay: 0.15s;
 }
 
-.qSearchWrap .searchIcon {
-  top: 50%;
-  transform: translateY(-50%);
+.kpiGrid > .kpiColumn:nth-child(3) {
+  animation-delay: 0.3s;
 }
 
-.qSearchWrap .search {
-  width: 100%;
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.cell {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.pager {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.range {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.pagerButtons {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.pageLabel {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+.kpiGrid > .kpiColumn:nth-child(4) {
+  animation-delay: 0.45s;
 }
 
 @media (max-width: 1024px) {
-  .tiles {
+  .kpiGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -415,17 +326,19 @@
     gap: 0.75rem;
   }
 
-  .tiles {
-    grid-template-columns: 1fr;
-  }
-
   .search {
     width: 100%;
   }
 }
 
+@media (max-width: 560px) {
+  .kpiGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tile {
-    transition: none;
+  .kpiGrid > .kpiColumn {
+    animation: none;
   }
 }

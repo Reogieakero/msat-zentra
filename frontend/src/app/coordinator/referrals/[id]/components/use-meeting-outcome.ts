@@ -2,6 +2,7 @@
 import * as React from "react";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { apiErrorMessage } from "@/lib/api/errors";
 import {
   formatManilaDate,
@@ -30,6 +31,7 @@ export function useMeetingOutcome(
   onAttendedConfirmed: () => void,
 ) {
   const m = meeting;
+  const dock = useDock();
   const [step, setStep] = React.useState<"idle" | "yes" | "rebook">("idle");
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [logOpen, setLogOpen] = React.useState(false);
@@ -164,6 +166,21 @@ export function useMeetingOutcome(
     }
     setPending(true);
     setError(null);
+    // Attended saves close the overlay at once — the shared Dock reports
+    // the request until it settles. Missed meetings stay open to rebook.
+    let taskId: string | null = null;
+    if (attended) {
+      try {
+        taskId = dock.startTask({
+          kind: "attendance-save",
+          title: "Recording attendance",
+          description: "Parent meeting outcome",
+        });
+      } catch {
+        taskId = null;
+      }
+      closeDialog();
+    }
     try {
       const inviteesById = new Map((m.invitees ?? []).map((u) => [u.id, u]));
       const freeText = attendees
@@ -190,19 +207,25 @@ export function useMeetingOutcome(
       }
       if (attended) {
         if (docsFailed) {
-          setError(
-            "Outcome saved, but some document images could not be uploaded — retry Attach below.",
+          if (taskId) {
+            dock.failTask(
+              taskId,
+              "Attendance saved, but some document images did not upload.",
+            );
+          }
+          toast.error({
+            title: "Documents not uploaded",
+            description:
+              "The outcome was saved, but some images failed — retry Attach below.",
+          });
+        } else if (taskId) {
+          dock.completeTask(
+            taskId,
+            docsUploaded > 0
+              ? `Attendance recorded · ${docsUploaded} image${docsUploaded === 1 ? "" : "s"}`
+              : "Attendance recorded",
           );
-        } else {
-          closeDialog();
         }
-        toast.success({
-          title: "Attendance recorded",
-          description:
-            docsUploaded > 0 && !docsFailed
-              ? `Minutes and logbook saved with ${docsUploaded} image${docsUploaded === 1 ? "" : "s"} attached.`
-              : "Minutes and logbook saved — the case can move to certification.",
-        });
         onAttendedConfirmed();
       } else {
         toast.success({
@@ -214,7 +237,15 @@ export function useMeetingOutcome(
       }
       onChanged();
     } catch (err) {
-      setError(apiErrorMessage(err));
+      if (taskId) dock.failTask(taskId, apiErrorMessage(err));
+      if (attended) {
+        toast.error({
+          title: "Could not record attendance",
+          description: apiErrorMessage(err),
+        });
+      } else {
+        setError(apiErrorMessage(err));
+      }
     } finally {
       setPending(false);
     }
@@ -231,6 +262,18 @@ export function useMeetingOutcome(
     }
     setPending(true);
     setError(null);
+    // Close at once — the shared Dock reports the booking until it settles.
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "adm-book",
+        title: "Booking home visitation",
+        description: `Home visit · ${formatManilaDate(next.toISOString())}`,
+      });
+    } catch {
+      taskId = null;
+    }
+    closeDialog();
     try {
       await apiClient.patch(`/api/adm/meetings/${m.id}/reschedule`, {
         meetingDatetime: next.toISOString(),
@@ -239,14 +282,19 @@ export function useMeetingOutcome(
           ? { attendanceLogbookRef: rebookLogbook.trim() }
           : {}),
       });
-      toast.success({
-        title: "Home visitation booked",
-        description: `Moved to ${formatManilaDate(next.toISOString())} at ${formatManilaTime(next.toISOString())}.`,
-      });
-      closeDialog();
+      if (taskId) {
+        dock.completeTask(
+          taskId,
+          `Home visitation ${formatManilaDate(next.toISOString())} at ${formatManilaTime(next.toISOString())}`,
+        );
+      }
       onChanged();
     } catch (err) {
-      setError(apiErrorMessage(err));
+      if (taskId) dock.failTask(taskId, apiErrorMessage(err));
+      toast.error({
+        title: "Could not book home visitation",
+        description: apiErrorMessage(err),
+      });
     } finally {
       setPending(false);
     }

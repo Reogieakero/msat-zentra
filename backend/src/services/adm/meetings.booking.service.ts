@@ -165,6 +165,24 @@ export async function bookProfileMeeting(ctx: AdmContext, profileId: string, inp
       });
     }
   }
+  if (
+    profile.referral?.consultReviewer === "nurse" &&
+    !invitees.some((i) => i.role === "nurse")
+  ) {
+    const actor = await actorName(ctx.userId);
+    const studentName = profile.student?.user?.fullName ?? "your student";
+    const when = meeting.meetingDatetime.toISOString().slice(0, 16).replace("T", " ");
+    const venueLabel = input.venue === "home" ? "home visitation" : "in school";
+    void fanoutToRole("nurse", {
+      sourceTable: "adm_parent_meetings",
+      action: "book",
+      message: `${actor} booked a parent meeting for the ADM case of ${studentName} on ${when} (${venueLabel}).`,
+      sourceId: meeting.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} booked a parent meeting for ${studentName} on ${when} — ${r.fullName}, the ADM consultation you endorsed now has a parent meeting.`,
+    });
+  }
   void fanoutToRole("adm_coordinator", {
     sourceTable: "adm_parent_meetings",
     action: "book",
@@ -271,6 +289,20 @@ export async function bookReferralMeeting(ctx: AdmContext, referralId: string, i
       action: "book",
       message: `${actor} invited you to a parent meeting for ${studentName} on ${when} (${venueLabel}).`,
       sourceId: meeting.id,
+    });
+  }
+  if (
+    referral.consultReviewer === "nurse" &&
+    !invitees.some((i) => i.role === "nurse")
+  ) {
+    void fanoutToRole("nurse", {
+      sourceTable: "adm_parent_meetings",
+      action: "book",
+      message: `${actor} booked a parent meeting for the ADM case of ${studentName} on ${when} (${venueLabel}).`,
+      sourceId: meeting.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} booked a parent meeting for ${studentName} on ${when} — ${r.fullName}, the ADM consultation you endorsed now has a parent meeting.`,
     });
   }
   void fanoutToRole("adm_coordinator", {

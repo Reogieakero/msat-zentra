@@ -17,9 +17,7 @@ import {
   Lock,
   LockOpen,
   MoreHorizontal,
-  Move as MoveIcon,
   User,
-  XCircle,
 } from "lucide-react";
 import styles from "./session-plan-card.module.css";
 
@@ -101,6 +99,22 @@ function StatusPill({ status, started }: { status: string; started: boolean }) {
   );
 }
 
+/**
+ * Dialog width that fits the session board — one column per session, three at
+ * most before the boards start to squeeze. Keeps the 2rem viewport margins of
+ * the dialog's base max-width at every breakpoint.
+ */
+export function sessionBoardDialogWidth(count: number): string {
+  if (count >= 3) return "sm:max-w-[min(56rem,calc(100%-2rem))]";
+  if (count === 2) return "sm:max-w-[min(42rem,calc(100%-2rem))]";
+  return "sm:max-w-md";
+}
+
+/**
+ * Sessions render as kanban-board cards — the same anatomy as the floating
+ * boards on the desks (icon + muted title header with a divider, status pill
+ * on the right) laid out in a board grid, one board per session.
+ */
 export function SessionPlanCard<T extends PlanSessionItem>({
   title,
   sessions,
@@ -137,7 +151,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
       {sessions.length === 0 ? (
         <p className="text-sm leading-6 text-muted-foreground">{emptyHint}</p>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-3 p-0">
+        <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3 p-0">
           {sessions.map((s) => {
             const isScheduled = s.status === "scheduled";
             const targetMs = new Date(s.scheduledAt).getTime();
@@ -149,23 +163,23 @@ export function SessionPlanCard<T extends PlanSessionItem>({
             const docsLabel =
               (s.attachmentsCount ?? 0) > 0 ? "Docs" : "Add docs (optional)";
             return (
+              /* Board card — the session sits inside the desk's kanban board
+                 frame (added by the caller), so it only needs the compact
+                 card anatomy: kind + status on top, facts, countdown, actions. */
               <li
                 key={s.id}
-                className="flex flex-col gap-3.5 rounded-[14px] border border-border bg-card p-4"
+                className="flex min-w-0 flex-col gap-2.5 rounded-md border border-border bg-card p-2.5"
               >
-                {/* Top row */}
-                <div className="flex items-start gap-3">
-                  <div
-                    className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-muted text-muted-foreground"
-                    aria-hidden="true"
-                  >
-                    <User className="size-[18px]" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="m-0 text-[15px] font-semibold leading-5 text-foreground">
-                      {kindLabel(s.sessionType)}
-                    </p>
-                    <p className="mt-1 flex items-center gap-4 text-[13px] leading-[18px] text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground">
+                    <User className="size-3.5 shrink-0" aria-hidden="true" />
+                    <span className="truncate">{kindLabel(s.sessionType)}</span>
+                  </span>
+                  <StatusPill status={s.status} started={started} />
+                </div>
+                <div className="flex flex-1 flex-col gap-2.5">
+                    {/* Facts */}
+                    <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] leading-4 text-muted-foreground">
                       <span className="inline-flex items-center gap-1.5">
                         <Calendar className="size-3.5" aria-hidden="true" />
                         <time dateTime={s.scheduledAt}>{formatDate(s.date)}</time>
@@ -175,203 +189,194 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                         {formatTime(s.scheduledAt)}
                       </span>
                     </p>
-                  </div>
-                  <StatusPill status={s.status} started={started} />
-                </div>
 
-                {/* Status strip for upcoming sessions */}
-                {isScheduled && hasTarget ? (
-                  <div className="flex items-center justify-between gap-3 rounded-xl bg-muted px-3.5 py-3">
-                    <div className="min-w-0">
-                      <p className="m-0 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                        {started ? "Session time" : "Starts in"}
+                    {/* Live countdown strip for upcoming sessions */}
+                    {isScheduled && hasTarget ? (
+                      <div className="flex flex-col gap-1 rounded-lg bg-muted px-3 py-2">
+                        <p className="m-0 flex items-baseline justify-between gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            {started ? "Session time" : "Starts in"}
+                          </span>
+                          <span
+                            role="timer"
+                            aria-label={
+                              started
+                                ? "Session time arrived"
+                                : `Session starts in ${formatCountdown(targetMs, now)}`
+                            }
+                            className="text-base font-semibold leading-tight tabular-nums text-foreground"
+                          >
+                            {started ? "Now" : formatCountdown(targetMs, now)}
+                          </span>
+                        </p>
+                        <p className="m-0 flex items-start gap-1.5 text-[11px] leading-4 text-muted-foreground">
+                          {started ? (
+                            <LockOpen className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+                          ) : (
+                            <Lock className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+                          )}
+                          {started
+                            ? "You can now mark this session done and add docs."
+                            : `Mark done${docsSupported ? " and docs" : ""} unlock at session time.`}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {/* Notes / outcome / cancel reason / docs count */}
+                    {s.status === "completed" && s.sessionNotes ? (
+                      <p className="m-0 text-[13px] leading-5 whitespace-pre-wrap text-foreground">
+                        {s.sessionNotes}
                       </p>
-                      <p
-                        role="timer"
-                        aria-label={
-                          started
-                            ? "Session time arrived"
-                            : `Session starts in ${formatCountdown(targetMs, now)}`
-                        }
-                        className="m-0 text-2xl font-semibold tabular-nums text-foreground"
-                      >
-                        {started ? "Now" : formatCountdown(targetMs, now)}
+                    ) : null}
+                    {s.status === "completed" && s.outcome ? (
+                      <p className="m-0 text-[12px] leading-4 text-muted-foreground">
+                        <span className="font-semibold text-foreground">Outcome: </span>
+                        {s.outcome}
                       </p>
-                    </div>
-                    <p className="m-0 flex max-w-[250px] items-start gap-2 text-[13px] leading-5 text-muted-foreground">
-                      {started ? (
-                        <LockOpen className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                      ) : (
-                        <Lock className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                      )}
-                      {started
-                        ? "You can now mark this session done and add docs."
-                        : `Mark done${docsSupported ? " and docs" : ""} unlock at session time.`}
-                    </p>
-                  </div>
-                ) : null}
+                    ) : null}
+                    {s.status === "cancelled" && s.cancelReason ? (
+                      <p className="m-0 text-[12px] leading-4 text-muted-foreground">
+                        {s.cancelReason}
+                      </p>
+                    ) : null}
+                    {docsSupported && (s.attachmentsCount ?? 0) > 0 ? (
+                      <p className="m-0 text-[12px] leading-4 text-muted-foreground">
+                        <span className="font-semibold text-foreground">Docs: </span>
+                        {s.attachmentsCount} photo{s.attachmentsCount === 1 ? "" : "s"} filed
+                        {" — "}
+                        <button
+                          type="button"
+                          className={styles.folderBtn}
+                          onClick={() => onAction(s, "docs")}
+                          aria-label={`View documentation for the ${formatDate(s.date)} session`}
+                        >
+                          view
+                        </button>
+                      </p>
+                    ) : null}
 
-                {/* Notes / outcome / cancel reason / docs count */}
-                {s.status === "completed" && s.sessionNotes ? (
-                  <p className="m-0 text-sm leading-6 whitespace-pre-wrap text-foreground">
-                    {s.sessionNotes}
-                  </p>
-                ) : null}
-                {s.status === "completed" && s.outcome ? (
-                  <p className="m-0 text-sm leading-6 text-muted-foreground">
-                    <span className="font-semibold text-foreground">Outcome: </span>
-                    {s.outcome}
-                  </p>
-                ) : null}
-                {s.status === "cancelled" && s.cancelReason ? (
-                  <p className="m-0 text-sm leading-6 text-muted-foreground">
-                    {s.cancelReason}
-                  </p>
-                ) : null}
-                {docsSupported && (s.attachmentsCount ?? 0) > 0 ? (
-                  <p className="m-0 text-sm leading-6 text-muted-foreground">
-                    <span className="font-semibold text-foreground">Docs: </span>
-                    {s.attachmentsCount} photo{s.attachmentsCount === 1 ? "" : "s"} filed
-                    {" — "}
-                    <button
-                      type="button"
-                      className={styles.folderBtn}
-                      onClick={() => onAction(s, "docs")}
-                      aria-label={`View documentation for the ${formatDate(s.date)} session`}
-                    >
-                      view
-                    </button>
-                  </p>
-                ) : null}
-
-                {/* Actions */}
-                {s.status === "cancelled" ? (
-                  manageable ? (
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="destructive"
-                        className={`${styles.deleteBtn} h-8 rounded-[8px] px-4`}
-                        title="Permanently remove this cancelled session"
-                        disabled={disabled}
-                        onClick={() => onAction(s, "delete")}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  ) : null
-                ) : showActions ? (
-                  <div className="flex items-center justify-end gap-2">
-                    {isScheduled ? (
-                      <>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                    {/* Actions */}
+                    {s.status === "cancelled" ? (
+                      manageable ? (
+                        <div className="mt-auto flex items-center justify-end gap-1.5 pt-0.5">
+                          <Button
+                            type="button"
+                            size="xs"
+                            variant="destructive"
+                            className={`${styles.deleteBtn} h-6 rounded-md px-3 text-xs`}
+                            title="Permanently remove this cancelled session"
+                            disabled={disabled}
+                            onClick={() => onAction(s, "delete")}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      ) : null
+                    ) : showActions ? (
+                      <div className="mt-auto flex flex-wrap items-center justify-end gap-1.5 pt-0.5">
+                        {isScheduled ? (
+                          <>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  className="size-6 rounded-md"
+                                  disabled={disabled}
+                                  aria-label={`More actions for the ${formatDate(s.date)} session`}
+                                >
+                                  <MoreHorizontal aria-hidden="true" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                className="z-[60] w-[250px] rounded-xl p-1.5"
+                              >
+                                {docsSupported ? (
+                                  <DropdownMenuItem
+                                    disabled={disabled || locked}
+                                    title={
+                                      locked
+                                        ? "Documentation unlocks once the session time arrives"
+                                        : s.status === "completed"
+                                          ? "View or file documentation for this session"
+                                          : "File documentation for this session"
+                                    }
+                                    onSelect={() => onAction(s, "docs")}
+                                  >
+                                    <FileText aria-hidden="true" />
+                                    {docsLabel}
+                                    {locked ? (
+                                      <Lock
+                                        className="ml-auto size-3.5"
+                                        aria-hidden="true"
+                                      />
+                                    ) : null}
+                                  </DropdownMenuItem>
+                                ) : null}
+                                {docsSupported ? <DropdownMenuSeparator /> : null}
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  disabled={disabled}
+                                  className={`${styles.cancelItem} font-medium`}
+                                  onSelect={() => onAction(s, "cancel")}
+                                >
+                                  Cancel session
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                             <Button
                               type="button"
-                              size="icon"
+                              size="xs"
                               variant="outline"
-                              className="size-8 rounded-[8px]"
+                              className="h-6 rounded-md px-2.5 text-xs"
                               disabled={disabled}
-                              aria-label={`More actions for the ${formatDate(s.date)} session`}
+                              onClick={() => onAction(s, "move")}
                             >
-                              <MoreHorizontal aria-hidden="true" />
+                              Move
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="z-[60] w-[250px] rounded-xl p-1.5"
-                          >
-                            {docsSupported ? (
-                              <DropdownMenuItem
-                                disabled={disabled || locked}
-                                title={
-                                  locked
-                                    ? "Documentation unlocks once the session time arrives"
-                                    : s.status === "completed"
-                                      ? "View or file documentation for this session"
-                                      : "File documentation for this session"
-                                }
-                                onSelect={() => onAction(s, "docs")}
-                              >
-                                <FileText aria-hidden="true" />
-                                {docsLabel}
-                                {locked ? (
-                                  <Lock
-                                    className="ml-auto size-3.5"
-                                    aria-hidden="true"
-                                  />
-                                ) : null}
-                              </DropdownMenuItem>
-                            ) : null}
-                            {docsSupported ? <DropdownMenuSeparator /> : null}
-                            <DropdownMenuItem
-                              variant="destructive"
-                              disabled={disabled}
-                              className="text-[#b91c1c] dark:text-[#fca5a5]"
-                              onSelect={() => onAction(s, "cancel")}
+                            <Button
+                              type="button"
+                              size="xs"
+                              disabled={disabled || locked}
+                              title={
+                                locked
+                                  ? "You can mark this session done once the scheduled time arrives"
+                                  : "Record what happened and mark this session done"
+                              }
+                              onClick={() => onAction(s, "finish")}
+                              className={
+                                locked
+                                  ? "h-6 rounded-md bg-muted px-2.5 text-xs text-muted-foreground"
+                                  : "h-6 rounded-md bg-[#2563eb] px-2.5 text-xs font-semibold text-white hover:bg-[#1d4ed8]"
+                              }
                             >
-                              <XCircle aria-hidden="true" />
-                              Cancel session
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="outline"
-                          className="h-8 rounded-[8px] px-4 text-sm"
-                          disabled={disabled}
-                          onClick={() => onAction(s, "move")}
-                        >
-                          <MoveIcon aria-hidden="true" />
-                          Move
-                        </Button>
-                        <Button
-                          type="button"
-                          size="xs"
-                          disabled={disabled || locked}
-                          title={
-                            locked
-                              ? "You can mark this session done once the scheduled time arrives"
-                              : "Record what happened and mark this session done"
-                          }
-                          onClick={() => onAction(s, "finish")}
-                          className={
-                            locked
-                              ? "h-8 rounded-[8px] bg-muted px-4 text-sm text-muted-foreground"
-                              : "h-8 rounded-[8px] bg-[#2563eb] px-4 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
-                          }
-                        >
-                          {locked ? (
-                            <Lock aria-hidden="true" />
-                          ) : (
-                            <Check strokeWidth={3} aria-hidden="true" />
-                          )}
-                          Mark done
-                        </Button>
-                      </>
-                    ) : docsSupported ? (
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="outline"
-                        className="h-8 rounded-[8px] px-4"
-                        disabled={disabled || locked}
-                        title={
-                          locked
-                            ? "Documentation unlocks once the session time arrives"
-                            : s.status === "completed"
-                              ? "View or file documentation for this session"
-                              : "File documentation for this session"
-                        }
-                        onClick={() => onAction(s, "docs")}
-                      >
-                        {docsLabel}
-                      </Button>
+                              Mark done
+                            </Button>
+                          </>
+                        ) : docsSupported ? (
+                          <Button
+                            type="button"
+                            size="xs"
+                            variant="outline"
+                            className="h-6 rounded-md px-2.5 text-xs"
+                            disabled={disabled || locked}
+                            title={
+                              locked
+                                ? "Documentation unlocks once the session time arrives"
+                                : s.status === "completed"
+                                  ? "View or file documentation for this session"
+                                  : "File documentation for this session"
+                            }
+                            onClick={() => onAction(s, "docs")}
+                          >
+                            {docsLabel}
+                          </Button>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
-                ) : null}
               </li>
             );
           })}

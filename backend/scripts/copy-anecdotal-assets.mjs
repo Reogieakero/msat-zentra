@@ -13,7 +13,7 @@ const src = path.join(root, "src", "modules", "anecdotal", "assets");
 const dest = path.join(root, "dist", "modules", "anecdotal", "assets");
 
 await mkdir(dest, { recursive: true });
-for (const file of ["deped-logo.png", "msat-logo.png"]) {
+for (const file of ["deped-logo.png", "msat-logo.png", "msat-crest.png"]) {
   await cp(path.join(src, file), path.join(dest, file));
   console.log(`[copy-anecdotal-assets] ${file} -> dist/modules/anecdotal/assets/`);
 }

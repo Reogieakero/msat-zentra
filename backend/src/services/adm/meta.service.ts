@@ -63,12 +63,18 @@ export async function readCoordinatorProfileSettings(coordinatorId: string) {
     }),
     prisma.staffProfile.findUnique({
       where: { userId: coordinatorId },
-      select: { photoUrl: true, primaryColor: true, secondaryColor: true },
+      select: {
+        photoUrl: true,
+        mascot: true,
+        primaryColor: true,
+        secondaryColor: true,
+      },
     }),
   ]);
   return {
     fullName: user?.fullName ?? "",
     photoUrl: profile?.photoUrl ?? null,
+    mascot: profile?.mascot ?? null,
     primaryColor: profile?.primaryColor ?? null,
     secondaryColor: profile?.secondaryColor ?? null,
   };
@@ -76,13 +82,14 @@ export async function readCoordinatorProfileSettings(coordinatorId: string) {
 
 export interface UpdateProfileSettingsInput {
   fullName?: string;
+  mascot?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
 }
 
 export async function updateProfileSettings(ctx: AdmContext, input: UpdateProfileSettingsInput) {
   const coordinatorId = ctx.userId;
-  const { fullName, primaryColor, secondaryColor } = input;
+  const { fullName, mascot, primaryColor, secondaryColor } = input;
   await prisma.$transaction(async (tx) => {
     if (fullName !== undefined) {
       await tx.user.update({
@@ -90,9 +97,14 @@ export async function updateProfileSettings(ctx: AdmContext, input: UpdateProfil
         data: { fullName },
       });
     }
-    const palette: { primaryColor?: string | null; secondaryColor?: string | null } = {};
+    const palette: {
+      primaryColor?: string | null;
+      secondaryColor?: string | null;
+      mascot?: string | null;
+    } = {};
     if (primaryColor !== undefined) palette.primaryColor = primaryColor;
     if (secondaryColor !== undefined) palette.secondaryColor = secondaryColor;
+    if (mascot !== undefined) palette.mascot = mascot;
     if (Object.keys(palette).length > 0) {
       await tx.staffProfile.upsert({
         where: { userId: coordinatorId },

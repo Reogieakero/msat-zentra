@@ -1,0 +1,325 @@
+/* Referrals queue — kanban board over a grid of case cards (no data table).
+   Each card is one referred learner: sprite, status, eligibility, meeting and
+   latest action. Filters live in the board header actions. */
+
+/* In-board filter controls — search + status dropdown + clear. */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.searchWrap {
+  position: relative;
+  width: 15rem;
+  max-width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.caseGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .caseGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .caseGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.caseCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
+  transition:
+    transform 160ms ease-out,
+    border-color 160ms ease-out,
+    box-shadow 160ms ease-out;
+}
+
+.caseCard:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 45%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 45%);
+}
+
+/* Rows cascade in on mount — same entrance as the nurse case board. */
+@keyframes case-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.caseGrid > .caseCard {
+  animation: case-card-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caseGrid > .caseCard {
+    animation: none;
+  }
+  .caseCard {
+    transition: none;
+  }
+  .caseCard:hover {
+    transform: none;
+  }
+}
+
+.caseHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.caseId {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.caseName {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.caseLrn {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.caseMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.metaPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.4375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A booked (unattended) meeting reads as a blue pill. */
+.metaPillBooked {
+  border-color: color-mix(in oklch, oklch(0.72 0.14 245), transparent 50%);
+  background-color: color-mix(in oklch, oklch(0.72 0.14 245), transparent 88%);
+  color: oklch(0.72 0.14 245);
+}
+
+/* Centered status pill-tabs in the board header (All / Booked / …). */
+.statusTabs {
+  --amber: oklch(0.769 0.188 70.08);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+}
+
+.statusTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease-out, color 120ms ease-out,
+    border-color 120ms ease-out;
+}
+
+.statusTab:hover {
+  color: var(--foreground);
+}
+
+.statusTabActive {
+  border-color: color-mix(in oklch, var(--amber), transparent 55%);
+  background-color: color-mix(in oklch, var(--amber), transparent 88%);
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.statusTabCount {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+/* Submenu surface for the "Booked info" meeting panel on a case card. */
+.infoSub {
+  width: 20rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.25rem;
+}
+
+.caseFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+  margin-top: auto;
+  padding-top: 0.25rem;
+  border-top: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+}
+
+.latestAction {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.latestMain {
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.latestAt {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.cardMenuBtn {
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+/* Right side of the card foot: optional "Book schedule" CTA + the 3-dots. */
+.caseActions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+/* Row-actions menu — the trigger is a tiny kebab, so give the content a
+   min-width wide enough to keep every label on one line. */
+.menu {
+  min-width: 12rem;
+}
+
+.errorBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  padding: 1rem;
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.spin {
+  width: 1rem;
+  height: 1rem;
+  animation: coord-spin 1s linear infinite;
+}
+
+@keyframes coord-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+.interpretation {
+  margin: 0;
+  padding: 0.5rem 0 0 0.625rem;
+  border-left: 2px solid color-mix(in oklch, var(--primary), transparent 35%);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Amber data points inside the interpretation line — the desk accent. */
+.interpretNum {
+  color: oklch(0.769 0.188 70.08);
+  font-weight: 600;
+}

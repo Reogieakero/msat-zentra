@@ -10,47 +10,25 @@
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Queue layout: filters header, full-width table + pager, then the insight
-   cards in a horizontal row beneath. Cards sit side by side on desktop and
-   wrap below it on smaller screens. */
-.contentSingle {
+/* Kanban board + icon-only intake rail on the right — same layout as the
+   coordinator / nurse overviews: the rail spans the full stack height so it
+   stays pinned (sticky) through the page scroll. */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.mainCol {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   min-width: 0;
 }
 
-.main {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-/* Empty-state page that fits the viewport exactly (no page scroll).
-   Section-level only — the centered empty card keeps its own size
-   (same max-width as enrolled). Math mirrors coordinator.module.css
-   shell offsets. Doubled selector beats .page regardless of order.
-   overflow: clip (not hidden) trims residual sub-pixel/glow overflow
-   without creating a scroll container. Must stay after .page. */
-.pageEmpty.pageEmpty {
-  justify-content: center;
-  min-height: calc(100vh - 3rem - 2rem);
-  min-height: calc(100dvh - 3rem - 2rem);
-  padding-bottom: 0;
-  overflow: clip;
-}
-
-@media (max-width: 1023px) {
-  .pageEmpty.pageEmpty {
-    min-height: calc(100vh - 6rem - 2rem);
-    min-height: calc(100dvh - 6rem - 2rem);
-  }
-}
-
-@media (max-width: 767px) {
-  .pageEmpty.pageEmpty {
-    min-height: calc(100vh - 6rem - 1.5rem);
-    min-height: calc(100dvh - 6rem - 1.5rem);
+@media (max-width: 1024px) {
+  .body {
+    grid-template-columns: 1fr;
   }
 }

@@ -1,10 +1,14 @@
 "use client";
-import { Badge } from "@/components/ui/badge";
+
+import {
+  CalendarClock,
+  CheckCircle2,
+  Home,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanOverlay, KanbanPill } from "@/components/ui/kanban-overlay";
 import {
   formatManilaDate,
   formatManilaTime,
@@ -14,13 +18,14 @@ import {
   ClinicDatePicker,
   ClinicTimePicker,
 } from "@/app/nurse/overview/components/ClinicDateTimePicker";
-import styles from "../case-page.module.css";
+import { AttendeeEditor } from "./attendee-editor";
 import type {
   ParentMeetingItem,
   MeetingTiming,
 } from "./use-meeting-timing";
 import type { MeetingOutcome } from "./use-meeting-outcome";
-import { AttendeeEditor } from "./attendee-editor";
+import styles from "../case-page.module.css";
+
 export function OutcomeDialog({
   meeting,
   timing,
@@ -34,14 +39,12 @@ export function OutcomeDialog({
   const {
     step,
     dialogOpen,
-    pending,
-    error,
     logbook,
     minutes,
     setMinutes,
+    attendees,
     checkedInvitees,
     setCheckedInvitees,
-    attendees,
     removingDocId,
     rebookDate,
     setRebookDate,
@@ -61,9 +64,91 @@ export function OutcomeDialog({
     removeAttendee,
     saveOutcome,
     submitRebook,
+    pending,
+    error,
   } = outcome;
+
+  const statusPill = m.attended ? (
+    <KanbanPill tone="success">Attended</KanbanPill>
+  ) : timing.state === "live" ? (
+    <KanbanPill tone="success">Live now</KanbanPill>
+  ) : timing.state === "overdue" ? (
+    <KanbanPill tone="danger">Overdue</KanbanPill>
+  ) : (
+    <KanbanPill tone="accent">Upcoming</KanbanPill>
+  );
+
+  const footer =
+    step === "rebook" ? (
+      <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+        <Button
+          type="button"
+          size="sm"
+          className="h-6 px-3 text-xs"
+          disabled={pending}
+          onClick={() => void submitRebook()}
+        >
+          Book home visitation
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-6 px-3 text-xs"
+          disabled={pending}
+          onClick={closeDialog}
+        >
+          Later
+        </Button>
+      </div>
+    ) : step === "yes" ? (
+      <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+        <Button
+          type="button"
+          size="sm"
+          className="h-6 px-3 text-xs"
+          disabled={pending}
+          onClick={() => void saveOutcome(true)}
+        >
+          Save attendance
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-6 px-3 text-xs"
+          disabled={pending}
+          onClick={backToAsk}
+        >
+          Back
+        </Button>
+      </div>
+    ) : (
+      <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+        <Button
+          type="button"
+          size="sm"
+          className="h-6 px-3 text-xs"
+          disabled={pending}
+          onClick={openYesDialog}
+        >
+          Yes
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-6 px-3 text-xs"
+          disabled={pending}
+          onClick={() => void saveOutcome(false)}
+        >
+          No
+        </Button>
+      </div>
+    );
+
   return (
-    <CardModal
+    <KanbanOverlay
       open={dialogOpen}
       onClose={closeDialog}
       title={
@@ -73,6 +158,17 @@ export function OutcomeDialog({
             ? "Log attendance"
             : "Did the parent/guardian attend?"
       }
+      icon={
+        <span className="text-primary" aria-hidden>
+          {step === "rebook" ? (
+            <Home size={14} />
+          ) : step === "yes" ? (
+            <CheckCircle2 size={14} />
+          ) : (
+            <CalendarClock size={14} />
+          )}
+        </span>
+      }
       description={
         step === "rebook"
           ? "Pick a new schedule for the home visitation."
@@ -80,7 +176,9 @@ export function OutcomeDialog({
             ? "Log the attendance and minutes for this meeting."
             : "Choose an answer to record the outcome."
       }
-      size={step === "yes" ? "md" : "sm"}
+      headerActions={statusPill}
+      width="lg"
+      footer={footer}
     >
       {step === "idle" ? (
         <>
@@ -105,51 +203,9 @@ export function OutcomeDialog({
             </div>
             <div className={styles.kpi}>
               <dt className={styles.metaLabel}>Status</dt>
-              <dd style={{ margin: 0 }}>
-                {m.attended ? (
-                  <Badge variant="success">Attended</Badge>
-                ) : timing.state === "live" ? (
-                  <Badge variant="success">Live now</Badge>
-                ) : timing.state === "overdue" ? (
-                  <Badge variant="destructive">Overdue</Badge>
-                ) : (
-                  <Badge variant="outline">Upcoming</Badge>
-                )}
-              </dd>
+              <dd style={{ margin: 0 }}>{statusPill}</dd>
             </div>
           </dl>
-          <div className={styles.choiceGrid}>
-            <Button
-              className={styles.choiceBtn}
-              disabled={pending}
-              onClick={openYesDialog}
-            >
-              {pending ? (
-                <Loader2
-                  className="animate-spin"
-                  aria-hidden="true"
-                  style={{ width: "0.875rem", height: "0.875rem" }}
-                />
-              ) : null}
-              Yes
-            </Button>
-            <Button
-              variant="outline"
-              className={styles.choiceBtn}
-              disabled={pending}
-              aria-busy={pending || undefined}
-              onClick={() => void saveOutcome(false)}
-            >
-              {pending ? (
-                <Loader2
-                  className="animate-spin"
-                  aria-hidden="true"
-                  style={{ width: "0.875rem", height: "0.875rem" }}
-                />
-              ) : null}
-              No
-            </Button>
-          </div>
         </>
       ) : null}
       {step === "yes" ? (
@@ -262,25 +318,6 @@ export function OutcomeDialog({
               {error}
             </p>
           ) : null}
-          <div className={styles.attendBtns}>
-            <Button
-              disabled={pending}
-              aria-busy={pending || undefined}
-              onClick={() => void saveOutcome(true)}
-            >
-              {pending ? (
-                <Loader2
-                  className="animate-spin"
-                  aria-hidden="true"
-                  style={{ width: "0.875rem", height: "0.875rem" }}
-                />
-              ) : null}
-              {pending ? "Saving…" : "Save attendance"}
-            </Button>
-            <Button variant="outline" disabled={pending} onClick={backToAsk}>
-              Back
-            </Button>
-          </div>
         </div>
       ) : null}
       {step === "rebook" ? (
@@ -318,27 +355,8 @@ export function OutcomeDialog({
               {error}
             </p>
           ) : null}
-          <div className={styles.attendBtns}>
-            <Button
-              disabled={pending}
-              aria-busy={pending || undefined}
-              onClick={() => void submitRebook()}
-            >
-              {pending ? (
-                <Loader2
-                  className="animate-spin"
-                  aria-hidden="true"
-                  style={{ width: "0.875rem", height: "0.875rem" }}
-                />
-              ) : null}
-              {pending ? "Booking…" : "Book home visitation"}
-            </Button>
-            <Button variant="outline" disabled={pending} onClick={closeDialog}>
-              Later
-            </Button>
-          </div>
         </div>
       ) : null}
-    </CardModal>
+    </KanbanOverlay>
   );
 }

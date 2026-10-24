@@ -1,5 +1,6 @@
 import { Router } from "express";
 import admRoutes from "./adm.routes.js";
+import alertCasesRoutes from "./alertCases.routes.js";
 import alertsRoutes from "./alerts.routes.js";
 import anecdotalRoutes from "./anecdotal.routes.js";
 import casesRoutes from "./cases.routes.js";
@@ -10,6 +11,7 @@ import settingsRoutes from "./settings.routes.js";
 const router = Router();
 
 router.use(overviewRoutes);
+router.use(alertCasesRoutes);
 router.use(alertsRoutes);
 router.use(casesRoutes);
 router.use(scheduleRoutes);

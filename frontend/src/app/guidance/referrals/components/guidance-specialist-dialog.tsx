@@ -1,14 +1,7 @@
 "use client";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FormDropdown } from "./form-dropdown";
@@ -23,51 +16,16 @@ export function SpecialistDialog({
   handleAction,
 }: GuidanceDialogProps) {
   return (
-    <Dialog
+    <KanbanOverlay
       open={dialogs.specialist}
-      onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("specialist") }}
-    >
-      <DialogContent
-        className={styles.dialogScrollHidden}
-        aria-busy={isActionPending || undefined}
-      >
-        <DialogHeader>
-          <DialogTitle>Ask a specialist for help</DialogTitle>
-          <DialogDescription>
-            Send this case to a specialist office.
-          </DialogDescription>
-        </DialogHeader>
-        <div className={styles.formGrid}>
-          <div>
-            <FormDropdown
-              id="specialistRole"
-              label="Send to"
-              value={form.specialistRole}
-              onChange={(v) =>
-                setForm((f) => ({ ...f, specialistRole: v }))
-              }
-              placeholder="Pick a specialist"
-              options={[
-                { value: "nurse", label: "Nurse" },
-                { value: "adm_coordinator", label: "ADM Coordinator" },
-                { value: "principal", label: "Principal" },
-              ]}
-            />
-          </div>
-          <div className={styles.formFull}>
-            <Label htmlFor="specialistReason">What help is needed?</Label>
-            <Textarea
-              id="specialistReason"
-              value={form.specialistReason}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, specialistReason: e.target.value }))
-              }
-              placeholder="Explain what help the student needs…"
-              maxLength={500}
-            />
-          </div>
-        </div>
-        <DialogFooter>
+      onClose={() => closeDialog("specialist")}
+      dismissable={!isActionPending}
+      busy={isActionPending}
+      width="lg"
+      title="Ask a specialist for help"
+      description="Send this case to a specialist office."
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
           <Button
             variant="destructive"
             className={styles.btnRed}
@@ -92,8 +50,39 @@ export function SpecialistDialog({
             {isActionPending ? <Loader2 className={styles.spin} aria-hidden="true" /> : null}
             {isActionPending ? "Sending…" : "Send"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <div className={styles.formGrid}>
+        <div>
+          <FormDropdown
+            id="specialistRole"
+            label="Send to"
+            value={form.specialistRole}
+            onChange={(v) =>
+              setForm((f) => ({ ...f, specialistRole: v }))
+            }
+            placeholder="Pick a specialist"
+            options={[
+              { value: "nurse", label: "Nurse" },
+              { value: "adm_coordinator", label: "ADM Coordinator" },
+              { value: "principal", label: "Principal" },
+            ]}
+          />
+        </div>
+        <div className={styles.formFull}>
+          <Label htmlFor="specialistReason">What help is needed?</Label>
+          <Textarea
+            id="specialistReason"
+            value={form.specialistReason}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, specialistReason: e.target.value }))
+            }
+            placeholder="Explain what help the student needs…"
+            maxLength={500}
+          />
+        </div>
+      </div>
+    </KanbanOverlay>
   );
 }

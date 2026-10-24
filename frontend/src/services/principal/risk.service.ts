@@ -23,11 +23,10 @@ export async function fetchRiskHeatmap(): Promise<HeatmapData> {
 export async function fetchSectionFactorStudents(
   sectionId: string,
   factor: RiskFactor,
-  termId: string,
 ): Promise<HeatmapStudent[]> {
   const { data } = await apiClient.get<{ students: HeatmapStudent[] }>(
     `/api/risk/sections/${sectionId}/students`,
-    { params: { termId, factor } },
+    { params: { factor } },
   );
   return data.students;
 }

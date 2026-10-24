@@ -6,18 +6,39 @@ import {
   CheckCircle2,
   FileText,
   Loader2,
+  Upload,
   UploadCloud,
   X,
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { GRADE_LABEL } from "@/services/registry/sf10.types";
 import { useSf10BulkUpload } from "@/components/registry/sf10/sf10-bulk-upload-context";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 
 import styles from "./sf10.module.css";
 
 const GRADES = ["G7", "G8", "G9", "G10", "G11", "G12"];
+
+// Accepted formats render as amber pills (the SF10 desk accent) — one pill
+// each, never a comma/dot separated list. Shared by the board description
+// and the dropzone hint.
+const FILE_FORMATS = ["PDF", "JPG", "PNG", "XLSX"];
+
+function FormatPills() {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1 align-middle">
+      {FILE_FORMATS.map((format) => (
+        <span
+          key={format}
+          className="inline-flex h-5 items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 text-[10px] font-semibold tracking-wide text-amber-700 dark:text-amber-400"
+        >
+          {format}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export function Sf10UploadPanel({
   onChanged,
@@ -57,25 +78,58 @@ export function Sf10UploadPanel({
   const doneItems = items.filter((i) => i.status === "done").length;
   const needsGradeBlocked = items.some((i) => i.status === "needs-grade" && !i.gradeLevel);
 
+  // Kanban board shell (same board/header pattern as the desk's other
+  // boards): dropzone + upload queue fill the board, the 24px actions live
+  // in the footer.
   return (
-    <section className={assign.card} aria-labelledby="sf10-upload">
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className="relative">
-        <h2 id="sf10-upload" className="text-base font-semibold">
-          Upload SF10
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Attach SF10 files in bulk (PDF, JPG, PNG, or XLSX) — select many at
-          once like Drive. The learner, the subjects, and each record&apos;s
-          grade level are read from the files first — then filed automatically.
-          Uploads keep running in the bottom-right dock even if you leave this page.
+    <KanbanBoard
+      title="Upload SF10"
+      icon={<Upload size={14} className="text-amber-500" aria-hidden />}
+      ariaLabel="Upload SF10"
+      description={
+        <p className="leading-5">
+          Attach SF10 files in bulk <FormatPills /> — select many at once like
+          Drive. The learner, the subjects, and each record&apos;s grade level
+          are read from the files first — then filed automatically. Uploads
+          keep running in the bottom-right dock even if you leave this page.
         </p>
-      </div>
-
+      }
+      footer={
+        <div className={styles.uploadActions}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={bulk.clearDone}
+            disabled={uploading || doneItems === 0}
+          >
+            Clear done
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={bulk.clearAll}
+            disabled={uploading || items.length === 0}
+          >
+            Clear
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={bulk.startUpload}
+            disabled={uploading || actionableCount === 0}
+          >
+            {uploading ? `Uploading ${progress.done + 1} of ${progress.total}…` : `Upload ${actionableCount > 0 ? `(${actionableCount})` : ""}`}
+          </Button>
+        </div>
+      }
+    >
       <div
-        className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ""} relative`}
+        className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -107,11 +161,14 @@ export function Sf10UploadPanel({
             ? "Drag & drop SF10 files"
             : `${items.length} file${items.length === 1 ? "" : "s"} selected · ${doneItems} done`}
         </p>
-        <p className={styles.dropHint}>PDF, JPG, PNG, or XLSX · select many or drop a batch · or click to browse</p>
+        <p className={`${styles.dropHint} flex flex-wrap items-center justify-center gap-1.5`}>
+          <FormatPills />
+          <span>select many or drop a batch · or click to browse</span>
+        </p>
       </div>
 
       {items.length > 0 ? (
-        <ul className="relative flex max-h-72 min-w-0 flex-col gap-1 overflow-y-auto rounded-md border p-2" aria-label="Upload queue">
+        <ul className="flex max-h-72 min-w-0 flex-col gap-1 overflow-y-auto rounded-md border p-2" aria-label="Upload queue">
           {items.map((item) => (
             <li
               key={item.key}
@@ -168,7 +225,7 @@ export function Sf10UploadPanel({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 shrink-0 px-2"
+                className="h-6 shrink-0 px-1.5"
                 onClick={(e) => {
                   e.stopPropagation();
                   bulk.cancelItem(item.key);
@@ -184,22 +241,10 @@ export function Sf10UploadPanel({
       ) : null}
 
       {needsGradeBlocked && !uploading ? (
-        <p className="relative text-xs text-amber-600 dark:text-amber-400" role="alert">
+        <p className="text-xs text-amber-600 dark:text-amber-400" role="alert">
           Some files need a grade before they can be filed — pick each grade, then upload again.
         </p>
       ) : null}
-
-      <div className={`${styles.uploadActions} relative`}>
-        <Button type="button" variant="outline" size="sm" onClick={bulk.clearDone} disabled={uploading || doneItems === 0}>
-          Clear done
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={bulk.clearAll} disabled={uploading || items.length === 0}>
-          Clear
-        </Button>
-        <Button type="button" size="sm" onClick={bulk.startUpload} disabled={uploading || actionableCount === 0}>
-          {uploading ? `Uploading ${progress.done + 1} of ${progress.total}…` : `Upload ${actionableCount > 0 ? `(${actionableCount})` : ""}`}
-        </Button>
-      </div>
-    </section>
+    </KanbanBoard>
   );
 }

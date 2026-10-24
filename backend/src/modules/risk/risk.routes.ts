@@ -82,15 +82,9 @@ router.get(
   etag(),
   async (req, res, next) => {
     try {
-      const schoolYearId =
-        typeof req.query.schoolYearId === "string" && req.query.schoolYearId !== ""
-          ? req.query.schoolYearId
-          : undefined;
-      const termId =
-        typeof req.query.termId === "string" && req.query.termId !== ""
-          ? req.query.termId
-          : undefined;
-      res.json(await getRiskTrend(schoolYearId, termId));
+      // Server-scoped: the trend follows the active school year/term —
+      // client-supplied filters are ignored.
+      res.json(await getRiskTrend(req.termScope?.schoolYearId, req.termScope?.termId));
     } catch (e) {
       next(e);
     }
@@ -206,10 +200,12 @@ router.get(
   etag(),
   async (req, res, next) => {
     try {
-      const termId = typeof req.query.termId === "string" ? req.query.termId : null;
+      // Server-scoped: the drill-down follows the active term — a client term
+      // query param is ignored.
+      const termId = await resolveActiveTermId(req);
       const factor = req.query.factor as RiskFactor | undefined;
       if (!termId) {
-        return res.status(400).json({ error: { code: "MISSING_TERM", message: "termId query required" } });
+        return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
       }
       if (!factor || !["Academic", "Attendance", "Behavioral"].includes(factor)) {
         return res.status(400).json({ error: { code: "MISSING_FACTOR", message: "factor query required" } });
@@ -233,8 +229,10 @@ router.get(
   requireRole("principal", "adviser", "guidance_counselor", "nurse"),
   async (req, res, next) => {
     try {
-      const termId = typeof req.query.termId === "string" ? req.query.termId : undefined;
-      if (!termId) return res.status(400).json({ error: { code: "MISSING_TERM", message: "termId query required" } });
+      // Server-scoped: the heatmap follows the active term — a client term
+      // query param is ignored.
+      const termId = await resolveActiveTermId(req);
+      if (!termId) return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
       res.json(await getSectionFactorCounts(String(req.params.id), termId));
     } catch (e) {
       next(e);

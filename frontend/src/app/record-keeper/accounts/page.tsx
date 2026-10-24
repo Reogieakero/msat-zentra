@@ -7,25 +7,30 @@ import {
   X,
   UserPlus,
   SearchX,
+  Clock,
+  UserCheck,
+  Layers,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import { toast } from "@/components/ui/sonner";
-import { useDebouncedValue } from "@/lib/useDebouncedValue";
-import { markSelfNotified } from "@/lib/realtime/recordKeeperChannel";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
+import { KanbanBoard, KanbanBoardHeader } from "@/components/ui/kanban-board";
+import { RowList, type RowListItem } from "@/components/ui/row-list";
+import { RowListSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { LrnVerifyButton } from "./components/LrnVerifyButton";
+import { LrnVerifyDock } from "./components/LrnVerifyDock";
 import { RecordKeeperEmptyCard, RecordKeeperEmptyState } from "../components/RecordKeeperEmptyCard";
-import { RecordKeeperPageHeader } from "../components/RecordKeeperPageHeader";
-import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
-import { AccountsBreakdown, type AccountBreakdown } from "./components/AccountsBreakdown";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { markSelfNotified } from "@/lib/realtime/recordKeeperChannel";
+import type { AccountBreakdown } from "./components/AccountsBreakdown";
+import { AccountsBreakdownRail } from "./components/AccountsBreakdownRail";
 import { formatGrade, formatSection } from "@/lib/utils";
-import type { PendingStudentsResponse } from "./components/types";
+import type { PendingStudent, PendingStudentsResponse } from "./components/types";
 import { formatRelativeTime } from "./components/types";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./accounts.module.css";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
@@ -51,6 +56,7 @@ export default function AccountApprovalsPage() {
 function AccountApprovalsPageInner() {
   const searchParams = useSearchParams();
   const qc = useQueryClient();
+  const dock = useDock();
   const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
   const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
   const page = pager.page;
@@ -73,16 +79,28 @@ function AccountApprovalsPageInner() {
     setQueryInput(value);
   }, []);
 
-  const { data, isPending, isError, isFetching } = useQuery({
+  // Queue anchor for the section rail's "Review accounts" jump.
+  const queueRef = React.useRef<HTMLDivElement | null>(null);
+  // One verification dock at a time — row buttons only set the target;
+  // the dock is keyed by student id so switching rows re-runs the match.
+  const [verifyTarget, setVerifyTarget] = React.useState<PendingStudent | null>(null);
+  const handleReviewSection = React.useCallback(
+    (section: string) => {
+      setQuery(section);
+      queueRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+    [setQuery],
+  );
+
+  const { data, isPending, isError } = useQuery({
     queryKey: ["record-keeper-pending-students", page, debouncedQuery],
     queryFn: ({ signal }) => fetchPendingStudents(page, debouncedQuery, signal),
     placeholderData: keepPreviousData,
-    staleTime: 30_000,
   });
 
   const { data: breakdownData, isPending: breakdownPending } = useQuery({
     queryKey: ["record-keeper-account-breakdown"],
-    queryFn: () =>
+    queryFn: (): Promise<AccountBreakdown[]> =>
       apiClient
         .get<{ data: AccountBreakdown[] }>("/api/record-keeper/account-breakdown")
         .then((res) => (Array.isArray(res.data?.data) ? res.data.data : [])),
@@ -92,15 +110,24 @@ function AccountApprovalsPageInner() {
   const students = data?.students ?? [];
   const filteredTotal = data?.total ?? students.length;
   const unfilteredTotal = data?.unfilteredTotal ?? filteredTotal;
-  const isSyncing = isFetching && !isPending;
 
   const act = useMutation({
-    mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
+    mutationFn: ({
+      id,
+      approve,
+      reason,
+    }: {
+      id: string;
+      approve: boolean;
+      reason?: string;
+      name?: string;
+    }) =>
       apiClient.post(
         approve ? `/api/auth/approve/${id}` : `/api/auth/reject/${id}`,
-        approve ? {} : { reason: "Rejected by record keeper" }
+        approve ? {} : { reason: reason ?? "" }
       ),
-    onMutate: async ({ id }) => {
+
+    onMutate: async ({ id, approve, name }) => {
       // Optimistic removal with rollback on error.
       await qc.cancelQueries({ queryKey: ["record-keeper-pending-students"] });
       const previous = qc.getQueriesData({ queryKey: ["record-keeper-pending-students"] });
@@ -111,26 +138,48 @@ function AccountApprovalsPageInner() {
             ? { ...old, students: old.students.filter((s) => s.id !== id), total: Math.max(0, (old.total ?? 1) - 1) }
             : old,
       );
-      return { previous };
-    },
-    onSuccess: (_data, { id, approve }) => {
-
-      markSelfNotified(id);
-      toast.success({
-        title: approve ? "Approved" : "Rejected",
-        description: approve ? "The student account is now active." : "The account request was rejected.",
-      });
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "generic",
+          title: approve ? "Approving account" : "Rejecting account",
+          description: name ?? "Student",
+        });
+      } catch {
+        taskId = null;
+      }
+      return { previous, taskId };
     },
     onError: (err, _vars, context) => {
       for (const [key, data] of context?.previous ?? []) {
         qc.setQueryData(key, data);
       }
-      toast.error({ title: "Action failed", description: "Could not process this account. Changes were rolled back." });
+      const message =
+        (err as { response?: { data?: { error?: { message?: string } } } })?.response
+          ?.data?.error?.message ?? "Could not process this account. Changes were rolled back.";
+      if (context?.taskId) dock.failTask(context.taskId, message);
+      toast.error({ title: "Action failed", description: message });
+    },
+    onSuccess: (_data, { id, approve, name }, context) => {
+
+      markSelfNotified(id);
+
+      // The row was already removed optimistically, so the name rides along
+      // in the mutation variables instead of being looked up from the cache.
+      const studentName = name ?? "Student";
+      if (context?.taskId) {
+        dock.completeTask(context.taskId, approve ? "Account approved." : "Account rejected.");
+      }
+      toast.success({
+        title: approve ? "Approved" : "Rejected",
+        description: approve ? `${studentName} is now active.` : `${studentName} was rejected.`,
+      });
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["record-keeper-pending-students"] });
       qc.invalidateQueries({ queryKey: ["record-keeper-accounts-audit"] });
       qc.invalidateQueries({ queryKey: ["record-keeper-account-breakdown"] });
+      qc.invalidateQueries({ queryKey: ["record-keeper-overview"] });
       qc.invalidateQueries({ queryKey: ["record-keeper-notifications"] });
     },
   });
@@ -138,7 +187,11 @@ function AccountApprovalsPageInner() {
   const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
 
   const safePage = Math.min(page, totalPages);
-  const pageRows = students;
+
+  const actingVars = act.isPending
+    ? (act.variables as { id: string; approve: boolean } | undefined)
+    : undefined;
+  const pageRows = React.useMemo(() => data?.students ?? [], [data]);
   const hasRecords = unfilteredTotal > 0;
   const searching = debouncedQuery.length > 0;
 
@@ -151,9 +204,82 @@ function AccountApprovalsPageInner() {
     };
   }, [breakdownData]);
 
-  const tilesPending = breakdownPending || isPending;
+  const kpisPending = breakdownPending || isPending;
+
+  // KPI strip — kanban columns mirroring the record keeper overview stats
+  // board (KanbanBoardHeader + number-first stat card with mascot chip).
+  // Mascots are deliberately distinct from the other desk boards' cast
+  // (overview owl/scout/knight/postbot, final-grades scientist/rocket/cap,
+  // sf10 hamster/drone/lantern).
+  const kpiColumns = [
+    {
+      key: "pending",
+      icon: Clock,
+      accent: "text-amber-500",
+      title: "Pending approval",
+      value: unfilteredTotal,
+      hint: "G7–10 sign-ups awaiting sign-off",
+      mascot: "clockwork",
+    },
+    {
+      key: "with-account",
+      icon: UserCheck,
+      accent: "text-primary",
+      title: "With account",
+      value: sideStats.withAccount,
+      hint: "Active student logins",
+      mascot: "fox",
+    },
+    {
+      key: "pending-signup",
+      icon: UserPlus,
+      accent: "text-blue-500",
+      title: "Pending sign-up",
+      value: sideStats.pendingSignup,
+      hint: "Rostered learners with no login yet",
+      mascot: "bunny",
+    },
+    {
+      key: "sections",
+      icon: Layers,
+      accent: "text-emerald-600 dark:text-emerald-400",
+      title: "Sections tracked",
+      value: sideStats.sections,
+      hint: "G7–10 sections this school year",
+      mascot: "hedgehog",
+    },
+  ];
+
+  // Kanban rows — status pill + `|`, mascot + name (derived sprite, same
+  // derivation the backend persists), LRN rectangle pill, then section /
+  // grade / requested meta pills and the icon-only LRN verification action.
+  const rowItems = React.useMemo<RowListItem[]>(
+    () =>
+      pageRows.map((s) => ({
+        key: s.id,
+        status: { label: "Pending", tone: "amber" as const },
+        title: s.name,
+        idLabel: s.lrn,
+        idLabelClassName: "text-xs font-medium",
+        meta: [
+          { label: formatSection(s.section), tone: "amber" as const, dot: false },
+          { label: formatGrade(s.gradeLevel), tone: "amber" as const, dot: false },
+          {
+            label: formatRelativeTime(s.requestedAt),
+            tone: "muted" as const,
+            dot: false,
+            title: `Requested ${new Date(s.requestedAt).toLocaleString()}`,
+          },
+        ],
+        ariaLabel: `${s.name}, pending account, ${formatSection(s.section)}`,
+        avatarMascot: { name: s.name, seed: s.lrn },
+        actions: <LrnVerifyButton student={s} onOpen={() => setVerifyTarget(s)} />,
+      })),
+    [pageRows]
+  );
+
   // True empty (no records at all, not a search with no matches):
-  // hide the page header, tiles, and queue/breakdown cards entirely and
+  // hide the KPI board and queue/breakdown cards entirely and
   // render a single centered card instead.
   const isTrueEmpty =
     !isPending && !isError && !breakdownPending && !hasRecords && !searching;
@@ -175,114 +301,109 @@ function AccountApprovalsPageInner() {
   return (
     <section className={styles.page}>
       <div className={styles.stack}>
-        {tilesPending ? (
-          <PageHeaderSkeleton />
-        ) : (
-          <RecordKeeperPageHeader
-            title="Account Approvals"
-            description="Approve or reject student account requests for grades 7–10."
-          />
-        )}
-        <section className={assign.card} aria-label="Accounts summary">
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          {tilesPending ? (
-            <ul className={`${styles.tiles} relative`}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <li key={i}>
-                  <Skeleton className={styles.tileSkel} />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <ul className={`${styles.tiles} relative`}>
-              <li className={styles.tile}>
-                <span className={styles.tileValue}>{unfilteredTotal}</span>
-                <span className={styles.tileLabel}>Pending approval</span>
-                <span className={styles.tileHint}>G7–10 sign-ups awaiting sign-off</span>
-              </li>
-              <li className={styles.tile}>
-                <span className={styles.tileValue}>{sideStats.withAccount}</span>
-                <span className={styles.tileLabel}>With account</span>
-                <span className={styles.tileHint}>Active student logins</span>
-              </li>
-              <li className={styles.tile}>
-                <span className={styles.tileValue}>{sideStats.pendingSignup}</span>
-                <span className={styles.tileLabel}>Pending sign-up</span>
-                <span className={styles.tileHint}>Rostered learners with no login yet</span>
-              </li>
-              <li className={styles.tile}>
-                <span className={styles.tileValue}>{sideStats.sections}</span>
-                <span className={styles.tileLabel}>Sections tracked</span>
-                <span className={styles.tileHint}>G7–10 sections this school year</span>
-              </li>
-            </ul>
-          )}
+        <section
+          className={styles.kpiBoard}
+          aria-label="Accounts summary"
+          aria-busy={kpisPending || undefined}
+        >
+          <div className={styles.kpiGrid}>
+            {kpisPending
+              ? Array.from({ length: kpiColumns.length }).map((_, i) => (
+                  <div key={i} className={styles.kpiColumn} aria-hidden="true">
+                    <div className={styles.kpiHeadSkeleton}>
+                      <Skeleton className={styles.kpiSkelTitle} />
+                    </div>
+                    <Skeleton className={styles.kpiSkelCard} />
+                  </div>
+                ))
+              : kpiColumns.map((column) => {
+                  const Icon = column.icon;
+                  return (
+                    <div
+                      key={column.key}
+                      className={styles.kpiColumn}
+                      aria-label={`${column.title}, ${column.value}`}
+                    >
+                      <KanbanBoardHeader
+                        icon={<Icon size={14} className={column.accent} aria-hidden />}
+                        title={column.title}
+                      />
+                      <div className={styles.kpiStat}>
+                        <span className={styles.kpiStatTop}>
+                          <span
+                            className={`${styles.kpiNumber} ${
+                              column.value === 0 ? styles.kpiNumberZero : ""
+                            }`}
+                          >
+                            {column.value}
+                          </span>
+                          <span className={styles.kpiMascot} aria-hidden="true">
+                            <StudentMascot
+                              name={column.title}
+                              character={column.mascot}
+                              size={36}
+                            />
+                          </span>
+                        </span>
+                        <span className={styles.kpiHint}>{column.hint}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+          </div>
         </section>
 
-        <section className={assign.card} aria-labelledby="accounts-queue-heading">
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className={`${styles.queueHead} relative`}>
-            <div className={styles.queueHeadText}>
-              <h2 id="accounts-queue-heading" className="text-base font-semibold">
-                Pending Students
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Approve or reject student account requests for grades 7–10 —{" "}
-                {isPending ? "…" : `${filteredTotal} pending${isSyncing ? " · Syncing…" : ""}`}.
-              </p>
-            </div>
-            <div className={styles.queueActions}>
-              <div className={styles.qSearchWrap}>
-                <Search className={styles.searchIcon} aria-hidden />
-                <Input
-                  className={styles.search}
-                  placeholder="Search name, LRN, or section…"
-                  value={queryInput}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                  }}
-                  aria-label="Search pending students"
-                />
+        <div ref={queueRef} className={styles.queueAnchor}>
+          <KanbanBoard
+            title="Pending Students"
+            icon={<UserPlus size={14} className="text-primary" aria-hidden />}
+            description="Review student account requests for grades 7–10."
+            ariaLabel="Pending student accounts"
+            actions={
+              <div className={styles.headerActions}>
+                <div className={styles.searchWrap}>
+                  <Search className={styles.searchIcon} aria-hidden />
+                  <Input
+                    className={styles.search}
+                    placeholder="Search name, LRN, or section…"
+                    value={queryInput}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                    }}
+                    aria-label="Search pending students"
+                  />
+                </div>
+                {queryInput && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={styles.clearBtn}
+                    onClick={() => {
+                      setQuery("");
+                    }}
+                  >
+                    <X aria-hidden />
+                    Clear
+                  </Button>
+                )}
               </div>
-              {queryInput && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={styles.clearBtn}
-                  onClick={() => {
-                    setQuery("");
-                  }}
-                >
-                  <X aria-hidden />
-                  Show all
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className={`${styles.content} relative`}>
+            }
+            footer={
+              <Pagination
+                currentPage={safePage}
+                totalItems={filteredTotal}
+                onPageChange={setPage}
+              />
+            }
+          >
             {isPending ? (
-              <div className={styles.tableWrap}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Section</TableHead>
-                      <TableHead>Grade</TableHead>
-                      <TableHead>Requested</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Verification</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <SkeletonRows />
-                  </TableBody>
-                </Table>
-              </div>
+              <RowListSkeleton
+                rows={8}
+                gutter="0.625rem"
+                withMetaAvatar={false}
+                withActions
+                metaPills={3}
+              />
             ) : isError ? (
               <p className={styles.empty}>Could not load pending students.</p>
             ) : !hasRecords ? (
@@ -298,95 +419,44 @@ function AccountApprovalsPageInner() {
                 hint={`No students match "${query}".`}
               />
             ) : (
-              <div className={styles.tableWrap}>
-                <Table aria-label="Pending student accounts">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Section</TableHead>
-                      <TableHead>Grade</TableHead>
-                      <TableHead>Requested</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Verification</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pageRows.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell>
-                          <div className={styles.studentCell}>
-                            <span className={styles.studentName}>{s.name}</span>
-                            <span className={styles.studentLrn}>{s.lrn}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className={styles.cell}>
-                          {formatSection(s.section)}
-                        </TableCell>
-                        <TableCell className={styles.cell}>{formatGrade(s.gradeLevel)}</TableCell>
-                        <TableCell className={styles.cell}>
-                          <span className={styles.requested}>{formatRelativeTime(s.requestedAt)}</span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="amber" className={styles.statusBadge}>
-                            Pending
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <LrnVerifyButton
-                            student={s}
-                            onApprove={() => act.mutateAsync({ id: s.id, approve: true }).then(() => undefined)}
-                            approving={act.isPending}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <RowList
+                bleed
+                gutter="0.625rem"
+                animateOnMount
+                items={rowItems}
+                emptyText="No pending student accounts."
+                ariaLabel="Pending student accounts"
+              />
             )}
-          </div>
-
-          <Pagination
-            currentPage={safePage}
-            totalItems={filteredTotal}
-            onPageChange={setPage}
-          />
-        </section>
-
-        <AccountsBreakdown data={breakdownData ?? []} loading={breakdownPending} />
+          </KanbanBoard>
+        </div>
       </div>
+      <AccountsBreakdownRail
+        data={breakdownData ?? []}
+        loading={breakdownPending}
+        onReview={handleReviewSection}
+      />
+
+      {verifyTarget ? (
+        <LrnVerifyDock
+          key={verifyTarget.id}
+          student={verifyTarget}
+          approving={actingVars?.id === verifyTarget.id}
+          onClose={() => setVerifyTarget(null)}
+          onApprove={() => {
+            const target = verifyTarget;
+            // Close at once — the shared Dock reports the request until it settles.
+            setVerifyTarget(null);
+            return act.mutateAsync({ id: target.id, approve: true, name: target.name }).then(() => undefined);
+          }}
+          onReject={(reason) => {
+            const target = verifyTarget;
+            setVerifyTarget(null);
+            return act.mutateAsync({ id: target.id, approve: false, reason, name: target.name }).then(() => undefined);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
 
-function SkeletonRows() {
-  return (
-    <>
-      {Array.from({ length: 8 }).map((_, i) => (
-        <TableRow key={i}>
-          <TableCell>
-            <div className={styles.studentCell}>
-              <Skeleton className={styles.skelName} />
-              <Skeleton className={styles.skelLrn} />
-            </div>
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "38%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "44%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "64%" }} />
-          </TableCell>
-        </TableRow>
-      ))}
-    </>
-  );
-}

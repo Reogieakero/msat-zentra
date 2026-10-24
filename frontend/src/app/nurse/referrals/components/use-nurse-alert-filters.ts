@@ -19,6 +19,7 @@ export function useNurseAlertFilters({
   serverPage,
   serverTotal,
   serverTotalPages,
+  pageSize = PAGE_SIZE,
 }: {
   alerts: NurseAlertItem[];
   initialType?: TypeFilter;
@@ -27,6 +28,8 @@ export function useNurseAlertFilters({
   serverPage?: number;
   serverTotal?: number;
   serverTotalPages?: number;
+  /** Records per page. Defaults to the global 15; the ADM kanban pages 16. */
+  pageSize?: number;
 }) {
   const [typeFilter, setTypeFilter] = React.useState<TypeFilter>(initialType);
   const [actionFilter, setActionFilter] = React.useState<ActionFilter>("");
@@ -42,8 +45,8 @@ export function useNurseAlertFilters({
       return b.sortTime - a.sortTime;
     });
     const idx = sorted.findIndex((a) => a.row.id === highlightId);
-    return idx >= 0 ? Math.floor(idx / PAGE_SIZE) + 1 : null;
-  }, [alerts, highlightId]);
+    return idx >= 0 ? Math.floor(idx / pageSize) + 1 : null;
+  }, [alerts, highlightId, pageSize]);
   const effPage = serverDriven
     ? (serverPage ?? 1)
     : !paged && highlightPage !== null
@@ -99,7 +102,7 @@ export function useNurseAlertFilters({
   const total = serverDriven ? (serverTotal ?? filtered.length) : filtered.length;
   const totalPages = serverDriven
     ? Math.max(1, serverTotalPages ?? 1)
-    : Math.max(1, Math.ceil(total / PAGE_SIZE));
+    : Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(effPage, totalPages);
   return {
     typeFilter,
@@ -117,6 +120,5 @@ export function useNurseAlertFilters({
     total,
     totalPages,
     safePage,
-    pageSize: PAGE_SIZE,
   };
 }

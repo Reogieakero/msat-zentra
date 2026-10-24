@@ -87,9 +87,25 @@ export const CONSULT_REVIEWER_LABELS: Record<string, string> = {
   adm_coordinator: "ADM Coordinator",
 };
 
+/** Referral status pill shown in the generic track overlays — label +
+    accent dot color (same statuses the queues use). */
+export const ADM_TRACK_STATUS_META: Record<string, { label: string; color: string }> = {
+  pending: { label: "Pending review", color: "#f59e0b" },
+  in_progress: { label: "In progress", color: "#3b82f6" },
+  follow_up: { label: "Follow-up", color: "#8b5cf6" },
+  info_requested: { label: "Needs info", color: "#f59e0b" },
+  escalated: { label: "Escalated", color: "#ef4444" },
+  resolved: { label: "Resolved", color: "#22c55e" },
+  dismissed: { label: "Dismissed", color: "#ef4444" },
+};
+
 export interface AdmTrackInput {
   stage?: string | null;
   referralStatus?: string | null;
+  /** Audit-derived dismissal actor — the board reads it to judge whether a
+      dismissal was the filer withdrawing ("Cancelled") or the desk
+      rejecting ("Rejected"). */
+  dismissedByRole?: string | null;
   consultReviewer?: string | null;
   referredBy?: string | null;
   anecdotalDate?: string | null;

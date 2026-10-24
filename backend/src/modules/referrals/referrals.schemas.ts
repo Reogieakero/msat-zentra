@@ -123,11 +123,18 @@ export const reopenSchema = z.object({
   consultReviewer: z.enum(["nurse", "guidance_counselor", "lrpc"]).optional(),
 }).strict();
 
-/** Queue list-query validation: page/pageSize capped at 15, trimmed filters. */
-export const referralsQueueQuerySchema = paginationQuerySchema().extend({
+/** Nurse-queue page ceiling — the ADM kanban board pages a 4×4 grid (16). */
+export const NURSE_QUEUE_MAX_PAGE_SIZE = 16;
+
+/** Queue list-query validation: page/pageSize capped at the queue ceiling, trimmed filters. */
+export const referralsQueueQuerySchema = paginationQuerySchema(NURSE_QUEUE_MAX_PAGE_SIZE).extend({
   track: z.string().trim().max(40).optional(),
   status: z.string().trim().max(40).optional(),
   highlight: z.string().trim().max(120).optional(),
+  // `latest` ranks the whole filtered queue by referred time before paging —
+  // Referral.id is a random uuid, so the default id-desc page pick is an
+  // arbitrary sample that can miss the newest referrals on a busy desk.
+  sort: z.enum(["latest"]).optional(),
 });
 
 export const referralsMineQuerySchema = paginationQuerySchema().extend({

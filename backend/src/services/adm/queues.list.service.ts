@@ -63,49 +63,91 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
     stageFilter === "principal_approval" && ctx.role === "principal"
       ? { in: ["principal_approval", "enrollment_monitoring"] as AdmStage[] }
       : (stageFilter as AdmStage);
-  const where: Prisma.AdmLearnerProfileWhereInput = {
-    ...(stageFilter && stageFilter !== "consultation"
-      ? { stage: effectiveStageFilter }
-      : stageFilter === ""
-        ? { OR: [{ stage: { in: REFERRAL_STAGES } }, recentApprovalWhere] }
-        : { OR: [recentApprovalWhere] }),
-    ...(eligibilityFilter ? { eligibilityStatus: eligibilityFilter } : {}),
-    ...(q
-      ? {
-          OR: [
-            { student: { user: { fullName: { contains: q, mode: "insensitive" as const } } } },
-            { student: { lrn: { contains: q } } },
-            { id: { contains: q } },
-          ],
-        }
-      : {}),
+
+  // The coordinator desk only surfaces cases the nurse / guidance counselor
+  // endorsed with the referral form ready — never every ADM case, and never
+  // the enrolled / monitoring / completed stages. "Endorsed" means the
+  // consultation reviewer forwarded the referral to the ADM coordinator with
+  // the referral form completed. The principal desk keeps the full view.
+  const coordinatorIntake = ctx.role === "adm_coordinator";
+  const endorsedReferralWhere: Prisma.ReferralWhereInput = {
+    consultReviewer: { in: ["nurse", "guidance_counselor"] },
+    referralFormReady: true,
   };
+  // No profile exists at the "consultation" stage (forwards live as pre-profile
+  // referrals), so a consultation filter matches zero profiles. Any stage
+  // outside the coordinator-readable set also matches zero. The enrolled stages
+  // (enrollment_monitoring / completion) are readable here so the coordinator's
+  // Enrolled page works; the endorsed-referral filter below still scopes them
+  // to real pipeline cases.
+  const coordinatorReadableStages = [...REFERRAL_STAGES, ...ENROLLED_STAGES];
+  const coordinatorStageWhere: Prisma.AdmLearnerProfileWhereInput["stage"] =
+    stageFilter === ""
+      ? { in: REFERRAL_STAGES }
+      : (coordinatorReadableStages as string[]).includes(stageFilter)
+        ? effectiveStageFilter
+        : { in: [] as AdmStage[] };
+
+  const qProfileWhere: Prisma.AdmLearnerProfileWhereInput["OR"] = q
+    ? [
+        { student: { user: { fullName: { contains: q, mode: "insensitive" as const } } } },
+        { student: { lrn: { contains: q } } },
+        { id: { contains: q } },
+      ]
+    : undefined;
+
+  const where: Prisma.AdmLearnerProfileWhereInput = coordinatorIntake
+    ? {
+        stage: coordinatorStageWhere,
+        referral: endorsedReferralWhere,
+        ...(eligibilityFilter ? { eligibilityStatus: eligibilityFilter } : {}),
+        ...(qProfileWhere ? { OR: qProfileWhere } : {}),
+      }
+    : {
+        ...(stageFilter && stageFilter !== "consultation"
+          ? { stage: effectiveStageFilter }
+          : stageFilter === ""
+            ? { OR: [{ stage: { in: REFERRAL_STAGES } }, recentApprovalWhere] }
+            : { OR: [recentApprovalWhere] }),
+        ...(eligibilityFilter ? { eligibilityStatus: eligibilityFilter } : {}),
+        ...(qProfileWhere ? { OR: qProfileWhere } : {}),
+      };
 
   const includeEarly =
     (!stageFilter || stageFilter === "consultation") &&
     (!eligibilityFilter || eligibilityFilter === "pending");
 
-  const earlyWhere: Prisma.ReferralWhereInput = {
-    referredToRole: "adm_coordinator",
-    admProfiles: { none: {} },
-    NOT: {
-      status: "pending",
-      consultReviewer: { in: ["nurse", "guidance_counselor"] },
-    },
-    ...(q
-      ? {
-          OR: [
-            { student: { user: { fullName: { contains: q, mode: "insensitive" as const } } } },
-            { student: { lrn: { contains: q } } },
-            { roster: { fullName: { contains: q, mode: "insensitive" as const } } },
-            { roster: { lrn: { contains: q } } },
-            { id: { contains: q } },
-          ],
-        }
-      : {}),
-  };
+  const qReferralWhere: Prisma.ReferralWhereInput["OR"] = q
+    ? [
+        { student: { user: { fullName: { contains: q, mode: "insensitive" as const } } } },
+        { student: { lrn: { contains: q } } },
+        { roster: { fullName: { contains: q, mode: "insensitive" as const } } },
+        { roster: { lrn: { contains: q } } },
+        { id: { contains: q } },
+      ]
+    : undefined;
 
-  const referredWhere: Prisma.AdmLearnerProfileWhereInput = { stage: { in: REFERRAL_STAGES } };
+  const earlyWhere: Prisma.ReferralWhereInput = coordinatorIntake
+    ? {
+        referredToRole: "adm_coordinator",
+        admProfiles: { none: {} },
+        ...endorsedReferralWhere,
+        status: { not: "pending" },
+        ...(qReferralWhere ? { OR: qReferralWhere } : {}),
+      }
+    : {
+        referredToRole: "adm_coordinator",
+        admProfiles: { none: {} },
+        NOT: {
+          status: "pending",
+          consultReviewer: { in: ["nurse", "guidance_counselor"] },
+        },
+        ...(qReferralWhere ? { OR: qReferralWhere } : {}),
+      };
+
+  const referredWhere: Prisma.AdmLearnerProfileWhereInput = coordinatorIntake
+    ? { stage: { in: REFERRAL_STAGES }, referral: endorsedReferralWhere }
+    : { stage: { in: REFERRAL_STAGES } };
 
   const useDbPaging = !includeEarly;
   const [profileItems, stageGroups, totalReferredProfiles, earlyItems, totalProfiles] = await Promise.all([

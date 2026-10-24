@@ -55,33 +55,25 @@ type RangeKey = (typeof RANGES)[number]["value"];
 export function RiskTrend() {
   const gradId = React.useId().replace(/:/g, "");
 
-  // The trend always follows the workspace term — no local SY/term filter.
-  const { activeTerm } = useTerm();
+  // Server-scoped: the trend follows the active school year/term. Daily vs
+  // per-term rows are inferred from the response, not from client state.
+  const { activeSchoolYear } = useTerm();
 
   const [range, setRange] = usePersistentState<RangeKey>(
     "zentra.risk.trend.range",
     "all"
   );
 
-  const schoolYearId = activeTerm?.schoolYearId ?? null;
-  const termId = activeTerm?.termId ?? null;
-
   const { data, isPending } = useQuery({
-
-    queryKey: ["risk-trend", schoolYearId, termId ?? "none"],
+    queryKey: ["risk-trend"],
     queryFn: async () => {
-      const params: Record<string, string> = {};
-      if (schoolYearId) params.schoolYearId = schoolYearId;
-      if (termId) params.termId = termId;
-      const res = await apiClient.get<RiskTrendData>("/api/risk/trend", { params });
+      const res = await apiClient.get<RiskTrendData>("/api/risk/trend");
       return res.data;
     },
-    enabled: schoolYearId !== null && termId !== null,
   });
 
-  const isDaily = termId !== null;
-
   const trend = data?.trend ?? [];
+  const isDaily = trend.some((t) => Boolean(t.date));
   let chartData = trend.map((t) => ({
     date: t.date,
     term: t.term,
@@ -114,15 +106,17 @@ export function RiskTrend() {
           <h2 className={styles.title}>Risk Trend</h2>
           <p className={styles.subtitle}>
             {isDaily
-              ? "Total for the selected term"
+              ? "Total for the active term"
               : "School-wide risk trend by term"}
           </p>
         </div>
         <div className={styles.filters}>
           <p className={styles.scopeNote} aria-live="polite">
-            {activeTerm
-              ? `Showing ${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
-              : "No workspace term selected"}
+            {isDaily
+              ? "Showing the active term"
+              : activeSchoolYear
+                ? `Showing ${activeSchoolYear.name}`
+                : "No active school year"}
           </p>
         </div>
       </div>
@@ -136,7 +130,7 @@ export function RiskTrend() {
             <PrincipalEmptyState
               icon={TrendingUp}
               title="No trend data yet"
-              hint="No risk trend data available for the selected school year and term."
+              hint="No risk trend data available for the active school year and term."
             />
         </div>
         ) : (
@@ -144,7 +138,7 @@ export function RiskTrend() {
         <div className={`${styles.cardHeader} relative`}>
           <p className={styles.cardDesc}>
             {isDaily
-              ? "Daily risk levels for the selected term"
+              ? "Daily risk levels for the active term"
               : "Risk levels aggregated per term"}
           </p>
           <div className={styles.cardActions}>

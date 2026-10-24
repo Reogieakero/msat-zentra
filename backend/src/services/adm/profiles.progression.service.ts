@@ -12,7 +12,10 @@ const ROLE_FOR_STAGE: Record<AdmStage, string[]> = {
   meeting_parents: ["adm_coordinator"],
   home_visitation: ["guidance_counselor"],
   certification: ["adm_coordinator"],
-  principal_approval: ["principal"],
+  // The coordinator endorses the prepared certification to the Principal
+  // (PATCH stage → principal_approval). The Principal signs via
+  // /principal-approve, which is a separate, guarded action.
+  principal_approval: ["principal", "adm_coordinator"],
   enrollment_monitoring: ["adm_coordinator"],
   completion: ["adm_coordinator"],
 };
@@ -23,12 +26,23 @@ export async function advanceStage(ctx: AdmContext, profileId: string, target: A
     where: { id: profileId },
     include: {
       student: { select: { user: { select: { fullName: true } } } },
-      referral: { select: { id: true, referredBy: true } },
+      referral: { select: { id: true, referredBy: true, consultReviewer: true } },
       forms: { select: { formType: true, status: true } },
       parentMeetings: { select: { attended: true } },
+      modules: { select: { submitted: true } },
     },
   });
   if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
+  // Role gate runs before the no-op early return so an out-of-role caller can
+  // never read the case file through a same-stage PATCH.
+  const allowed = ROLE_FOR_STAGE[target] ?? [];
+  if (!allowed.includes(ctx.role)) {
+    throw new AppError(
+      403,
+      "FORBIDDEN_STAGE",
+      `Role ${ctx.role} cannot move a case to ${target}`
+    );
+  }
   if (profile.stage === target) {
     return profile;
   }
@@ -39,13 +53,19 @@ export async function advanceStage(ctx: AdmContext, profileId: string, target: A
       `Cannot move from ${profile.stage} to ${target}`
     );
   }
-  const allowed = ROLE_FOR_STAGE[target] ?? [];
-  if (!allowed.includes(ctx.role)) {
-    throw new AppError(
-      403,
-      "FORBIDDEN_STAGE",
-      `Role ${ctx.role} cannot move a case to ${target}`
-    );
+  // A case can only be completed once every released module is submitted —
+  // the coordinator must not close enrollment monitoring early. Enforced
+  // here so the rule holds for any caller, not just the board button.
+  if (target === "completion") {
+    const totalModules = profile.modules.length;
+    const submittedModules = profile.modules.filter((m) => m.submitted).length;
+    if (totalModules === 0 || submittedModules < totalModules) {
+      throw new AppError(
+        409,
+        "ADM_MODULES_INCOMPLETE",
+        "All modules must be submitted before this case can be completed"
+      );
+    }
   }
 
   const data: { stage: AdmStage; eligibilityStatus?: "pending" | "eligible" | "ineligible" } = {
@@ -113,6 +133,19 @@ export async function advanceStage(ctx: AdmContext, profileId: string, target: A
     });
   }
 
+  // Tell the Nurse reviewer when the case they consulted on is closed out.
+  if (target === "completion" && profile.referral?.consultReviewer === "nurse") {
+    void fanoutToRole("nurse", {
+      sourceTable: "referrals",
+      action: "status",
+      message: `The ADM case for ${studentName} was completed.`,
+      sourceId: profile.referral.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} completed the ADM case for ${studentName} — ${r.fullName}, the consultation you endorsed is now closed.`,
+    });
+  }
+
   void fanoutNotification({
     userId: ctx.userId,
     sourceTable: "adm_learner_profiles",
@@ -137,6 +170,7 @@ export async function certify(ctx: AdmContext, profileId: string, recommendation
         select: {
           id: true,
           referredBy: true,
+          consultReviewer: true,
           anecdotalRecordId: true,
           homeVisitations: { select: { id: true }, take: 1 },
         },
@@ -235,6 +269,17 @@ export async function certify(ctx: AdmContext, profileId: string, recommendation
     messageFor: (r) =>
       `${actor} certified the ADM case for ${studentName} and endorsed it to the Principal — sent to you, ${r.fullName}.`,
   });
+  if (profile.referral?.consultReviewer === "nurse") {
+    void fanoutToRole("nurse", {
+      sourceTable: "referrals",
+      action: "status",
+      message: `The ADM case for ${studentName} was certified and endorsed to the Principal.`,
+      sourceId: profile.referral.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} certified the ADM case for ${studentName} — ${r.fullName}, the consultation you endorsed is now with the Principal.`,
+    });
+  }
   void fanoutNotification({
     userId: ctx.userId,
     sourceTable: "adm_learner_profiles",
@@ -250,7 +295,7 @@ export async function principalApprove(ctx: AdmContext, profileId: string) {
     where: { id: profileId },
     include: {
       student: { select: { user: { select: { fullName: true } } } },
-      referral: { select: { id: true, referredBy: true, status: true } },
+      referral: { select: { id: true, referredBy: true, status: true, consultReviewer: true } },
     },
   });
   if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
@@ -291,6 +336,17 @@ export async function principalApprove(ctx: AdmContext, profileId: string) {
         `${actor} signed the ADM case for ${studentName} — sent to you, ${r.fullName}.`,
     });
   }
+  if (profile.referral?.consultReviewer === "nurse") {
+    void fanoutToRole("nurse", {
+      sourceTable: "referrals",
+      action: "status",
+      message: `The ADM case for ${studentName} was signed by the Principal.`,
+      sourceId: profile.referral.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} signed the ADM case for ${studentName} — ${r.fullName}, the consultation you endorsed is now approved.`,
+    });
+  }
   return updated;
 }
 
@@ -299,6 +355,7 @@ export async function principalReturn(ctx: AdmContext, profileId: string) {
     where: { id: profileId },
     include: {
       student: { select: { user: { select: { fullName: true } } } },
+      referral: { select: { id: true, consultReviewer: true } },
     },
   });
   if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
@@ -344,5 +401,16 @@ export async function principalReturn(ctx: AdmContext, profileId: string) {
     messageFor: (r) =>
       `${actor} returned the ADM case for ${studentName} for revision — sent to you, ${r.fullName}.`,
   });
+  if (profile.referral?.consultReviewer === "nurse") {
+    void fanoutToRole("nurse", {
+      sourceTable: "referrals",
+      action: "status",
+      message: `The ADM case for ${studentName} was returned by the Principal for revision.`,
+      sourceId: profile.referral?.id ?? profile.referralId ?? profile.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} returned the ADM case for ${studentName} for revision — ${r.fullName}, the consultation you endorsed needs another look.`,
+    });
+  }
   return updated;
 }

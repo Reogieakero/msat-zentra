@@ -5,15 +5,17 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { useNowTick } from "@/lib/clock";
-import { useTerm } from "@/lib/term/TermContext";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { fetchCoordinatorCaseDetail } from "@/services/coordinator/cases.service";
 import type {
   AdmCaseRow,
   AdmFormRef,
+  AdmMeeting,
   CoordinatorCaseDetail,
 } from "@/services/coordinator/coordinator.types";
+import { useCoordinatorBooking } from "../../components/use-coordinator-booking";
 import { fetchOcForm01Detail, type OcForm01Detail } from "@/components/ocform01/ocform01";
 import { buildGcForm03Data } from "@/services/guidance/gcform03.service";
 import type { GcForm03Data } from "@/services/guidance/gcform03.types";
@@ -25,11 +27,9 @@ import type { CertSheetContext } from "../certification-sheet";
 import { CASE_STEPS, type CaseStepId } from "../case-steps";
 import { deriveChecklist } from "../eligibility-checklist-card";
 export function useCoordinatorCaseView(caseId: string) {
-  const { activeTerm } = useTerm();
-  const caseTermKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const detailQuery = useQuery({
-    // Term-scoped: never show another term's case file.
-    queryKey: ["coordinator-case", caseId, caseTermKey],
+    // The server scopes the case file — no client term in the key.
+    queryKey: ["coordinator-case", caseId],
     queryFn: ({ signal }) => fetchCoordinatorCaseDetail(caseId, signal),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
@@ -37,29 +37,33 @@ export function useCoordinatorCaseView(caseId: string) {
   const now = useNowTick();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const termId = activeTerm?.termId ?? "";
-  const scopeLabel = activeTerm
-    ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
-    : "No active term";
+  const scopeLabel = "the current term";
   const [createTarget, setCreateTarget] = React.useState<AdmCaseRow | null>(null);
   const [certSheetOpen, setCertSheetOpen] = React.useState(false);
   const searchParams = useSearchParams();
+  const dock = useDock();
   const createMutation = useMutation({
-    mutationFn: async () => {
-      if (!createTarget) throw new Error("No referral selected.");
-      const referralId = createTarget.id.replace(/^referral:/, "");
+    mutationFn: async ({
+      target,
+    }: {
+      target: AdmCaseRow;
+      taskId: string | null;
+    }) => {
+      const referralId = target.id.replace(/^referral:/, "");
       const { data } = await apiClient.post("/api/adm/profiles", {
         referralId,
-        termId,
       });
       return data as { id: string };
     },
-    onSuccess: (profile) => {
+    onSuccess: (profile, vars) => {
       if (profile?.id) markSelfNotified(profile.id);
       void queryClient.invalidateQueries({ queryKey: ["coordinator-referrals"] });
       void queryClient.invalidateQueries({ queryKey: ["coordinator-dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["coordinator-notifications"] });
       setCreateTarget(null);
+      if (vars.taskId) {
+        dock.completeTask(vars.taskId, `${vars.target.student} → profile`);
+      }
       toast.success({
         title: "Learner profile created",
         description: "Opening the case file to continue toward certification.",
@@ -68,13 +72,54 @@ export function useCoordinatorCaseView(caseId: string) {
         `/coordinator/referrals/${encodeURIComponent(profile.id)}?certify=1`,
       );
     },
-    onError: (err) =>
+    onError: (err, vars) => {
+      if (vars.taskId) dock.failTask(vars.taskId, apiErrorMessage(err));
       toast.error({
         title: "Could not create profile",
         description: apiErrorMessage(err),
-      }),
+      });
+    },
   });
   const caseData = detailQuery.data ?? null;
+  // Reuse the referrals/overview booking flow so the case page books through
+  // the same dialog, dock task, and invalidation path.
+  const bookingRow = React.useMemo<AdmCaseRow | null>(() => {
+    if (!caseData) return null;
+    return {
+      id:
+        caseData.kind === "referral" && caseData.referralId
+          ? `referral:${caseData.referralId}`
+          : (caseData.profileId ?? caseData.id),
+      lrn: caseData.lrn,
+      student: caseData.student,
+      grade: caseData.grade,
+      stage: caseData.stage,
+      eligibilityStatus: caseData.eligibilityStatus,
+      preparedBy: caseData.preparedBy,
+      datePrepared: caseData.datePrepared,
+      approvedBy: caseData.approvedBy,
+      approvalDate: caseData.approvalDate,
+      forms: caseData.forms,
+    };
+  }, [caseData]);
+  // The case detail leaves empty relations optional; the booking sheet only
+  // reads ids/schedules, so fill the gaps rather than widening its types.
+  const bookingMeetings = React.useMemo<AdmMeeting[]>(
+    () =>
+      (caseData?.meetings ?? []).map((m) => ({
+        ...m,
+        invitees: m.invitees ?? [],
+        attachments: m.attachments ?? [],
+      })),
+    [caseData],
+  );
+  const booking = useCoordinatorBooking({
+    selected: bookingRow,
+    meetings: bookingMeetings,
+    invalidateReferrals: () => {
+      void detailQuery.refetch();
+    },
+  });
   const JOIN_EARLY_MS = 15 * 60_000;
   const hasAttendedMeeting = (caseData?.meetings ?? []).some(
     (mtg) => mtg.attended,
@@ -309,11 +354,27 @@ export function useCoordinatorCaseView(caseId: string) {
   return {
     detailQuery,
     now,
-    termId,
     scopeLabel,
     createTarget,
     setCreateTarget,
     createMutation,
+    confirmCreate: () => {
+      const target = createTarget;
+      if (!target || createMutation.isPending) return;
+      // Close at once — the shared Dock reports the request until it settles.
+      setCreateTarget(null);
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "generic",
+          title: "Creating learner profile",
+          description: `${target.student} → profile`,
+        });
+      } catch {
+        taskId = null;
+      }
+      createMutation.mutate({ target, taskId });
+    },
     preparingProfile,
     startCreateProfile,
     hasAttendedMeeting,
@@ -352,6 +413,8 @@ export function useCoordinatorCaseView(caseId: string) {
     hasCertification,
     checklist,
     stepDone,
+    booking,
+    bookingRow,
   };
 }
 export type CoordinatorCaseView = ReturnType<typeof useCoordinatorCaseView>;

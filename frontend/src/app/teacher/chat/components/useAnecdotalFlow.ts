@@ -527,7 +527,6 @@ export function useAnecdotalFlow({
       const created = await createAnecdotalRecord({
         studentId: student.id,
         sectionId: selectedClass.sectionId,
-        termId: selectedClass.termId,
         observationDatetime: obsDateTime,
         descriptionOfIncident: note,
         descriptionOfLocation: location || "Classroom",

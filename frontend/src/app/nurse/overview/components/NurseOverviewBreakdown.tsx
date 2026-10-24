@@ -15,18 +15,21 @@ import {
 import type { NurseBreakdownRow } from "@/services/nurse/nurse.types";
 import type { LucideIcon } from "lucide-react";
 import { Activity, ClipboardList, Send } from "lucide-react";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 
+// Amber ramp — the rail's accent (tailwind amber-500), so the donut slices
+// and bars share the page's action color. Same shade steps as before.
+const AMBER = "oklch(0.769 0.188 70.08)"; // amber-500
 const SHADES = [
-  "var(--primary)",
-  "color-mix(in oklch, var(--primary), transparent 25%)",
-  "color-mix(in oklch, var(--primary), transparent 45%)",
-  "color-mix(in oklch, var(--primary), transparent 60%)",
-  "color-mix(in oklch, var(--primary), transparent 72%)",
-  "color-mix(in oklch, var(--primary), transparent 82%)",
-  "color-mix(in oklch, var(--primary), transparent 89%)",
+  AMBER,
+  `color-mix(in oklch, ${AMBER}, transparent 25%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 45%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 60%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 72%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 82%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 89%)`,
 ];
 
 interface Slice extends NurseBreakdownRow {
@@ -45,6 +48,17 @@ function buildSlices(rows: NurseBreakdownRow[]): { slices: Slice[]; total: numbe
   return { slices, total };
 }
 
+/** Board header icon — same slot as the main "Latest referred students" board. */
+function BoardIcon({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <span className="text-primary" aria-hidden>
+      <Icon size={14} />
+    </span>
+  );
+}
+
+/** One chart per kanban board: header (icon, title, total) + description +
+    the chart itself, chromeless rows — same shell as the case board above. */
 function BarPanel({
   title,
   description,
@@ -61,61 +75,52 @@ function BarPanel({
   icon: LucideIcon;
 }) {
   const { slices, total } = buildSlices(rows);
-  const height = Math.max(168, slices.length * 36 + 16);
+  const height = Math.max(120, slices.length * 28 + 8);
   const isEmpty = rows.length === 0;
 
   return (
-    <div className={assign.card}>
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      {isEmpty ? null : (
-      <div className="relative">
-        <h2 className={styles.sectionTitle}>{title}</h2>
-        <p className={styles.sectionDesc}>{description}</p>
-      </div>
-      )}
+    <KanbanBoard
+      title={title}
+      icon={<BoardIcon icon={Icon} />}
+      count={total}
+      description={description}
+      className="flex-1"
+    >
       {isEmpty ? (
         <NurseEmptyState icon={Icon} title={emptyTitle} hint={emptyText} />
       ) : (
-        <>
-          <div
-            className={`${styles.barChart} relative`}
-            role="img"
-            aria-label={`${title}: ${slices.map((s) => `${s.label} ${s.count} (${s.percent}%)`).join(", ")}`}
-          >
-            <ResponsiveContainer width="100%" height={height}>
-              <BarChart data={slices} layout="vertical" margin={{ top: 4, right: 36, bottom: 4, left: 0 }}>
-                <XAxis type="number" hide />
-                <YAxis type="category" dataKey="label" width={112} tickLine={false} axisLine={false} />
-                <Tooltip
-                  cursor={false}
-                  contentStyle={{
-                    borderRadius: "8px",
-                    border: "1px solid var(--border)",
-                    background: "var(--card)",
-                    color: "var(--foreground)",
-                    fontSize: "0.75rem",
-                  }}
-                  formatter={(value) => [value, "Cases"]}
-                  labelFormatter={() => ""}
-                />
-                <Bar dataKey="count" barSize={18} radius={[2, 6, 6, 2]}>
-                  {slices.map((d) => (
-                    <Cell key={d.key} fill={d.fill} />
-                  ))}
-                  <LabelList dataKey="count" position="right" />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <p className={`${styles.legendTotal} relative`}>
-            {total} {total === 1 ? "case" : "cases"} total
-          </p>
-        </>
+        <div
+          className={`${styles.barChart} relative`}
+          role="img"
+          aria-label={`${title}: ${slices.map((s) => `${s.label} ${s.count} (${s.percent}%)`).join(", ")}`}
+        >
+          <ResponsiveContainer width="100%" height={height}>
+            <BarChart data={slices} layout="vertical" margin={{ top: 2, right: 28, bottom: 2, left: 0 }}>
+              <XAxis type="number" hide />
+              <YAxis type="category" dataKey="label" width={104} tickLine={false} axisLine={false} />
+              <Tooltip
+                cursor={false}
+                contentStyle={{
+                  borderRadius: "8px",
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  color: "var(--foreground)",
+                  fontSize: "0.75rem",
+                }}
+                formatter={(value) => [value, "Cases"]}
+                labelFormatter={() => ""}
+              />
+              <Bar dataKey="count" barSize={12} radius={[2, 4, 4, 2]}>
+                {slices.map((d) => (
+                  <Cell key={d.key} fill={d.fill} />
+                ))}
+                <LabelList dataKey="count" position="right" />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       )}
-    </div>
+    </KanbanBoard>
   );
 }
 
@@ -140,16 +145,13 @@ function DonutPanel({
   const isEmpty = rows.length === 0;
 
   return (
-    <div className={assign.card}>
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      {isEmpty ? null : (
-      <div className="relative">
-        <h2 className={styles.sectionTitle}>{title}</h2>
-        <p className={styles.sectionDesc}>{description}</p>
-      </div>
-      )}
+    <KanbanBoard
+      title={title}
+      icon={<BoardIcon icon={Icon} />}
+      count={total}
+      description={description}
+      className="flex-1"
+    >
       {isEmpty ? (
         <NurseEmptyState icon={Icon} title={emptyTitle} hint={emptyText} />
       ) : (
@@ -159,7 +161,7 @@ function DonutPanel({
           aria-label={`${title}: ${slices.map((s) => `${s.label} ${s.count} (${s.percent}%)`).join(", ")}`}
         >
           <div className={styles.chartWrap}>
-            <ResponsiveContainer width="100%" height={168}>
+            <ResponsiveContainer width="100%" height={132}>
               <PieChart>
                 <Pie
                   data={slices}
@@ -168,8 +170,7 @@ function DonutPanel({
                   innerRadius="64%"
                   outerRadius="100%"
                   paddingAngle={2}
-                  stroke="var(--card)"
-                  strokeWidth={2}
+                  stroke="transparent"
                   isAnimationActive
                   animationDuration={700}
                 >
@@ -191,14 +192,19 @@ function DonutPanel({
                 <span className={styles.swatch} style={{ background: s.fill }} aria-hidden="true" />
                 <span className={styles.legendLabel}>{s.label}</span>
                 <span className={styles.legendValue}>
-                  {s.count} · {s.percent}%
+                  <span className={styles.legendPill}>
+                    <span className={styles.legendPillCount}>{s.count}</span>
+                    <span className={styles.legendPillPercent} style={{ color: AMBER }}>
+                      {s.percent}%
+                    </span>
+                  </span>
                 </span>
               </li>
             ))}
           </ul>
         </div>
       )}
-    </div>
+    </KanbanBoard>
   );
 }
 

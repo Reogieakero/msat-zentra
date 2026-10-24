@@ -58,7 +58,6 @@ export function CoordinatorReferralsBookDialog({
   onClose,
   onSubmit,
 }: CoordinatorReferralsBookDialogProps) {
-
   const caseParams =
     selected && selected.id.startsWith("referral:")
       ? { referralId: selected.id.slice("referral:".length) }
@@ -129,6 +128,8 @@ export function CoordinatorReferralsBookDialog({
           ? {
               name: selected.student,
               sub: [selected.grade, selected.lrn].filter(Boolean).join(" · "),
+              lrn: selected.lrn,
+              grade: selected.grade,
             }
           : null
       }
@@ -156,6 +157,7 @@ export function CoordinatorReferralsBookDialog({
       submitLabel={isReschedule ? "Reschedule meeting" : "Book meeting"}
       busyLabel={isReschedule ? "Rescheduling…" : "Booking…"}
       idPrefix="coord-book"
+      variant="board"
     />
   );
 }

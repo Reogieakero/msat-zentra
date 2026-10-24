@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Inbox, Loader2, SearchX } from "lucide-react";
+import { Inbox, Loader2, Search, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { GuidanceReferralsToolbar } from "./guidance-referrals-toolbar";
 import { GuidanceReferralsDialogsHost } from "./guidance-referrals-dialogs-host";
@@ -18,6 +23,8 @@ import { useGuidanceReferralActions } from "./use-guidance-referral-actions";
 import {
   GuidanceReferralEntry,
 } from "./GuidanceReferralEntry";
+import { GuidanceCaseKanbanCard } from "./GuidanceCaseKanbanCard";
+import { GuidanceActionTabs } from "./GuidanceActionTabs";
 import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
 import { GuidanceActionMenu } from "./GuidanceActionMenu";
 import {
@@ -101,6 +108,7 @@ export function GuidanceReferralsTable({
   lockType = false,
   title = "Referrals to me",
   highlightId = null,
+  layout = "list",
 }: GuidanceReferralsTableProps) {
   const {
     dialogs,
@@ -132,6 +140,7 @@ export function GuidanceReferralsTable({
   } | null>(null);
 
   const goToPage = (next: number) => onPageChange?.(next);
+  const isKanban = layout === "kanban";
   const hasActiveFilters =
     query.trim() !== "" || action !== "" || (!lockType && typeFilter !== "");
 
@@ -147,7 +156,9 @@ export function GuidanceReferralsTable({
 
   return (
     <div className={styles.layout}>
-      <div className={`${styles.feed} ${styles.layoutFeed}`}>
+      <div
+        className={`${styles.feed} ${styles.layoutFeed}${isKanban ? ` ${styles.feedWide}` : ""}`}
+      >
         <h1 className={styles.srOnly}>Cases sent to guidance</h1>
         {!lockType && (
           <GuidanceReferralsToolbar
@@ -163,6 +174,43 @@ export function GuidanceReferralsTable({
             typeFilterLabel={typeFilterLabel}
           />
         )}
+
+        {isKanban ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <GuidanceActionTabs
+              action={action}
+              summary={summary}
+              track={typeFilter === "ADM" ? "ADM" : "Counseling"}
+              onPick={(value) => {
+                onActionChange(action === value ? "" : value);
+                goToPage(1);
+              }}
+              onClear={() => {
+                onActionChange("");
+                goToPage(1);
+              }}
+            />
+            <InputGroup className="w-56 max-w-full shrink-0 rounded-[16px]">
+              <InputGroupInput
+                placeholder={
+                  typeFilter === "ADM"
+                    ? "Search ADM cases…"
+                    : "Search counseling cases…"
+                }
+                value={query}
+                onChange={(event) => onQueryChange(event.target.value)}
+                aria-label={
+                  typeFilter === "ADM"
+                    ? "Search ADM cases"
+                    : "Search counseling cases"
+                }
+              />
+              <InputGroupAddon>
+                <Search aria-hidden />
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+        ) : null}
 
       {mutation.isError && (
         <div className={styles.errorBlock} role="alert">
@@ -192,12 +240,37 @@ export function GuidanceReferralsTable({
           }
           hint={
             hasActiveFilters
-              ? lockType
-                ? "Pick a different action in the sidebar, or show every case."
-                : "Try a different name or keyword, or clear the filter to see every case."
+              ? isKanban
+                ? "Pick a different filter above the board, or show every case."
+                : lockType
+                  ? "Pick a different action in the sidebar, or show every case."
+                  : "Try a different name or keyword, or clear the filter to see every case."
               : "New cases sent to you by advisers will appear here."
           }
         />
+      ) : isKanban ? (
+        <div className={styles.kanbanGrid} role="list" aria-label={title}>
+          {referrals.map((row) => (
+            <GuidanceCaseKanbanCard
+              key={row.id}
+              row={row}
+              now={now}
+              highlighted={highlightId !== null && highlightId === row.id}
+              actionPending={isActionPending}
+              onReviewAdm={setReviewAdmFor}
+              onReviewCounseling={(row) => openDialog(row.id, "accept")}
+              onBookSession={(row) => openDialog(row.id, "schedule")}
+              onPreview={setPreviewId}
+              onPrivacy={setPrivacyFor}
+              onOpenSession={(referralId, session, dialog) =>
+                openSessionDialog(referralId, session, dialog)
+              }
+              onChanged={() => {
+                invalidateGuidance();
+              }}
+            />
+          ))}
+        </div>
       ) : (
         <ol className={styles.timeline}>
           {referrals.map((row) => (
@@ -235,17 +308,19 @@ export function GuidanceReferralsTable({
       )}
       </div>
 
-      <GuidanceActionMenu
-        action={action}
-        summary={summary}
-        typeFilter={typeFilter}
-        showCancelled={lockType}
-        onPick={(value) => {
-          onActionChange(action === value ? "" : value);
-          goToPage(1);
-        }}
-        onClear={() => onActionChange("")}
-      />
+      {isKanban ? null : (
+        <GuidanceActionMenu
+          action={action}
+          summary={summary}
+          typeFilter={typeFilter}
+          showCancelled={lockType}
+          onPick={(value) => {
+            onActionChange(action === value ? "" : value);
+            goToPage(1);
+          }}
+          onClear={() => onActionChange("")}
+        />
+      )}
 
       <GuidanceReferralDialogs
         dialogs={dialogs}
@@ -305,6 +380,8 @@ interface GuidanceReferralsTableProps {
 
   lockType?: boolean;
   title?: string;
+
+  layout?: "list" | "kanban";
 
   highlightId?: string | null;
 

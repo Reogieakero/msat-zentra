@@ -142,11 +142,10 @@ export interface LockBatchResponse {
   skipped: number;
 }
 
-export async function lockBatchGrades(assignmentId: string, code: string, termId?: string): Promise<LockBatchResponse> {
+export async function lockBatchGrades(assignmentId: string, code: string): Promise<LockBatchResponse> {
   const { data } = await apiClient.post<LockBatchResponse>(`/api/grades/final-grades/lock-batch`, {
     assignmentId,
     code,
-    ...(termId ? { termId } : {}),
   });
   return data;
 }

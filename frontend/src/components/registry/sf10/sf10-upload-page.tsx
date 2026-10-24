@@ -2,27 +2,24 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, FolderOpen } from "lucide-react";
+import { ArrowRight, Clock, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sf10UploadPanel } from "@/components/registry/sf10/Sf10UploadPanel";
-import { Sf10FolderGrid } from "@/components/registry/sf10/sf10-folders";
-import { RecordKeeperPageHeader } from "@/app/record-keeper/components/RecordKeeperPageHeader";
-import { RegistrarPageHeader } from "@/app/registrar/components/RegistrarPageHeader";
+import { Sf10RecordOverlay } from "@/components/registry/sf10/Sf10RecordOverlay";
+import { Sf10RecordKanbanGrid } from "@/components/registry/sf10/sf10-folders";
 import { fetchSf10Records, type Sf10ListResult } from "@/services/registry/sf10.service";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/components/registry/sf10/sf10.module.css";
 
-const LATEST_TAKE = 10;
+const LATEST_TAKE = 5;
 
 export function Sf10UploadPage({ desk }: { desk: "registrar" | "record-keeper" }) {
   const qc = useQueryClient();
-  const router = useRouter();
+  const [openRecordId, setOpenRecordId] = React.useState<string | null>(null);
   const [filedIds, setFiledIds] = React.useState<string[]>([]);
   const lastId = filedIds.length > 0 ? filedIds[filedIds.length - 1] : null;
-  const DeskPageHeader = desk === "registrar" ? RegistrarPageHeader : RecordKeeperPageHeader;
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: [`${desk}-sf10`] });
@@ -38,76 +35,69 @@ export function Sf10UploadPage({ desk }: { desk: "registrar" | "record-keeper" }
   });
   const latest = latestQuery.data?.records ?? [];
   const openRecord = (r: { id: string }) => {
-    router.push(`/${desk}/sf10/${r.id}`);
+    setOpenRecordId(r.id);
   };
 
   return (
     <section className={styles.page}>
       <div className={styles.stack}>
-        <DeskPageHeader
-          title="Upload SF10"
-          description="Attach the SF10 file — the learner, subjects, and grade level are read from the file first, then filed automatically under this desk."
-        />
         <div className="flex min-h-[50vh] items-center justify-center">
           <div className={styles.emptyStack}>
-          <Sf10UploadPanel
-            onChanged={refresh}
-            onUploaded={(id) => setFiledIds((prev) => [...prev, id])}
-          />
-          {lastId ? (
-            <section className={assign.card} aria-label="Filed records">
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative flex flex-wrap items-center justify-between gap-2">
-                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FolderOpen className="size-4" aria-hidden />
-                  {filedIds.length === 1 ? "1 record filed — open the folder to watch it being read." : `${filedIds.length} records filed — open the latest folder to watch it being read.`}
-                </p>
-                <Button asChild size="sm">
-                  <Link href={`/${desk}/sf10/${lastId}`}>
+            <Sf10UploadPanel
+              onChanged={refresh}
+              onUploaded={(id) => setFiledIds((prev) => [...prev, id])}
+            />
+            {lastId ? (
+              <section className="rounded-xl border border-border p-2.5" aria-label="Filed records">
+                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                  <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <FolderOpen className="size-3.5" aria-hidden />
+                    {filedIds.length === 1 ? "1 record filed — open the folder to watch it being read." : `${filedIds.length} records filed — open the latest folder to watch it being read.`}
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setOpenRecordId(lastId)}
+                  >
                     View latest
-                    <ArrowRight aria-hidden />
-                  </Link>
-                </Button>
-              </div>
-            </section>
-          ) : null}
+                    <ArrowRight size={14} aria-hidden />
+                  </Button>
+                </div>
+              </section>
+            ) : null}
           </div>
         </div>
 
         {latestQuery.isPending || latest.length > 0 ? (
-          <section aria-labelledby="sf10-latest">
-            <div className="relative">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 id="sf10-latest" className="text-base font-semibold">
-                  Latest files
-                </h2>
-                <Button asChild variant="default" size="sm" className="h-8">
-                  <Link href={`/${desk}/sf10`}>
-                    View all
-                    <ArrowRight aria-hidden />
-                  </Link>
-                </Button>
+          <KanbanBoard
+            title="Latest files"
+            icon={<Clock size={14} className="text-amber-500" aria-hidden />}
+            ariaLabel="Latest files"
+            description={`The ${LATEST_TAKE} most recently filed records — open a folder to read it.`}
+            actions={
+              <Button asChild variant="default" size="sm" className="h-6 px-2 text-xs">
+                <Link href={`/${desk}/sf10`}>View all</Link>
+              </Button>
+            }
+          >
+            {latestQuery.isPending ? (
+              <div className={styles.folderKanbanGrid} aria-hidden="true">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className={styles.folderKanbanSkel} />
+                ))}
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                The {LATEST_TAKE} most recently filed records — open a folder to read it.
-              </p>
-            </div>
-            <div className="relative mt-3">
-              {latestQuery.isPending ? (
-                <div className={styles.folderGrid} aria-hidden="true">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <Skeleton key={i} className="h-44 w-full rounded-xl" />
-                  ))}
-                </div>
-              ) : (
-                <Sf10FolderGrid records={latest} onOpen={openRecord} />
-              )}
-            </div>
-          </section>
+            ) : (
+              <Sf10RecordKanbanGrid records={latest} onOpen={openRecord} />
+            )}
+          </KanbanBoard>
         ) : null}
       </div>
+      <Sf10RecordOverlay
+        desk={desk}
+        recordId={openRecordId}
+        onClose={() => setOpenRecordId(null)}
+      />
     </section>
   );
 }

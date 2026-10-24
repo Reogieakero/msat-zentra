@@ -6,7 +6,7 @@
   min-height: 100%;
   background-color: var(--background);
   font-family: var(--font-sans), system-ui, sans-serif;
-  max-width: 52rem;
+  max-width: 76rem;
   width: 100%;
   margin: 0 auto;
 }
@@ -17,11 +17,11 @@
 .backBtn {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
   width: fit-content;
-  height: 2rem;
-  padding: 0 0.75rem;
-  font-size: 0.875rem;
+  height: 1.5rem;
+  padding: 0 0.625rem;
+  font-size: 0.75rem;
   font-weight: 600;
   line-height: 1;
   border-radius: var(--radius-md);
@@ -41,8 +41,8 @@
 }
 
 .backBtn svg {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 /* High-contrast action buttons — same inverse-theme treatment so every
@@ -246,16 +246,9 @@
   display: flex;
   align-items: flex-start;
   gap: 1.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.875rem;
-  background:
-    radial-gradient(120% 90% at 50% -10%, color-mix(in oklch, var(--primary), transparent 35%) 0%, transparent 55%),
-    radial-gradient(70% 55% at 18% 30%, color-mix(in oklch, var(--muted-foreground), transparent 45%) 0%, transparent 62%),
-    var(--card);
-  padding: 1.25rem 1.5rem;
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--foreground), transparent 92%),
-    0 12px 32px -16px color-mix(in oklch, var(--foreground), transparent 70%);
+  border-bottom: 1px solid var(--border);
+  padding: 0 0.25rem 0.875rem;
+  background: transparent;
 }
 
 .headerSection {
@@ -326,8 +319,9 @@
 
 .studentName {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 1.125rem;
   font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--foreground);
 }
 
@@ -407,7 +401,6 @@
   flex-direction: column;
   gap: 0.75rem;
   min-width: 0;
-  max-width: 36rem;
 }
 
 .wizardSide {
@@ -615,13 +608,41 @@
 }
 
 .checkDot[data-done="true"] {
-  background-color: var(--primary);
-  border-color: var(--primary);
+  background-color: #22c55e;
+  border-color: #22c55e;
 }
 
 .checkDot[data-done="false"] {
   background-color: transparent;
   border-color: var(--border);
+}
+
+/* Checklist status pill — rectangle, green when on file. */
+.checkPill {
+  display: inline-flex;
+  align-items: center;
+  height: 1.25rem;
+  padding: 0 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background-color: var(--muted);
+  color: var(--foreground);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.checkPillGreen {
+  border-color: color-mix(in oklch, #22c55e 55%, transparent);
+  background-color: color-mix(in oklch, #22c55e 15%, transparent);
+  color: color-mix(in oklch, #22c55e 80%, var(--foreground));
+}
+
+.checkPillRed {
+  border-color: color-mix(in oklch, #ef4444 55%, transparent);
+  background-color: color-mix(in oklch, #ef4444 15%, transparent);
+  color: color-mix(in oklch, #ef4444 82%, var(--foreground));
 }
 
 .checkText {
@@ -736,6 +757,19 @@
   color: var(--muted-foreground);
 }
 
+/* Empty parent-meetings column — message plus the same Booking entry point
+   the referrals list and overview desks expose. */
+.emptyMeeting {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+}
+
+.emptyMeeting .muted {
+  margin: 0;
+}
+
 .metaList {
   margin: 0;
   padding: 0;
@@ -783,6 +817,92 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Horizontal evidence chain — inner card, one centered column per form,
+   green check on top. */
+.evidenceCard {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background-color: var(--card);
+  padding: 0.75rem;
+}
+
+.evidenceRow {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.evidenceCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.evidenceCol:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.evidenceCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  color: transparent;
+}
+
+.evidenceCheck[data-ok="true"] {
+  background-color: #22c55e;
+  border-color: #22c55e;
+  color: #ffffff;
+}
+
+.evidenceColLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+
+/* Green rectangle "Verified" pill. */
+.evidencePill {
+  display: inline-flex;
+  align-items: center;
+  height: 1.25rem;
+  padding: 0 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background-color: var(--muted);
+  color: var(--foreground);
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.evidencePillGreen {
+  border-color: color-mix(in oklch, #22c55e 55%, transparent);
+  background-color: color-mix(in oklch, #22c55e 15%, transparent);
+  color: color-mix(in oklch, #22c55e 80%, var(--foreground));
 }
 
 .evidenceItem {
@@ -1053,4 +1173,213 @@
   background-color: #b91c1c !important;
   border-color: #b91c1c !important;
   color: #ffffff !important;
+}
+
+/* ── Kanban board ─────────────────────────────────────────────────────
+   The case file is a workflow board: one column per case step, each
+   holding its action/evidence cards. Columns scroll horizontally when
+   the viewport can't fit all five. */
+/* Board title cluster — learner name plus amber identity pills, sitting
+   in the KanbanBoard header's left slot. */
+.boardTitle {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.boardTitleName {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.boardTitlePills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* Amber outline pills used across the board header — dark transparent
+   background, muted amber border, bright bold amber 10px label. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 1.25rem;
+  padding: 0 0.5rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in oklch, #f59e0b 45%, transparent);
+  background-color: color-mix(in oklch, #f59e0b 6%, transparent);
+  color: color-mix(in oklch, #fbbf24 92%, var(--foreground));
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.boardRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.boardRow {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.column {
+  flex: 1 1 13rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The column's KanbanBoard fills the column so all boards in a row match
+   height, and the board's inner card grows to fill the board. */
+.column > section {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.columnInner {
+  flex: 1 1 auto;
+}
+
+.columnHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.columnDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+
+.columnDot[data-done="true"] {
+  color: #22c55e;
+}
+
+/* Flat panel — board content that sits directly in a column with no
+   nested card frame (Meetings / Evidence / Certify). */
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Meeting status pills — rectangle, colour-coded (red = booked/overdue,
+   amber = upcoming, green = attended/live). */
+.meetingPill {
+  display: inline-flex;
+  align-items: center;
+  height: 1.5rem;
+  padding: 0 0.625rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background-color: var(--muted);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.meetingPillRed {
+  border-color: color-mix(in oklch, #ef4444 55%, transparent);
+  background-color: color-mix(in oklch, #ef4444 15%, transparent);
+  color: color-mix(in oklch, #ef4444 82%, var(--foreground));
+}
+
+.meetingPillAmber {
+  border-color: color-mix(in oklch, #f59e0b 55%, transparent);
+  background-color: color-mix(in oklch, #f59e0b 16%, transparent);
+  color: color-mix(in oklch, #f59e0b 85%, var(--foreground));
+}
+
+.meetingPillBlue {
+  border-color: color-mix(in oklch, #3b82f6 55%, transparent);
+  background-color: color-mix(in oklch, #3b82f6 15%, transparent);
+  color: color-mix(in oklch, #3b82f6 85%, var(--foreground));
+}
+
+.meetingPillGreen {
+  border-color: color-mix(in oklch, #22c55e 55%, transparent);
+  background-color: color-mix(in oklch, #22c55e 15%, transparent);
+  color: color-mix(in oklch, #22c55e 80%, var(--foreground));
+}
+
+/* Meetings list fills the column so the action button can pin bottom-right. */
+.meetingsList {
+  flex: 1 1 auto;
+}
+
+.meetingInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.meetingInfo svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+/* Selected meeting attendees — bullet list. */
+.invitees {
+  margin-top: 0.5rem;
+}
+
+.inviteesTitle {
+  margin: 0 0 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.inviteeList {
+  margin: 0;
+  padding-left: 1.125rem;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+
+.inviteeRole {
+  color: var(--muted-foreground);
+}
+
+.meetingActions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 0.625rem;
+}
+
+.meetingActions > button {
+  height: 1.5rem;
+  min-height: 1.5rem;
 }

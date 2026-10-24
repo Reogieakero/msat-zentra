@@ -32,14 +32,15 @@ router.patch(
   async (req, res, next) => {
     try {
       const counselorId = req.user!.id;
-      const { fullName, primaryColor, secondaryColor } = req.body as {
+      const { fullName, mascot, primaryColor, secondaryColor } = req.body as {
         fullName?: string;
+        mascot?: string | null;
         primaryColor?: string | null;
         secondaryColor?: string | null;
       };
       const result = await updateProfileSettings(
         { userId: counselorId, role: req.user!.role, termId: null, schoolYearId: null },
-        { fullName, primaryColor, secondaryColor },
+        { fullName, mascot, primaryColor, secondaryColor },
       );
       await invalidateTags(["guidance", "overview"]);
       res.json(result);

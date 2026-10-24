@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { paginationQuerySchema } from "../../lib/pagination.js";
+import { MASCOT_CHARACTERS } from "../../services/mascot.js";
 
 export const HEX_COLOR = z
   .string()
@@ -7,6 +8,7 @@ export const HEX_COLOR = z
 
 export const registryProfileSchema = z.object({
   fullName: z.string().trim().min(1).max(100).optional(),
+  mascot: z.enum(MASCOT_CHARACTERS).nullable().optional(),
   primaryColor: HEX_COLOR.nullable().optional(),
   secondaryColor: HEX_COLOR.nullable().optional(),
 });

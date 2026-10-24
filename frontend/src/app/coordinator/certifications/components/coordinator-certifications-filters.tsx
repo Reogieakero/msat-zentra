@@ -17,10 +17,14 @@ import type {
 } from "@/services/coordinator/certifications.types";
 import styles from "./coordinator-certifications-filters.module.css";
 
-const OPTIONS: { value: CertStatusFilter; label: string }[] = [
+const OPTIONS: { value: CertStatusFilter; label: string; color?: string }[] = [
   { value: "all", label: "All statuses" },
   ...(["prepared", "awaiting", "revision", "approved"] as CertStatus[]).map(
-    (s) => ({ value: s as CertStatusFilter, label: CERT_STATUS_META[s].label }),
+    (s) => ({
+      value: s as CertStatusFilter,
+      label: CERT_STATUS_META[s].label,
+      color: CERT_STATUS_META[s].color,
+    }),
   ),
 ];
 
@@ -38,8 +42,8 @@ export function CoordinatorCertificationsFilters({
   onStatusChange,
 }: CoordinatorCertificationsFiltersProps) {
   const hasActiveFilters = status !== "all";
-  const statusLabel =
-    OPTIONS.find((o) => o.value === status)?.label ?? "Status";
+  const activeOption = OPTIONS.find((o) => o.value === status);
+  const statusLabel = activeOption?.label ?? "Status";
 
   return (
     <div className={styles.filters}>
@@ -62,7 +66,13 @@ export function CoordinatorCertificationsFilters({
             className={`${styles.filterBtn} ${status !== "all" ? styles.filterActive : ""}`}
           >
             {status === "all" ? "Status" : statusLabel}
-            {status !== "all" && <span className={styles.filterDot} aria-hidden />}
+            {status !== "all" && activeOption?.color ? (
+              <span
+                className={styles.filterDot}
+                style={{ backgroundColor: activeOption.color }}
+                aria-hidden
+              />
+            ) : null}
             <ChevronDown aria-hidden />
           </Button>
         </DropdownMenuTrigger>
@@ -74,6 +84,13 @@ export function CoordinatorCertificationsFilters({
                 checked={status === item.value}
                 onCheckedChange={() => onStatusChange(item.value)}
               >
+                {item.color ? (
+                  <span
+                    className={styles.optionDot}
+                    style={{ backgroundColor: item.color }}
+                    aria-hidden
+                  />
+                ) : null}
                 {item.label}
               </DropdownMenuCheckboxItem>
             </div>

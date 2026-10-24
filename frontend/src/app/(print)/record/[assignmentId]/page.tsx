@@ -157,7 +157,6 @@ export default function ClassRecordPage() {
             subjectLabel={`${assignment.subjectName} (${assignment.subjectCode}) — ${assignment.sectionName}`}
             termLabel={`Term ${assignment.termNumber}, ${assignment.schoolYear}`}
             unlockCount={lockCount}
-            termId={assignment.termId}
             variant="default"
             className="h-6 px-3 text-xs"
           />

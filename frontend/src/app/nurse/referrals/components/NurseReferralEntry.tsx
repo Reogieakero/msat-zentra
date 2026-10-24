@@ -1,18 +1,18 @@
 "use client";
 
-import * as React from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarClock, ChevronRight } from "lucide-react";
+import { CalendarClock, ChevronRight, X } from "lucide-react";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FolderCard } from "@/components/ui/FolderCard";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { NurseAdmReviewDialog } from "../../overview/components/NurseAdmReviewDialog";
 import type {
   NurseQueueRow,
@@ -21,6 +21,7 @@ import type {
 import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
 import type { NurseAlertItem } from "@/services/nurse/nurse.types";
 import {
+  anecdotalCategoryBadgeVariant,
   anecdotalCategoryColor,
   formatDate,
   formatTime,
@@ -36,7 +37,10 @@ import {
   watermarkColor,
   watermarkLabel,
 } from "./nurse-referrals-format";
-import { SessionPlanCard } from "@/components/session-plan/SessionPlanCard";
+import {
+  SessionPlanCard,
+  sessionBoardDialogWidth,
+} from "@/components/session-plan/SessionPlanCard";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./NurseReferralEntry.module.css";
 
@@ -71,6 +75,8 @@ export function NurseReferralEntry({
   alert,
   highlighted = false,
   now,
+  boardOpen,
+  onBoardChange,
   onPreview,
   onPrivacy,
   onEndorsedNotice,
@@ -84,6 +90,10 @@ export function NurseReferralEntry({
   alert: NurseAlertItem;
   highlighted?: boolean;
   now: number;
+  /** The Clinic sessions board is owned by the page so a confirmed action
+      can close it at once (the Dock carries the request). */
+  boardOpen: boolean;
+  onBoardChange: (open: boolean) => void;
   onPreview: (recordId: string) => void;
   onPrivacy: (studentName: string) => void;
   onEndorsedNotice: (studentName: string) => void;
@@ -109,7 +119,6 @@ export function NurseReferralEntry({
 
   const showSessions = !isPending || (isAdm && row.sessions.length > 0);
   const hasRail = !!row.anecdotalId || showSessions;
-  const [sessOpen, setSessOpen] = React.useState(false);
 
   return (
     <li
@@ -149,7 +158,9 @@ export function NurseReferralEntry({
             <Badge variant={isAdm ? "secondary" : "outline"}>
               {isAdm ? "ADM" : "Clinic"}
             </Badge>
-            <Badge variant="outline">{row.category}</Badge>
+            <Badge variant={anecdotalCategoryBadgeVariant(row.category) ?? "outline"}>
+              {row.category}
+            </Badge>
           </div>
           <p className={styles.railMeta}>{referredSentence(row)}</p>
           <p className={styles.railMeta}>{latestSentence(latest)}</p>
@@ -306,7 +317,7 @@ export function NurseReferralEntry({
                   className={styles.sessDrop}
                   aria-haspopup="dialog"
                   aria-label={`Clinic sessions for ${row.student}, ${row.sessions.length} ${row.sessions.length === 1 ? "session" : "sessions"} — click to view`}
-                  onClick={() => setSessOpen(true)}
+                  onClick={() => onBoardChange(true)}
                 >
                   <span className={styles.sessDropIcon} aria-hidden="true">
                     <CalendarClock size={18} />
@@ -326,20 +337,41 @@ export function NurseReferralEntry({
                     className={styles.sessChevron}
                   />
                 </button>
-                <Dialog open={sessOpen} onOpenChange={setSessOpen}>
+                <Dialog open={boardOpen} onOpenChange={onBoardChange}>
                   <DialogContent
-                    className={`${styles.modalCard} max-h-[85vh] overflow-y-auto sm:max-w-lg`}
+                    showCloseButton={false}
+                    className={`${styles.modalCard} max-h-[85vh] overflow-y-auto ${sessionBoardDialogWidth(row.sessions.length)}`}
                   >
                     <span className={assign.glowClip} aria-hidden="true">
                       <span className={assign.cardGlow} />
                     </span>
-                    <DialogHeader className="relative">
-                      <DialogTitle>Clinic sessions for {row.student}</DialogTitle>
-                      <DialogDescription>
-                        {row.sessions.length} {row.sessions.length === 1 ? "session" : "sessions"} on this case.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="relative">
+                    {/* Title/description live on the kanban board below (the
+                        sr-only pair keeps the dialog labelled for screen
+                        readers). */}
+                    <DialogTitle className="sr-only">
+                      Clinic sessions for {row.student}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                      {row.sessions.length} {row.sessions.length === 1 ? "session" : "sessions"} on this case.
+                    </DialogDescription>
+                    <KanbanBoard
+                      className="relative bg-card"
+                      title={`Clinic sessions for ${row.student}`}
+                      icon={<CalendarClock className="size-3.5" aria-hidden="true" />}
+                      actions={
+                        <DialogClose asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="size-6"
+                            aria-label="Close"
+                          >
+                            <X className="size-4" aria-hidden="true" />
+                          </Button>
+                        </DialogClose>
+                      }
+                    >
                       <SessionPlanCard
                         title="Clinic sessions"
                         sessions={row.sessions.map((s) => ({
@@ -358,7 +390,7 @@ export function NurseReferralEntry({
                           action === "docs" ? onDocs(row, s) : onSession(row, s, action)
                         }
                       />
-                    </div>
+                    </KanbanBoard>
                   </DialogContent>
                 </Dialog>
               </div>

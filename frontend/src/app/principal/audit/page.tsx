@@ -23,7 +23,7 @@ import type {
 import styles from "./page.module.css";
 import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
 import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
-import assign from "../academics/assign/components/section-assignments.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 import { usePaginatedQuery } from "@/lib/api/usePaginatedQuery";
@@ -186,20 +186,16 @@ function PrincipalAuditPageInner() {
       />
       )}
 
-      <section aria-label="Audit entries" className="flex min-w-0 flex-col gap-3">
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className={styles.sectionTitle}>Audit Entries</h2>
-              <p className={styles.sectionDesc} aria-live="polite">
-                {totalCount === 0
-                  ? "No audit entries on record."
-                  : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school.`}
-              </p>
-            </div>
+      <KanbanBoard
+        title="Audit Entries"
+        icon={<ShieldCheck size={14} aria-hidden="true" />}
+        count={totalCount}
+        description={
+          totalCount === 0
+            ? "No audit entries on record."
+            : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school.`
+        }
+        toolbar={
             <AuditToolbar
               actionType={actionType}
               onActionTypeChange={(v) => {
@@ -229,8 +225,16 @@ function PrincipalAuditPageInner() {
               onExport={handleExport}
               exporting={exporting}
             />
-          </div>
-
+        }
+        footer={
+          <Pagination
+            currentPage={safePage}
+            totalItems={totalCount}
+            pageSize={PAGE_SIZE}
+            onPageChange={pager.setPage}
+          />
+        }
+      >
           {error ? (
             <div className="relative flex flex-col items-center gap-2 py-6 text-center">
               <span
@@ -262,20 +266,11 @@ function PrincipalAuditPageInner() {
               }
             />
           ) : (
-            <>
-              <div className="relative">
-                <AuditTable entries={entries} />
-              </div>
-              <Pagination
-                currentPage={safePage}
-                totalItems={totalCount}
-                pageSize={PAGE_SIZE}
-                onPageChange={pager.setPage}
-              />
-            </>
+            <div className="relative">
+              <AuditTable entries={entries} />
+            </div>
           )}
-        </div>
-      </section>
+      </KanbanBoard>
     </section>
   );
 }

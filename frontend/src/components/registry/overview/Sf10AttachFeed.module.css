@@ -118,3 +118,77 @@
   background-color: color-mix(in oklch, var(--primary), black 12%);
   color: var(--primary-foreground);
 }
+
+/* --- Kanban variant (record keeper) ---------------------------------------
+   No parent board — a plain header row (same shape as the teacher overview
+   anecdote feed) over the shareable folder cards. */
+.kanbanSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.kanbanHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.kanbanHeaderText {
+  min-width: 0;
+}
+
+.kanbanGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.875rem;
+  /* Rows hug card height; extra column height stays below the grid. */
+  align-content: start;
+}
+
+.skelFolderKanban {
+  height: 12rem;
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+
+.kanbanBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Cards (and their skeletons) rise in when the grid mounts — keeps the
+   skeleton-to-folder swap from reading as a hard cut. */
+@keyframes folder-feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kanbanGrid > * {
+  animation: folder-feed-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.kanbanGrid > *:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.kanbanGrid > *:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanbanGrid > * {
+    animation: none;
+  }
+}

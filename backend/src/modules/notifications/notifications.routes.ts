@@ -65,6 +65,17 @@ router.get(
   } catch (e) { next(e); }
 });
 
+// True unread total for the bell badge. The list endpoint is paged (15/page),
+// so counting within a fetched page under-reports when there are many unread.
+router.get("/unread-count", requireAuth, async (req, res, next) => {
+  try {
+    const count = await prisma.notification.count({
+      where: { userId: req.user!.id, isRead: false },
+    });
+    res.json({ count });
+  } catch (e) { next(e); }
+});
+
 router.post("/read/:id", requireAuth, async (req, res, next) => {
   try {
     const note = await prisma.notification.findUnique({ where: { id: String(req.params.id) } });

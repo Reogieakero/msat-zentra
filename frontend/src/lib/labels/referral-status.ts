@@ -43,6 +43,21 @@ export function activeSessionOf<T extends { status: string; scheduledAt: string 
     });
   return actives[0] ?? null;
 }
+/** Newest session by scheduled time — apps use it to read the latest state
+    of a case's plan (e.g. a cancelled most recent session). */
+export function latestSessionOf<T extends { scheduledAt: string }>(sessions: T[]): T | null {
+  let latest: T | null = null;
+  let latestAt = -Infinity;
+  for (const session of sessions) {
+    const at = new Date(session.scheduledAt).getTime();
+    const value = Number.isFinite(at) ? at : -Infinity;
+    if (value >= latestAt) {
+      latestAt = value;
+      latest = session;
+    }
+  }
+  return latest;
+}
 export function statusLabel(status: string, opts?: { escalatedText?: string; rawFallback?: boolean }): string {
   switch (status) {
     case "pending":

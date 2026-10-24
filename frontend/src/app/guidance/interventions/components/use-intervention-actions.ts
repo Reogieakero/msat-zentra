@@ -11,9 +11,29 @@ import {
   scheduleFollowUpSession,
   startFollowUp,
 } from "@/services/guidance/interventions.service";
-import { toast } from "@/components/ui/sonner";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import { useGuidanceInvalidate, useGuidanceMutation } from "../../overview/components/use-guidance-mutation";
+function interventionDockTitle(action: string): string {
+  switch (action) {
+    case "start":
+      return "Starting intervention";
+    case "review":
+      return "Saving review";
+    case "outcome":
+      return "Recording outcome";
+    case "schedule":
+      return "Booking session";
+    case "finish":
+      return "Completing session";
+    case "move":
+      return "Moving session";
+    case "cancelSess":
+      return "Cancelling session";
+    default:
+      return "Updating intervention";
+  }
+}
+
 function interventionSuccessMessage(action: string): { title: string; description: string } {
   switch (action) {
     case "start":
@@ -252,11 +272,15 @@ export function useInterventionActions(onMutateSuccess: () => void) {
     silentSuccess: true,
     successTitle: "Saved",
     errorFallback: "The change did not go through. Check your connection and try again.",
-    onSuccessExtra: (_data, variables) => {
-      // UI already patched optimistically — recompute reminders then pop the
-      // sileo toast instantly on server success.
+    dock: {
+      title: (variables) => interventionDockTitle(variables.action),
+      description: "Updating the intervention plan.",
+      done: (variables) => interventionSuccessMessage(variables.action).description,
+    },
+    onSuccessExtra: () => {
+      // UI is already patched optimistically — recompute booking reminders.
+      // The shared Dock row carries the outcome; no second toast on top.
       refreshBookingReminders(true);
-      toast.success(interventionSuccessMessage(variables.action));
     },
     mutationFn: async ({
       key,
@@ -363,8 +387,16 @@ export function useInterventionActions(onMutateSuccess: () => void) {
   // (not after refetch). UI/toast no longer wait for refetch.
   const [settling, setSettling] = React.useState(false);
   const isActionPending = actionMutation.isPending || settling;
-  const runAction = (key: string, action: string, payload: unknown) => {
-    if (actionMutation.isPending || settling) return;
+  const runAction = (
+    key: string,
+    action: string,
+    payload: unknown,
+    opts?: {
+      onSuccess?: () => void;
+      onError?: (error: unknown) => void;
+    }
+  ) => {
+    if (actionMutation.isPending || settling) return false;
     // Close dialogs instantly; the row is already patched optimistically.
     onMutateSuccess();
     setSettling(true);
@@ -374,8 +406,11 @@ export function useInterventionActions(onMutateSuccess: () => void) {
         onSettled: () => {
           setSettling(false);
         },
+        ...(opts?.onSuccess ? { onSuccess: () => opts.onSuccess?.() } : {}),
+        ...(opts?.onError ? { onError: (error) => opts.onError?.(error) } : {}),
       }
     );
+    return true;
   };
   return {
     invalidateGuidance,

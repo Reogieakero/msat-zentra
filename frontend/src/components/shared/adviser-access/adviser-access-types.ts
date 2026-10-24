@@ -23,6 +23,8 @@ export type GradeBand = "G7" | "G8" | "G9" | "G10" | "G11" | "G12";
 export type AffectedAdvisee = {
   lrn: string;
   name: string;
+  /** Persisted profile mascot (StudentMascot pool) — null falls back to the derived sprite. */
+  mascot?: string | null;
   gradeLevel: GradeBand;
   section: string;
   sf10Status: "verified" | "validated" | "pending";
@@ -192,6 +194,8 @@ export interface BoardStudent {
   checkedAt?: string | null;
   lrn: string;
   name: string;
+  /** Persisted profile mascot (StudentMascot pool) — null → derived sprite. */
+  mascot?: string | null;
   sf10Status: AffectedAdvisee["sf10Status"];
   hasRecord?: boolean;
   state: BoardStudentState;
@@ -221,6 +225,7 @@ export function toBoardStudents(requests: AdviserAccessRequest[]): BoardStudent[
         checkedAt: r.checkedAt,
         lrn: a.lrn,
         name: a.name,
+        mascot: a.mascot ?? null,
         sf10Status: a.sf10Status,
         hasRecord: a.hasRecord,
         state,

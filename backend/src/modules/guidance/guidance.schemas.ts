@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { paginationQuerySchema } from "../../lib/pagination.js";
+import { MASCOT_CHARACTERS } from "../../services/mascot.js";
 
 export const consultReviewSchema = z.object({
   recommendation: z.string().trim().min(1).max(500),
@@ -20,6 +21,7 @@ export const HEX_COLOR = z
 
 export const guidanceProfileSchema = z.object({
   fullName: z.string().trim().min(1).max(100).optional(),
+  mascot: z.enum(MASCOT_CHARACTERS).nullable().optional(),
   primaryColor: HEX_COLOR.nullable().optional(),
   secondaryColor: HEX_COLOR.nullable().optional(),
 });
@@ -43,7 +45,13 @@ export const guidanceAnecdotalQuerySchema = paginationQuerySchema().extend({
   docs: z.enum(["0", "1"]).optional(),
 });
 
-export const guidanceCasesQuerySchema = paginationQuerySchema().extend({
+/** Merged alerts desk (guidance referrals + live interventions), server-paged. */
+export const guidanceAlertCasesQuerySchema = paginationQuerySchema().extend({
+  type: z.enum(["ADM", "Counseling", "Intervention"]).optional(),
+  risk: z.enum(["High", "Moderate", "Low"]).optional(),
+});
+
+export const guidanceCasesQuerySchema = paginationQuerySchema(16).extend({
   status: z
     .enum(["pending", "in_progress", "resolved", "escalated", "follow_up", "info_requested", "dismissed"])
     .optional(),

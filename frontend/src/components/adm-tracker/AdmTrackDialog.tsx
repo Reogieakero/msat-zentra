@@ -1,20 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronDown } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { createPortal } from "react-dom";
+import { History, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AdmTrackingTimeline } from "./AdmTrackingTimeline";
+import type { TrackerCaseInput } from "./adm-stage-activity";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  buildAdmTrackSteps,
+  ADM_TRACK_STATUS_META,
+  admTrackSummary,
   type AdmTrackInput,
 } from "./adm-track-data";
-import styles from "./adm-track-dialog.module.css";
 
 export interface AdmTrackCase {
   student: string;
@@ -23,6 +19,11 @@ export interface AdmTrackCase {
   reason?: string | null;
 }
 
+/**
+ * Generic ADM track overlay: the same kanban board the teacher referral
+ * tracker renders (`AdmTrackingTimeline` cards variant) plus the compact
+ * referral header. Used from the nurse desk.
+ */
 export function AdmTrackDialog({
   open,
   onClose,
@@ -34,113 +35,124 @@ export function AdmTrackDialog({
   caseInfo: AdmTrackCase;
   track: AdmTrackInput;
 }) {
-  const steps = React.useMemo(() => buildAdmTrackSteps(track), [track]);
-  const current = steps.find((s) => s.state === "current") ?? steps[steps.length - 1];
-  const scrollRef = React.useRef<HTMLDivElement | null>(null);
-  const [showScrollDown, setShowScrollDown] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  const panelRef = React.useRef<HTMLDivElement | null>(null);
 
-  const updateScrollBtn = React.useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) {
-      setShowScrollDown(false);
-      return;
-    }
-    setShowScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 40);
+  React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
   }, []);
 
   React.useEffect(() => {
     if (!open) return;
-    updateScrollBtn();
-    window.addEventListener("resize", updateScrollBtn);
-    const el = scrollRef.current;
-    if (el && typeof ResizeObserver !== "undefined") {
-      const observer = new ResizeObserver(() => updateScrollBtn());
-      observer.observe(el);
-      return () => {
-        window.removeEventListener("resize", updateScrollBtn);
-        observer.disconnect();
-      };
-    }
-    return () => window.removeEventListener("resize", updateScrollBtn);
-  }, [open, updateScrollBtn, steps]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
-  return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Track ADM referral — {caseInfo.student}</DialogTitle>
-          <DialogDescription>
-            {caseInfo.lrn} · {caseInfo.section} · {current.order} of 8 · {current.label} ({current.owner})
-          </DialogDescription>
-        </DialogHeader>
+  React.useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    panelRef.current?.focus({ preventScroll: true });
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
-        <div ref={scrollRef} onScroll={updateScrollBtn} className={styles.scrollArea}>
-          <p className={styles.summary}>
-            <span className={styles.summaryStrong}>How this case started: </span>
-            the adviser filed the anecdotal report
-            {track.referredBy ? ` (${track.referredBy})` : ""}, then referred it for
-            consultation. Only the picked reviewer acts at consultation —{" "}
-            {steps[1].owner} — before the ADM coordinator takes the parent
-            meeting onward.
-            {caseInfo.reason ? ` Reason: ${caseInfo.reason}` : ""}
-          </p>
+  if (!open || !mounted) return null;
 
-          <ol className={styles.timeline} aria-label={`ADM pipeline for ${caseInfo.student}`}>
-            {steps.map((step) => {
-              const done = step.state === "done";
-              const isCurrent = step.state === "current";
-              return (
-                <li key={step.stage} className={styles.step}>
-                  <span className={styles.rail} aria-hidden>
-                    <span
-                      className={`${styles.dot} ${done ? styles.dotDone : ""} ${isCurrent ? styles.dotCurrent : ""}`}
-                    >
-                      {done ? <Check className={styles.dotIcon} /> : null}
-                    </span>
-                    <span className={`${styles.line} ${done ? styles.lineLit : ""}`} />
-                  </span>
-                  <div className={styles.body}>
-                    <div className={styles.topRow}>
-                      <span className={styles.order}>Step {step.order}</span>
-                      <p className={`${styles.label} ${!done && !isCurrent ? styles.labelTodo : ""}`}>
-                        {step.label}
-                      </p>
-                      {done ? (
-                        <Badge variant="secondary">Done</Badge>
-                      ) : isCurrent ? (
-                        <Badge variant="default">Current</Badge>
-                      ) : (
-                        <Badge variant="outline">Upcoming</Badge>
-                      )}
-                    </div>
-                    <p className={styles.detail}>{step.detail}</p>
-                    <p className={styles.owner}>Owner: {step.owner}</p>
-                    <p className={styles.desc}>{step.description}</p>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-          {showScrollDown && (
-            <button
-              type="button"
-              className={styles.scrollDownBtn}
-              onClick={() =>
-                scrollRef.current?.scrollBy({
-                  top: Math.max(
-                    200,
-                    (scrollRef.current?.clientHeight ?? 400) * 0.8
-                  ),
-                  behavior: "smooth",
-                })
-              }
-            >
-              <ChevronDown aria-hidden="true" />
-              Scroll down
-            </button>
-          )}
+  // The generic cards board reads a TrackerCaseInput; the desk input is a
+  // strict subset apart from the dismissal actor and timeline fields.
+  const input: TrackerCaseInput = {
+    stage: track.stage ?? null,
+    referralStatus: track.referralStatus ?? null,
+    dismissedByRole: track.dismissedByRole || null,
+    consultReviewer: track.consultReviewer ?? null,
+    referredBy: track.referredBy ?? null,
+    anecdotalDate: track.anecdotalDate ?? null,
+    referredDate: track.referredDate ?? null,
+    meetingAttended: track.meetingAttended ?? null,
+    hasHomeVisit: track.hasHomeVisit ?? false,
+    approved: track.approved ?? false,
+    approvedAt: track.approvedAt ?? null,
+  };
+  const { holder } = admTrackSummary(track);
+  const statusMeta = ADM_TRACK_STATUS_META[(track.referralStatus ?? "").toLowerCase()];
+  const dot = statusMeta?.color ?? "var(--muted-foreground)";
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/55 p-4 backdrop-blur-[2px] animate-in fade-in-0 duration-150 dark:bg-black/70"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="adm-track-title"
+        tabIndex={-1}
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-4xl min-w-0 flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-muted p-2.5 shadow-xl [font-family:var(--font-inter)] animate-in fade-in-0 zoom-in-95 duration-150 dark:bg-background"
+      >
+        <div className="-mx-2.5 flex min-w-0 items-start gap-1.5 border-b border-border px-3.5 pb-2">
+          <div className="min-w-0 flex-1">
+            <h2 id="adm-track-title" className="truncate text-[13px] font-semibold">
+              Track ADM referral
+            </h2>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {caseInfo.student} · {caseInfo.lrn}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-6 w-6 shrink-0 px-0"
+            onClick={onClose}
+            aria-label="Close dialog"
+          >
+            <X size={14} strokeWidth={1.8} aria-hidden />
+          </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 px-1">
+          {statusMeta ? (
+            <span
+              className="inline-flex max-w-full items-center truncate rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight"
+              style={{
+                color: dot,
+                borderColor: `color-mix(in srgb, ${dot} 40%, transparent)`,
+                backgroundColor: `color-mix(in srgb, ${dot} 12%, transparent)`,
+              }}
+              title={statusMeta.label}
+            >
+              {statusMeta.label}
+            </span>
+          ) : null}
+          <span
+            className="inline-flex max-w-full items-center truncate rounded-md border px-2 py-0.5 text-xs font-semibold leading-tight"
+            style={{
+              color: "#f59e0b",
+              borderColor: "color-mix(in srgb, #f59e0b 40%, transparent)",
+              backgroundColor: "color-mix(in srgb, #f59e0b 12%, transparent)",
+            }}
+            title="ADM case"
+          >
+            ADM case
+          </span>
+          <span className="text-[11px] text-muted-foreground">to {holder}</span>
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5 px-1">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            <History size={14} aria-hidden />
+            Pipeline tracking
+          </p>
+          <AdmTrackingTimeline input={input} variant="cards" />
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

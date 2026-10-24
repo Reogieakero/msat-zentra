@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { Sf10Status } from "@/services/registry/sf10.types";
 
 export function formatRelativeTime(iso: string | null): string {
@@ -16,11 +17,13 @@ export function formatRelativeTime(iso: string | null): string {
   return `${day}d ago`;
 }
 
-export function StatusBadge({ status }: { status: Sf10Status }) {
-  const variant = status === "released" ? "secondary" : "warning";
+/** Status color coding, same as the desk KPI accents: attached is amber
+ * (in flight), released is green (archived). */
+export function StatusBadge({ status, className }: { status: Sf10Status; className?: string }) {
+  const variant = status === "released" ? "green" : "amber";
   const label = status === "released" ? "Released" : "Attached";
   return (
-    <Badge variant={variant} className="font-normal">
+    <Badge variant={variant} className={cn("font-normal", className)}>
       {label}
     </Badge>
   );

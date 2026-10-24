@@ -11,15 +11,32 @@ type Props = {
   withAccount: number;
   pending: number;
   noAccount?: number;
+  /** Segment palette — "amber" mirrors the rail's amber accent. */
+  tone?: DonutTone;
 };
 
-const COLORS = {
-  withAccount: "var(--primary)",
-  pending: "color-mix(in oklch, var(--primary) 65%, var(--card))",
-  noAccount: "color-mix(in oklch, var(--primary) 35%, var(--card))",
+export type DonutTone = "primary" | "amber";
+
+// Segment palettes. Primary is the page's monochrome ink; amber is the
+// account-rail accent (badge / open state), so rail flyouts read amber.
+export const DONUT_TONES: Record<
+  DonutTone,
+  { withAccount: string; pending: string; noAccount: string }
+> = {
+  primary: {
+    withAccount: "var(--primary)",
+    pending: "color-mix(in oklch, var(--primary) 65%, var(--card))",
+    noAccount: "color-mix(in oklch, var(--primary) 35%, var(--card))",
+  },
+  amber: {
+    withAccount: "oklch(0.769 0.188 70.08)", // amber-500
+    pending: "color-mix(in oklch, oklch(0.769 0.188 70.08) 65%, var(--card))",
+    noAccount: "color-mix(in oklch, oklch(0.769 0.188 70.08) 35%, var(--card))",
+  },
 };
 
-export function Donut({ withAccount, pending, noAccount = 0 }: Props) {
+export function Donut({ withAccount, pending, noAccount = 0, tone = "primary" }: Props) {
+  const COLORS = DONUT_TONES[tone];
   const total = withAccount + pending + noAccount;
   const size = 96;
   const stroke = 12;

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Users, Flame, Gauge, BookOpen } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import type { SectionSummary } from "@/services/principal/academics";
 import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
 import styles from "./SectionCardGrid.module.css";
@@ -61,9 +61,9 @@ export function SectionCardGrid({
               >
                 <span className={`${styles.cardHead} relative`}>
                   <span className={styles.sectionName}>{s.section}</span>
-                  <Badge variant="secondary" className={styles.gradeBadge}>
+                  <Pill tone="neutral" label="Grade level" className={styles.gradeBadge}>
                     {s.grade}
-                  </Badge>
+                  </Pill>
                 </span>
                 <span className={`${styles.stats} relative`}>
                   <span className={styles.stat}>

@@ -1,5 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
+import { isMascotCharacter } from "../mascot.js";
 import type { DeskIdentity, RegistryContext } from "./registry.types.js";
 
 export async function readProfileSettings(staffId: string) {
@@ -10,12 +12,13 @@ export async function readProfileSettings(staffId: string) {
     }),
     prisma.staffProfile.findUnique({
       where: { userId: staffId },
-      select: { photoUrl: true, primaryColor: true, secondaryColor: true },
+      select: { photoUrl: true, mascot: true, primaryColor: true, secondaryColor: true },
     }),
   ]);
   return {
     fullName: user?.fullName ?? "",
     photoUrl: profile?.photoUrl ?? null,
+    mascot: profile?.mascot ?? null,
     primaryColor: profile?.primaryColor ?? null,
     secondaryColor: profile?.secondaryColor ?? null,
   };
@@ -23,6 +26,7 @@ export async function readProfileSettings(staffId: string) {
 
 export interface UpdateProfileSettingsInput {
   fullName?: string;
+  mascot?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
 }
@@ -33,7 +37,10 @@ export async function updateProfileSettings(
   input: UpdateProfileSettingsInput,
 ) {
   const staffId = ctx.userId;
-  const { fullName, primaryColor, secondaryColor } = input;
+  const { fullName, mascot, primaryColor, secondaryColor } = input;
+  if (mascot !== undefined && mascot !== null && !isMascotCharacter(mascot)) {
+    throw new AppError(400, "INVALID_MASCOT", "Unknown mascot character.");
+  }
   await prisma.$transaction(async (tx) => {
     if (fullName !== undefined) {
       await tx.user.update({
@@ -41,9 +48,10 @@ export async function updateProfileSettings(
         data: { fullName },
       });
     }
-    const palette: { primaryColor?: string | null; secondaryColor?: string | null } = {};
+    const palette: { primaryColor?: string | null; secondaryColor?: string | null; mascot?: string | null } = {};
     if (primaryColor !== undefined) palette.primaryColor = primaryColor;
     if (secondaryColor !== undefined) palette.secondaryColor = secondaryColor;
+    if (mascot !== undefined) palette.mascot = mascot;
     if (Object.keys(palette).length > 0) {
       await tx.staffProfile.upsert({
         where: { userId: staffId },

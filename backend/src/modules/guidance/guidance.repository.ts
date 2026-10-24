@@ -6,7 +6,9 @@ export { GRADE_LABELS, GRADE_ORDER };
 export { MAX_PAGE_SIZE, PAGE_SIZE };
 
 export const GUIDANCE_QUEUE_PAGE_SIZE = PAGE_SIZE;
-export const GUIDANCE_QUEUE_MAX_PAGE_SIZE = MAX_PAGE_SIZE;
+/* Guidance queue boards lay cases out four per row; the 4×4 board pages in
+   16 records (the global ceiling for ordinary lists stays 15). */
+export const GUIDANCE_QUEUE_MAX_PAGE_SIZE = 16;
 
 export function resolveGuidancePageSize(req: { query: unknown }): number {
   return resolvePaging(req.query, { maxPageSize: GUIDANCE_QUEUE_MAX_PAGE_SIZE }).pageSize;

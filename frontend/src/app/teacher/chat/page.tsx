@@ -4,7 +4,9 @@ import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BamaChat } from "./components/BamaChat";
 import { TeacherEmptyCard } from "../components/TeacherEmptyCard";
-import { ZentraPageHeaderSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { KanbanBoardSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
+import chatStyles from "./components/bama-chat.module.css";
 import { MessageSquareOff } from "lucide-react";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
 
@@ -29,9 +31,13 @@ function TeacherChatGate() {
 
   if (overview.isPending || overview.isError || !overview.data) {
     return (
-      <section className="flex w-full flex-col gap-4" aria-busy="true" aria-label="Loading chat">
-        <ZentraPageHeaderSkeleton />
-        <ZentraTableSkeleton rows={6} columns={3} withPager={false} />
+      <section className={chatStyles.page} aria-busy="true" aria-label="Loading chat">
+        <div className={chatStyles.layout}>
+          <Skeleton className="min-h-[30rem] w-full rounded-xl" />
+          <div className={chatStyles.body}>
+            <KanbanBoardSkeleton rows={6} className="flex-1" />
+          </div>
+        </div>
       </section>
     );
   }

@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { fetchCoordinatorReferrals } from "@/services/coordinator/overview.service";
 import { apiErrorMessage } from "@/lib/api/errors";
 import type {
@@ -61,6 +62,7 @@ export interface CoordinatorEnrolledModel {
 
 export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
   const queryClient = useQueryClient();
+  const dock = useDock();
   const searchParams = useSearchParams();
   const [now] = React.useState(() => Date.now());
   const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
@@ -121,12 +123,36 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     staleTime: 30_000,
   });
 
+  // Completed ADM cases fill the board's "Complete" lane (page 1 — the lane
+  // is a short tail, monitoring keeps the pager). Without this the lane only
+  // meant "all modules submitted" and a confirmed case simply vanished.
+  const completedQuery = useQuery({
+    queryKey: ["coordinator-enrolled", "completed", debounced, elig, ENROLLED_PAGE_SIZE],
+    queryFn: ({ signal }) =>
+      fetchCoordinatorReferrals(1, {
+        q: debounced || undefined,
+        stage: "completion",
+        eligibility: elig,
+        limit: ENROLLED_PAGE_SIZE,
+        signal,
+      }),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+
   const rows = React.useMemo(() => {
-    const all = Array.isArray(enrolledQuery.data?.rows)
+    const monitoring = Array.isArray(enrolledQuery.data?.rows)
       ? enrolledQuery.data.rows
       : [];
-    return all.filter((r) => r.approvedBy);
-  }, [enrolledQuery.data]);
+    const completed = Array.isArray(completedQuery.data?.rows)
+      ? completedQuery.data.rows
+      : [];
+    const seen = new Set(monitoring.map((r) => r.id));
+    return [
+      ...monitoring.filter((r) => r.approvedBy),
+      ...completed.filter((r) => r.approvedBy && !seen.has(r.id)),
+    ];
+  }, [enrolledQuery.data, completedQuery.data]);
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["coordinator-enrolled"] });
@@ -135,34 +161,54 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
   };
 
   const completeMutation = useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
+    mutationFn: async ({ id }: { id: string; student: string }) => {
       const { data } = await apiClient.patch(`/api/adm/${id}/stage`, {
         stage: "completion",
       });
       return data;
     },
-    onMutate: async ({ id }) => {
-      // Optimistic removal with rollback on error.
+    onMutate: async ({ id, student }) => {
+      // Optimistic move to the Complete lane with rollback on error.
       await queryClient.cancelQueries({ queryKey: ["coordinator-enrolled"] });
       const previous = queryClient.getQueriesData({ queryKey: ["coordinator-enrolled"] });
       queryClient.setQueriesData<{ rows?: AdmCaseRow[] }>(
         { queryKey: ["coordinator-enrolled"] },
-        (old) => (old && Array.isArray(old.rows) ? { ...old, rows: old.rows.filter((r) => r.id !== id) } : old),
+        (old) =>
+          old && Array.isArray(old.rows)
+            ? {
+                ...old,
+                rows: old.rows.map((r) =>
+                  r.id === id ? { ...r, stage: "completion" } : r,
+                ),
+              }
+            : old,
       );
-      return { previous };
+      // Report through the shared bottom-right Dock instead of a toast.
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "adm-complete",
+          title: "Marking case completed",
+          description: `${student} → completion`,
+        });
+      } catch {
+        taskId = null;
+      }
+      return { previous, taskId };
     },
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data, vars, context) => {
       markSelfNotified(vars.id);
       invalidate();
-      setCompleteTarget(null);
-      toast.success({
-        title: "Marked as completed",
-        description: "Device return can now be recorded on the Devices page.",
-      });
+      if (context?.taskId) {
+        dock.completeTask(context.taskId, "Moved to the Complete lane");
+      }
     },
     onError: (err, _vars, context) => {
       for (const [key, data] of context?.previous ?? []) {
         queryClient.setQueryData(key, data);
+      }
+      if (context?.taskId) {
+        dock.failTask(context.taskId, apiErrorMessage(err));
       }
       toast.error({
         title: "Could not mark as completed",
@@ -217,12 +263,15 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     safePage,
     start,
     end,
-    enrolledPending: enrolledQuery.isPending,
-    enrolledError: enrolledQuery.isError,
-    enrolledRefetching: enrolledQuery.isRefetching,
-    enrolledBackground: enrolledQuery.isFetching && !enrolledQuery.isPending,
+    enrolledPending: enrolledQuery.isPending || completedQuery.isPending,
+    enrolledError: enrolledQuery.isError || completedQuery.isError,
+    enrolledRefetching: enrolledQuery.isRefetching || completedQuery.isRefetching,
+    enrolledBackground:
+      (enrolledQuery.isFetching && !enrolledQuery.isPending) ||
+      (completedQuery.isFetching && !completedQuery.isPending),
     refetchEnrolled: () => {
       void enrolledQuery.refetch();
+      void completedQuery.refetch();
     },
     query: queryInput,
     setQuery,
@@ -240,8 +289,11 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     completingId,
     confirmComplete: () => {
       if (completeTarget && !completeMutation.isPending) {
-        setCompletingId(completeTarget.id);
-        completeMutation.mutate({ id: completeTarget.id });
+        const row = completeTarget;
+        setCompletingId(row.id);
+        // Close the overlay at once — the Dock reports the request.
+        setCompleteTarget(null);
+        completeMutation.mutate({ id: row.id, student: row.student });
       }
     },
   };

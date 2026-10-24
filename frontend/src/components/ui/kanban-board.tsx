@@ -7,24 +7,34 @@ export function KanbanBoardHeader({
   title,
   count,
   actions,
+  center,
   ariaLabel,
 }: {
   icon?: React.ReactNode;
   title: React.ReactNode;
   count?: React.ReactNode;
   actions?: React.ReactNode;
+  /** Slot centered in the title row (e.g. a status filter / view switcher). */
+  center?: React.ReactNode;
   ariaLabel?: string;
 }) {
   return (
     <div
-      className="-mx-2.5 flex items-center justify-between gap-2 border-b border-border px-3.5 pb-2"
+      className="-mx-2.5 relative flex items-center gap-2 border-b border-border px-3.5 pb-2"
       aria-label={ariaLabel}
     >
-      <span className="inline-flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground">
+      <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground">
         {icon}
         <span className="truncate">{title}</span>
       </span>
-      <span className="flex shrink-0 items-center gap-2">
+      {center ? (
+        <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center">
+          <div className="pointer-events-auto flex items-center">{center}</div>
+        </div>
+      ) : null}
+      {/* Right side hugs its content — the title keeps every spare pixel
+          (a flex-1 here split the row 50/50 and clipped long titles). */}
+      <span className="flex shrink-0 items-center justify-end gap-2">
         {actions ?? null}
         {count !== undefined ? (
           <span className="text-xs font-semibold text-muted-foreground">{count}</span>
@@ -47,6 +57,8 @@ interface KanbanBoardProps {
   icon?: React.ReactNode;
   count?: React.ReactNode;
   actions?: React.ReactNode;
+  /** Centered in the title row — e.g. a status filter or view switcher. */
+  headerCenter?: React.ReactNode;
   description?: React.ReactNode;
   toolbar?: React.ReactNode;
   footer?: React.ReactNode;
@@ -65,6 +77,7 @@ export function KanbanBoard({
   icon,
   count,
   actions,
+  headerCenter,
   description,
   toolbar,
   footer,
@@ -87,6 +100,7 @@ export function KanbanBoard({
           title={title}
           count={count}
           actions={actions}
+          center={headerCenter}
           ariaLabel={
             typeof title === "string" && count !== undefined
               ? `${title}, ${String(count)}`
@@ -94,7 +108,9 @@ export function KanbanBoard({
           }
         />
         {description ? (
-          <div className="px-1 text-xs text-muted-foreground">{description}</div>
+          <div className="px-1 text-xs text-muted-foreground whitespace-normal break-words">
+            {description}
+          </div>
         ) : null}
         {toolbar ?? null}
         {children}

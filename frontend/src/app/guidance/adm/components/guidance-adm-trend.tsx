@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import type { GuidanceAdmSummary } from "@/services/guidance/adm.types";
 import styles from "./guidance-adm-reports.module.css";
 
@@ -31,14 +31,15 @@ export function GuidanceAdmTrend({ summary }: { summary: GuidanceAdmSummary }) {
   );
 
   return (
-    <Card className={styles.card}>
-      <CardHeader>
-        <CardTitle className={styles.sectionTitle}>ADM referred over time</CardTitle>
-        <CardDescription className={styles.sectionDesc}>
+    <KanbanBoard
+      title={<span className={styles.sectionTitle}>ADM referred over time</span>}
+      description={
+        <span className={styles.sectionDesc}>
           Cases referred to guidance per week — last 12 weeks.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </span>
+      }
+      className={styles.card}
+    >
         {total === 0 ? (
           <p className={styles.empty}>No ADM referrals in the last 12 weeks.</p>
         ) : (
@@ -84,7 +85,6 @@ export function GuidanceAdmTrend({ summary }: { summary: GuidanceAdmSummary }) {
             </p>
           </>
         )}
-      </CardContent>
-    </Card>
+    </KanbanBoard>
   );
 }

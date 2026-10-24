@@ -133,7 +133,6 @@ type Props = {
   unlockCount: number;
   subjectLabel: string;
   termLabel: string;
-  termId?: string;
   onWeightsSaved: () => void;
 };
 
@@ -151,7 +150,6 @@ export function WorkspaceGutter({
   unlockCount,
   subjectLabel,
   termLabel,
-  termId,
   onWeightsSaved,
 }: Props) {
   const [openKey, setOpenKey] = React.useState<MenuKey | null>(null);
@@ -446,7 +444,6 @@ export function WorkspaceGutter({
                   subjectLabel={subjectLabel}
                   termLabel={termLabel}
                   unlockCount={unlockCount}
-                  termId={termId}
                   className="h-6 px-3 text-xs"
                 />
               </div>

@@ -17,6 +17,9 @@ export interface RowListMetaPill {
   /** Rich rendering for the label (e.g. two-tone numerator/denominator).
       Falls back to `label` when omitted; `label` stays the a11y/key string. */
   labelNode?: ReactNode;
+  /** Set false to hide the leading tone dot (renders a plain rectangle
+      pill, e.g. to match a dotless lead pill). */
+  dot?: boolean;
 }
 
 export interface RowListItem {
@@ -26,6 +29,11 @@ export interface RowListItem {
   title: string;
   /** Rectangle id pill rendered after the title (e.g. LRN). */
   idLabel?: string;
+  /** Override for the id pill's size/weight (defaults to `text-[11px] font-medium`). */
+  idLabelClassName?: string;
+  /** Optional rectangle pill rendered before the status pill (e.g. a term
+      chip). Renders in a meta tone with no dot; defaults to amber. */
+  leadPill?: { label: string; tone?: RowTone };
   /** Right-side factor pills. */
   meta?: RowListMetaPill[];
   /** Optional detected/snapshot date pill on the right. Omit when unknown. */
@@ -42,6 +50,12 @@ export interface RowListItem {
     character?: string | null;
     size?: number;
   };
+  /** Optional trailing controls (e.g. a row actions menu) rendered at the
+      end of the right-hand cell. */
+  actions?: ReactNode;
+  /** Override for the row aria-label. Defaults to the risk-board phrasing
+      `${status.label} risk: ${title}`. */
+  ariaLabel?: string;
 }
 
 const STATUS_TONE: Record<RowTone, string> = {
@@ -89,12 +103,24 @@ function StatusPill({ label, tone }: { label: string; tone: RowTone }) {
   );
 }
 
-function RowListRow({ item, index = 0, reduceMotion = false }: { item: RowListItem; index?: number; reduceMotion?: boolean }) {
+function RowListRow({
+  item,
+  index = 0,
+  reduceMotion = false,
+  hasLead = false,
+}: {
+  item: RowListItem;
+  index?: number;
+  reduceMotion?: boolean;
+  /** Whether the list renders the lead pill column (keeps rows aligned
+      when only some items carry a lead pill). */
+  hasLead?: boolean;
+}) {
   return (
     <motion.li
       layout={!reduceMotion}
-      className={styles.row}
-      aria-label={`${item.status.label} risk: ${item.title}`}
+      className={`${styles.row}${hasLead ? ` ${styles.rowLead}` : ""}`}
+      aria-label={item.ariaLabel ?? `${item.status.label} risk: ${item.title}`}
       initial={reduceMotion ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={reduceMotion ? undefined : { opacity: 0, y: -6, transition: { duration: 0.18 } }}
@@ -108,6 +134,17 @@ function RowListRow({ item, index = 0, reduceMotion = false }: { item: RowListIt
       }}
       style={{ willChange: "transform, opacity" }}
     >
+      {hasLead ? (
+        item.leadPill ? (
+          <span
+            className={`w-fit max-w-full justify-center ${PILL_BASE} ${META_TONE[item.leadPill.tone ?? "amber"]}`}
+          >
+            {item.leadPill.label}
+          </span>
+        ) : (
+          <span aria-hidden />
+        )
+      ) : null}
       <StatusPill label={item.status.label} tone={item.status.tone} />
       <span className={styles.sep} aria-hidden>
         |
@@ -126,7 +163,9 @@ function RowListRow({ item, index = 0, reduceMotion = false }: { item: RowListIt
         </span>
         {item.idLabel ? (
           <span
-            className="inline-flex shrink-0 items-center rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground"
+            className={`inline-flex shrink-0 items-center rounded-md border border-border bg-secondary px-1.5 py-0.5 text-secondary-foreground ${
+              item.idLabelClassName ?? "text-[11px] font-medium"
+            }`}
             title={item.idLabel}
           >
             {item.idLabel}
@@ -142,7 +181,7 @@ function RowListRow({ item, index = 0, reduceMotion = false }: { item: RowListIt
           >
             {pill.icon ? (
               <pill.icon size={11} aria-hidden />
-            ) : (
+            ) : pill.dot === false ? null : (
               <span className={styles.metaDot} style={{ background: META_DOT[pill.tone ?? "muted"] }} aria-hidden />
             )}
             {pill.labelNode ?? pill.label}
@@ -166,6 +205,7 @@ function RowListRow({ item, index = 0, reduceMotion = false }: { item: RowListIt
             {initialsOf(item.avatarSource ?? item.title)}
           </span>
         )}
+        {item.actions ?? null}
       </span>
     </motion.li>
   );
@@ -177,6 +217,7 @@ export function RowList({
   ariaLabel = "Rows",
   bleed = false,
   gutter,
+  animateOnMount = false,
 }: {
   items: RowListItem[];
   emptyText?: string;
@@ -185,11 +226,23 @@ export function RowList({
   bleed?: boolean;
   /** Container gutter the bleed cancels (default 1.125rem card gutter). */
   gutter?: string;
+  /** Run the staggered mount animation on first paint (e.g. kanban boards
+      that cascade like their KPI stats). Off by default so refetches and
+      filter changes don't re-animate existing rows. */
+  animateOnMount?: boolean;
 }) {
   if (items.length === 0) {
     return <p className={styles.empty}>{emptyText}</p>;
   }
-  return <AnimatedRowUl items={items} ariaLabel={ariaLabel} bleed={bleed} gutter={gutter} />;
+  return (
+    <AnimatedRowUl
+      items={items}
+      ariaLabel={ariaLabel}
+      bleed={bleed}
+      gutter={gutter}
+      animateOnMount={animateOnMount}
+    />
+  );
 }
 
 function AnimatedRowUl({
@@ -197,24 +250,33 @@ function AnimatedRowUl({
   ariaLabel,
   bleed,
   gutter,
+  animateOnMount,
 }: {
   items: RowListItem[];
   ariaLabel: string;
   bleed: boolean;
   gutter?: string;
+  animateOnMount: boolean;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
+  const hasLead = items.some((item) => item.leadPill != null);
   return (
     <motion.ul
       layout={!reduceMotion}
-      className={`${styles.list} ${bleed ? styles.listBleed : ""}`}
+      className={`${styles.list}${bleed ? ` ${styles.listBleed}` : ""}${hasLead ? ` ${styles.listLead}` : ""}`}
       style={gutter ? ({ "--row-list-gutter": gutter } as CSSProperties) : undefined}
       aria-label={ariaLabel}
       transition={{ layout: { duration: 0.28, ease: "easeOut" } }}
     >
-      <AnimatePresence initial={false}>
+      <AnimatePresence initial={animateOnMount}>
         {items.map((item, index) => (
-          <RowListRow key={item.key} item={item} index={index} reduceMotion={reduceMotion} />
+          <RowListRow
+            key={item.key}
+            item={item}
+            index={index}
+            reduceMotion={reduceMotion}
+            hasLead={hasLead}
+          />
         ))}
       </AnimatePresence>
     </motion.ul>

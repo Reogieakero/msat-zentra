@@ -74,6 +74,11 @@ export interface RatedSubjectCandidate extends OcrSubjectCandidate {
   gradeLevel: string | null;
   /** Quarterly ratings Q1–Q4 in column order. Null = unreadable/split unknown. */
   quarters: Array<number | null> | null;
+  /**
+   * SHS only: per-semester final grades [1st sem, 2nd sem]. Semester tables
+   * show each semester's own final even when a subject spans both.
+   */
+  semFinals?: Array<number | null> | null;
   /** PASSED / FAILED / PROMOTED … as printed, else null. */
   remarks: string | null;
 }

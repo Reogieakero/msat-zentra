@@ -1,14 +1,7 @@
 "use client";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { GuidanceAdmCase } from "@/services/guidance/adm.types";
@@ -31,28 +24,15 @@ export function GuidanceAdmRejectDialog({
   onSubmit: () => void;
 }) {
   return (
-    <Dialog open={rejectId !== null} onOpenChange={(open) => { if (!open && !pending) onClose(); }}>
-      <DialogContent aria-busy={pending || undefined}>
-        <DialogHeader>
-          <DialogTitle>
-            Reject from ADM{activeReject ? ` — ${activeReject.student}` : ""}
-          </DialogTitle>
-          <DialogDescription>
-            The case closes without further ADM action. Please say why, so
-            there is a record.
-          </DialogDescription>
-        </DialogHeader>
-        <div>
-          <Label htmlFor="quickRejectReason">Why is this being rejected?</Label>
-          <Textarea
-            id="quickRejectReason"
-            value={rejectReason}
-            onChange={(e) => onReasonChange(e.target.value)}
-            placeholder="Explain why this case doesn't warrant ADM…"
-            maxLength={500}
-          />
-        </div>
-        <DialogFooter>
+    <KanbanOverlay
+      open={rejectId !== null}
+      onClose={onClose}
+      dismissable={!pending}
+      busy={pending}
+      title={`Reject from ADM${activeReject ? ` — ${activeReject.student}` : ""}`}
+      description="The case closes without further ADM action. Please say why, so there is a record."
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
           <Button
             variant="destructive"
             className={styles.btnRed}
@@ -73,8 +53,19 @@ export function GuidanceAdmRejectDialog({
             ) : null}
             {pending ? "Rejecting…" : "Reject"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <div>
+        <Label htmlFor="quickRejectReason">Why is this being rejected?</Label>
+        <Textarea
+          id="quickRejectReason"
+          value={rejectReason}
+          onChange={(e) => onReasonChange(e.target.value)}
+          placeholder="Explain why this case doesn't warrant ADM…"
+          maxLength={500}
+        />
+      </div>
+    </KanbanOverlay>
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import type { AttentionItem } from "./coordinator-overview-helpers";
 import styles from "./coordinator-overview-attention-dialog.module.css";
 
@@ -26,11 +26,16 @@ export function CoordinatorOverviewAttentionDialog({
   onRetry,
 }: CoordinatorOverviewAttentionDialogProps) {
   return (
-    <CardModal
+    <KanbanOverlay
       open={open}
       onClose={onClose}
-      size="sm"
+      width="sm"
       title="Needs attention"
+      icon={
+        <span className="text-primary" aria-hidden>
+          <TriangleAlert size={14} />
+        </span>
+      }
       description="Actionable items across your desk, newest workflow first."
     >
         {attentionError ? (
@@ -86,6 +91,6 @@ export function CoordinatorOverviewAttentionDialog({
             </li>
           ))}
         </ul>
-    </CardModal>
+    </KanbanOverlay>
   );
 }

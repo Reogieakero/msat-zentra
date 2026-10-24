@@ -1,10 +1,6 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { eligibilityLabel } from "@/services/coordinator/labels";
-import type { AdmEligibility } from "@/services/coordinator/coordinator.types";
+import { Check } from "lucide-react";
 import styles from "./case-page.module.css";
 
 export interface ChecklistInput {
@@ -52,111 +48,38 @@ export function deriveChecklist(input: ChecklistInput): {
   ];
 }
 
+/**
+ * Derived eligibility checklist — rendered flat as the body of the
+ * eligibility KanbanBoard (the board supplies the title, progress and
+ * eligibility badge; the page supplies the derived note).
+ */
 export function EligibilityChecklistCard({
   checklist,
-  eligibilityStatus,
-  compact,
-  stepIndex,
-  stepTotal,
-  onPrevStep,
-  onNextStep,
 }: {
   checklist: ReturnType<typeof deriveChecklist>;
-  eligibilityStatus: AdmEligibility;
-  compact?: boolean;
-
-  stepIndex?: number;
-  stepTotal?: number;
-  onPrevStep?: () => void;
-  onNextStep?: () => void;
 }) {
-  const done = checklist.filter((c) => c.ok).length;
-  const showStepNav =
-    typeof stepIndex === "number" &&
-    typeof stepTotal === "number" &&
-    stepTotal > 0;
   return (
-    <aside
-      className={styles.checklistCard}
-      aria-label={`Eligibility checklist, ${done} of ${checklist.length} complete`}
-    >
-      <span className={styles.glowClip} aria-hidden="true">
-        <span className={styles.cardGlow} />
-      </span>
-      <div className={styles.checklistHead}>
-        <h2 className={styles.cardTitle} style={{ margin: 0 }}>
-          Eligibility checklist
-        </h2>
-        <Badge
-          variant={
-            eligibilityStatus === "eligible"
-              ? "secondary"
-              : eligibilityStatus === "ineligible"
-                ? "destructive"
-                : "outline"
-          }
-        >
-          {eligibilityLabel(eligibilityStatus)}
-        </Badge>
-      </div>
-      <p className={styles.checklistProgress} role="status">
-        {done} of {checklist.length} complete
-      </p>
-      {showStepNav ? (
-        <div className={styles.checklistNav}>
-          <span className={styles.carouselCount} role="status">
-            Step {(stepIndex as number) + 1} of {stepTotal}
+    <ul className={styles.checklist}>
+      {checklist.map((c) => (
+        <li key={c.key} className={styles.checklistItem}>
+          <span
+            className={styles.checkDot}
+            data-done={c.ok ? "true" : "false"}
+            aria-hidden="true"
+          >
+            {c.ok ? <Check size={12} strokeWidth={3} /> : ""}
           </span>
-          <div className={styles.carouselNav}>
-            <Button
-              size="icon"
-              variant="outline"
-              className={styles.carouselBtn}
-              disabled={!onPrevStep}
-              onClick={onPrevStep}
-              aria-label="Previous step"
-            >
-              <ChevronLeft aria-hidden="true" />
-            </Button>
-            <Button
-              size="icon"
-              variant="outline"
-              className={styles.carouselBtn}
-              disabled={!onNextStep}
-              onClick={onNextStep}
-              aria-label="Next step"
-            >
-              <ChevronRight aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-      ) : null}
-      <ul className={styles.checklist}>
-        {checklist.map((c) => (
-          <li key={c.key} className={styles.checklistItem}>
-            <span
-              className={styles.checkDot}
-              data-done={c.ok ? "true" : "false"}
-              aria-hidden="true"
-            >
-              {c.ok ? <Check size={12} strokeWidth={3} /> : ""}
-            </span>
-            <span className={styles.checkText}>
-              <span className={styles.checkLabel}>{c.label}</span>
-              {!compact ? (
-                <span className={styles.checkHint}>{c.hint}</span>
-              ) : null}
-            </span>
-            <Badge variant={c.ok ? "success" : "outline"}>
-              {c.ok ? "On file" : "Missing"}
-            </Badge>
-          </li>
-        ))}
-      </ul>
-      <p className={styles.checklistNote}>
-        Eligibility is derived from the checklist — it cannot be typed
-        manually.
-      </p>
-    </aside>
+          <span className={styles.checkText}>
+            <span className={styles.checkLabel}>{c.label}</span>
+            <span className={styles.checkHint}>{c.hint}</span>
+          </span>
+          <span
+            className={`${styles.checkPill} ${c.ok ? styles.checkPillGreen : styles.checkPillRed}`}
+          >
+            {c.ok ? "On file" : "Missing"}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -3,7 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import {
+  CalendarClock,
   CheckCircle2,
+  ClipboardCheck,
   Eye,
   FileText,
   Info,
@@ -27,6 +29,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
@@ -35,6 +40,7 @@ import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import { AdmTrackDialog } from "@/components/adm-tracker/AdmTrackDialog";
 import { Textarea } from "@/components/ui/textarea";
 import { NurseStartHandlingDialog } from "./NurseStartHandlingDialog";
+import { NurseSessionScheduleBoard } from "./NurseSessionScheduleBoard";
 import { apiErrorMessage } from "@/lib/api/errors";
 import {
   addNurseFollowUpNote,
@@ -45,7 +51,7 @@ import type {
   NurseReferralStatus,
 } from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "./use-nurse-mutation";
-import { isEndorsed } from "../../referrals/components/nurse-referrals-format";
+import { activeSessionOf, isEndorsed } from "../../referrals/components/nurse-referrals-format";
 import styles from "./nurse-overview.module.css";
 
 const QUICK_ACTIONS: { status: NurseReferralStatus; label: string }[] = [
@@ -59,6 +65,7 @@ export function NurseQueueRowActions({
   seeMoreHref,
   viewFormHref,
   viewOnly = false,
+  menuLeadingItems,
 }: {
   row: NurseQueueRow;
   onChanged: () => void;
@@ -69,6 +76,10 @@ export function NurseQueueRowActions({
   viewFormHref?: string;
 
   viewOnly?: boolean;
+
+  /** Extra items rendered at the top of the viewOnly menu, before a
+      separator (desk-specific actions like "Endorse & forward"). */
+  menuLeadingItems?: React.ReactNode;
 }) {
   const [startOpen, setStartOpen] = React.useState(false);
   const [resolveOpen, setResolveOpen] = React.useState(false);
@@ -123,27 +134,14 @@ export function NurseQueueRowActions({
   }
 
   function runStatus(status: NurseReferralStatus, resolutionSummary?: string) {
-    statusMutation.mutate(
-      { status, resolutionSummary },
-      {
-        onSuccess: () => {
-          if (status === "resolved") {
-            setResolveOpen(false);
-            setSummary("");
-            setDialogError(null);
-          }
-        },
-        onError: () => {
-          if (status === "resolved") {
-            setDialogError(
-              statusMutation.error
-                ? apiErrorMessage(statusMutation.error, "Could not resolve this case. Try again.")
-                : "Could not resolve this case. Try again."
-            );
-          }
-        },
-      }
-    );
+    // Overlays close at once — the shared Dock reports the request until it
+    // settles (the mutation hook owns that task).
+    if (status === "resolved") {
+      setResolveOpen(false);
+      setSummary("");
+      setDialogError(null);
+    }
+    statusMutation.mutate({ status, resolutionSummary });
   }
 
   function handleResolve() {
@@ -163,18 +161,15 @@ export function NurseQueueRowActions({
       return;
     }
     setDialogError(null);
-    noteMutation.mutate(note.trim(), {
-      onError: () => {
-        setDialogError(
-          noteMutation.error
-            ? apiErrorMessage(noteMutation.error, "Could not save the note. Try again.")
-            : "Could not save the note. Try again."
-        );
-      },
-    });
+    // Close at once — the Dock reports the save until it settles.
+    setNoteOpen(false);
+    noteMutation.mutate(note.trim());
   }
 
   const isAdm = row.type === "ADM";
+  /* Clinic rows with a live booking get the same "Session schedule…"
+     kanban the ADM rows show (passed by their callers as a leading item). */
+  const bookedSession = isAdm ? null : activeSessionOf(row.sessions);
 
   return (
     <>
@@ -197,6 +192,39 @@ export function NurseQueueRowActions({
         <DropdownMenuContent align="end" className="min-w-56">
           {viewOnly ? (
             <>
+              {menuLeadingItems}
+              {!isAdm && bookedSession ? (
+                <>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className={styles.menuItem}>
+                      <CalendarClock aria-hidden />
+                      Session schedule…
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent
+                      sideOffset={8}
+                      className="min-w-0 overflow-visible border-0 bg-transparent p-0 shadow-none ring-0"
+                    >
+                      <NurseSessionScheduleBoard
+                        row={row}
+                        session={bookedSession}
+                      />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+              {!isAdm &&
+                (row.status === "pending" || row.status === "escalated") &&
+                !hiddenItems.includes("start") && (
+                  <DropdownMenuItem
+                    className={styles.menuItem}
+                    disabled={statusPending}
+                    onSelect={() => setStartOpen(true)}
+                  >
+                    <ClipboardCheck aria-hidden />
+                    Review clinic case…
+                  </DropdownMenuItem>
+                )}
               {isAdm && (
                 <DropdownMenuItem
                   className={styles.menuItem}
@@ -204,14 +232,6 @@ export function NurseQueueRowActions({
                 >
                   <Route aria-hidden />
                   Track ADM referral
-                </DropdownMenuItem>
-              )}
-              {viewFormHref && (
-                <DropdownMenuItem asChild className={styles.menuItem}>
-                  <Link href={viewFormHref}>
-                    <FileText aria-hidden />
-                    View referral form
-                  </Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
@@ -222,14 +242,6 @@ export function NurseQueueRowActions({
                 <FileText aria-hidden />
                 View anecdotal report
               </DropdownMenuItem>
-              {seeMoreHref && (
-                <DropdownMenuItem asChild className={styles.menuItem}>
-                  <Link href={seeMoreHref}>
-                    <Eye aria-hidden />
-                    See more
-                  </Link>
-                </DropdownMenuItem>
-              )}
             </>
           ) : (
           <>
@@ -437,6 +449,7 @@ export function NurseQueueRowActions({
           }}
           track={{
             referralStatus: row.status,
+            dismissedByRole: row.dismissedByRole,
             consultReviewer: row.consultReviewer ?? "nurse",
             referredBy: "Adviser",
             anecdotalDate: row.anecdotal?.observedAt ?? row.referredAt,

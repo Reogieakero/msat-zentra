@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { venueLabel } from "@/services/coordinator/labels";
+import { friendlyWords, venueLabel } from "@/services/coordinator/labels";
 import styles from "./case-page.module.css";
 import {
   formatCountdown,
@@ -46,35 +45,58 @@ export function ParentMeetingCard({
       style={{
         alignItems: "flex-start",
         flexDirection: "column",
+        flex: 1,
         display: active ? undefined : "none",
       }}
       aria-hidden={active ? undefined : true}
     >
       <div className={styles.badgeRow} style={{ marginTop: 0 }}>
-        <Badge variant={m.venue === "home" ? "secondary" : "outline"}>
-          {venueLabel(m.venue)}
-        </Badge>
-        <Badge variant={m.attended ? "success" : "outline"}>
-          {m.attended ? "Attended" : "Booked"}
-        </Badge>
+        <span className={styles.meetingPill}>{venueLabel(m.venue)}</span>
+        {m.attended ? (
+          <span className={`${styles.meetingPill} ${styles.meetingPillGreen}`}>
+            Attended
+          </span>
+        ) : (
+          <span className={`${styles.meetingPill} ${styles.meetingPillBlue}`}>
+            Booked
+          </span>
+        )}
         {showCountdown && timing.state === "upcoming" ? (
-          <Badge variant="outline">
+          <span className={`${styles.meetingPill} ${styles.meetingPillAmber}`}>
             Starts in {formatCountdown(timing.msUntil)}
-          </Badge>
+          </span>
         ) : null}
         {timing.state === "live" ? (
-          <Badge variant="success">Live now</Badge>
+          <span className={`${styles.meetingPill} ${styles.meetingPillGreen}`}>
+            Live now
+          </span>
         ) : null}
         {showCountdown && timing.state === "overdue" ? (
-          <Badge variant="destructive">
+          <span className={`${styles.meetingPill} ${styles.meetingPillRed}`}>
             Overdue by {formatCountdown(timing.msOverdue)}
-          </Badge>
+          </span>
         ) : null}
       </div>
-      <div className={styles.attendBtns} style={{ marginTop: "0.625rem" }}>
+      {m.invitees && m.invitees.length > 0 ? (
+        <div className={styles.invitees}>
+          <p className={styles.inviteesTitle}>Selected to attend</p>
+          <ul className={styles.inviteeList}>
+            {m.invitees.map((inv) => (
+              <li key={inv.id}>
+                {inv.fullName}
+                <span className={styles.inviteeRole}>
+                  {" "}
+                  · {friendlyWords(inv.role)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <div className={styles.meetingActions}>
         <Button
           variant="outline"
-          className={styles.logBtn}
+          className={`${styles.logBtn} h-6`}
           onClick={() => outcome.setLogOpen(true)}
         >
           See attendance log

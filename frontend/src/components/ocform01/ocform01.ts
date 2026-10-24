@@ -50,7 +50,7 @@ function slugify(value: string): string {
 export function buildOcForm01ImageFilename(
   detail: { studentName?: string; observationDate?: string },
   recordId: string,
-  ext: "png" | "jpg",
+  ext: "png" | "jpg" | "pdf",
 ): string {
   const raw = (detail.observationDate ?? "").trim();
   let datePart = "";

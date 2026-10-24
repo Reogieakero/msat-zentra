@@ -86,6 +86,8 @@ export interface TeacherOverviewData {
   masterTeacherEligible: boolean;
   masterTeacherTaken: boolean;
   masterTeacherHolderName: string | null;
+  shareStudentData?: boolean;
+  shareUpdatedAt?: string | null;
   advisorySection: AdvisorySectionInfo | null;
   kpi: TeacherKpiRow;
   atRiskFactors: {
@@ -113,6 +115,8 @@ export interface TeacherOverviewCritical {
   masterTeacherEligible: boolean;
   masterTeacherTaken: boolean;
   masterTeacherHolderName: string | null;
+  shareStudentData?: boolean;
+  shareUpdatedAt?: string | null;
   advisorySection: AdvisorySectionInfo | null;
   kpi: TeacherKpiRow;
   atRiskFactors: {

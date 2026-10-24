@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Check, Copy, Inbox, Loader2, RefreshCw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { toast } from "@/components/ui/sonner";
 import { DropdownSelect } from "./components/DropdownSelect";
 import { AssignAdviserDialog } from "./components/AssignAdviserDialog";
@@ -36,9 +36,9 @@ function initialsOf(name: string): string {
 
 export default function PrincipalAssignPage() {
 
-  const { activeTerm, termReady } = useTerm();
-  const schoolYearId = activeTerm?.schoolYearId ?? "";
-  const schoolYearName = activeTerm?.schoolYearName ?? "";
+  const { activeSchoolYear, isLoading: yearsLoading, termReady } = useTerm();
+  const schoolYearId = activeSchoolYear?.id ?? "";
+  const schoolYearName = activeSchoolYear?.name ?? "";
 
   const [grade, setGrade] = React.useState<GradeLevel | null>(null);
   const [dialog, setDialog] = React.useState<DialogState | null>(null);
@@ -81,8 +81,8 @@ export default function PrincipalAssignPage() {
     [gradeSections],
   );
 
-  const hasNoScope = termReady && !schoolYearId;
-  const isLoading = !termReady || (!!schoolYearId && sectionsQuery.isPending);
+  const hasNoScope = termReady && !yearsLoading && !schoolYearId;
+  const isLoading = !termReady || yearsLoading || (!!schoolYearId && sectionsQuery.isPending);
   const isError = !!schoolYearId && sectionsQuery.isError;
   const hasNoData = !isLoading && !isError && !!schoolYearId && sections.length === 0;
 
@@ -109,7 +109,7 @@ export default function PrincipalAssignPage() {
         <PrincipalEmptyCard
           icon={Inbox}
           title="No active school year"
-          hint="No active school year selected. Pick one from the top-bar badge first."
+          hint="No active school year. Ask the registrar to mark a school year as active."
           centered
         />
       ) : isError ? (
@@ -202,17 +202,13 @@ export default function PrincipalAssignPage() {
                         <span className={assign.cardGlow} />
                       </span>
 
-                      <Badge
-                        variant="secondary"
+                      <Pill
+                        tone="blue"
+                        label="Grade level"
                         className={`${assign.gradeBadge} ${assign.gradeFloat}`}
-                        style={{
-                          backgroundColor: "var(--primary)",
-                          color: "var(--primary-foreground)",
-                          borderColor: "transparent",
-                        }}
                       >
                         Grade {s.gradeLevel}
-                      </Badge>
+                      </Pill>
                       <div className={assign.cardHead}>
                         <span className={assign.avatar} aria-hidden>
                           {initialsOf(s.name)}

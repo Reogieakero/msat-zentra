@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
 import {
   AdmReviewDialog as SharedAdmReviewDialog,
@@ -47,6 +48,7 @@ export function AdmReviewDialog({
   mode?: "queue" | "desk";
 }) {
   const invalidateGuidance = useGuidanceInvalidate();
+  const dock = useDock();
 
   const [bookedScheduled, setBookedScheduled] = React.useState(false);
 
@@ -81,19 +83,32 @@ export function AdmReviewDialog({
   }
 
   async function bookSessionOnly(scheduledAt: string) {
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "adm-book",
+        title: "Booking ADM consultation",
+        description: `${student} · ${new Date(scheduledAt).toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        })}`,
+      });
+    } catch {
+      taskId = null;
+    }
     try {
       await bookAdmConsultationSession(referralId, { scheduledAt });
     } catch {
+      if (taskId) dock.failTask(taskId, "Could not book the session.");
       toast.error({
         title: "Could not book the session",
         description: "The session was not saved. Check your connection and try again.",
       });
       throw new Error("book-failed");
     }
-    toast.success({
-      title: "Session booked",
-      description: `${student}'s case stays pending until you decide.`,
-    });
+    if (taskId) dock.completeTask(taskId, "Session booked — the case stays pending until you decide.");
     try {
       const rows = await listAdmConsultationSessions(referralId);
       setBookedScheduled(rows.some((s) => s.status === "scheduled"));
@@ -104,6 +119,16 @@ export function AdmReviewDialog({
   }
 
   async function decideReject(recommendation: string) {
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "generic",
+        title: "Rejecting from ADM",
+        description: `${student}'s case`,
+      });
+    } catch {
+      taskId = null;
+    }
     try {
       if (mode === "desk") {
 
@@ -112,16 +137,14 @@ export function AdmReviewDialog({
         await reviewAdmConsultation(referralId, { recommendation, outcome: "reject" });
       }
     } catch {
+      if (taskId) dock.failTask(taskId, "Could not reject the case.");
       toast.error({
         title: "Could not reject the case",
         description: "The rejection did not go through. Check your connection and try again.",
       });
       throw new Error("reject-failed");
     }
-    toast.success({
-      title: "Rejected from ADM",
-      description: `${student}'s case was closed with your recommendation kept on record.`,
-    });
+    if (taskId) dock.completeTask(taskId, "Case rejected — the recommendation is kept on record.");
     refreshAll();
   }
 

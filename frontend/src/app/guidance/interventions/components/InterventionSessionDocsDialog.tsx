@@ -63,6 +63,11 @@ export function InterventionSessionDocsDialog({
       `${added.length} photo${added.length === 1 ? "" : "s"} attached to this session.`,
     errorFallback: "Could not attach the photos. Try again.",
     silentError: true,
+    dock: {
+      title: "Uploading session photos",
+      description: (files: File[]) =>
+        `${files.length} photo${files.length === 1 ? "" : "s"} being filed.`,
+    },
     onSuccessExtra: (added) => {
       setDocs((prev) => [...prev, ...added]);
       setPending([]);
@@ -78,6 +83,10 @@ export function InterventionSessionDocsDialog({
     successDescription: () => "The photo was removed from this session.",
     errorFallback: "Could not remove the photo. Try again.",
     silentError: true,
+    dock: {
+      title: "Removing session photo",
+      description: "Updating the session documentation.",
+    },
     onSuccessExtra: (_data, id) => {
       setDocs((prev) => prev.filter((d) => d.id !== id));
       setError(null);

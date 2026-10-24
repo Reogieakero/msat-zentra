@@ -1,4 +1,6 @@
 export interface RegistryAttachmentRow {
+  /** SF10 record id — opens the record report overlay from the feed card. */
+  id: string;
   student: string;
   lrn: string;
   grade: string;
@@ -30,6 +32,18 @@ export interface RegistryGradeCountRow {
   count: number;
 }
 
+export interface RegistryRequestDayRow {
+  date: string;
+  /** Requests submitted that day. */
+  pending: number;
+  /** Students granted that day, bucketed by their approve date. */
+  approved: number;
+  /** Students reported missing that day, bucketed by their report date. */
+  reported: number;
+  /** Requests denied that day. */
+  denied: number;
+}
+
 export interface RegistryOverviewData {
   pendingAccounts: number;
   pendingAdviserAccess: number;
@@ -46,6 +60,8 @@ export interface RegistryOverviewData {
   sf10: { total: number; released: number; available: number; attach: number };
   sectionsByGrade: RegistryGradeCountRow[];
   subjectsByGrade: RegistryGradeCountRow[];
+  sf10RequestsDaily: RegistryRequestDayRow[];
+  rosterByGrade: RegistryGradeCountRow[];
 }
 
 export type RegistrarAttachmentRow = RegistryAttachmentRow;

@@ -1,18 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { CalendarDays, Loader2, MapPin } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { createPortal } from "react-dom";
+import { CalendarDays, ClipboardList, Clock, Loader2, MapPin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CardModal } from "@/components/ui/CardModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pill } from "@/components/ui/pill";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import {
   ClinicDatePicker,
   ClinicTimePicker,
 } from "@/app/nurse/overview/components/ClinicDateTimePicker";
 import styles from "./BookSessionDialog.module.css";
+import board from "./BookSessionDialog.board.module.css";
 
 export interface BookSessionFields {
   scheduledAt: string;
@@ -31,6 +34,12 @@ export interface InviteStaffOption {
 export interface BookSessionStudentCard {
   name: string;
   sub?: string;
+  /** Board variant: LRN and section rendered as separate pills (LRN first). */
+  lrn?: string;
+  /** Section name shown on the amber pill. */
+  section?: string;
+  /** Grade level shown as the section pill's tooltip label. */
+  grade?: string;
   badgeText?: string;
   badgeVariant?: "red" | "amber" | "outline";
 }
@@ -40,6 +49,11 @@ const INVITE_ROLE_LABELS: Record<string, string> = {
   nurse: "School Nurse",
   adviser: "Adviser",
 };
+
+/* Primary action uses the shared Pill blue (translucent fill + blue text)
+   so the CTA matches every blue pill on the desks. */
+const PILL_BLUE_BUTTON =
+  "bg-blue-500/20 text-blue-700 hover:bg-blue-500/30 dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/30 font-semibold";
 
 function inviteRoleLabel(role: string): string {
   return INVITE_ROLE_LABELS[role] ?? role.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
@@ -162,6 +176,9 @@ export interface BookSessionDialogProps {
   initialSessionType?: string;
   idPrefix?: string;
 
+  /** "card" = shared centred modal (default). "board" = wide kanban overlay. */
+  variant?: "card" | "board";
+
   inviteStaff?: InviteStaffOption[];
   initialInviteIds?: string[];
   inviteHint?: string;
@@ -206,6 +223,7 @@ export function BookSessionDialog({
   initialVenue = "",
   initialSessionType,
   idPrefix = "book-session",
+  variant = "card",
   inviteStaff,
   initialInviteIds = [],
   inviteHint,
@@ -225,6 +243,35 @@ export function BookSessionDialog({
   const [takenLoading, setTakenLoading] = React.useState(false);
 
   const [step, setStep] = React.useState(1);
+
+  const boardMode = variant === "board";
+  const [mounted, setMounted] = React.useState(false);
+  const panelRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    // Portal target only exists after mount (no document during prerender).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!open || !boardMode) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    panelRef.current?.focus();
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open, boardMode]);
+
+  React.useEffect(() => {
+    if (!open || !boardMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !busy) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, boardMode, busy, onClose]);
 
   const inviteKey = [...initialInviteIds].sort().join(",");
   const openKey = open
@@ -366,6 +413,360 @@ export function BookSessionDialog({
         ? `${formatSummaryDate(date)} · ${effectiveTime}`
         : "Pick a date and time";
 
+  if (boardMode) {
+    if (!mounted) return null;
+    return createPortal(
+      <div
+        className={board.overlay}
+        onMouseDown={(e) => {
+          if (!busy && e.target === e.currentTarget) {
+            onClose();
+            setError(null);
+          }
+        }}
+      >
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={typeof title === "string" ? title : undefined}
+          tabIndex={-1}
+          aria-busy={busy || undefined}
+          className={board.shell}
+        >
+          <div className={board.header}>
+            <span className={board.headIcon} aria-hidden="true">
+              <CalendarDays />
+            </span>
+            <div className={board.headText}>
+              <h2 className={board.title}>{title}</h2>
+              {description ? (
+                <p className={board.description}>{description}</p>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className={board.close}
+              onClick={() => {
+                if (!busy) {
+                  onClose();
+                  setError(null);
+                }
+              }}
+              disabled={busy}
+              aria-label="Close dialog"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className={board.scroll}>
+            {studentCard ? (
+              <div className={board.caseStrip}>
+                <StudentMascot
+                  name={studentCard.name}
+                  seed={studentCard.lrn ?? studentCard.name}
+                  size={36}
+                />
+                <div className={board.caseText}>
+                  <span className={board.caseName}>{studentCard.name}</span>
+                  <div className={board.casePills}>
+                    {studentCard.lrn ? <Pill label="LRN">{studentCard.lrn}</Pill> : null}
+                    {(studentCard.section ?? studentCard.grade) ? (
+                      <Pill
+                        label={studentCard.grade ?? "Section"}
+                        tone="amber"
+                      >
+                        {studentCard.section ?? studentCard.grade}
+                      </Pill>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className={board.lanes}>
+              <section className={board.lane} aria-label="Schedule">
+                <div className={board.laneHead}>
+                  <span className={board.laneTitle}>
+                    <CalendarDays
+                      className={`${board.laneIcon} ${board.iconSchedule}`}
+                      aria-hidden="true"
+                    />
+                    Schedule
+                  </span>
+                </div>
+                <div className={board.laneCards}>
+                  <div className={styles.field}>
+                    <span
+                      id={`${idPrefix}-board-date-label`}
+                      className={styles.fieldLabel}
+                    >
+                      Date
+                    </span>
+                    <div
+                      className={board.dayStack}
+                      role="group"
+                      aria-labelledby={`${idPrefix}-board-date-label`}
+                    >
+                      {dayCards.map((d) => {
+                        const selected = date === d.key;
+                        return (
+                          <button
+                            key={d.key}
+                            type="button"
+                            className={`${styles.dayCard}${selected ? ` ${styles.daySelected} ${board.chipSelected}` : ""}`}
+                            aria-pressed={selected}
+                            onClick={() => pickDay(d.key)}
+                          >
+                            <span className={styles.dayDow}>{d.dow}</span>
+                            <span className={styles.dayLabel}>{d.label}</span>
+                          </button>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        className={`${styles.dayCard}${useCustomDate ? ` ${styles.daySelected} ${board.chipSelected}` : ""}`}
+                        aria-pressed={useCustomDate}
+                        onClick={() => setUseCustomDate(true)}
+                      >
+                        <CalendarDays className={styles.dayIcon} aria-hidden="true" />
+                        <span className={styles.dayLabel}>Other date</span>
+                      </button>
+                    </div>
+                    {useCustomDate ? (
+                      <div className={styles.customDate}>
+                        <ClinicDatePicker
+                          id={`${idPrefix}-board-date`}
+                          label="Custom date"
+                          value={date}
+                          onChange={(v) => {
+                            setDate(v);
+                            setError(null);
+                            setTaken([]);
+                            setTakenLoading(true);
+                          }}
+                          min={today}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </section>
+
+              <section className={board.lane} aria-label="Time">
+                <div className={board.laneHead}>
+                  <span className={board.laneTitle}>
+                    <Clock
+                      className={`${board.laneIcon} ${board.iconTime}`}
+                      aria-hidden="true"
+                    />
+                    Time
+                  </span>
+                  <span className={board.laneHint}>
+                    {takenLoading
+                      ? "Checking…"
+                      : taken.length > 0
+                        ? "Crossed-out = taken"
+                        : ""}
+                  </span>
+                </div>
+                <div className={board.laneCards}>
+                  <div className={styles.field}>
+                    <div
+                      className={board.timeStack}
+                      role="group"
+                      aria-label="Time"
+                    >
+                      {TIME_SLOTS.map((slot) => {
+                        const selected = time === slot.key && !timeIsCustom;
+                        const reason = slotDisabled(slot);
+                        return (
+                          <button
+                            key={slot.key}
+                            type="button"
+                            className={`${styles.timePill}${selected ? ` ${styles.timeSelected} ${board.chipSelected}` : ""}${reason ? ` ${styles.timeTaken}` : ""}`}
+                            aria-pressed={selected}
+                            disabled={reason !== null || busy}
+                            title={reason ?? slot.label}
+                            onClick={() => pickTime(slot.key)}
+                          >
+                            {slot.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {timeIsCustom || customTime !== "" ? (
+                      <div className={styles.customDate}>
+                        <ClinicTimePicker
+                          id={`${idPrefix}-board-time`}
+                          label="Custom time"
+                          value={timeIsCustom ? time : customTime}
+                          onChange={(v) => {
+                            setTime(v);
+                            setCustomTime("");
+                            setError(null);
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </section>
+
+              <section className={board.lane} aria-label="Details">
+                <div className={board.laneHead}>
+                  <span className={board.laneTitle}>
+                    <ClipboardList
+                      className={`${board.laneIcon} ${board.iconDetails}`}
+                      aria-hidden="true"
+                    />
+                    Details
+                  </span>
+                </div>
+                <div className={board.laneCards}>
+                  {showSessionType && sessionTypeOptions.length > 0 ? (
+                    <div className={styles.field}>
+                      <span
+                        id={`${idPrefix}-board-type-label`}
+                        className={styles.fieldLabel}
+                      >
+                        {sessionTypeLabel}
+                      </span>
+                      <div
+                        className={`${styles.kindTrack} ${board.typeTabs}`}
+                        role="group"
+                        aria-labelledby={`${idPrefix}-board-type-label`}
+                      >
+                        {sessionTypeOptions.map((o) => {
+                          const selected = sessionType === o.value;
+                          return (
+                            <button
+                              key={o.value}
+                              type="button"
+                              className={`${styles.kindBtn} ${board.typeTab}${selected ? ` ${board.typeTabSelected}` : ""}`}
+                              aria-pressed={selected}
+                              onClick={() => {
+                                setSessionType(o.value);
+                                setError(null);
+                              }}
+                            >
+                              {o.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className={styles.field}>
+                    <Label htmlFor={`${idPrefix}-board-venue`}>{venueLabel}</Label>
+                    <div className={styles.venueWrap}>
+                      <MapPin className={styles.venueIcon} aria-hidden="true" />
+                      <Input
+                        id={`${idPrefix}-board-venue`}
+                        value={venue}
+                        onChange={(e) => setVenue(e.target.value)}
+                        placeholder={venuePlaceholder}
+                        maxLength={200}
+                        className={styles.venueInput}
+                      />
+                    </div>
+                    {venueHint ? <p className={styles.hint}>{venueHint}</p> : null}
+                  </div>
+
+                  {showInvites ? (
+                    <div className={styles.field}>
+                      <span className={styles.fieldLabel}>
+                        Invite staff
+                        {invites.length > 0 ? ` · ${invites.length} invited` : ""}
+                      </span>
+                      {inviteHint ? <p className={styles.hint}>{inviteHint}</p> : null}
+                      {inviteStaff!.length === 0 ? (
+                        <p className={styles.hint}>No invitable staff right now.</p>
+                      ) : (
+                        inviteGroups.map(([role, members]) => (
+                          <div key={role} className={styles.inviteGroup}>
+                            <p className={styles.inviteGroupLabel}>
+                              {inviteRoleLabel(role)}
+                            </p>
+                            <div
+                              className={board.invitePills}
+                              role="group"
+                              aria-label="Invite staff"
+                            >
+                              {members.map((s) => {
+                                const checked = invites.includes(s.id);
+                                return (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    className={`${board.invitePill}${checked ? ` ${board.invitePillSelected}` : ""}`}
+                                    aria-pressed={checked}
+                                    onClick={() => toggleInvite(s.id)}
+                                    title={s.fullName}
+                                  >
+                                    {s.fullName}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            </div>
+          </div>
+
+          {error || serverError ? (
+            <div className={board.errorWrap}>
+              <div className={styles.errorBlock} role="alert">
+                <p className={styles.errorText}>{error ?? serverError}</p>
+              </div>
+            </div>
+          ) : null}
+
+          <div className={board.footer}>
+            <div className={styles.summary}>
+              <div className={board.summaryPills}>
+                {date ? (
+                  <span className={board.summaryPill}>{formatSummaryDate(date)}</span>
+                ) : null}
+                {effectiveTime ? (
+                  <span className={board.summaryPill}>
+                    {selectedSlot?.label ?? effectiveTime}
+                  </span>
+                ) : null}
+                {!date && !effectiveTime ? (
+                  <span className={board.summaryEmpty}>Pick a date and time</span>
+                ) : null}
+              </div>
+              <p className={styles.summarySub}>
+                {showSessionType ? `${kindLabel} · ` : ""}
+                {venue.trim() || "No venue set"}
+              </p>
+            </div>
+            <div className={board.actions}>
+              <Button
+                onClick={save}
+                disabled={busy}
+                aria-busy={busy || undefined}
+                className={`${board.footerBtn} ${PILL_BLUE_BUTTON}`}
+              >
+                {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                {busy ? (busyLabel ?? "Booking…") : submitLabel}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+
   return (
     <CardModal
       open
@@ -414,15 +815,26 @@ export function BookSessionDialog({
                   </span>
                   <span className={styles.studentText}>
                     <span className={styles.studentName}>{studentCard.name}</span>
-                    {studentCard.sub ? (
-                      <span className={styles.studentSub}>{studentCard.sub}</span>
-                    ) : null}
+                    <span className={styles.studentPills}>
+                      {studentCard.lrn ? <Pill label="LRN">{studentCard.lrn}</Pill> : null}
+                      {studentCard.grade ? (
+                        <Pill label="Section" tone="amber">
+                          {studentCard.grade}
+                        </Pill>
+                      ) : null}
+                      {!studentCard.lrn && !studentCard.grade && studentCard.sub ? (
+                        <Pill label="Section">{studentCard.sub}</Pill>
+                      ) : null}
+                      {studentCard.badgeText ? (
+                        <Pill
+                          label="Risk level"
+                          tone={studentCard.badgeVariant === "red" ? "red" : "amber"}
+                        >
+                          {studentCard.badgeText}
+                        </Pill>
+                      ) : null}
+                    </span>
                   </span>
-                  {studentCard.badgeText ? (
-                    <Badge variant={studentCard.badgeVariant ?? "outline"}>
-                      {studentCard.badgeText}
-                    </Badge>
-                  ) : null}
                 </div>
               ) : null}
 
@@ -663,6 +1075,7 @@ export function BookSessionDialog({
                 onClick={save}
                 disabled={busy}
                 aria-busy={busy || undefined}
+                className={PILL_BLUE_BUTTON}
               >
                 {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
                 {busy ? (busyLabel ?? "Booking…") : submitLabel}

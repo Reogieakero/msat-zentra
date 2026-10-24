@@ -5,7 +5,7 @@ import {
   ChevronDown,
   Search,
   SearchX,
-  X,
+  ShieldAlert,
 } from "lucide-react";
 import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { Button } from "@/components/ui/button";
@@ -16,33 +16,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import type { GuidanceRiskLevel } from "@/services/guidance/guidance.types";
 import type {
-  GuidanceReferralItem,
-  GuidanceRiskLevel,
-} from "@/services/guidance/guidance.types";
-import type { AtRiskStudentItem } from "@/services/guidance/interventions.types";
+  AlertCaseType,
+  GuidanceAlertCasesSummary,
+} from "@/services/guidance/alerts.types";
 import { useNowTick } from "@/lib/clock";
-import {
-  actionTimeOf,
-  rowKey,
-  rowRisk,
-  rowSearchText,
-  rowType,
-  type GuidanceAlertRow,
-  type TypeFilter,
-} from "./guidance-alerts-helpers";
-import { CaseTableRow } from "./guidance-alerts-row";
+import { rowKey, rowRisk, type GuidanceAlertRow, type TypeFilter } from "./guidance-alerts-helpers";
+import { CaseKanbanRow } from "./guidance-alerts-row";
+import { GuidanceBookedSessionButton } from "./GuidanceAlertsRowActions";
+import { GuidanceCaseDetailDialog } from "../../components/GuidanceCaseDetailDialog";
 import { Pagination } from "@/components/shared/pagination";
 import styles from "./guidance-alerts-table.module.css";
 export type { GuidanceAlertRow };
-import { PAGE_SIZE } from "@/components/shared/pagination";
 
 const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "", label: "All types" },
@@ -50,169 +37,192 @@ const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "Counseling", label: "Counseling" },
   { value: "Intervention", label: "Intervention" },
 ];
+
+export type RiskFilter = "" | GuidanceRiskLevel;
+
+const RISK_OPTIONS: { value: RiskFilter; label: string }[] = [
+  { value: "", label: "All risks" },
+  { value: "High", label: "High risk" },
+  { value: "Moderate", label: "Moderate risk" },
+  { value: "Low", label: "Low risk" },
+];
+
+/**
+ * Server-paged board: filters, search and paging are query params resolved by
+ * `/api/guidance/alerts/cases`, so this component only renders the page it is
+ * handed. Low-risk rows never reach the desk — the backend drops them.
+ */
 export function GuidanceAlertsTable({
-  referrals,
-  interventions,
+  rows,
   riskByStudent,
+  summary,
+  total,
+  page,
+  query,
+  type,
+  risk,
+  onQueryChange,
+  onTypeChange,
+  onRiskChange,
+  onPageChange,
 }: {
-  referrals: GuidanceReferralItem[];
-  interventions: AtRiskStudentItem[];
+  rows: GuidanceAlertRow[];
   riskByStudent: Record<string, GuidanceRiskLevel>;
+  summary: GuidanceAlertCasesSummary;
+  total: number;
+  page: number;
+  query: string;
+  type: AlertCaseType;
+  risk: RiskFilter;
+  onQueryChange: (next: string) => void;
+  onTypeChange: (next: AlertCaseType) => void;
+  onRiskChange: (next: RiskFilter) => void;
+  onPageChange: (next: number) => void;
 }) {
-  const [query, setQuery] = React.useState("");
-  const [type, setType] = React.useState<TypeFilter>("");
-  const [page, setPage] = React.useState(1);
+  const [activeRow, setActiveRow] = React.useState<GuidanceAlertRow | null>(null);
   const now = useNowTick();
-  const rows: GuidanceAlertRow[] = React.useMemo(
-    () => [
-      ...referrals.map((referral): GuidanceAlertRow => ({ kind: "referral", referral })),
-      ...interventions.map((item): GuidanceAlertRow => ({ kind: "intervention", item })),
-    ],
-    [referrals, interventions]
-  );
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const kept = rows.filter((row) => {
-      if (type !== "" && rowType(row) !== type) return false;
-      if (q !== "" && !rowSearchText(row).toLowerCase().includes(q)) return false;
-      return true;
-    });
-    kept.sort((a, b) => {
-      const at = actionTimeOf(a);
-      const bt = actionTimeOf(b);
-      if (at === null && bt === null) return 0;
-      if (at === null) return 1;
-      if (bt === null) return -1;
-      return bt - at;
-    });
-    return kept;
-  }, [rows, query, type]);
-  const clearFilters = React.useCallback(() => {
-    setQuery("");
-    setType("");
-    setPage(1);
-  }, []);
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const activeRisk = risk ?? "";
   const typeLabel = TYPE_OPTIONS.find((o) => o.value === type)?.label ?? "All types";
-  const hasActiveFilters = query.trim() !== "" || type !== "";
-  const hasRows = rows.length > 0;
+  const riskLabel = RISK_OPTIONS.find((o) => o.value === activeRisk)?.label ?? "All risks";
+  const hasRows = summary.total > 0;
+  const hasFilters = type !== "" || activeRisk !== "" || query.trim() !== "";
+
   return (
-    <section aria-label="Referred cases" className={styles.panel}>
-      <span className={styles.glowClip} aria-hidden="true">
-        <span className={styles.cardGlow} />
-      </span>
-      <div className={styles.header}>
-        <div className={styles.headerText}>
-          <h2 className={styles.sectionTitle}>Referred cases</h2>
-          <p className={styles.sectionDesc}>
-            Every ADM, counseling, and intervention case on your desk — {total} case
-            {total === 1 ? "" : "s"}.
-          </p>
-        </div>
-        {hasRows && (
-          <div className={styles.headerActions}>
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} aria-hidden />
-              <Input
-                className={styles.search}
-                style={{ height: "2rem" }}
-                placeholder="Search by student or keyword…"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setPage(1);
-                }}
-                aria-label="Search referred cases"
-              />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  style={{ height: "2rem" }}
-                  aria-label={`Filter cases by type, currently showing: ${typeLabel}`}
-                  className={`${styles.filterBtn} ${type !== "" ? styles.filterActive : ""}`}
-                >
-                  {type === "" ? "Type" : typeLabel}
-                  {type !== "" && <span className={styles.filterDot} aria-hidden />}
-                  <ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.filterMenu}>
-                {TYPE_OPTIONS.map((item) => (
-                  <DropdownMenuCheckboxItem
-                    key={item.label}
-                    checked={type === item.value}
-                    onCheckedChange={() => {
-                      setType(item.value);
-                      setPage(1);
-                    }}
+    <>
+      <KanbanBoard
+        title="Referred cases"
+        icon={
+          <span className="text-amber-600 dark:text-amber-400" aria-hidden>
+            <BellRing size={14} />
+          </span>
+        }
+        count={total}
+        description={
+          hasRows
+            ? "Every ADM, counseling, and intervention case on your desk."
+            : "No referred cases — nothing needs your attention right now."
+        }
+        actions={
+          hasRows ? (
+            <div className={styles.headerControls}>
+              <div className={styles.searchWrap}>
+                <Search className={styles.searchIcon} aria-hidden />
+                <Input
+                  className={styles.search}
+                  style={{ borderRadius: "16px" }}
+                  placeholder="Search by student or keyword…"
+                  value={query}
+                  onChange={(e) => onQueryChange(e.target.value)}
+                  aria-label="Search referred cases"
+                />
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Filter cases by type, currently showing: ${typeLabel}`}
+                    className={`${styles.filterBtn} ${type !== "" ? styles.filterActive : ""}`}
                   >
-                    {item.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" className={styles.clearBtn} onClick={clearFilters}>
-                <X aria-hidden />
-                Show all
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-      <div className={styles.tableBody}>
+                    <span className={styles.filterValue}>{type === "" ? "Type" : typeLabel}</span>
+                    {type !== "" && <span className={styles.filterDot} aria-hidden />}
+                    <ChevronDown aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className={styles.filterMenu}>
+                  {TYPE_OPTIONS.map((item) => (
+                    <DropdownMenuCheckboxItem
+                      key={item.label}
+                      checked={type === item.value}
+                      onCheckedChange={() => onTypeChange(item.value as AlertCaseType)}
+                    >
+                      {item.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Filter cases by risk, currently showing: ${riskLabel}`}
+                    className={`${styles.filterBtn} ${activeRisk !== "" ? styles.filterActive : ""}`}
+                  >
+                    <ShieldAlert aria-hidden />
+                    <span className={styles.filterValue}>
+                      {activeRisk === "" ? "Risk" : riskLabel.replace(" risk", "")}
+                    </span>
+                    {activeRisk !== "" && <span className={styles.filterDot} aria-hidden />}
+                    <ChevronDown aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className={styles.filterMenu}>
+                  {RISK_OPTIONS.map((item) => (
+                    <DropdownMenuCheckboxItem
+                      key={item.label}
+                      checked={activeRisk === item.value}
+                      onCheckedChange={() => onRiskChange(item.value)}
+                    >
+                      {item.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : null
+        }
+        footer={
+          total > 0 ? (
+            <Pagination currentPage={page} totalItems={total} onPageChange={onPageChange} />
+          ) : null
+        }
+      >
         {!hasRows ? (
           <GuidanceEmptyState
             icon={BellRing}
             title="No referred cases"
             hint="No referred cases — nothing needs your attention right now."
           />
-        ) : filtered.length === 0 ? (
+        ) : rows.length === 0 ? (
           <GuidanceEmptyState
             icon={SearchX}
-            title="No cases match your search"
-            hint="Try a different name or keyword, or clear the search and filters."
+            title="No cases match your filters"
+            hint={
+              hasFilters
+                ? "Try a different name or keyword, or clear the search and filters."
+                : "Nothing on this page — try an earlier one."
+            }
           />
         ) : (
-          <div className={styles.tableWrap}>
-            <Table aria-label="Cases on the guidance desk">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Case status</TableHead>
-                  <TableHead>Risk</TableHead>
-                  <TableHead>Latest action</TableHead>
-                  <TableHead>
-                    <span className={styles.srOnly}>Row actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageRows.map((row) => (
-                  <CaseTableRow
-                    key={rowKey(row)}
-                    row={row}
-                    riskLevel={rowRisk(row, riskByStudent)}
-                    now={now}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <ul className={styles.caseList} aria-label="Cases on the guidance desk">
+            {rows.map((row) => (
+              <CaseKanbanRow
+                key={rowKey(row)}
+                row={row}
+                riskLevel={rowRisk(row, riskByStudent)}
+                now={now}
+                onOpen={() => setActiveRow(row)}
+                onBook={() => setActiveRow(null)}
+              />
+            ))}
+          </ul>
         )}
-        <Pagination
-          currentPage={safePage}
-          totalItems={total}
-          onPageChange={setPage}
-        />
-      </div>
-    </section>
+      </KanbanBoard>
+      <GuidanceCaseDetailDialog
+        row={activeRow}
+        riskLevel={activeRow ? rowRisk(activeRow, riskByStudent) : undefined}
+        onClose={() => setActiveRow(null)}
+        actions={
+          activeRow?.kind === "intervention" ? (
+            <GuidanceBookedSessionButton
+              item={activeRow.item}
+              onBeforeOpen={() => setActiveRow(null)}
+              keepOverlayOnOpen
+            />
+          ) : undefined
+        }
+      />
+    </>
   );
 }

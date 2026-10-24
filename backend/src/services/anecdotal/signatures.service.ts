@@ -57,8 +57,10 @@ export async function applySignature(ctx: AnecdotalContext, recordId: string) {
   ]);
   if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
   const maySign =
-    record.section.adviserId === ctx.userId ||
-    (!record.section.adviserId && record.observerId === ctx.userId);
+    ctx.role !== "guidance_counselor" &&
+    ctx.role !== "nurse" &&
+    (record.section.adviserId === ctx.userId ||
+      (!record.section.adviserId && record.observerId === ctx.userId));
   if (!maySign) {
     throw new AppError(403, "FORBIDDEN", "Only the section adviser may sign this form");
   }
@@ -95,8 +97,10 @@ export async function signRecord(ctx: AnecdotalContext, recordId: string, signat
   });
   if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
   const maySign =
-    record.section.adviserId === ctx.userId ||
-    (!record.section.adviserId && record.observerId === ctx.userId);
+    ctx.role !== "guidance_counselor" &&
+    ctx.role !== "nurse" &&
+    (record.section.adviserId === ctx.userId ||
+      (!record.section.adviserId && record.observerId === ctx.userId));
   if (!maySign) {
     throw new AppError(403, "FORBIDDEN", "Only the section adviser may sign this form");
   }
@@ -134,8 +138,10 @@ export async function removeSignature(ctx: AnecdotalContext, recordId: string) {
   });
   if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
   const maySign =
-    record.section.adviserId === ctx.userId ||
-    (!record.section.adviserId && record.observerId === ctx.userId);
+    ctx.role !== "guidance_counselor" &&
+    ctx.role !== "nurse" &&
+    (record.section.adviserId === ctx.userId ||
+      (!record.section.adviserId && record.observerId === ctx.userId));
   if (!maySign) {
     throw new AppError(403, "FORBIDDEN", "Only the section adviser may remove this signature");
   }

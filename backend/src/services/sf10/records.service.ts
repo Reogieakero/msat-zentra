@@ -10,7 +10,9 @@ import { getEnv } from "../../config/env.js";
 import {
   extractPdfText,
   extractSubjectsFromGrid,
+  extractSubjectsFromGridShs,
   extractXlsxGrid,
+  isShsForm,
   isXlsxUpload,
   tryWorker,
 } from "./ocr-text.service.js";
@@ -43,7 +45,7 @@ import {
   assertRecordAccess,
   resolveGradeBand,
 } from "../../modules/sf10/sf10.repository.js";
-import { canUploadGradeLevel, deskForUpload, provisionGradeForUpload } from "../../lib/roles.js";
+import { canUploadGradeLevel, deskForRole, deskForUpload, provisionGradeForUpload } from "../../lib/roles.js";
 import { mascotFor } from "../mascot.js";
 import type { Sf10Context } from "./sf10.types.js";
 
@@ -203,6 +205,8 @@ export interface OcrSubjectPayload {
   gradeLevel?: string | null;
   /** Quarterly ratings Q1–Q4 in column order, if read. */
   quarters?: Array<number | null> | null;
+  /** SHS only: per-semester finals [1st sem, 2nd sem], if read. */
+  semFinals?: Array<number | null> | null;
   /** PASSED / FAILED … as printed, if read. */
   remarks?: string | null;
 }
@@ -285,13 +289,14 @@ export async function buildLocalPayload(file: {
 }): Promise<LocalExtraction> {
   if (isXlsxUpload(file.mimetype, file.originalname)) {
     const grid = await extractXlsxGrid(file.buffer);
-    const subjects = extractSubjectsFromGrid(grid).map((s) => ({
+    const subjects = (isShsForm(grid) ? extractSubjectsFromGridShs(grid) : extractSubjectsFromGrid(grid)).map((s) => ({
       rawName: s.rawName,
       norm: s.norm,
       grade: s.rating,
       rating: s.rating,
       gradeLevel: s.gradeLevel,
       quarters: s.quarters,
+      semFinals: s.semFinals ?? null,
       remarks: s.remarks,
     }));
     const learner = extractIdentityFromCells(grid);
@@ -712,15 +717,7 @@ function fileGradeCeiling(
 }
 
 async function summarizeDeficiencies(
-  subjects: Array<{
-    rawName: string;
-    norm: string;
-    rating?: number | null;
-    grade?: number | null;
-    gradeLevel?: string | null;
-    quarters?: Array<number | null> | null;
-    remarks?: string | null;
-  }>,
+  subjects: OcrSubjectPayload[],
   studentGrade: string,
 ) {
   const idx = PROVISION_GRADES.indexOf(studentGrade);
@@ -744,6 +741,7 @@ async function summarizeDeficiencies(
       rating: s.rating ?? s.grade ?? null,
       gradeLevel: s.gradeLevel ?? null,
       quarters: s.quarters ?? null,
+      semFinals: s.semFinals ?? null,
       remarks: s.remarks ?? null,
     })),
     studentGrade,
@@ -1157,6 +1155,7 @@ export async function getSubjectMap(ctx: Sf10Context, recordId: string) {  const
           rating: s.rating ?? s.grade ?? null,
           gradeLevel: s.gradeLevel ?? null,
           quarters: s.quarters ?? null,
+          semFinals: s.semFinals ?? null,
           remarks: s.remarks ?? null,
         }))
       : [];
@@ -1225,8 +1224,10 @@ export async function getRecordDetail(ctx: Sf10Context, recordId: string) {
       uploadedAt: true,
       verifiedBy: true,
       verifiedAt: true,
+      verifiedByUser: { select: { fullName: true } },
       validatedBy: true,
       validatedAt: true,
+      validatedByUser: { select: { fullName: true } },
       releasedAt: true,
       archivedAt: true,
       currentVersion: true,
@@ -1262,8 +1263,10 @@ export async function getRecordDetail(ctx: Sf10Context, recordId: string) {
       uploadedFileUrl: record.uploadedFileUrl,
       uploadedAt: record.uploadedAt,
       verifiedBy: record.verifiedBy,
+      verifiedByName: record.verifiedByUser?.fullName ?? null,
       verifiedAt: record.verifiedAt,
       validatedBy: record.validatedBy,
+      validatedByName: record.validatedByUser?.fullName ?? null,
       validatedAt: record.validatedAt,
       releasedAt: record.releasedAt,
       archivedAt: record.archivedAt,
@@ -1278,10 +1281,21 @@ export async function getRecordDetail(ctx: Sf10Context, recordId: string) {
 export async function verifyRecord(ctx: Sf10Context, recordId: string) {
   const record = await prisma.sf10Record.findUnique({
     where: { id: recordId },
-    select: { id: true, desk: true },
+    select: {
+      id: true,
+      desk: true,
+      status: true,
+      student: { select: { gradeLevel: true } },
+    },
   });
   if (!record) throw new AppError(404, "NOT_FOUND", "SF10 record not found");
+  if (record.status === "released") {
+    throw new AppError(409, "BAD_STATUS", "This record is released & archived — verification is closed");
+  }
   if (ctx.role === "adviser") await assertAdviserSf10Access(ctx.userId, recordId);
+  // Desk roles stamp records too (record-keeper / registrar) — keep them
+  // inside their own desk scope.
+  if (deskForRole(ctx.role)) await assertDeskAccess(record.desk, ctx, record.student.gradeLevel);
   const updated = await prisma.sf10Record.update({ where: { id: record.id }, data: { verifiedBy: ctx.userId, verifiedAt: new Date() } });
 
   void (async () => {
@@ -1319,6 +1333,68 @@ export async function verifyRecord(ctx: Sf10Context, recordId: string) {
     } catch {
 
     }
+  })();
+  return updated;
+}
+
+/**
+ * Desk-side validation stamp: the record-keeper / registrar confirms the
+ * filed record is good to release. Independent of verification (either
+ * stamp can land first); released records are closed to both.
+ */
+export async function validateRecord(ctx: Sf10Context, recordId: string) {
+  const record = await prisma.sf10Record.findUnique({
+    where: { id: recordId },
+    select: {
+      id: true,
+      desk: true,
+      status: true,
+      student: { select: { gradeLevel: true } },
+    },
+  });
+  if (!record) throw new AppError(404, "NOT_FOUND", "SF10 record not found");
+  await assertDeskAccess(record.desk, ctx, record.student.gradeLevel);
+  if (record.status === "released") {
+    throw new AppError(409, "BAD_STATUS", "This record is released & archived — validation is closed");
+  }
+  const updated = await prisma.sf10Record.update({
+    where: { id: record.id },
+    data: { validatedBy: ctx.userId, validatedAt: new Date() },
+  });
+
+  await fanoutNotification({
+    userId: ctx.userId,
+    sourceTable: "sf10_records",
+    action: "validate_self",
+    message: `You validated an SF10 record — ready for release.`,
+    sourceId: record.id,
+  });
+  void (async () => {
+    try {
+      const full = await prisma.sf10Record.findUnique({
+        where: { id: record.id },
+        select: {
+          student: {
+            select: {
+              user: { select: { fullName: true } },
+              section: { select: { name: true, adviserId: true } },
+            },
+          },
+        },
+      });
+      const adviserId = full?.student.section?.adviserId ?? null;
+      const name = full?.student.user.fullName ?? "your advisee";
+      const section = full?.student.section?.name ?? "—";
+      if (adviserId && adviserId !== ctx.userId) {
+        await fanoutNotification({
+          userId: adviserId,
+          sourceTable: "sf10_records",
+          action: "validate",
+          message: `SF10 validated for your advisee ${name} (${section}).`,
+          sourceId: record.id,
+        });
+      }
+    } catch { /* best-effort */ }
   })();
   return updated;
 }

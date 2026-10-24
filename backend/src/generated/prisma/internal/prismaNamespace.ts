@@ -4050,7 +4050,9 @@ export const StaffProfileScalarFieldEnum = {
   photoUrl: 'photoUrl',
   mascot: 'mascot',
   primaryColor: 'primaryColor',
-  secondaryColor: 'secondaryColor'
+  secondaryColor: 'secondaryColor',
+  shareStudentData: 'shareStudentData',
+  shareUpdatedAt: 'shareUpdatedAt'
 } as const
 
 export type StaffProfileScalarFieldEnum = (typeof StaffProfileScalarFieldEnum)[keyof typeof StaffProfileScalarFieldEnum]
@@ -4675,6 +4677,7 @@ export const AdviserSf10AccessRequestScalarFieldEnum = {
   checkedBy: 'checkedBy',
   checkSummary: 'checkSummary',
   reportedMissingLrns: 'reportedMissingLrns',
+  reportedLrnAt: 'reportedLrnAt',
   approvedLrns: 'approvedLrns',
   approvedLrnAt: 'approvedLrnAt',
   status: 'status',

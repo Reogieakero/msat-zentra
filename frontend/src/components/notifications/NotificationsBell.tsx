@@ -74,8 +74,22 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleF
     staleTime: 30_000,
   });
 
+  // Badge uses a dedicated count so it reflects the true unread total, not just
+  // the unread items within the first page of the list.
+  const unreadQuery = useQuery({
+    queryKey: [...queryKey, "unread-count"],
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.get<{ count: number }>(
+        "/api/notifications/unread-count",
+        { signal },
+      );
+      return typeof data?.count === "number" ? data.count : 0;
+    },
+    staleTime: 30_000,
+  });
+
   const notifications = notificationsQuery.data ?? [];
-  const unread = notifications.filter((n) => !n.isRead).length;
+  const unread = unreadQuery.data ?? notifications.filter((n) => !n.isRead).length;
 
   const refresh = () => {
     for (const key of targets) {

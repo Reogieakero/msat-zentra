@@ -32,7 +32,9 @@ export function AdviserAccessKanban(props: {
   onDeny: DenyFn;
   denyingId: string | null;
 }) {
-  return <SharedKanban {...props} desk="record-keeper" />;
+  // animateOnMount: same staggered card cascade as the final-grades RowList
+  // (registrar's adapter leaves it off).
+  return <SharedKanban {...props} desk="record-keeper" animateOnMount />;
 }
 
 export function HistoryTable(props: { requests: AdviserAccessRequest[] }) {

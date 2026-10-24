@@ -16,12 +16,29 @@ export function NurseAdmReviewDialog({
   row,
   onChanged,
   onCreateReferral,
+  open: controlledOpen,
+  onClose: controlledOnClose,
 }: {
   row: NurseQueueRow;
   onChanged: () => void;
   onCreateReferral: (draft: { recommendation: string; scheduledAt?: string }) => void;
+  /** Controlled visibility — pass together with `onClose` when the parent
+      owns the trigger (e.g. a row's kebab menu). The built-in trigger button
+      only renders in uncontrolled mode. */
+  open?: boolean;
+  onClose?: () => void;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+
+  function setOpen(next: boolean) {
+    if (isControlled) {
+      if (!next) controlledOnClose?.();
+      return;
+    }
+    setInternalOpen(next);
+  }
 
   const bookMutation = useNurseMutation({
     mutationFn: (scheduledAt: string) =>
@@ -48,10 +65,13 @@ export function NurseAdmReviewDialog({
   });
 
   async function bookSessionOnly(scheduledAt: string) {
+    // Close at once — the shared Dock reports the booking until it settles.
+    setOpen(false);
     await bookMutation.mutateAsync(scheduledAt);
   }
 
   async function decideReject(recommendation: string) {
+    setOpen(false);
     await rejectMutation.mutateAsync(recommendation);
   }
 
@@ -68,15 +88,17 @@ export function NurseAdmReviewDialog({
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="xs"
-        style={{ height: "32px" }}
-        onClick={() => setOpen(true)}
-        disabled={busy}
-      >
-        Review ADM case
-      </Button>
+      {!isControlled && (
+        <Button
+          variant="outline"
+          size="xs"
+          style={{ height: "32px" }}
+          onClick={() => setOpen(true)}
+          disabled={busy}
+        >
+          Review ADM case
+        </Button>
+      )}
 
       <SharedAdmReviewDialog
         open={open}
@@ -90,10 +112,11 @@ export function NurseAdmReviewDialog({
         sectionLine={`${row.section} · ${row.grade}`}
         observed={row.anecdotal?.observedAt ?? "—"}
         category={row.anecdotal?.category ?? row.category}
-        referred={
+        referred={row.date}
+        waiting={
           row.waitingDays !== null && row.waitingDays > 0
-            ? `${row.date} · waiting ${row.waitingDays}d`
-            : row.date
+            ? `waiting ${row.waitingDays}d`
+            : undefined
         }
         anecdotalId={row.anecdotalId}
         description={

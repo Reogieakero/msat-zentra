@@ -15,6 +15,7 @@ import {
   extractRemark,
   isBlockedUnknownRow,
   isClassifiedGradeLine,
+  isNonSubjectRow,
   looksLikeSubjectName,
   matchSingleSubject,
   normalizeSubjectName,
@@ -740,6 +741,136 @@ export function extractSubjectsFromGrid(grid: string[][]): RatedSubjectCandidate
       remarks: extractRemark(line),
     };
     if (!existing || (existing.rating == null && rating != null)) found.set(key, candidate);
+  }
+  return [...found.values()];
+}
+
+/**
+ * Detect an SHS SF10 workbook (DepEd SF10-SHS) by its title block. JHS
+ * workbooks never contain these markers.
+ */
+export function isShsForm(grid: string[][]): boolean {
+  const flat = grid.map((r) => r.join(" ")).join(" ").toLowerCase();
+  return /sf\s*10\s*[-–]?\s*shs|senior high school student permanent/i.test(flat);
+}
+
+/**
+ * SHS XLSX extraction: subjects are grouped under CORE / APPLIED /
+ * SPECIALIZED, one row per subject, with a semestral final grade (average of
+ * two quarterly grades). Grade level comes from the "GRADE LEVEL:" row.
+ */
+export function extractSubjectsFromGridShs(grid: string[][]): RatedSubjectCandidate[] {
+  const found = new Map<string, RatedSubjectCandidate>();
+  let currentGrade: string | null = null;
+  let currentSem: "1ST" | "2ND" = "1ST";
+  for (const row of grid) {
+    const cells = row.map((c) => (c ?? "").trim());
+    const line = cells.filter(Boolean).join(" ");
+    if (!line) continue;
+
+    // Track the grade level for this scholastic block.
+    if (cells.some((c) => /grade\s*level/i.test(c))) {
+      for (const c of cells) {
+        const m = c.match(/^(?:g\s*)?(7|8|9|10|11|12)$/i);
+        if (m) {
+          currentGrade = `G${m[1]}`;
+          break;
+        }
+      }
+      const sem = cells.find((c) => /^(1ST|2ND)$/i.test(c.trim()));
+      if (sem) currentSem = sem.trim().toUpperCase() as "1ST" | "2ND";
+    }
+
+    // Header row — skip.
+    if (cells.some((c) => /^subjects?$/i.test(c)) && cells.some((c) => /sem\s*final\s*grade/i.test(c))) {
+      continue;
+    }
+    if (/general ave|remarks:|prepared by|certified true/i.test(line)) continue;
+
+    // A subject row carries a category in its leading cells.
+    const category = cells.slice(1, 9).find((c) => /^(core|applied|specialized)$/i.test(c));
+    if (!category) continue;
+
+    const subjectName = cells[9];
+    if (!subjectName || !/[a-zA-Z]{2,}/.test(subjectName)) continue;
+    if (isNonSubjectRow(subjectName) || isBlockedUnknownRow(subjectName)) continue;
+
+    // Quarter grades: two quarters (5 cells each, merged) at 46-50 and 51-55;
+    // sem final grade at 56-60 (5 merged cells).
+    const quarterVals: Array<number | null> = [];
+    for (let i = 46; i <= 50; i++) quarterVals.push(parseRating(cells[i]));
+    const q2: Array<number | null> = [];
+    for (let i = 51; i <= 55; i++) q2.push(parseRating(cells[i]));
+    let semFinal: number | null = null;
+    for (let i = 56; i <= 60; i++) {
+      const v = parseRating(cells[i]);
+      if (v !== null) {
+        semFinal = v;
+        break;
+      }
+    }
+    if (semFinal === null) {
+      const nums = cells.slice(46).map(parseRating).filter((v): v is number => v !== null);
+      if (nums.length > 0) semFinal = nums[nums.length - 1];
+    }
+    if (semFinal === null) continue;
+
+    const q1 = quarterVals.find((v) => v !== null) ?? null;
+    const q2v = q2.find((v) => v !== null) ?? null;
+    const isSecondSem = currentSem === "2ND";
+    const semIdx = isSecondSem ? 1 : 0;
+    const slot0 = isSecondSem ? 2 : 0;
+    const slot1 = isSecondSem ? 3 : 1;
+    const quarters =
+      q1 !== null || q2v !== null
+        ? (() => {
+            const arr: Array<number | null> = [null, null, null, null];
+            if (q1 !== null) arr[slot0] = q1;
+            if (q2v !== null) arr[slot1] = q2v;
+            return arr;
+          })()
+        : null;
+    const rawName = subjectName.trim().replace(/\s+/g, " ");
+    const norm = normalizeSubjectName(rawName);
+    if (!norm) continue;
+
+    const key = `${currentGrade ?? "?"}|${norm}`;
+    const existing = found.get(key);
+    const newQuarters = quarters ?? [];
+    if (existing) {
+      // Merge across semester blocks: append this semester's quarterly grades
+      // to the existing ones so S1..S4 all survive (SHS has 4 quarters).
+      const merged: Array<number | null> = [...(existing.quarters ?? [null, null, null, null])];
+      while (merged.length < 4) merged.push(null);
+      for (let i = 0; i < 4; i++) {
+        if (newQuarters[i] !== null && newQuarters[i] !== undefined) {
+          merged[i] = newQuarters[i] as number;
+        }
+      }
+      const rating = semFinal != null ? semFinal : existing.rating;
+      const mergedSemFinals = [...(existing.semFinals ?? [null, null])];
+      mergedSemFinals[semIdx] = semFinal ?? mergedSemFinals[semIdx] ?? null;
+      found.set(key, {
+        ...existing,
+        rating,
+        quarters: merged.length > 0 ? merged : existing.quarters,
+        semFinals: mergedSemFinals,
+        remarks: extractRemark(line) ?? existing.remarks,
+      });
+    } else {
+      const semFinals: Array<number | null> = [null, null];
+      semFinals[semIdx] = semFinal;
+      const candidate: RatedSubjectCandidate = {
+        rawName,
+        norm,
+        rating: semFinal,
+        gradeLevel: currentGrade,
+        quarters: newQuarters.length > 0 ? newQuarters : null,
+        semFinals,
+        remarks: extractRemark(line),
+      };
+      found.set(key, candidate);
+    }
   }
   return [...found.values()];
 }

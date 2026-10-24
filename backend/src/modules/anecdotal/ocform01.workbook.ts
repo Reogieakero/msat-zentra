@@ -33,7 +33,7 @@ async function loadLogos(): Promise<{ deped: Uint8Array; msat: Uint8Array }> {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const [deped, msat] = await Promise.all([
     readFile(path.join(here, "assets", "deped-logo.png")),
-    readFile(path.join(here, "assets", "msat-logo.png")),
+    readFile(path.join(here, "assets", "msat-crest.png")),
   ]);
   return { deped, msat };
 }

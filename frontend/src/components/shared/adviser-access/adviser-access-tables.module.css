@@ -336,6 +336,42 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
   min-width: 0;
+  /* Columns hug their content — a short column stays short instead of
+     stretching to match the tallest one. */
+  align-items: start;
+}
+
+/* Card lists under each column head — height follows content up to the
+   viewport, then scrolls with the shared thin amber thumb, which only
+   appears while the list is hovered / focused. */
+.boardScroll {
+  max-height: calc(100dvh - 11rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.boardScroll:hover,
+.boardScroll:focus-within {
+  scrollbar-color: color-mix(in oklch, #f59e0b 55%, transparent) transparent;
+}
+
+.boardScroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.boardScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.boardScroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.boardScroll:hover::-webkit-scrollbar-thumb,
+.boardScroll:focus-within::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, #f59e0b 55%, transparent);
 }
 
 .kanbanCol {

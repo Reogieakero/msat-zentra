@@ -32,13 +32,16 @@ function flagsFromParts(args: {
     (finalAvg != null && finalAvg < 75) || (rawAvg != null && rawAvg < 75);
 
   const attPresent = args.attendance.filter((a) => a.status === "present").length;
-  const attendanceFlag = args.attendance.some((a) => a.subjectId !== null)
-    ? args.attendance.length > 0
-      ? attPresent / args.attendance.length < 0.8
-      : false
-    : args.enrolled > 0
-      ? attPresent / args.enrolled < 0.8
-      : false;
+  // No attendance rows means no attendance signal at all — never treat an
+  // empty record set as 0% attendance.
+  const attendanceFlag =
+    args.attendance.length === 0
+      ? false
+      : args.attendance.some((a) => a.subjectId !== null)
+        ? attPresent / args.attendance.length < 0.8
+        : args.enrolled > 0
+          ? attPresent / args.enrolled < 0.8
+          : false;
 
   const behavioralFlag = args.anecdotalCount >= 1;
 
@@ -175,13 +178,16 @@ export function computeRiskFactors(inputs: FactorInputs): RiskFactors {
     (rawAvg != null && rawAvg < 75);
   const attPresent = attendance.filter((a) => a.status === "present").length;
 
-  const attendanceFlag = attendance.some((a) => a.subjectId != null)
-    ? attendance.length > 0
-      ? attPresent / attendance.length < 0.8
-      : false
-    : enrolled > 0
-      ? attPresent / enrolled < 0.8
-      : false;
+  // No attendance rows means no attendance signal at all — never treat an
+  // empty record set as 0% attendance (that auto-flagged every fresh learner).
+  const attendanceFlag =
+    attendance.length === 0
+      ? false
+      : attendance.some((a) => a.subjectId != null)
+        ? attPresent / attendance.length < 0.8
+        : enrolled > 0
+          ? attPresent / enrolled < 0.8
+          : false;
   const behavioralFlag = anecdotalCount >= 1;
   return { academicFlag, attendanceFlag, behavioralFlag };
 }
@@ -272,10 +278,40 @@ export async function evaluateBothRosterRisk(
   };
 }
 
+/**
+ * Auto-detection gate: the engine only raises a Guidance intervention when the
+ * learner's class adviser has connected/synced student data in Settings —
+ * i.e. the adviser has claimed the section and switched sharing ON.
+ */
+export async function isAdviserDataConnected(args: {
+  studentId?: string | null;
+  rosterId?: string | null;
+}): Promise<boolean> {
+  if (!!args.studentId === !!args.rosterId) return false;
+  const select = {
+    section: {
+      select: {
+        adviser: {
+          select: { staffProfile: { select: { shareStudentData: true } } },
+        },
+      },
+    },
+  };
+  const row = args.studentId
+    ? await prisma.studentProfile.findUnique({
+        where: { userId: args.studentId },
+        select,
+      })
+    : await prisma.studentRoster.findUnique({
+        where: { id: args.rosterId! },
+        select,
+      });
+  return row?.section?.adviser?.staffProfile?.shareStudentData ?? false;
+}
+
 export async function recomputeRisk(studentId: string, termId: string) {
   const dual = await evaluateBothRisk(studentId, termId);
-  const result = dual.final;
-  await prisma.$transaction([
+  const result = dual.final;  await prisma.$transaction([
     prisma.studentProfile.update({
       where: { userId: studentId },
       data: {
@@ -305,7 +341,7 @@ export async function recomputeRisk(studentId: string, termId: string) {
   ]);
 
   const atRisk = result.riskLevel === "High" || result.riskLevel === "Moderate";
-  if (atRisk) {
+  if (atRisk && (await isAdviserDataConnected({ studentId }))) {
     const open = await prisma.intervention.findFirst({
       where: { studentId, termId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
       select: { id: true },
@@ -374,7 +410,7 @@ export async function recomputeRosterRisk(rosterId: string, termId: string) {
   ]);
 
   const atRisk = result.riskLevel === "High" || result.riskLevel === "Moderate";
-  if (atRisk) {
+  if (atRisk && (await isAdviserDataConnected({ rosterId }))) {
     const open = await prisma.intervention.findFirst({
       where: { rosterId, termId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
       select: { id: true },

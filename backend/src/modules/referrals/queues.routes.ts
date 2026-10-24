@@ -53,10 +53,11 @@ router.get(
         typeof highlightRaw === "string" && highlightRaw.trim()
           ? highlightRaw.trim()
           : "";
+      const sort = qRaw.sort === "latest" ? "latest" : "";
       res.json(
         await listQueue(
           { userId: req.user!.id, role: req.user!.role, termId: req.termScope?.termId ?? null },
-          { hasPaginationParams, page, pageSize, q, track, status, highlight },
+          { hasPaginationParams, page, pageSize, q, track, status, highlight, sort },
         ),
       );
     } catch (e) {

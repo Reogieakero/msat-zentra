@@ -23,10 +23,7 @@ export function CertifyPanel({
 }) {
   void hasAttendedMeeting;
   return (
-    <div className={styles.card}>
-      <span className={styles.glowClip} aria-hidden="true">
-        <span className={styles.cardGlow} />
-      </span>
+    <div className={styles.panel}>
       <h2 className={styles.cardTitle}>Recommendation &amp; certification</h2>
       {hasCertification ? (
         <p className={styles.cardText} style={{ marginBottom: 0 }}>

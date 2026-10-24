@@ -1,21 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { FolderCard } from "@/components/ui/FolderCard";
+import { Badge } from "@/components/ui/badge";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AnecdotalRecordKanbanCard,
+  humanizeCategory,
+} from "@/components/anecdotal/anecdotal-record-kanban-card";
+import { Button } from "@/components/ui/button";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { HelpCircle, SearchX } from "lucide-react";
 import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
-import { CATEGORY_COLORS } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
 import type { GuidanceAnecdotalRecord } from "@/services/guidance/anecdotal.types";
 import {
   GuidanceAnecdotalFilters,
@@ -62,13 +58,29 @@ function isClosedStatus(status: string): boolean {
   return status === "resolved" || status === "dismissed";
 }
 
-const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
-  behavioral: 1,
-  bullying: 2,
-  academic: 3,
-  attendance: 4,
-  health: 5,
-};
+type StatusVariant = "amber" | "green" | "red" | "blue" | "violet" | "outline";
+
+function statusVariant(record: GuidanceAnecdotalRecord): StatusVariant {
+  if (isEndorsedCase(record.referralType, record.referralStatus)) return "green";
+  switch (record.referralStatus) {
+    case "pending":
+      return "amber";
+    case "in_progress":
+      return "blue";
+    case "resolved":
+      return "green";
+    case "dismissed":
+      return "outline";
+    case "escalated":
+      return "red";
+    case "follow_up":
+      return "violet";
+    case "info_requested":
+      return "blue";
+    default:
+      return "outline";
+  }
+}
 
 function isEndorsedCase(type: string | undefined, status: string): boolean {
   return type === "ADM" && status === "in_progress";
@@ -93,28 +105,6 @@ function statusLabel(record: GuidanceAnecdotalRecord): string {
       return "Needs more info";
     default:
       return humanize(record.referralStatus);
-  }
-}
-
-function statusColor(record: GuidanceAnecdotalRecord): string {
-  if (isEndorsedCase(record.referralType, record.referralStatus)) return "#4ade80";
-  switch (record.referralStatus) {
-    case "pending":
-      return "#fbbf24";
-    case "in_progress":
-      return "#e5e5e5";
-    case "resolved":
-      return "#4ade80";
-    case "dismissed":
-      return "#d4d4d4";
-    case "escalated":
-      return "#f87171";
-    case "follow_up":
-      return "#e5e5e5";
-    case "info_requested":
-      return "#e5e5e5";
-    default:
-      return "#e5e5e5";
   }
 }
 
@@ -184,43 +174,35 @@ export function GuidanceAnecdotalFolders({
               hint="Try a different name or keyword, or clear the filter to see every referred case."
             />
           ) : (
-              <div className={styles.studentGrid}>
-                {records.map((record) => (
-                  <div key={record.referralId} className={styles.studentBlock}>
-                    <button
-                      type="button"
-                      className={styles.studentFolderBtn}
-                      onClick={() => openRecord(record)}
-                      aria-label={`Preview ${record.student}'s record from ${record.date}`}
+            <div className={styles.studentGrid}>
+              {records.map((record) => (
+                <AnecdotalRecordKanbanCard
+                  key={record.referralId}
+                  category={record.category}
+                  studentName={record.student}
+                  plainName
+                  mascotSeed={record.lrn}
+                  lrn={record.lrn}
+                  metaText={record.section}
+                  metaTitle={`Section ${record.section}`}
+                  metaLabel={record.grade || "Grade level"}
+                  metaTone="amber"
+                  fileName={`GCForm-01_${record.date}`}
+                  fileTag={`${humanizeCategory(record.category)} • ${timeAgo(record.date)}`}
+                  headerRight={
+                    <Badge
+                      variant={statusVariant(record)}
+                      className="shrink-0 rounded-md"
+                      title={statusLabel(record)}
                     >
-                      <span className={styles.folderWrap}>
-                        <span className={styles.folderBadge} aria-hidden="true">
-                          <span
-                            className={styles.statusText}
-                            style={{ color: statusColor(record) }}
-                            title={statusLabel(record)}
-                          >
-                            {statusLabel(record)}
-                          </span>
-                        </span>
-                        <FolderCard
-                          label={record.student}
-                          sublabel={`${record.lrn} · ${record.section}`}
-                          folderColor={CATEGORY_COLORS[record.category]}
-                          files={[
-                            {
-                              name: `OCForm-01_${record.date}`,
-                              tag: `${humanize(record.category)} • ${timeAgo(record.date)}`,
-                              tone: CATEGORY_TONES[record.category] ?? 1,
-                              icon: "doc" as const,
-                            },
-                          ]}
-                        />
-                      </span>
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      {statusLabel(record)}
+                    </Badge>
+                  }
+                  openLabel={`Preview ${record.student}'s record from ${record.date}`}
+                  onOpen={() => openRecord(record)}
+                />
+              ))}
+            </div>
           )}
           </div>
           <Pagination
@@ -245,38 +227,38 @@ export function GuidanceAnecdotalFolders({
         reason="endorsed"
       />
 
-      <Dialog open={helpOpen} onOpenChange={(open) => !open && setHelpOpen(false)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Why can&apos;t I open some reports?</DialogTitle>
-            <DialogDescription>
-              Some folders stay listed but their full report never opens. The summary on the folder is all that remains visible.
-            </DialogDescription>
-          </DialogHeader>
-          <ul className={styles.helpList}>
-            <li>
-              <p className={styles.helpItemTitle}>Finished cases — kept private</p>
-              <p className={styles.helpItemText}>
-                Folders marked Resolved or Closed can&apos;t be opened because the case is finished.
-                The full write-up stays hidden to protect the student&apos;s privacy.
-              </p>
-            </li>
-            <li>
-              <p className={styles.helpItemTitle}>Endorsed cases — with the ADM coordinator</p>
-              <p className={styles.helpItemText}>
-                Folders marked Endorsed can&apos;t be opened because the case was endorsed to the
-                ADM coordinator. The full report moved with the case and is no longer viewable on
-                this desk.
-              </p>
-            </li>
-          </ul>
-          <DialogFooter>
+      <KanbanOverlay
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        width="lg"
+        title="Why can&apos;t I open some reports?"
+        description="Some folders stay listed but their full report never opens. The summary on the folder is all that remains visible."
+        footer={
+          <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
             <Button type="button" onClick={() => setHelpOpen(false)}>
               Understood
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        }
+      >
+        <ul className={styles.helpList}>
+          <li>
+            <p className={styles.helpItemTitle}>Finished cases — kept private</p>
+            <p className={styles.helpItemText}>
+              Folders marked Resolved or Closed can&apos;t be opened because the case is finished.
+              The full write-up stays hidden to protect the student&apos;s privacy.
+            </p>
+          </li>
+          <li>
+            <p className={styles.helpItemTitle}>Endorsed cases — with the ADM coordinator</p>
+            <p className={styles.helpItemText}>
+              Folders marked Endorsed can&apos;t be opened because the case was endorsed to the
+              ADM coordinator. The full report moved with the case and is no longer viewable on
+              this desk.
+            </p>
+          </li>
+        </ul>
+      </KanbanOverlay>
     </>
   );
 }

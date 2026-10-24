@@ -16,12 +16,16 @@ export interface AdvisoryIdentityStudent {
   sectionId: string | null;
   lrn: string;
   name: string;
+  /** Persisted profile mascot (StudentMascot pool); null → derived sprite. */
+  mascot?: string | null;
 }
 
 export interface AdvisoryIdentityRoster {
   sectionId: string;
   lrn: string;
   name: string;
+  /** Persisted roster mascot (StudentMascot pool); null → derived sprite. */
+  mascot?: string | null;
 }
 
 /**
@@ -33,7 +37,7 @@ export interface AdvisoryIdentityRoster {
 export function buildAdvisoryIdentity(
   students: AdvisoryIdentityStudent[],
   rosterEntries: AdvisoryIdentityRoster[],
-): Map<string, Map<string, { name: string }>> {
+): Map<string, Map<string, { name: string; mascot: string | null }>> {
   const studentsBySection = new Map<string, AdvisoryIdentityStudent[]>();
   for (const s of students) {
     const key = s.sectionId ?? "";
@@ -47,12 +51,13 @@ export function buildAdvisoryIdentity(
     list.push(r);
     rosterBySection.set(r.sectionId, list);
   }
-  const advisoryBySection = new Map<string, Map<string, { name: string }>>();
+  const advisoryBySection = new Map<string, Map<string, { name: string; mascot: string | null }>>();
   for (const sectionId of new Set([...studentsBySection.keys(), ...rosterBySection.keys()])) {
-    const map = new Map<string, { name: string }>();
-    for (const s of studentsBySection.get(sectionId) ?? []) map.set(s.lrn, { name: s.name });
+    const map = new Map<string, { name: string; mascot: string | null }>();
+    for (const s of studentsBySection.get(sectionId) ?? [])
+      map.set(s.lrn, { name: s.name, mascot: s.mascot ?? null });
     for (const x of rosterBySection.get(sectionId) ?? []) {
-      if (!map.has(x.lrn)) map.set(x.lrn, { name: x.name });
+      if (!map.has(x.lrn)) map.set(x.lrn, { name: x.name, mascot: x.mascot ?? null });
     }
     advisoryBySection.set(sectionId, map);
   }
@@ -99,21 +104,22 @@ export async function listAccessRequests(query: AccessListQuery) {
             select: {
               sectionId: true,
               lrn: true,
+              mascot: true,
               user: { select: { fullName: true } },
             },
             orderBy: { lrn: "asc" },
           }),
           prisma.studentRoster.findMany({
             where: { sectionId: { in: sectionIds } },
-            select: { sectionId: true, lrn: true, fullName: true },
+            select: { sectionId: true, lrn: true, fullName: true, mascot: true },
             orderBy: { lrn: "asc" },
           }),
         ])
       : [[], []];
   // Advisory identity per section (section profiles first, then roster-only).
   const advisoryBySection = buildAdvisoryIdentity(
-    allStudents.map((s) => ({ sectionId: s.sectionId, lrn: s.lrn, name: s.user.fullName })),
-    allRoster.map((r) => ({ sectionId: r.sectionId, lrn: r.lrn, name: r.fullName })),
+    allStudents.map((s) => ({ sectionId: s.sectionId, lrn: s.lrn, name: s.user.fullName, mascot: s.mascot })),
+    allRoster.map((r) => ({ sectionId: r.sectionId, lrn: r.lrn, name: r.fullName, mascot: r.mascot })),
   );
   // SF10 lookup runs by LRN across ALL profiles: a record counts even when
   // the profile sits in another section or none (e.g. roster-only advisee
@@ -142,6 +148,7 @@ export async function listAccessRequests(query: AccessListQuery) {
         return {
           lrn,
           name: ident.name,
+          mascot: ident.mascot ?? null,
           gradeLevel: r.gradeLevel,
           section: r.section.name,
           hasAccount: recByLrn.has(lrn),
@@ -181,8 +188,9 @@ export async function listAccessRequests(query: AccessListQuery) {
 }
 
 /**
- * Normalize the approvedLrnAt JSON column (LRN → ISO timestamp) into a plain
- * record. Tolerates nulls, arrays, and non-string values.
+ * Normalize a per-LRN JSON timestamp column (approvedLrnAt / reportedLrnAt,
+ * LRN → ISO timestamp) into a plain record. Tolerates nulls, arrays, and
+ * non-string values.
  */
 export function normalizeApprovedLrnAt(value: unknown): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -557,9 +565,10 @@ async function fetchSingleMatch(
 }
 
 /**
- * "Report as missing" for one requested student: stores the LRN mark and
- * notifies the adviser. Independent of the approve/deny verdict — only
- * pending requests can be reported on.
+ * "Report as missing" for one requested student: stores the LRN mark
+ * (with its confirmation time in reportedLrnAt) and notifies the adviser.
+ * Independent of the approve/deny verdict — only pending requests can be
+ * reported on.
  */
 export async function reportMissingAccessRecord(ctx: RegistryContext, input: ReportMissingInput) {
   const { requestId: id, lrn, band, enforceBand, deskLabel } = input;
@@ -573,6 +582,7 @@ export async function reportMissingAccessRecord(ctx: RegistryContext, input: Rep
       adviserId: true,
       requestedLrns: true,
       reportedMissingLrns: true,
+      reportedLrnAt: true,
       section: { select: { name: true } },
     },
   });
@@ -596,12 +606,23 @@ export async function reportMissingAccessRecord(ctx: RegistryContext, input: Rep
   const sectionName = request.section?.name ?? "Unsectioned";
 
   const prev = request.reportedMissingLrns ?? [];
-  if (prev.includes(lrn)) return { requestId: id, lrn, reportedMissingLrns: [...prev] };
+  if (prev.includes(lrn)) {
+    return {
+      requestId: id,
+      lrn,
+      reportedMissingLrns: [...prev],
+      reportedLrnAt: normalizeApprovedLrnAt(request.reportedLrnAt),
+    };
+  }
 
   const reportedMissingLrns = [...prev, lrn];
+  const reportedLrnAt = {
+    ...normalizeApprovedLrnAt(request.reportedLrnAt),
+    [lrn]: new Date().toISOString(),
+  };
   await prisma.adviserSf10AccessRequest.update({
     where: { id },
-    data: { reportedMissingLrns },
+    data: { reportedMissingLrns, reportedLrnAt },
   });
 
   fireSideEffects(
@@ -626,7 +647,7 @@ export async function reportMissingAccessRecord(ctx: RegistryContext, input: Rep
     "report-missing",
   );
 
-  return { requestId: id, lrn, reportedMissingLrns };
+  return { requestId: id, lrn, reportedMissingLrns, reportedLrnAt };
 }
 
 export interface ApproveLrnInput {

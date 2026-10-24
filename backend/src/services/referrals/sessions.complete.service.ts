@@ -67,6 +67,33 @@ export async function completeSession(
       await writeAudit({ userId: ctx.userId, actionType: "referral_follow_up", sourceTable: "referrals", sourceId: referral.id, reason: `Follow-up on ${next.scheduledAt.toISOString().slice(0, 10)}`, oldValue: { status: referral.status }, newValue: { status: "follow_up", followUpDate: next.scheduledAt.toISOString().slice(0, 10) } });
     }
   }
+  // A finished clinic session with no follow-up closes the case. The nurse
+  // board already renders that state as "Done" (derived from the completed
+  // session), so the referral itself must move to resolved — otherwise the
+  // teacher's advisory list keeps showing "In progress".
+  const closedBySession =
+    ctx.role === "nurse" &&
+    !input.followUpSession &&
+    referral.status !== "resolved" &&
+    referral.status !== "dismissed" &&
+    (referral.referredToRole === "nurse" ||
+      (referral.status === "escalated" && referral.escalatedTo === "nurse"));
+  if (closedBySession) {
+    await prisma.referral.update({
+      where: { id: referral.id },
+      data: { status: "resolved", resolvedAt: new Date() },
+    });
+    await writeAudit({
+      userId: ctx.userId,
+      actionType: "referral_status_change",
+      sourceTable: "referrals",
+      sourceId: referral.id,
+      reason: "Clinic session completed — case closed",
+      oldValue: { status: referral.status },
+      newValue: { status: "resolved" },
+    });
+  }
+
   const card = await referralCard(referral);
   const didWhen = formatWhen(session.scheduledAt);
 
@@ -76,7 +103,9 @@ export async function completeSession(
         ? `Clinic set a follow-up for ${card.who} — next session ${formatWhen(parseScheduledAt(input.followUpSession.scheduledAt))}.`
         : `A follow-up was set for your referral for ${card.who}.`
       : ctx.role === "nurse"
-        ? `Clinic completed a session for ${card.who} (${session.sessionType}, ${didWhen}).`
+        ? closedBySession
+          ? `Clinic completed a session for ${card.who} (${session.sessionType}, ${didWhen}) — case closed.`
+          : `Clinic completed a session for ${card.who} (${session.sessionType}, ${didWhen}).`
         : `Guidance completed a session for ${card.who} (${session.sessionType}, ${didWhen}).`;
     void fanoutNotification({
       userId: referral.referredBy,

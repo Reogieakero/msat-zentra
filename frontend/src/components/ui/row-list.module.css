@@ -41,12 +41,23 @@
   will-change: transform, opacity;
 }
 
+/* Lead-pill variant (e.g. a term chip before the status pill) gets an
+   extra column. The @supports subgrid override below still wins in modern
+   browsers so the shared list tracks keep every row aligned. */
+.rowLead {
+  grid-template-columns: max-content 5rem 1rem minmax(0, 1fr) auto;
+}
+
 /* Shared track sizing: the status column shrink-wraps the widest pill
    across ALL rows, so every `|` aligns with no wasted gutter. */
 @supports (grid-template-columns: subgrid) {
   .list {
     display: grid;
     grid-template-columns: auto 1rem minmax(0, 1fr) auto;
+  }
+
+  .listLead {
+    grid-template-columns: auto auto 1rem minmax(0, 1fr) auto;
   }
 
   .row {
@@ -108,6 +119,10 @@
     grid-template-columns: 5rem 1rem minmax(0, 1fr);
   }
 
+  .rowLead {
+    grid-template-columns: max-content 5rem 1rem minmax(0, 1fr);
+  }
+
   .metaCell {
     grid-column: 1 / -1;
     justify-content: flex-start;
@@ -116,6 +131,10 @@
   @supports (grid-template-columns: subgrid) {
     .list {
       grid-template-columns: auto 1rem minmax(0, 1fr);
+    }
+
+    .listLead {
+      grid-template-columns: auto auto 1rem minmax(0, 1fr);
     }
   }
 }

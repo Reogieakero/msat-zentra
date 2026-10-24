@@ -1,224 +1,150 @@
 "use client";
-
 import * as React from "react";
-import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import BranchedMenu from "@/components/nav/BranchedMenu";
-import { recordKeeperSettingsSections, scrollToSection } from "./components/SettingsNav";
+import { Check, Moon, Palette, Sun } from "lucide-react";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { RecordKeeperPageHeader } from "../components/RecordKeeperPageHeader";
+import { ZentraPageHeaderSkeleton, KanbanBoardSkeleton, IconRailSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { ProfileCard } from "./components/ProfileCard";
-import { PaletteCard } from "./components/PaletteCard";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { apiClient } from "@/lib/api/client";
+import { PasswordCard } from "./components/PasswordCard";
+import { recordKeeperSettingsSections } from "./components/SettingsNav";
+import { SettingsRail } from "./components/SettingsRail";
 import { useTheme } from "@/components/providers";
-import { toast } from "@/components/ui/sonner";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-
-function getErrorMessage(err: unknown, fallback: string): string {
-  const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
-  const message = data?.error?.message ?? data?.message;
-  if (typeof message === "string" && message) return message;
-  if (err instanceof Error && err.message) return err.message;
-  return fallback;
-}
-
-function PasswordCard() {
-  const [current, setCurrent] = React.useState("");
-  const [next, setNext] = React.useState("");
-  const [confirm, setConfirm] = React.useState("");
-  const [error, setError] = React.useState<string | null>(null);
-  const [saving, setSaving] = React.useState(false);
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (saving) return;
-    if (next.length < 8) {
-      setError("New password must be at least 8 characters.");
-      return;
-    }
-    if (next !== confirm) {
-      setError("New passwords do not match.");
-      return;
-    }
-    setError(null);
-    setSaving(true);
-    try {
-      await apiClient.post("/api/auth/change-password", {
-        currentPassword: current,
-        newPassword: next,
-      });
-      setCurrent("");
-      setNext("");
-      setConfirm("");
-      toast.success({ title: "Password updated", description: "Use your new password next time you sign in." });
-    } catch (err) {
-      const message = getErrorMessage(err, "Failed to update password.");
-      setError(message);
-      toast.error({ title: "Could not update password", description: message });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <section id="section-password" aria-labelledby="settings-password" className={`${assign.card} scroll-mt-24`}>
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <h2 id="settings-password" className="relative text-base font-semibold">
-        Password
-      </h2>
-      <p className="relative mt-1 text-sm text-muted-foreground">
-        Choose a new password at least 8 characters long.
-      </p>
-      <form onSubmit={(e) => void handleSave(e)} className="relative mt-4 max-w-sm space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="settings-current">Current password</Label>
-          <Input
-            id="settings-current"
-            type="password"
-            autoComplete="current-password"
-            value={current}
-            onChange={(e) => {
-              setCurrent(e.target.value);
-              setError(null);
-            }}
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="settings-new">New password</Label>
-          <Input
-            id="settings-new"
-            type="password"
-            autoComplete="new-password"
-            value={next}
-            onChange={(e) => {
-              setNext(e.target.value);
-              setError(null);
-            }}
-            required
-            minLength={8}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="settings-confirm">Confirm new password</Label>
-          <Input
-            id="settings-confirm"
-            type="password"
-            autoComplete="new-password"
-            value={confirm}
-            onChange={(e) => {
-              setConfirm(e.target.value);
-              setError(null);
-            }}
-            required
-            minLength={8}
-          />
-        </div>
-        {error ? (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        ) : null}
-        <Button type="submit" disabled={saving} aria-busy={saving || undefined}>
-          {saving ? (
-            <>
-              <Loader2 size={16} className="animate-spin" aria-hidden />
-              <span aria-live="polite">Saving…</span>
-            </>
-          ) : (
-            "Update password"
-          )}
-        </Button>
-      </form>
-    </section>
-  );
-}
-
+import { useDock } from "@/components/dock/dock-store";
+import sectionStyles from "./components/settings-section.module.css";
+import { useRecordKeeperProfileSettings } from "@/services/settings/profile-settings";
 export default function RecordKeeperSettingsPage() {
   const { theme, setTheme } = useTheme();
-  const isDark = theme === "dark";
-  const links = recordKeeperSettingsSections();
-  const [activeSection, setActiveSection] = React.useState(links[0]?.id ?? "section-profile");
-
-  const handleSelectSection = (id: string) => {
-    setActiveSection(id);
-    scrollToSection(id);
+  const dock = useDock();
+  // Theme is instant/local, but still reports through the shared Dock so
+  // every action on this page lands in the same bottom-right task list.
+  const applyTheme = (next: "light" | "dark") => {
+    setTheme(next);
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "generic",
+        title: "Appearance updated",
+        description: `${next === "dark" ? "Dark" : "Light"} theme`,
+      });
+    } catch {
+      taskId = null;
+    }
+    if (taskId) dock.completeTask(taskId, `${next === "dark" ? "Dark" : "Light"} theme applied.`);
   };
+  const profile = useRecordKeeperProfileSettings();
+  const isDark = theme === "dark";
+  const links = React.useMemo(() => recordKeeperSettingsSections(), []);
+  const [activeId, setActiveId] = React.useState("section-profile");
 
-  return (
-    <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Your profile, appearance, and account security.
-        </p>
-      </div>
+  // Scroll-spy: highlight the rail icon for the section in view.
+  React.useEffect(() => {
+    if (profile.isPending) return;
+    const els = links
+      .map((l) => document.getElementById(l.id))
+      .filter((el): el is HTMLElement => el !== null);
+    if (els.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActiveId(entry.target.id);
+        }
+      },
+      { rootMargin: "-30% 0px -60% 0px" },
+    );
+    els.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [links, profile.isPending]);
 
-      <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <div className="lg:sticky lg:top-24">
-          <BranchedMenu
-            items={[
-              {
-                label: "Settings",
-                children: links.map((l) => ({
-                  value: l.id,
-                  label: l.label,
-                  icon: <l.Icon size={16} strokeWidth={1.8} aria-hidden="true" />,
-                })),
-              },
-            ]}
-            defaultOpen={[0]}
-            defaultActive={activeSection}
-            onSelect={(value) => handleSelectSection(value)}
-            width={240}
-          />
+  // Gate on the fast profile query — the sections mount together so the
+  // rail's scroll-spy finds every anchor in one pass.
+  if (profile.isPending) {
+    return (
+      <section className={`mx-auto flex w-full max-w-3xl flex-col gap-3 ${sectionStyles.page}`} aria-busy="true" aria-label="Loading settings">
+        <ZentraPageHeaderSkeleton />
+        <div className={sectionStyles.layout}>
+          <div className={`flex w-full min-w-0 flex-col gap-3 ${sectionStyles.stack}`}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <KanbanBoardSkeleton
+                key={i}
+                rows={i === 1 ? 2 : 3}
+                titleWidth={i === 0 ? "7rem" : "6rem"}
+                showDescription={i === 1}
+              />
+            ))}
+          </div>
+          <IconRailSkeleton count={4} />
         </div>
-        <div className="flex min-w-0 flex-col gap-5">
+      </section>
+    );
+  }
+  return (
+    <section className={`mx-auto flex w-full max-w-3xl flex-col gap-3 ${sectionStyles.page}`}>
+      <RecordKeeperPageHeader
+        title="Settings"
+        description="Your profile, appearance, and account security."
+      />
+      <div className={sectionStyles.layout}>
+        <div className={`flex w-full min-w-0 flex-col gap-3 ${sectionStyles.stack}`}>
           <ProfileCard />
-
-          <section id="section-appearance" aria-labelledby="settings-appearance" className={`${assign.card} scroll-mt-24`}>
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
-            <h2 id="settings-appearance" className="relative text-base font-semibold">
-              Appearance
-            </h2>
-            <p className="relative mt-1 text-sm text-muted-foreground">
-              Applies instantly across the whole workspace.
-            </p>
-            <div className="relative mt-4">
-              <p className="mb-2 text-sm font-medium">Theme</p>
-              <div className="flex gap-2" role="radiogroup" aria-label="Theme">
-                <Button
+          <div id="section-appearance" className={sectionStyles.boardWrap}>
+            <KanbanBoard
+              title="Appearance"
+              icon={<Palette size={14} aria-hidden="true" />}
+              description="Applies instantly across the whole workspace. Pick a card."
+              ariaLabel="Appearance settings"
+            >
+              <p className="px-1 text-sm font-medium">Theme</p>
+              <div className={sectionStyles.themeGrid} role="radiogroup" aria-label="Theme">
+                <button
                   type="button"
-                  variant={!isDark ? "default" : "outline"}
                   role="radio"
                   aria-checked={!isDark}
-                  onClick={() => setTheme("light")}
-                  className="flex-1"
+                  onClick={() => applyTheme("light")}
+                  className={`${sectionStyles.themeOption} ${!isDark ? sectionStyles.themeOptionActive : ""}`}
                 >
-                  Light
-                </Button>
-                <Button
+                  {!isDark ? (
+                    <span className={sectionStyles.themeCheck} aria-hidden="true">
+                      <Check size={12} strokeWidth={3} />
+                    </span>
+                  ) : null}
+                  <span className={`${sectionStyles.themePreview} ${sectionStyles.themePreviewLight}`} aria-hidden="true">
+                    <span className={`${sectionStyles.themePreviewBar} ${sectionStyles.themePreviewBarLight}`} style={{ width: "70%" }} />
+                    <span className={`${sectionStyles.themePreviewBar} ${sectionStyles.themePreviewBarLight}`} style={{ width: "100%" }} />
+                    <span className={sectionStyles.themePreviewAccent} />
+                  </span>
+                  <span className={sectionStyles.themeLabel}>
+                    <Sun size={14} aria-hidden="true" />
+                    Light
+                  </span>
+                </button>
+                <button
                   type="button"
-                  variant={isDark ? "default" : "outline"}
                   role="radio"
                   aria-checked={isDark}
-                  onClick={() => setTheme("dark")}
-                  className="flex-1"
+                  onClick={() => applyTheme("dark")}
+                  className={`${sectionStyles.themeOption} ${isDark ? sectionStyles.themeOptionActive : ""}`}
                 >
-                  Dark
-                </Button>
+                  {isDark ? (
+                    <span className={sectionStyles.themeCheck} aria-hidden="true">
+                      <Check size={12} strokeWidth={3} />
+                    </span>
+                  ) : null}
+                  <span className={`${sectionStyles.themePreview} ${sectionStyles.themePreviewDark}`} aria-hidden="true">
+                    <span className={`${sectionStyles.themePreviewBar} ${sectionStyles.themePreviewBarDark}`} style={{ width: "70%" }} />
+                    <span className={`${sectionStyles.themePreviewBar} ${sectionStyles.themePreviewBarDark}`} style={{ width: "100%" }} />
+                    <span className={sectionStyles.themePreviewAccent} />
+                  </span>
+                  <span className={sectionStyles.themeLabel}>
+                    <Moon size={14} aria-hidden="true" />
+                    Dark
+                  </span>
+                </button>
               </div>
-            </div>
-          </section>
-
-          <PaletteCard />
-
+            </KanbanBoard>
+          </div>
           <PasswordCard />
         </div>
+        <SettingsRail links={links} activeId={activeId} onSelect={setActiveId} />
       </div>
     </section>
   );

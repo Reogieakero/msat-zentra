@@ -12,13 +12,13 @@ import {
   Files,
   ClipboardList,
   Send,
-  Flame,
   Settings,
   type LucideIcon,
 } from "lucide-react";
 
 import styles from "./guidance-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
 type NavItem = {
@@ -80,11 +80,6 @@ const NAV: NavGroup[] = [
     label: "Insights",
     items: [
       { title: "Referrals Report", href: "/guidance/adm", icon: Send },
-      {
-        title: "Risk Dashboard",
-        href: "/guidance/risk",
-        icon: Flame,
-      },
     ],
   },
   {
@@ -174,23 +169,43 @@ function GuidanceRail({ groups }: { groups: NavGroup[] }) {
   );
 }
 
-export function GuidanceSidebar() {
+export function GuidanceSidebar({
+  collapsed = true,
+}: {
+  collapsed?: boolean;
+} = {}) {
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const isActive = useIsActive();
+  const activeHref =
+    TABS.find((t) => isActive(t.href))?.href ?? "/guidance/overview";
 
   return (
     <>
-      <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Guidance sections">
-        <div ref={railScrollRef} className={styles.railScroll}>
-          <GuidanceRail groups={NAV} />
-        </div>
-        <div className={styles.railHintWrap}>
-          <ScrollDownHint
-            scrollRef={railScrollRef}
-            watchKey="guidance-nav"
-            label="Scroll for more"
-            className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+      <aside
+        className={`${styles.rail} ${styles.railDesktop} ${collapsed ? styles.railCollapsed : ""}`}
+        aria-label="Guidance sections"
+      >
+        {collapsed ? (
+          <SidebarIconRail
+            groups={NAV}
+            ariaLabel="Guidance sections, icon only"
+            activeHref={activeHref}
           />
-        </div>
+        ) : (
+          <>
+            <div ref={railScrollRef} className={styles.railScroll}>
+              <GuidanceRail groups={NAV} />
+            </div>
+            <div className={styles.railHintWrap}>
+              <ScrollDownHint
+                scrollRef={railScrollRef}
+                watchKey="guidance-nav"
+                label="Scroll for more"
+                className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+              />
+            </div>
+          </>
+        )}
       </aside>
       <div className={styles.tabsMobile}>
         <GuidanceNavbar tabs={TABS} />

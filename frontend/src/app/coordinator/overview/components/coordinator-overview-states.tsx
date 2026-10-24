@@ -10,14 +10,18 @@ export function CoordinatorOverviewSkeleton() {
     <section className={styles.page} aria-busy="true">
       <div className={styles.kpiGrid} aria-hidden="true">
         {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className={styles.card}>
-            <Skeleton style={{ width: "55%", height: "0.75rem" }} />
-            <Skeleton
-              style={{ width: "35%", height: "1.5rem", marginTop: "0.375rem" }}
-            />
-            <Skeleton
-              style={{ width: "80%", height: "0.75rem", marginTop: "0.375rem" }}
-            />
+          <div key={i} className={styles.kpiColumn}>
+            <div className={styles.kpiHeadSkeleton}>
+              <Skeleton style={{ width: "8rem", height: "1rem" }} />
+            </div>
+            <div className={styles.kpiStat}>
+              <div className={styles.kpiStatTop}>
+                <Skeleton className={styles.kpiMascot} />
+                <Skeleton style={{ width: "2rem", height: "1.5rem" }} />
+              </div>
+              <Skeleton style={{ width: "80%", height: "0.75rem" }} />
+            </div>
+            <Skeleton style={{ width: "5rem", height: "1.5rem", marginLeft: "auto" }} />
           </div>
         ))}
       </div>
@@ -26,13 +30,11 @@ export function CoordinatorOverviewSkeleton() {
         <Skeleton
           style={{ width: "60%", height: "0.8rem", marginTop: "0.375rem" }}
         />
-        {[0, 1, 2, 3, 4].map((i) => (
-          <Skeleton
-            key={i}
-            style={{ width: "100%", height: "2rem", marginTop: "0.5rem" }}
-          />
-        ))}
-        <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.75rem" }} />
+        <div className={styles.caseGrid}>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className={styles.caseCard} />
+          ))}
+        </div>
       </div>
       <hr className={styles.divider} aria-hidden="true" />
       <div className={styles.chartRow} aria-hidden="true">

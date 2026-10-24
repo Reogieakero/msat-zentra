@@ -35,6 +35,8 @@ export type StaffProfileMinAggregateOutputType = {
   mascot: string | null
   primaryColor: string | null
   secondaryColor: string | null
+  shareStudentData: boolean | null
+  shareUpdatedAt: Date | null
 }
 
 export type StaffProfileMaxAggregateOutputType = {
@@ -48,6 +50,8 @@ export type StaffProfileMaxAggregateOutputType = {
   mascot: string | null
   primaryColor: string | null
   secondaryColor: string | null
+  shareStudentData: boolean | null
+  shareUpdatedAt: Date | null
 }
 
 export type StaffProfileCountAggregateOutputType = {
@@ -62,6 +66,8 @@ export type StaffProfileCountAggregateOutputType = {
   mascot: number
   primaryColor: number
   secondaryColor: number
+  shareStudentData: number
+  shareUpdatedAt: number
   _all: number
 }
 
@@ -77,6 +83,8 @@ export type StaffProfileMinAggregateInputType = {
   mascot?: true
   primaryColor?: true
   secondaryColor?: true
+  shareStudentData?: true
+  shareUpdatedAt?: true
 }
 
 export type StaffProfileMaxAggregateInputType = {
@@ -90,6 +98,8 @@ export type StaffProfileMaxAggregateInputType = {
   mascot?: true
   primaryColor?: true
   secondaryColor?: true
+  shareStudentData?: true
+  shareUpdatedAt?: true
 }
 
 export type StaffProfileCountAggregateInputType = {
@@ -104,6 +114,8 @@ export type StaffProfileCountAggregateInputType = {
   mascot?: true
   primaryColor?: true
   secondaryColor?: true
+  shareStudentData?: true
+  shareUpdatedAt?: true
   _all?: true
 }
 
@@ -191,6 +203,8 @@ export type StaffProfileGroupByOutputType = {
   mascot: string | null
   primaryColor: string | null
   secondaryColor: string | null
+  shareStudentData: boolean
+  shareUpdatedAt: Date | null
   _count: StaffProfileCountAggregateOutputType | null
   _min: StaffProfileMinAggregateOutputType | null
   _max: StaffProfileMaxAggregateOutputType | null
@@ -226,6 +240,8 @@ export type StaffProfileWhereInput = {
   mascot?: Prisma.StringNullableFilter<"StaffProfile"> | string | null
   primaryColor?: Prisma.StringNullableFilter<"StaffProfile"> | string | null
   secondaryColor?: Prisma.StringNullableFilter<"StaffProfile"> | string | null
+  shareStudentData?: Prisma.BoolFilter<"StaffProfile"> | boolean
+  shareUpdatedAt?: Prisma.DateTimeNullableFilter<"StaffProfile"> | Date | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }
 
@@ -241,6 +257,8 @@ export type StaffProfileOrderByWithRelationInput = {
   mascot?: Prisma.SortOrderInput | Prisma.SortOrder
   primaryColor?: Prisma.SortOrderInput | Prisma.SortOrder
   secondaryColor?: Prisma.SortOrderInput | Prisma.SortOrder
+  shareStudentData?: Prisma.SortOrder
+  shareUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
 }
 
@@ -259,6 +277,8 @@ export type StaffProfileWhereUniqueInput = Prisma.AtLeast<{
   mascot?: Prisma.StringNullableFilter<"StaffProfile"> | string | null
   primaryColor?: Prisma.StringNullableFilter<"StaffProfile"> | string | null
   secondaryColor?: Prisma.StringNullableFilter<"StaffProfile"> | string | null
+  shareStudentData?: Prisma.BoolFilter<"StaffProfile"> | boolean
+  shareUpdatedAt?: Prisma.DateTimeNullableFilter<"StaffProfile"> | Date | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }, "userId" | "employeeId">
 
@@ -274,6 +294,8 @@ export type StaffProfileOrderByWithAggregationInput = {
   mascot?: Prisma.SortOrderInput | Prisma.SortOrder
   primaryColor?: Prisma.SortOrderInput | Prisma.SortOrder
   secondaryColor?: Prisma.SortOrderInput | Prisma.SortOrder
+  shareStudentData?: Prisma.SortOrder
+  shareUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.StaffProfileCountOrderByAggregateInput
   _max?: Prisma.StaffProfileMaxOrderByAggregateInput
   _min?: Prisma.StaffProfileMinOrderByAggregateInput
@@ -294,6 +316,8 @@ export type StaffProfileScalarWhereWithAggregatesInput = {
   mascot?: Prisma.StringNullableWithAggregatesFilter<"StaffProfile"> | string | null
   primaryColor?: Prisma.StringNullableWithAggregatesFilter<"StaffProfile"> | string | null
   secondaryColor?: Prisma.StringNullableWithAggregatesFilter<"StaffProfile"> | string | null
+  shareStudentData?: Prisma.BoolWithAggregatesFilter<"StaffProfile"> | boolean
+  shareUpdatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"StaffProfile"> | Date | string | null
 }
 
 export type StaffProfileCreateInput = {
@@ -307,6 +331,8 @@ export type StaffProfileCreateInput = {
   mascot?: string | null
   primaryColor?: string | null
   secondaryColor?: string | null
+  shareStudentData?: boolean
+  shareUpdatedAt?: Date | string | null
   user: Prisma.UserCreateNestedOneWithoutStaffProfileInput
 }
 
@@ -322,6 +348,8 @@ export type StaffProfileUncheckedCreateInput = {
   mascot?: string | null
   primaryColor?: string | null
   secondaryColor?: string | null
+  shareStudentData?: boolean
+  shareUpdatedAt?: Date | string | null
 }
 
 export type StaffProfileUpdateInput = {
@@ -335,6 +363,8 @@ export type StaffProfileUpdateInput = {
   mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   primaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   secondaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shareStudentData?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shareUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutStaffProfileNestedInput
 }
 
@@ -350,6 +380,8 @@ export type StaffProfileUncheckedUpdateInput = {
   mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   primaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   secondaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shareStudentData?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shareUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type StaffProfileCreateManyInput = {
@@ -364,6 +396,8 @@ export type StaffProfileCreateManyInput = {
   mascot?: string | null
   primaryColor?: string | null
   secondaryColor?: string | null
+  shareStudentData?: boolean
+  shareUpdatedAt?: Date | string | null
 }
 
 export type StaffProfileUpdateManyMutationInput = {
@@ -377,6 +411,8 @@ export type StaffProfileUpdateManyMutationInput = {
   mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   primaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   secondaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shareStudentData?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shareUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type StaffProfileUncheckedUpdateManyInput = {
@@ -391,6 +427,8 @@ export type StaffProfileUncheckedUpdateManyInput = {
   mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   primaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   secondaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shareStudentData?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shareUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type StaffProfileNullableScalarRelationFilter = {
@@ -418,6 +456,8 @@ export type StaffProfileCountOrderByAggregateInput = {
   mascot?: Prisma.SortOrder
   primaryColor?: Prisma.SortOrder
   secondaryColor?: Prisma.SortOrder
+  shareStudentData?: Prisma.SortOrder
+  shareUpdatedAt?: Prisma.SortOrder
 }
 
 export type StaffProfileMaxOrderByAggregateInput = {
@@ -431,6 +471,8 @@ export type StaffProfileMaxOrderByAggregateInput = {
   mascot?: Prisma.SortOrder
   primaryColor?: Prisma.SortOrder
   secondaryColor?: Prisma.SortOrder
+  shareStudentData?: Prisma.SortOrder
+  shareUpdatedAt?: Prisma.SortOrder
 }
 
 export type StaffProfileMinOrderByAggregateInput = {
@@ -444,6 +486,8 @@ export type StaffProfileMinOrderByAggregateInput = {
   mascot?: Prisma.SortOrder
   primaryColor?: Prisma.SortOrder
   secondaryColor?: Prisma.SortOrder
+  shareStudentData?: Prisma.SortOrder
+  shareUpdatedAt?: Prisma.SortOrder
 }
 
 export type StaffProfileCreateNestedOneWithoutUserInput = {
@@ -498,6 +542,8 @@ export type StaffProfileCreateWithoutUserInput = {
   mascot?: string | null
   primaryColor?: string | null
   secondaryColor?: string | null
+  shareStudentData?: boolean
+  shareUpdatedAt?: Date | string | null
 }
 
 export type StaffProfileUncheckedCreateWithoutUserInput = {
@@ -511,6 +557,8 @@ export type StaffProfileUncheckedCreateWithoutUserInput = {
   mascot?: string | null
   primaryColor?: string | null
   secondaryColor?: string | null
+  shareStudentData?: boolean
+  shareUpdatedAt?: Date | string | null
 }
 
 export type StaffProfileCreateOrConnectWithoutUserInput = {
@@ -540,6 +588,8 @@ export type StaffProfileUpdateWithoutUserInput = {
   mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   primaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   secondaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shareStudentData?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shareUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type StaffProfileUncheckedUpdateWithoutUserInput = {
@@ -553,6 +603,8 @@ export type StaffProfileUncheckedUpdateWithoutUserInput = {
   mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   primaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   secondaryColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shareStudentData?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shareUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 
@@ -569,6 +621,8 @@ export type StaffProfileSelect<ExtArgs extends runtime.Types.Extensions.Internal
   mascot?: boolean
   primaryColor?: boolean
   secondaryColor?: boolean
+  shareStudentData?: boolean
+  shareUpdatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["staffProfile"]>
 
@@ -584,6 +638,8 @@ export type StaffProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   mascot?: boolean
   primaryColor?: boolean
   secondaryColor?: boolean
+  shareStudentData?: boolean
+  shareUpdatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["staffProfile"]>
 
@@ -599,6 +655,8 @@ export type StaffProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   mascot?: boolean
   primaryColor?: boolean
   secondaryColor?: boolean
+  shareStudentData?: boolean
+  shareUpdatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["staffProfile"]>
 
@@ -614,9 +672,11 @@ export type StaffProfileSelectScalar = {
   mascot?: boolean
   primaryColor?: boolean
   secondaryColor?: boolean
+  shareStudentData?: boolean
+  shareUpdatedAt?: boolean
 }
 
-export type StaffProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "employeeId" | "department" | "isAdviser" | "isMasterTeacher" | "handledGradeLevels" | "signatureImageUrl" | "photoUrl" | "mascot" | "primaryColor" | "secondaryColor", ExtArgs["result"]["staffProfile"]>
+export type StaffProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "employeeId" | "department" | "isAdviser" | "isMasterTeacher" | "handledGradeLevels" | "signatureImageUrl" | "photoUrl" | "mascot" | "primaryColor" | "secondaryColor" | "shareStudentData" | "shareUpdatedAt", ExtArgs["result"]["staffProfile"]>
 export type StaffProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -644,6 +704,8 @@ export type $StaffProfilePayload<ExtArgs extends runtime.Types.Extensions.Intern
     mascot: string | null
     primaryColor: string | null
     secondaryColor: string | null
+    shareStudentData: boolean
+    shareUpdatedAt: Date | null
   }, ExtArgs["result"]["staffProfile"]>
   composites: {}
 }
@@ -1079,6 +1141,8 @@ export interface StaffProfileFieldRefs {
   readonly mascot: Prisma.FieldRef<"StaffProfile", 'String'>
   readonly primaryColor: Prisma.FieldRef<"StaffProfile", 'String'>
   readonly secondaryColor: Prisma.FieldRef<"StaffProfile", 'String'>
+  readonly shareStudentData: Prisma.FieldRef<"StaffProfile", 'Boolean'>
+  readonly shareUpdatedAt: Prisma.FieldRef<"StaffProfile", 'DateTime'>
 }
     
 

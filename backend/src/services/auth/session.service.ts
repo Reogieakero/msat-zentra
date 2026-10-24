@@ -41,17 +41,28 @@ export async function register(input: RegisterInput) {
           });
           gradeLevel = roster?.gradeLevel ?? null;
         }
-        const bandRole =
-          gradeLevel === "G7" || gradeLevel === "G8" || gradeLevel === "G9" || gradeLevel === "G10"
-            ? "record_keeper"
-            : "registrar";
-        const gradeLabel = gradeLevel === "G11" ? "G11" : gradeLevel === "G12" ? "G12" : gradeLevel ?? "unknown grade";
-        await fanoutToRole(bandRole, {
+        const isLowerBand =
+          gradeLevel === "G7" || gradeLevel === "G8" || gradeLevel === "G9" || gradeLevel === "G10";
+        const message = gradeLevel
+          ? `New ${gradeLevel} sign-up: ${fullName} (LRN ${lrn ?? "—"}) — awaiting approval.`
+          : `New sign-up (grade unknown): ${fullName} (LRN ${lrn ?? "—"}) — awaiting approval. ` +
+            `Check the grade & LRN against school records first.`;
+        const notifyInput = {
           sourceTable: "users",
           action: "pending_signup",
-          message: `New ${gradeLabel} sign-up: ${fullName} (LRN ${lrn ?? "—"}) — awaiting approval.`,
+          message,
           sourceId: user.id,
-        });
+        };
+        // Unknown grade: the sign-up also surfaces in BOTH pending lists, so
+        // alert both desks instead of silently defaulting to the registrar.
+        if (!gradeLevel) {
+          await Promise.all([
+            fanoutToRole("record_keeper", notifyInput),
+            fanoutToRole("registrar", notifyInput),
+          ]);
+        } else {
+          await fanoutToRole(isLowerBand ? "record_keeper" : "registrar", notifyInput);
+        }
       } catch {
 
       }

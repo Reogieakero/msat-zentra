@@ -15,6 +15,7 @@ import {
 
 import styles from "./coordinator-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { CoordinatorSidebarReminder } from "./coordinator-sidebar-reminder";
 import { CoordinatorSidebarDeviceReminder } from "./coordinator-sidebar-device-reminder";
 
@@ -143,17 +144,38 @@ function CoordinatorRail({ groups }: { groups: NavGroup[] }) {
   );
 }
 
-export function CoordinatorSidebar() {
+export function CoordinatorSidebar({
+  collapsed = true,
+}: {
+  collapsed?: boolean;
+} = {}) {
+  const isActive = useIsActive();
+  const activeHref =
+    TABS.find((t) => isActive(t.href))?.href ?? "/coordinator/overview";
+
   return (
     <>
-      <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Coordinator sections">
-        <div className={styles.railScroll}>
-          <CoordinatorRail groups={NAV} />
-        </div>
-        <div className={styles.reminderWrap}>
-          <CoordinatorSidebarReminder />
-          <CoordinatorSidebarDeviceReminder />
-        </div>
+      <aside
+        className={`${styles.rail} ${styles.railDesktop} ${collapsed ? styles.railCollapsed : ""}`}
+        aria-label="Coordinator sections"
+      >
+        {collapsed ? (
+          <SidebarIconRail
+            groups={NAV}
+            ariaLabel="Coordinator sections, icon only"
+            activeHref={activeHref}
+          />
+        ) : (
+          <>
+            <div className={styles.railScroll}>
+              <CoordinatorRail groups={NAV} />
+            </div>
+            <div className={styles.reminderWrap}>
+              <CoordinatorSidebarReminder />
+              <CoordinatorSidebarDeviceReminder />
+            </div>
+          </>
+        )}
       </aside>
       <div className={styles.tabsMobile}>
         <CoordinatorNavbar tabs={TABS} />

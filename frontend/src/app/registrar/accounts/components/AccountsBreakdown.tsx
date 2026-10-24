@@ -1,6 +1,7 @@
-import { Donut } from "./Donut";
+import { Users } from "lucide-react";
+import { Donut, DONUT_TONES, type DonutTone } from "./Donut";
 import { Skeleton } from "@/components/ui/skeleton";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { KanbanBoardHeader } from "@/components/ui/kanban-board";
 import styles from "./accounts-breakdown.module.css";
 
 export type AccountBreakdown = {
@@ -12,6 +13,9 @@ export type AccountBreakdown = {
   total?: number;
 };
 
+// Kanban display — one column per grade level / section, mirroring the
+// overview stats board: kanban column shell + header + stat card, with the
+// donut + legend as the column's stat readout (no outer card wrapper).
 export function AccountsBreakdown({
   data,
   loading = false,
@@ -21,24 +25,19 @@ export function AccountsBreakdown({
 }) {
   if (loading) {
     return (
-      <section className={assign.card} aria-label="Accounts breakdown loading">
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <header className={`${styles.header} relative`}>
-          <h2 className="text-base font-semibold">Accounts Breakdown</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Student accounts by grade level and section
-          </p>
-        </header>
-        <div className={`${styles.grid} relative`}>
+      <section
+        className={styles.board}
+        aria-label="Accounts breakdown loading"
+        aria-busy="true"
+      >
+        <div className={styles.grid}>
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className={styles.card}>
-              <Skeleton className={styles.skelHead} />
-              <div className={styles.body}>
-                <Skeleton className={styles.skelDonut} />
-                <Skeleton className={styles.skelLegend} />
+            <div key={i} className={styles.column} aria-hidden="true">
+              <div className={styles.headSkeleton}>
+                <Skeleton className={styles.skelTitle} />
+                <Skeleton className={styles.skelCount} />
               </div>
+              <Skeleton className={styles.skelStat} />
             </div>
           ))}
         </div>
@@ -47,55 +46,61 @@ export function AccountsBreakdown({
   }
 
   return (
-    <section className={assign.card} aria-labelledby="accounts-breakdown">
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <header className={`${styles.header} relative`}>
-        <h2 id="accounts-breakdown" className="text-base font-semibold">Accounts Breakdown</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Section roster totals with account status — with account, pending, and no account yet
-        </p>
-      </header>
-
-      <div className={`${styles.grid} relative`}>
+    <section className={styles.board} aria-label="Accounts breakdown">
+      <div className={styles.grid}>
         {data.map((d) => {
           const noAccount = d.noAccount ?? 0;
+          const total = d.total ?? d.withAccount + d.pending + noAccount;
           return (
-            <article key={d.id} className={styles.card}>
-              <header className={styles.cardHead}>
-                <h3 className={styles.cardTitle}>{d.label}</h3>
-              </header>
+            <article
+              key={d.id}
+              className={styles.column}
+              aria-label={`${d.label}, ${total} learners: ${d.withAccount} with account, ${d.pending} pending, ${noAccount} no account`}
+            >
+              <KanbanBoardHeader
+                icon={<Users size={14} className="text-primary" aria-hidden />}
+                title={d.label}
+                count={total}
+              />
 
-              <div className={styles.body}>
-                <Donut
+              <div className={styles.stat}>
+                <BreakdownReadout
                   withAccount={d.withAccount}
                   pending={d.pending}
                   noAccount={noAccount}
                 />
-                <ul className={styles.legend}>
-                  <LegendItem
-                    color="var(--primary)"
-                    label="With account"
-                    value={d.withAccount}
-                  />
-                  <LegendItem
-                    color="color-mix(in oklch, var(--primary) 65%, var(--card))"
-                    label="Pending"
-                    value={d.pending}
-                  />
-                  <LegendItem
-                    color="color-mix(in oklch, var(--primary) 35%, var(--card))"
-                    label="No account"
-                    value={noAccount}
-                  />
-                </ul>
               </div>
             </article>
           );
         })}
       </div>
     </section>
+  );
+}
+
+// Donut + legend readout shared by the breakdown columns and the right
+// section rail's flyout panels.
+export function BreakdownReadout({
+  withAccount,
+  pending,
+  noAccount = 0,
+  tone = "primary",
+}: {
+  withAccount: number;
+  pending: number;
+  noAccount?: number;
+  tone?: DonutTone;
+}) {
+  const colors = DONUT_TONES[tone];
+  return (
+    <div className={styles.readout}>
+      <Donut withAccount={withAccount} pending={pending} noAccount={noAccount} tone={tone} />
+      <ul className={styles.legend}>
+        <LegendItem color={colors.withAccount} label="With account" value={withAccount} />
+        <LegendItem color={colors.pending} label="Pending" value={pending} />
+        <LegendItem color={colors.noAccount} label="No account" value={noAccount} />
+      </ul>
+    </div>
   );
 }
 

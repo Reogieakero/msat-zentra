@@ -1,14 +1,7 @@
 "use client";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { GuidanceDialogProps } from "./guidance-dialog-props";
@@ -22,31 +15,15 @@ export function AdmDialog({
   handleAction,
 }: GuidanceDialogProps) {
   return (
-    <Dialog open={dialogs.adm} onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("adm") }}>
-      <DialogContent
-        className={styles.dialogScrollHidden}
-        aria-busy={isActionPending || undefined}
-      >
-        <DialogHeader>
-          <DialogTitle>Start ADM process</DialogTitle>
-          <DialogDescription>
-            Move this case into ADM (Alternative Dispute Resolution) for
-            closer follow-through.
-          </DialogDescription>
-        </DialogHeader>
-        <div>
-          <Label htmlFor="admReason">Why does this case need ADM?</Label>
-          <Textarea
-            id="admReason"
-            value={form.admReason}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, admReason: e.target.value }))
-            }
-            placeholder="Explain why this case needs closer follow-through…"
-            maxLength={500}
-          />
-        </div>
-        <DialogFooter>
+    <KanbanOverlay
+      open={dialogs.adm}
+      onClose={() => closeDialog("adm")}
+      dismissable={!isActionPending}
+      busy={isActionPending}
+      title="Start ADM process"
+      description="Move this case into ADM (Alternative Dispute Resolution) for closer follow-through."
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
           <Button
             variant="destructive"
             className={styles.btnRed}
@@ -62,8 +39,21 @@ export function AdmDialog({
             {isActionPending ? <Loader2 className={styles.spin} aria-hidden="true" /> : null}
             {isActionPending ? "Starting…" : "Start ADM"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <div>
+        <Label htmlFor="admReason">Why does this case need ADM?</Label>
+        <Textarea
+          id="admReason"
+          value={form.admReason}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, admReason: e.target.value }))
+          }
+          placeholder="Explain why this case needs closer follow-through…"
+          maxLength={500}
+        />
+      </div>
+    </KanbanOverlay>
   );
 }

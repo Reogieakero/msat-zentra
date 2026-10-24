@@ -2,7 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
-import { actorName, ensureOpen, formatSession, formatWhen, getSession, getSessionReferral, isSessionType, parseScheduledAt, referralCard, truncate } from "../../modules/referrals/referrals.repository.js";
+import { actorName, ensureOpen, formatSession, formatWhen, getSession, getSessionReferral, isSessionType, parseScheduledAt, referralCard } from "../../modules/referrals/referrals.repository.js";
 import type { ReferralContext } from "./referral.types.js";
 
 export async function listSessions(ctx: ReferralContext, referralId: string) {
@@ -212,7 +212,6 @@ export async function cancelSession(
   await writeAudit({ userId: ctx.userId, actionType: "session_cancelled", sourceTable: "counseling_sessions", sourceId: session.id, reason: cancelReason?.trim() || "Counseling session cancelled", oldValue: { status: session.status }, newValue: { status: "cancelled" } });
   const card = await referralCard(referral);
   const was = formatWhen(session.scheduledAt);
-  const why = truncate(cancelReason, 120);
   if (referral.referredBy && referral.referredBy !== ctx.userId) {
     void fanoutNotification({
       userId: referral.referredBy,
@@ -220,8 +219,8 @@ export async function cancelSession(
       action: "status",
       message:
         ctx.role === "nurse"
-          ? `Clinic cancelled a session for ${card.who} (${session.sessionType}, ${was})${why ? ` — ${why}` : ""}.`
-          : `Guidance cancelled a session for ${card.who} (${session.sessionType}, ${was})${why ? ` — ${why}` : ""}.`,
+          ? `Clinic cancelled a session for ${card.who} (${session.sessionType}, ${was}).`
+          : `Guidance cancelled a session for ${card.who} (${session.sessionType}, ${was}).`,
       sourceId: referral.id,
     });
   }

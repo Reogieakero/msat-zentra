@@ -1,7 +1,7 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { CardModal } from "@/components/ui/CardModal";
+import { FileText } from "lucide-react";
+import { KanbanOverlay, KanbanPill } from "@/components/ui/kanban-overlay";
 import {
   attendeeLabel,
   formatManilaDate,
@@ -68,14 +68,24 @@ export function EvidenceDetailsDialog({
   const cert = certificationRecord(certificationDetails);
 
   return (
-    <CardModal
+    <KanbanOverlay
       open={target !== null}
       onClose={onClose}
       title={title}
-      description={
-        target ? <>Status: {friendlyWords(target.status)}</> : undefined
+      ariaLabel={title}
+      width="lg"
+      icon={
+        <span className="text-primary" aria-hidden>
+          <FileText size={14} />
+        </span>
       }
-      size="md"
+      headerActions={
+        target ? (
+          <KanbanPill title={`Status: ${friendlyWords(target.status)}`}>
+            {friendlyWords(target.status)}
+          </KanbanPill>
+        ) : null
+      }
     >
       {target?.formType === "MINUTES_OF_MEETING" ? (
         attended.length === 0 ? (
@@ -120,7 +130,7 @@ export function EvidenceDetailsDialog({
                   <div className={styles.kpi}>
                     <dt className={styles.metaLabel}>Status</dt>
                     <dd style={{ margin: 0 }}>
-                      <Badge variant="success">Attended</Badge>
+                      <KanbanPill tone="success">Attended</KanbanPill>
                     </dd>
                   </div>
                   {m.attendanceLogbookRef ? (
@@ -153,9 +163,7 @@ export function EvidenceDetailsDialog({
                     >
                       {m.attendees.map((a, idx) => (
                         <li key={`${a.name}-${idx}`}>
-                          <Badge variant="secondary">
-                            {attendeeLabel(a)}
-                          </Badge>
+                          <KanbanPill>{attendeeLabel(a)}</KanbanPill>
                         </li>
                       ))}
                     </ul>
@@ -214,6 +222,6 @@ export function EvidenceDetailsDialog({
           {title} — {friendlyWords(target.status)}.
         </p>
       ) : null}
-    </CardModal>
+    </KanbanOverlay>
   );
 }

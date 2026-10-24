@@ -7,10 +7,8 @@ import { Loader2 } from "lucide-react";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CoordinatorCertificationsCharts } from "./components/coordinator-certifications-charts";
-import { CoordinatorCertificationsGradeChart } from "./components/coordinator-certifications-grade";
 import { CoordinatorCertificationsFolders } from "./components/coordinator-certifications-folders";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { CoordinatorCertificationsRail } from "./components/coordinator-certifications-rail";
 import {
   fetchCertApprovalRows,
   fetchCertStageRows,
@@ -18,8 +16,6 @@ import {
   summarizeCertRecords,
 } from "@/services/coordinator/certifications.service";
 import type { CertStatusFilter } from "@/services/coordinator/certifications.types";
-import { CoordinatorPageHeader } from "../components/CoordinatorPageHeader";
-import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import styles from "./components/coordinator-certifications.module.css";
 
 function tabToStatus(tab: string | null): CertStatusFilter {
@@ -96,7 +92,6 @@ function CertificationsBody() {
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Certifications">
-        <PageHeaderSkeleton />
         <div className={styles.layout}>
           <div className={styles.main}>
             <div className={styles.skelPanel}>
@@ -114,7 +109,7 @@ function CertificationsBody() {
                 </div>
               </div>
               <div className={styles.skelFolderGrid}>
-                {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                {[0, 1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className={styles.skelFolderCard}>
                     <Skeleton className={styles.skelFolderBadge} />
                     <Skeleton className={styles.skelFolder} />
@@ -126,33 +121,10 @@ function CertificationsBody() {
             </div>
           </div>
 
-          <div className={styles.side}>
-            <div className={styles.skelSidePanel}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <Skeleton className={styles.skelChart} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendLabel} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-              <Skeleton className={styles.skelInterpretation} />
-              <hr className={styles.divider} />
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelGradeBars}>
-                {[0, 1, 2, 3].map((j) => (
-                  <div key={j} className={styles.skelGradeRow}>
-                    <Skeleton className={styles.skelGradeLabel} />
-                    <Skeleton className={styles.skelGradeBar} />
-                    <Skeleton className={styles.skelGradeCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className={styles.railSkel} aria-hidden>
+            {[0, 1].map((j) => (
+              <Skeleton key={j} className={styles.railSkelIcon} />
+            ))}
           </div>
         </div>
       </section>
@@ -191,12 +163,6 @@ function CertificationsBody() {
       className={trulyEmpty ? `${styles.page} ${styles.pageEmpty}` : styles.page}
       aria-label="Certifications"
     >
-      {trulyEmpty ? null : (
-        <CoordinatorPageHeader
-          title="Certifications"
-          description="Prepare recommendation folders and endorse them to the Principal for signature."
-        />
-      )}
       <div className={trulyEmpty ? `${styles.layout} ${styles.layoutEmpty}` : styles.layout}>
 
         <div className={styles.main}>
@@ -210,20 +176,7 @@ function CertificationsBody() {
           />
         </div>
 
-        {trulyEmpty ? null : (
-        <aside className={styles.side}>
-          <section className={assign.card} aria-label="Certification insights">
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
-            <div className="relative flex min-w-0 flex-col gap-5">
-              <CoordinatorCertificationsCharts summary={summary} />
-              <hr className={styles.divider} />
-              <CoordinatorCertificationsGradeChart summary={summary} />
-            </div>
-          </section>
-        </aside>
-        )}
+        {trulyEmpty ? null : <CoordinatorCertificationsRail summary={summary} />}
       </div>
     </section>
   );

@@ -4,10 +4,14 @@ import {
   referralsQueueQuerySchema,
 } from "../src/modules/referrals/referrals.schemas.js";
 
-describe("Referrals queue query validation (pageSize capped at 15)", () => {
+describe("Referrals queue query validation (pageSize capped at 16)", () => {
   it("rejects oversized pages on the shared queue", () => {
     expect(referralsQueueQuerySchema.safeParse({ pageSize: "50" }).success).toBe(false);
     expect(referralsQueueQuerySchema.parse({ pageSize: "15" }).pageSize).toBe(15);
+    // The ADM kanban board pages a 4×4 grid — 16 is valid for the shared
+    // queue, while the teacher "mine" list keeps the global 15 ceiling.
+    expect(referralsQueueQuerySchema.parse({ pageSize: "16" }).pageSize).toBe(16);
+    expect(referralsMineQuerySchema.safeParse({ pageSize: "16" }).success).toBe(false);
     expect(referralsMineQuerySchema.safeParse({ pageSize: "100" }).success).toBe(false);
   });
 

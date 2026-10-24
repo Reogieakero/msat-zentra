@@ -1,11 +1,14 @@
 import { z } from "zod";
 import { paginationQuerySchema } from "../../lib/pagination.js";
 import { ADM_STAGES, type AdmStage } from "../../services/adm.js";
+import { MASCOT_CHARACTERS } from "../../services/mascot.js";
 
 export const profileSchema = z.object({
   studentId: z.string().min(1).optional(),
   referralId: z.string().min(1),
-  termId: z.string().min(1),
+  // Server scope (req.termScope) determines the term for non-teacher desks;
+  // the body field remains for backward compatibility only.
+  termId: z.string().min(1).optional(),
   certificationDetails: z.record(z.any()).optional(),
 });
 
@@ -79,6 +82,7 @@ export const HEX_COLOR = z
 
 export const coordinatorProfileSchema = z.object({
   fullName: z.string().trim().min(1).max(100).optional(),
+  mascot: z.enum(MASCOT_CHARACTERS).nullable().optional(),
   primaryColor: HEX_COLOR.nullable().optional(),
   secondaryColor: HEX_COLOR.nullable().optional(),
 });

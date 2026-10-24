@@ -6,12 +6,13 @@ import {
 } from "../src/modules/guidance/guidance.schemas.js";
 import { interventionsQueueQuerySchema } from "../src/modules/interventions/interventions.schemas.js";
 
-describe("Guidance list query validation (pageSize capped at 15)", () => {
+describe("Guidance list query validation (pageSize capped at 15, cases board 16)", () => {
   it("rejects oversized pages across guidance queues", () => {
     expect(guidanceAlertsQuerySchema.safeParse({ pageSize: "50" }).success).toBe(false);
     expect(guidanceAlertsQuerySchema.parse({ pageSize: "15" }).pageSize).toBe(15);
     expect(guidanceAnecdotalQuerySchema.safeParse({ pageSize: "100" }).success).toBe(false);
     expect(guidanceCasesQuerySchema.safeParse({ pageSize: "30" }).success).toBe(false);
+    expect(guidanceCasesQuerySchema.parse({ pageSize: "16" }).pageSize).toBe(16);
     expect(interventionsQueueQuerySchema.safeParse({ pageSize: "75" }).success).toBe(false);
   });
 

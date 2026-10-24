@@ -2,28 +2,24 @@
 
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Camera, Loader2 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { StudentMascot, MASCOT_CHARACTERS } from "@/components/student-mascot/StudentMascot";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
+import { roleLabel } from "@/lib/auth/roles";
 import { toast } from "@/components/ui/sonner";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { useDock } from "@/components/dock/dock-store";
+import sectionStyles from "./settings-section.module.css";
 import {
   guidanceProfileSettingsKey,
   useGuidanceProfileSettings,
+  type GuidanceProfileSettings,
 } from "@/services/settings/profile-settings";
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  const first = parts[0]?.replace(/^[^A-Za-z]+/, "")?.[0] ?? parts[0]?.[0] ?? "?";
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : (parts[0]?.[1] ?? "");
-  return `${first}${last}`.toUpperCase();
-}
 
 function getErrorMessage(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
@@ -33,171 +29,165 @@ function getErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
-
 export function ProfileCard() {
   const session = useSession();
   const queryClient = useQueryClient();
+  const dock = useDock();
   const profile = useGuidanceProfileSettings();
-  const fileRef = React.useRef<HTMLInputElement | null>(null);
+  const profileKey = guidanceProfileSettingsKey(session?.sub);
 
   const [name, setName] = React.useState("");
   const [nameError, setNameError] = React.useState<string | null>(null);
-  const [nameSaving, setNameSaving] = React.useState(false);
-  const [photoError, setPhotoError] = React.useState<string | null>(null);
-  const [photoSaving, setPhotoSaving] = React.useState(false);
+  const [mascotError, setMascotError] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [mascot, setMascot] = React.useState<string | null>(null);
 
   const savedName = profile.data?.fullName ?? "";
+  const savedMascot = profile.data?.mascot ?? null;
 
-  const lastSyncedName = React.useRef<string | null>(null);
-  if (lastSyncedName.current !== savedName) {
-    lastSyncedName.current = savedName;
+  const [prevSavedName, setPrevSavedName] = React.useState<string | null>(null);
+  if (prevSavedName !== savedName) {
+    setPrevSavedName(savedName);
     setName(savedName);
   }
 
-  const photoUrl = profile.data?.photoUrl ?? null;
-  const displayName = savedName || "";
+  const [prevSavedMascot, setPrevSavedMascot] = React.useState<string | null | undefined>(undefined);
+  if (prevSavedMascot !== savedMascot) {
+    setPrevSavedMascot(savedMascot);
+    setMascot(savedMascot);
+  }
+
+  const displayName = savedName;
+  const band = session?.gradeBand ?? null;
+  const bandLabel = band === "7-10" ? "Grades 7–10" : band === "11-12" ? "Grades 11–12" : null;
   const nameDirty = name.trim() !== "" && name.trim() !== savedName;
+  const mascotDirty = (mascot ?? null) !== savedMascot;
+  const dirty = nameDirty || mascotDirty;
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: guidanceProfileSettingsKey(session?.sub) });
+    void queryClient.invalidateQueries({ queryKey: profileKey });
   };
 
-  async function handleNameSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (nameSaving || !nameDirty) return;
-    if (name.trim().length < 1) {
+    if (saving || !dirty) return;
+    if (nameDirty && name.trim().length < 1) {
       setNameError("Name cannot be empty.");
       return;
     }
     setNameError(null);
-    setNameSaving(true);
+    setMascotError(null);
+    setSaving(true);
+    // The shared Dock in the bottom-right reports the save until it settles.
+    let taskId: string | null = null;
     try {
-      await apiClient.patch("/api/guidance/settings/profile", { fullName: name.trim() });
+      taskId = dock.startTask({
+        kind: "generic",
+        title: "Saving profile",
+        description: nameDirty
+          ? `${name.trim()} → display name`
+          : `Mascot → ${mascot ?? "none"}`,
+      });
+    } catch {
+      taskId = null;
+    }
+    // Optimistic: topbar avatar + shell header update instantly,
+    // rollback on failure.
+    const previous = queryClient.getQueryData<GuidanceProfileSettings>(profileKey);
+    queryClient.setQueryData<GuidanceProfileSettings>(profileKey, (old) => ({
+      fullName: nameDirty ? name.trim() : (old?.fullName ?? savedName),
+      photoUrl: old?.photoUrl ?? profile.data?.photoUrl ?? null,
+      mascot: mascotDirty ? mascot : (old?.mascot ?? savedMascot),
+      primaryColor: old?.primaryColor ?? profile.data?.primaryColor ?? null,
+      secondaryColor: old?.secondaryColor ?? profile.data?.secondaryColor ?? null,
+    }));
+    try {
+      await apiClient.patch("/api/guidance/settings/profile", {
+        ...(nameDirty ? { fullName: name.trim() } : {}),
+        ...(mascotDirty ? { mascot } : {}),
+      });
+
       refresh();
-      toast.success({ title: "Name updated", description: "Your display name was saved." });
+      if (taskId) dock.completeTask(taskId, "Profile updated — your mascot and display name were saved.");
     } catch (err) {
-      const message = getErrorMessage(err, "Could not update your name.");
-      setNameError(message);
-      toast.error({ title: "Could not update name", description: message });
+      queryClient.setQueryData(profileKey, previous);
+      const message = getErrorMessage(err, "Could not update your profile.");
+      if (taskId) dock.failTask(taskId, message);
+      if (mascotDirty && !nameDirty) {
+        setMascotError(message);
+      } else {
+        setNameError(message);
+      }
+      toast.error({ title: "Could not update profile", description: message });
     } finally {
-      setNameSaving(false);
+      setSaving(false);
     }
   }
 
-  function handlePhotoPick(file: File | undefined) {
-    if (!file || photoSaving) return;
-    if (!file.type.startsWith("image/")) {
-      setPhotoError("Please choose an image file.");
-      return;
-    }
-    if (file.size > MAX_PHOTO_BYTES) {
-      setPhotoError("Photo must be smaller than 2MB.");
-      return;
-    }
-    setPhotoError(null);
-    setPhotoSaving(true);
-    const reader = new FileReader();
-    reader.onerror = () => {
-      setPhotoError("Could not read that file.");
-      setPhotoSaving(false);
-    };
-    reader.onload = async () => {
-      try {
-        const dataUrl = String(reader.result ?? "");
-        await apiClient.post("/api/guidance/settings/photo", { photoUrl: dataUrl });
-        refresh();
-        toast.success({ title: "Photo updated", description: "Your profile photo was saved." });
-      } catch (err) {
-        const message = getErrorMessage(err, "Could not update your photo.");
-        setPhotoError(message);
-        toast.error({ title: "Could not update photo", description: message });
-      } finally {
-        setPhotoSaving(false);
-        if (fileRef.current) fileRef.current.value = "";
-      }
-    };
-    reader.readAsDataURL(file);
-  }
+  // Profile (fast, single row) renders immediately — the page gates on it.
+  const loading = profile.isPending;
+  const loadError = profile.isError;
+
+  const mascotSeed = session?.sub ?? displayName;
 
   return (
-    <section id="section-profile" aria-labelledby="settings-profile" className={`${assign.card} scroll-mt-24`}>
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className="relative">
-        <h2 id="settings-profile" className="text-base font-semibold">
-          Profile
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Your photo and display name across the workspace.
-        </p>
-      </div>
-      {profile.isPending ? (
-        <div className="relative mt-1 flex items-center gap-4" aria-busy="true" aria-label="Loading profile">
-          <Skeleton className="size-16 shrink-0 rounded-full" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-3 w-64" />
-          </div>
-        </div>
-      ) : profile.isError ? (
-        <p role="alert" className="relative text-sm text-destructive">
-          Could not load your profile.
-        </p>
-      ) : (
-        <>
-          <div className="relative flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              aria-label={photoUrl ? "Change profile photo" : "Upload profile photo"}
-              className="group relative shrink-0 rounded-full"
-            >
-              <Avatar className="size-16">
-                {photoUrl ? <AvatarImage src={photoUrl} alt={displayName} /> : null}
-                <AvatarFallback className="bg-primary text-lg font-bold text-primary-foreground">
-                  {initialsOf(displayName)}
-                </AvatarFallback>
-              </Avatar>
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-              >
-                {photoSaving ? (
-                  <Loader2 size={20} className="animate-spin text-white" />
-                ) : (
-                  <Camera size={20} className="text-white" />
-                )}
-              </span>
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              aria-label="Profile photo file"
-              className="sr-only"
-              onChange={(e) => handlePhotoPick(e.target.files?.[0])}
-            />
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold">{displayName || "Counselor"}</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                Guidance Counselor
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Select the photo to replace it (image, up to 2MB).
-              </p>
+    <div id="section-profile" className={sectionStyles.boardWrap}>
+      <form onSubmit={(e) => void handleSave(e)}>
+        <KanbanBoard
+          title="Profile"
+          icon={<UserRound size={14} aria-hidden="true" />}
+          description="Your mascot and display name across the workspace."
+          ariaLabel="Profile settings"
+          footer={
+            loading || loadError ? null : (
+              <div className="flex justify-end px-1 pb-1">
+                <Button type="submit" disabled={saving || !dirty} aria-busy={saving || undefined} className={sectionStyles.btn}>
+                  {saving ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" aria-hidden />
+                      <span aria-live="polite">Saving…</span>
+                    </>
+                  ) : (
+                    "Save"
+                  )}
+                </Button>
+              </div>
+            )
+          }
+        >
+          {loading ? (
+            <div className="flex items-center gap-4 px-1" aria-busy="true" aria-label="Loading profile">
+              <Skeleton className="size-16 shrink-0 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-64" />
+              </div>
             </div>
-          </div>
-          {photoError ? (
-            <p role="alert" className="relative text-sm text-destructive">
-              {photoError}
+          ) : loadError ? (
+            <p role="alert" className="px-1 text-sm text-destructive">
+              Could not load your profile.
             </p>
-          ) : null}
-          <form onSubmit={(e) => void handleNameSave(e)} className="relative max-w-sm space-y-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="settings-display-name">Display name</Label>
-              <div className="flex gap-2">
+          ) : (
+            <div className="flex flex-col gap-3 px-1">
+              <div className="flex items-center gap-4">
+                <span className="shrink-0 overflow-hidden rounded-2xl border border-amber-500/40 bg-muted/40 shadow-sm">
+                  <StudentMascot
+                    name={displayName || "You"}
+                    seed={mascotSeed}
+                    character={mascot ?? undefined}
+                    size={120}
+                  />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold">{displayName || "Counselor"}</p>
+                  <div className={`mt-1.5 flex flex-wrap gap-1.5 ${sectionStyles.pills}`}>
+                    <span className={sectionStyles.pill}>{roleLabel(session?.role ?? "")}</span>
+                    {bandLabel ? <span className={sectionStyles.pill}>{bandLabel}</span> : null}
+                  </div>
+                </div>
+              </div>
+              <div className="max-w-sm space-y-1.5">
+                <Label htmlFor="settings-display-name">Display name</Label>
                 <Input
                   id="settings-display-name"
                   value={name}
@@ -207,28 +197,63 @@ export function ProfileCard() {
                   }}
                   placeholder="Your full name"
                   maxLength={100}
-                  className="min-w-0 flex-1"
+                  className="w-full"
                 />
-                <Button type="submit" disabled={nameSaving || !nameDirty} aria-busy={nameSaving || undefined}>
-                  {nameSaving ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" aria-hidden />
-                      <span aria-live="polite">Saving…</span>
-                    </>
-                  ) : (
-                    "Save"
-                  )}
-                </Button>
               </div>
+              {nameError ? (
+                <p role="alert" className={`text-sm text-destructive ${sectionStyles.reveal}`}>
+                  {nameError}
+                </p>
+              ) : null}
+              <div>
+                <p id="settings-mascot-label" className="mb-2 text-sm font-medium">
+                  Select your mascot
+                </p>
+                <div
+                  className={sectionStyles.mascotGrid}
+                  role="radiogroup"
+                  aria-labelledby="settings-mascot-label"
+                >
+                  {MASCOT_CHARACTERS.map((character) => {
+                    const active = mascot === character;
+                    return (
+                      <button
+                        key={character}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        aria-label={`Mascot ${character}`}
+                        onClick={() => {
+                          setMascot(character);
+                          setMascotError(null);
+                        }}
+                        className={`${sectionStyles.mascotOption} ${active ? sectionStyles.mascotOptionActive : ""}`}
+                      >
+                        <StudentMascot
+                          name={displayName || "You"}
+                          seed={mascotSeed}
+                          character={character}
+                          size={76}
+                        />
+                        <span className={sectionStyles.mascotName}>{character}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className={`mt-1.5 text-xs text-muted-foreground ${mascotDirty && !saving ? sectionStyles.reveal : ""}`}>
+                  {mascotDirty && !saving ? "Unsaved mascot — press Save. " : ""}
+                  Your mascot shows across your workspace.
+                </p>
+              </div>
+              {mascotError ? (
+                <p role="alert" className={`text-sm text-destructive ${sectionStyles.reveal}`}>
+                  {mascotError}
+                </p>
+              ) : null}
             </div>
-            {nameError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {nameError}
-              </p>
-            ) : null}
-          </form>
-        </>
-      )}
-    </section>
+          )}
+        </KanbanBoard>
+      </form>
+    </div>
   );
 }

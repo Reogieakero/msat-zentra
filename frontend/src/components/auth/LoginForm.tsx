@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { setAccessToken } from "@/lib/api/client";
+import { isTeacherRole } from "@/lib/auth/roles";
 import { useTerm } from "@/lib/term/TermContext";
 import { toast } from "@/components/ui/sonner";
 import styles from "./LoginForm.module.css";
@@ -76,7 +77,9 @@ export function LoginForm({
 
       queryClient.clear();
 
-      setPromptRequired(true);
+      // Only teacher roles pick a term; every other role is scoped server-side,
+      // so never prompt them (and clear any leftover prompt flag).
+      setPromptRequired(isTeacherRole(data.role));
       toast.success({ title: "Signed in", description: "Redirecting you now." });
       const home =
         (data.role === "principal" && "/principal/overview") ||

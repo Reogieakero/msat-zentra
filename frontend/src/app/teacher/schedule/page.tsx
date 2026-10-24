@@ -23,7 +23,7 @@ import kanbanStyles from "./components/subject-kanban.module.css";
 import { ScheduleGutter } from "./components/schedule-gutter";
 import { TeacherPageHeader } from "../components/TeacherPageHeader";
 import { TeacherEmptyCard } from "../components/TeacherEmptyCard";
-import { ZentraPageHeaderSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export interface ScheduleSubject {
@@ -84,15 +84,15 @@ function ScheduleSkeleton() {
     <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading schedule">
       <ZentraPageHeaderSkeleton />
       <div className={styles.skelGrid}>
-        {[0, 1, 2].map((i) => (
+        {[0, 1, 2, 3].map((i) => (
           <div key={i} className={styles.skelCard}>
             <div className="flex items-center gap-3">
-              <Skeleton className="size-11 shrink-0 rounded-full" />
+              <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
               <div className="flex-1 space-y-1.5">
                 <Skeleton className="h-3 w-32" />
                 <Skeleton className="h-3 w-24" />
               </div>
-              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-5 w-16" />
             </div>
             <div className="space-y-1.5 mt-2">
               {[0, 1].map((j) => (
@@ -102,7 +102,6 @@ function ScheduleSkeleton() {
           </div>
         ))}
       </div>
-      <ZentraTableSkeleton rows={4} columns={3} withPager={false} />
     </div>
   );
 }

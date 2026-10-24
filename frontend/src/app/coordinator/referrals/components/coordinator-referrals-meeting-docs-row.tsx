@@ -3,6 +3,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiErrorMessage } from "@/lib/api/errors";
+import { useDock } from "@/components/dock/dock-store";
 import {
   uploadMeetingAttachments,
   deleteMeetingAttachment,
@@ -21,6 +22,7 @@ export function MeetingDocsRow({
   const [removingId, setRemovingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const dock = useDock();
   const docs = meeting.attachments ?? [];
   function pick(files: FileList | null) {
     if (!files) return;
@@ -36,13 +38,26 @@ export function MeetingDocsRow({
     if (picked.length === 0 || uploading) return;
     setUploading(true);
     setError(null);
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "generic",
+        title: "Uploading meeting documents",
+        description: `${picked.length} file${picked.length === 1 ? "" : "s"}`,
+      });
+    } catch {
+      taskId = null;
+    }
     try {
       await uploadMeetingAttachments(meeting.id, picked);
       setPicked([]);
       if (inputRef.current) inputRef.current.value = "";
+      if (taskId) dock.completeTask(taskId, "Documents attached.");
       onRefresh();
     } catch (err) {
-      setError(apiErrorMessage(err));
+      const message = apiErrorMessage(err);
+      if (taskId) dock.failTask(taskId, message);
+      setError(message);
     } finally {
       setUploading(false);
     }
@@ -51,11 +66,24 @@ export function MeetingDocsRow({
     if (removingId) return;
     setRemovingId(id);
     setError(null);
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "generic",
+        title: "Removing meeting document",
+        description: "Meeting attachment",
+      });
+    } catch {
+      taskId = null;
+    }
     try {
       await deleteMeetingAttachment(meeting.id, id);
+      if (taskId) dock.completeTask(taskId, "Document removed.");
       onRefresh();
     } catch (err) {
-      setError(apiErrorMessage(err));
+      const message = apiErrorMessage(err);
+      if (taskId) dock.failTask(taskId, message);
+      setError(message);
     } finally {
       setRemovingId(null);
     }

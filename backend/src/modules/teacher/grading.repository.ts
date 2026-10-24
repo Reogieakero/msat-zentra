@@ -117,7 +117,7 @@ export async function assertAssignment(teacherId: string, assignmentId: string, 
     where: { id: assignmentId },
     include,
   });
-  if (!assignment || assignment.teacherId !== teacherId) {
+  if (!assignment || assignment.teacherId !== teacherId || assignment.termId !== termId) {
     throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
   }
   return assignment;

@@ -793,16 +793,60 @@ export async function getColumnCohortStudents(
   return { students, total, page: safePage, pageSize: effPageSize, highModerate };
 }
 
-async function getLiveCohortStudents(
+interface LiveCohort {
+  kept: RiskSnapshotStudent[];
+  highModerate: number;
+}
+
+/**
+ * `getLiveCohortStudents` recomputes the cohort from grades + attendance +
+ * anecdotes on every call (it never reads the snapshot tables), which makes it
+ * the most expensive read on the guidance desks. Memoize the scan for a few
+ * seconds with promise single-flight so concurrent callers (alerts desk,
+ * interventions queue, several counselors) share one pass instead of each
+ * paying for the whole school.
+ */
+const LIVE_COHORT_TTL_MS = 20_000;
+const liveCohortCache = new Map<string, { at: number; value: Promise<LiveCohort> }>();
+
+function liveCohort(
   termId: string,
   schoolYearId: string | undefined,
-  filters: StudentFilters,
-  page: number,
-  pageSize: number,
-): Promise<InterventionStudentsResult> {
-  // Real-time unified: always live, gradeMode ignored.
-  const includeRecovered = filters.includeRecovered === true && !filters.riskLevel;
+  includeRecovered: boolean,
+  riskLevel: StudentFilters["riskLevel"],
+  hasIntervention: StudentFilters["hasIntervention"],
+): Promise<LiveCohort> {
+  const key = [
+    termId,
+    schoolYearId ?? "-",
+    includeRecovered ? 1 : 0,
+    riskLevel ?? "-",
+    hasIntervention === undefined ? "-" : hasIntervention ? 1 : 0,
+  ].join("|");
+  const now = Date.now();
+  const hit = liveCohortCache.get(key);
+  if (hit && now - hit.at < LIVE_COHORT_TTL_MS) return hit.value;
 
+  const value = loadLiveCohort(termId, schoolYearId, includeRecovered, riskLevel, hasIntervention);
+  liveCohortCache.set(key, { at: now, value });
+  value.catch(() => {
+    if (liveCohortCache.get(key)?.value === value) liveCohortCache.delete(key);
+  });
+  if (liveCohortCache.size > 32) {
+    for (const [k, entry] of liveCohortCache) {
+      if (now - entry.at >= LIVE_COHORT_TTL_MS) liveCohortCache.delete(k);
+    }
+  }
+  return value;
+}
+
+async function loadLiveCohort(
+  termId: string,
+  schoolYearId: string | undefined,
+  includeRecovered: boolean,
+  riskLevel: StudentFilters["riskLevel"],
+  hasIntervention: StudentFilters["hasIntervention"],
+): Promise<LiveCohort> {
   const [profiles, rosters, profileSnapDates, rosterSnapDates] = await Promise.all([
     prisma.studentProfile.findMany({
       where: schoolYearId ? { section: { schoolYearId } } : undefined,
@@ -969,9 +1013,9 @@ async function getLiveCohortStudents(
     const recovered = level === "Low" && intervention?.outcomeStatus === "ongoing";
     if (!includeRecovered && level !== "High" && level !== "Moderate") return null;
     if (includeRecovered && level !== "High" && level !== "Moderate" && !recovered) return null;
-    if (filters.riskLevel && level !== filters.riskLevel) return null;
-    if (filters.hasIntervention === true && !intervention) return null;
-    if (filters.hasIntervention === false && intervention) return null;
+    if (riskLevel && level !== riskLevel) return null;
+    if (hasIntervention === true && !intervention) return null;
+    if (hasIntervention === false && intervention) return null;
 
     const subjectGrades: SubjectGrade[] = st.finalGrades.map((g) => ({
       subject: g.subject.name,
@@ -1069,7 +1113,25 @@ async function getLiveCohortStudents(
       a.studentName.localeCompare(b.studentName)
   );
 
-  const highModerate = kept.length;
+  return { kept, highModerate: kept.length };
+}
+
+async function getLiveCohortStudents(
+  termId: string,
+  schoolYearId: string | undefined,
+  filters: StudentFilters,
+  page: number,
+  pageSize: number,
+): Promise<InterventionStudentsResult> {
+  // Real-time unified: always live, gradeMode ignored.
+  const includeRecovered = filters.includeRecovered === true && !filters.riskLevel;
+  const { kept, highModerate } = await liveCohort(
+    termId,
+    schoolYearId,
+    includeRecovered,
+    filters.riskLevel,
+    filters.hasIntervention,
+  );
 
   const needle = (filters.q ?? "").trim().toLowerCase();
   const filtered = kept.filter((m) => {

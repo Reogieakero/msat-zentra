@@ -1,93 +1,79 @@
 "use client";
 
+import {
+  Activity,
+  CalendarClock,
+  Hourglass,
+  ListChecks,
+  Send,
+  type LucideIcon,
+} from "lucide-react";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import type {
   GuidanceAdmInsightsData,
   GuidanceAdmRecommendation,
 } from "@/services/guidance/adm.reports";
-import { PRIMARY_STEPS } from "./guidance-adm-reports";
+import { GuidanceAdmInterpretation } from "./guidance-adm-interpretation";
 import styles from "./guidance-adm.module.css";
 
-function InsightCard({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+/* Same coloured-icon language as the guidance overview KPI rail. */
+const FINDING_META: Record<string, { icon: LucideIcon; accent: string }> = {
+  total: { icon: Activity, accent: "text-primary" },
+  awaiting: { icon: Hourglass, accent: "text-amber-500" },
+  waiting: { icon: CalendarClock, accent: "text-orange-500" },
+  endorsed: { icon: Send, accent: "text-blue-500" },
+};
+
+const STAT_PILL =
+  "inline-flex max-w-full items-center truncate rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400";
+
+const TYPE_PILL =
+  "inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide";
+const TYPE_TONE: Record<string, string> = {
+  ADM: "border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-400",
+  Counseling:
+    "border-violet-500/40 bg-violet-500/15 text-violet-700 dark:text-violet-400",
+};
+
+const STUDENT_PILL =
+  "inline-flex min-w-0 max-w-[10rem] items-center truncate rounded-md border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400";
+
+const SECTION_PILL =
+  "inline-flex max-w-[7rem] items-center truncate rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground";
+
+function BoardIcon({ icon: Icon }: { icon: LucideIcon }) {
   return (
-    <section className={styles.insightCard} aria-label={label}>
-      <span className={styles.glowClip} aria-hidden="true">
-        <span className={styles.cardGlow} />
-      </span>
-      {children}
-    </section>
+    <span className="text-primary" aria-hidden>
+      <Icon size={14} />
+    </span>
   );
 }
 
-function Findings({ data }: { data: GuidanceAdmInsightsData }) {
+/** KPI stats strip — one kanban board per finding. */
+export function GuidanceAdmStats({ data }: { data: GuidanceAdmInsightsData }) {
   return (
     <div className={styles.findings} role="status" aria-label="Key findings">
-      {data.findings.map((f) => (
-        <InsightCard key={f.key} label={f.label}>
-          <p className={styles.findingValue}>{f.value}</p>
-          <p className={styles.findingLabel}>{f.label}</p>
-          <p className={styles.findingHint}>{f.hint}</p>
-        </InsightCard>
-      ))}
+      {data.findings.map((f) => {
+        const meta = FINDING_META[f.key] ?? FINDING_META.total;
+        const Icon = meta.icon;
+        return (
+          <KanbanBoard
+            key={f.key}
+            title={f.label}
+            icon={
+              <span className={meta.accent} aria-hidden>
+                <Icon size={14} />
+              </span>
+            }
+            description={<span className={STAT_PILL}>{f.hint}</span>}
+            className="flex-1"
+          >
+            <p className={styles.findingValue}>{f.value}</p>
+          </KanbanBoard>
+        );
+      })}
     </div>
-  );
-}
-
-const CATEGORY_COLORS = PRIMARY_STEPS;
-
-function Categories({ data }: { data: GuidanceAdmInsightsData }) {
-  const top = data.categories[0] ?? null;
-  return (
-    <InsightCard label="Cases by category">
-      <h3 className={styles.sectionTitle}>Cases by category</h3>
-      <p className={styles.sectionDesc}>
-        What the referred anecdotes were filed as.
-      </p>
-      {data.categories.length === 0 ? (
-        <p className={styles.insightEmpty}>No categorized cases yet.</p>
-      ) : (
-        <ul className={styles.categoryList}>
-          {data.categories.map((c, i) => (
-            <li key={c.key} className={styles.categoryRow}>
-              <span className={styles.categoryHead}>
-                <span
-                  className={styles.legendDot}
-                  style={{
-                    backgroundColor:
-                      CATEGORY_COLORS[i % CATEGORY_COLORS.length],
-                  }}
-                  aria-hidden
-                />
-                {c.label}
-              </span>
-              <span className={styles.categoryBar} aria-hidden>
-                <span
-                  className={styles.categoryFill}
-                  style={{
-                    width: `${c.share}%`,
-                    backgroundColor:
-                      CATEGORY_COLORS[i % CATEGORY_COLORS.length],
-                  }}
-                />
-              </span>
-              <span className={styles.legendCount}>
-                {c.count} · {c.share}%
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <p className={styles.interpretation} role="status">
-        {top
-          ? `${top.label} leads with ${top.count} of ${data.total} case${data.total === 1 ? "" : "s"} (${top.share}%) — start follow-through with the largest group first.`
-          : "Category mix will appear here once cases are referred to you."}
-      </p>
-    </InsightCard>
   );
 }
 
@@ -97,13 +83,34 @@ function formatDays(days: number | null): string {
 
 function Bottlenecks({ data }: { data: GuidanceAdmInsightsData }) {
   const { longestDays, avgDays, measured } = data.response;
+  const message =
+    (measured === 0
+      ? "Response times will appear once cases show recorded handling."
+      : `Your response measured over ${measured} handled case${measured === 1 ? "" : "s"}. `) +
+    (data.bottlenecks.length === 0
+      ? "No backlog — new referrals will surface here by waiting time."
+      : "Decide the longest-waiting cases before newer arrivals to keep the pipeline fair.");
+
   return (
-    <InsightCard label="Waiting bottlenecks">
-      <h3 className={styles.sectionTitle}>Waiting bottlenecks</h3>
-      <p className={styles.sectionDesc}>
-        Longest-waiting cases still needing action, counseling and ADM.
-      </p>
-      <div className={styles.responseStats} role="status" aria-label="Guidance response times">
+    <KanbanBoard
+      title="Waiting bottlenecks"
+      icon={
+        <span className="text-orange-500" aria-hidden>
+          <Hourglass size={14} />
+        </span>
+      }
+      count={data.bottlenecks.length}
+      description="Longest-waiting cases still needing action, counseling and ADM."
+      className="flex-1"
+      footer={
+        <GuidanceAdmInterpretation>{message}</GuidanceAdmInterpretation>
+      }
+    >
+      <div
+        className={styles.responseStats}
+        role="status"
+        aria-label="Guidance response times"
+      >
         <div className={styles.responseStat}>
           <span className={styles.responseValue}>{formatDays(longestDays)}</span>
           <span className={styles.responseLabel}>Longest response</span>
@@ -114,7 +121,7 @@ function Bottlenecks({ data }: { data: GuidanceAdmInsightsData }) {
         </div>
       </div>
       {data.bottlenecks.length === 0 ? (
-        <p className={styles.insightEmpty}>Nothing waiting — the queue is clear.</p>
+        <p className={styles.boardEmpty}>Nothing waiting — the queue is clear.</p>
       ) : (
         <ol className={styles.bottleneckList}>
           {data.bottlenecks.map((b) => (
@@ -126,10 +133,26 @@ function Bottlenecks({ data }: { data: GuidanceAdmInsightsData }) {
                 <span className={styles.bottleneckMain}>
                   <span className={styles.bottleneckName}>
                     {b.kind ? (
-                      <span className={styles.bottleneckType}>{b.kind}</span>
+                      <span
+                        className={`${TYPE_PILL} ${
+                          TYPE_TONE[b.kind] ??
+                          "border-border bg-secondary text-secondary-foreground"
+                        }`}
+                      >
+                        {b.kind}
+                      </span>
                     ) : null}
-                    {b.student}
-                    {b.section ? ` · ${b.section}` : ""}
+                    <span className="shrink-0" aria-hidden>
+                      <StudentMascot name={b.student} seed={b.student} size={28} />
+                    </span>
+                    <span className={STUDENT_PILL} title={b.student}>
+                      {b.student}
+                    </span>
+                    {b.section ? (
+                      <span className={SECTION_PILL} title={b.section}>
+                        {b.section}
+                      </span>
+                    ) : null}
                   </span>
                   {b.reason ? (
                     <span className={styles.bottleneckReason}>{b.reason}</span>
@@ -143,15 +166,7 @@ function Bottlenecks({ data }: { data: GuidanceAdmInsightsData }) {
           ))}
         </ol>
       )}
-      <p className={styles.interpretation} role="status">
-        {measured === 0
-          ? "Response times will appear once cases show recorded handling."
-          : `Your response measured over ${measured} handled case${measured === 1 ? "" : "s"}. `}
-        {data.bottlenecks.length === 0
-          ? "No backlog — new referrals will surface here by waiting time."
-          : "Decide the longest-waiting cases before newer arrivals to keep the pipeline fair."}
-      </p>
-    </InsightCard>
+    </KanbanBoard>
   );
 }
 
@@ -180,13 +195,15 @@ function RecommendationRow({ rec }: { rec: GuidanceAdmRecommendation }) {
 
 function Recommendations({ data }: { data: GuidanceAdmInsightsData }) {
   return (
-    <InsightCard label="Recommended actions">
-      <h3 className={styles.sectionTitle}>Recommended actions</h3>
-      <p className={styles.sectionDesc}>
-        What to do next, derived from your live caseload.
-      </p>
+    <KanbanBoard
+      title="Recommended actions"
+      icon={<BoardIcon icon={ListChecks} />}
+      count={data.recommendations.length}
+      description="What to do next, derived from your live guidance caseload."
+      className="flex-1"
+    >
       {data.recommendations.length === 0 ? (
-        <p className={styles.insightEmpty}>
+        <p className={styles.boardEmpty}>
           {data.total === 0
             ? "Recommendations will appear here once cases are referred to you."
             : "You're all caught up — nothing needs action."}
@@ -198,18 +215,15 @@ function Recommendations({ data }: { data: GuidanceAdmInsightsData }) {
           ))}
         </ul>
       )}
-    </InsightCard>
+    </KanbanBoard>
   );
 }
 
+/** Bottlenecks + recommendations — the boards below the report charts. */
 export function GuidanceAdmInsights({ data }: { data: GuidanceAdmInsightsData }) {
   return (
-    <div className={styles.insights}>
-      <Findings data={data} />
-      <div className={styles.insightsGrid}>
-        <Categories data={data} />
-        <Bottlenecks data={data} />
-      </div>
+    <div className={styles.insightsGrid}>
+      <Bottlenecks data={data} />
       <Recommendations data={data} />
     </div>
   );

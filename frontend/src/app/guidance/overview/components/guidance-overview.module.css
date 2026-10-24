@@ -1,362 +1,633 @@
 .page {
+  --guidance-number: #b45309;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  /* 16px comes from the layout shell (.main padding); no extra top or side
-     pad — content sits 16px below the navbar and gutters. */
-  padding: 0 0 2rem;
-  min-height: 100%;
-  background-color: var(--background);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  gap: 1.25rem;
+  /* 16px comes from the layout shell (.main padding); no extra top pad —
+     same as the nurse overview page. */
+  padding: 0 0 0.25rem;
 }
 
-.divider {
-  margin: 0;
-  border: none;
-  border-top: 1px solid var(--border, #e5e5e5);
+:global(.dark) .page {
+  --guidance-number: #fbbf24;
 }
 
-/* Top row: narrow KPI rail (15%, left) + grade-attention card (right).
-   The row stretches so both columns share one height; the 4 KPI cards
-   split that height into equal rows, so their accumulated height always
-   matches the grade card. Below 1100px the row collapses to one column
-   and the KPIs flow back into grids. */
-.topRow {
+/* Left stack (boards + charts) + icon-only KPI rail on the right — the
+   exact layout of /nurse/overview: the rail spans the full stack height, so
+   it stays pinned (sticky) through the whole page scroll, and no section may
+   cross into its 2.75rem strip. */
+.body {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 8.5fr);
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.mainCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cellMain {
+  margin: 0;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Flat board rows — one line per grade inside the kanban shell (no per-row
+   card chrome), highest-risk grade first. Same as the nurse case rows. */
+.caseList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.caseRow {
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  min-width: 0;
+}
+
+.caseRow:last-child {
+  border-bottom: none;
+}
+
+.caseInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Whole row is a link to the work queue. Three columns keep the section pills
+   centered in the row: identity left, sections center, risk metrics right. */
+.rowLink {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   gap: 0.75rem;
-  align-items: stretch;
-}
-
-.topMain {
+  padding: 0.625rem 0.375rem;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.topMain > * {
-  flex: 1;
-}
-
-.topKpis {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.topKpis > div {
-  flex: 1;
-  grid-template-columns: 1fr;
-  grid-template-rows: repeat(4, 1fr);
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-md);
+  transition: background-color 140ms ease-out;
 }
 
 @media (max-width: 1100px) {
-  .topRow {
-    grid-template-columns: 1fr;
+  .rowLink {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .topKpis {
-    display: block;
+  .caseInfo {
+    grid-column: 1;
+    grid-row: 1;
   }
 
-  .topKpis > div {
-    grid-template-rows: none;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .cellActions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .sectionGroup {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
   }
 }
 
-@media (max-width: 640px) {
-  .topKpis > div {
-    grid-template-columns: 1fr;
-  }
-}
-
-.error {
-  margin: 0;
-  padding: 2rem 1rem;
-  text-align: center;
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-}
-
-/* Skeleton mirrors the loaded layout block-for-block: top row (KPI rail
-   + grade-attention card with header button + interpretation), 3 risk
-   charts (donut card includes 3-row legend, all include interpretation),
-   2 caseload charts (type donut 148px + 2-row legend, sections bar
-   220px, both with interpretation). */
-.skelHead {
+.sectionGroup {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.skelHeadText {
-  display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 0.375rem;
   min-width: 0;
-  flex: 1 1 20rem;
 }
 
-.skelEyebrow {
-  width: 9rem;
-  height: 0.7rem;
-  border-radius: 0.25rem;
+.rowLink:hover {
+  background-color: color-mix(in oklch, var(--muted-foreground), transparent 94%);
 }
 
-.skelTitle {
-  width: min(15rem, 70%);
-  height: 1.625rem;
-  border-radius: 0.375rem;
+.rowLink:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
 }
 
-.skelLede {
-  width: min(34rem, 100%);
-  height: 0.875rem;
-  border-radius: 0.25rem;
+/* Rows cascade in on mount — same entrance as the registry kanban boards. */
+@keyframes case-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.skelBadge {
-  width: 10rem;
-  height: 1.5rem;
-  border-radius: 999px;
-  flex-shrink: 0;
+.caseList > .caseRow {
+  animation: case-row-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
-.skelTopRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 8.5fr);
-  gap: 0.75rem;
-  align-items: stretch;
+.caseList > .caseRow:nth-child(2) {
+  animation-delay: 0.06s;
 }
 
-.skelTopKpis {
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: repeat(4, 1fr);
-  gap: 0.75rem;
+.caseList > .caseRow:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caseList > .caseRow {
+    animation: none;
+  }
+}
+
+/* Icon-rail flyout menus — smooth open/close in both themes, same ease and
+   top-right origin as the nurse / registry KPI rails. */
+.railMenu {
+  transform-origin: top right;
+  transition:
+    opacity 180ms ease-out,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 180ms;
+}
+
+.railMenuOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+}
+
+.railMenuClosed {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Needs-review flyout preview — longest-waiting-ish cases before the CTA. */
+.railCaseList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   min-width: 0;
 }
 
-@media (max-width: 1100px) {
-  .skelTopRow {
-    grid-template-columns: 1fr;
-  }
-
-  .skelTopKpis {
-    grid-template-rows: none;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .skelTopKpis {
-    grid-template-columns: 1fr;
-  }
-}
-
-.skelKpiGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-@media (max-width: 1100px) {
-  .skelKpiGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .skelKpiGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.skelKpiCard {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
-  /* Matches Card size=sm --card-spacing (0.75rem). */
-  padding: 0.75rem;
-}
-
-.skelKpiLabel {
-  width: 60%;
-  height: 0.75rem;
-  border-radius: 0.25rem;
-}
-
-.skelKpiValue {
-  width: 40%;
-  height: 1.5rem;
-  border-radius: 0.375rem;
-}
-
-.skelKpiHint {
-  width: 75%;
-  height: 0.75rem;
-  border-radius: 0.25rem;
-}
-
-.skelCard {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
-  padding: 1rem;
-  min-width: 0;
-}
-
-.skelCardTitle {
-  width: 55%;
-  height: 1rem;
-  border-radius: 0.25rem;
-}
-
-.skelCardDesc {
-  width: 85%;
-  height: 0.8rem;
-  border-radius: 0.25rem;
-}
-
-/* Grade-table header row: title/desc left, See-more button right. */
-.skelCardHeadRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.skelCardHeadText {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* Interpretation block: margin-top + left border + 2-line reserve. */
-.skelInterpretation {
-  width: 100%;
-  height: 2.25rem;
-  margin-top: 0.75rem;
-  padding-left: 0.625rem;
-  border-left: 2px solid var(--border);
-  border-radius: 0.25rem;
-}
-
-/* Donut/bar legend: dot + label left, count right. */
-.skelLegend {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin-top: 0.5rem;
-}
-
-.skelLegendRow {
+.railCaseItem {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
 }
 
-.skelLegendLabel {
-  width: 6rem;
-  height: 0.75rem;
-  border-radius: 0.25rem;
+.railCaseItem:last-child {
+  border-bottom: none;
 }
 
-.skelLegendCount {
-  width: 2rem;
-  height: 0.75rem;
-  border-radius: 0.25rem;
+.railCaseName {
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 140ms ease-out;
 }
 
-.skelChart {
+.railCaseItem:hover .railCaseName {
+  color: var(--primary);
+}
+
+.railCaseWait {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .railMenu {
+    transition: none;
+  }
+
+  .railCaseName {
+    transition: none;
+  }
+}
+
+/* Chart grids — same 3-up breakdown row and 2-up trends row as nurse. */
+.threeCol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 1023px) {
+  .threeCol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .threeCol {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 1023px) {
+  .twoCol {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cellActions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  justify-self: end;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+
+/* Breakdown donut charts */
+.chartBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  position: relative;
+  /* Chart figures sit above neighbouring board content so Recharts tooltips
+     never get painted under the next card. */
+  z-index: 10;
+}
+
+.chartRow {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.chartWrap {
+  position: relative;
+  width: 8.5rem;
+  min-width: 8.5rem;
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.centerValue {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--guidance-number);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.centerLabel {
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+}
+
+.legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.swatch {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legendLabel {
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legendValue {
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Legend value — the shared Pill supplies the rectangle; these two spans
+   only colour the count and the share in the chart's amber accent. */
+.legendPillCount,
+.legendPillPercent {
+  font-variant-numeric: tabular-nums;
+  color: var(--guidance-number);
+}
+
+.legendPillPercent {
+  opacity: 0.7;
+}
+
+/* Chart tooltip — popover surface tokens keep it readable in light (white
+   card) and dark (near-black card) mode, with amber figures matching the
+   legend pills. */
+.chartTooltip {
+  min-width: 9.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  padding: 0.5rem 0.625rem;
+  box-shadow:
+    0 16px 40px -20px rgb(0 0 0 / 0.45),
+    0 4px 12px -6px rgb(0 0 0 / 0.3);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  position: relative;
+  z-index: 50;
+}
+
+.chartTooltipLabel {
+  margin: 0 0 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.chartTooltipList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.chartTooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+
+.chartTooltipDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.chartTooltipName {
+  color: var(--popover-foreground);
+}
+
+.chartTooltipValue {
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--guidance-number);
+}
+
+/* Breakdown bar charts — theme-aware SVG text (recharts sets its own
+   attributes, so color comes from the stylesheet, not props). */
+.barChart {
   width: 100%;
-  height: 148px;
-  border-radius: var(--radius-md);
 }
 
-.skelChartTall {
+.barChart text {
+  fill: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+/* Section line chart — same theme-aware text, raised above neighbouring
+   boards so the tooltip is never clipped. */
+.lineChart {
   width: 100%;
-  height: 220px;
-  border-radius: var(--radius-md);
+  position: relative;
+  z-index: 10;
+}
+
+.lineChart text {
+  fill: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+/* Bar value labels — amber figures in both themes. */
+.barChart .barNumber {
+  fill: var(--guidance-number);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Board header count + any inline figure — amber, theme-aware. */
+.amberNumber {
+  color: var(--guidance-number);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Uniform "What it means" footer: bottom-left of every chart board. */
+.interpretation {
+  margin: 0;
+  margin-top: auto;
+  padding-top: 0.625rem;
+  padding-left: 0.625rem;
+  border-left: 2px solid
+    color-mix(in oklch, var(--guidance-number) 55%, transparent);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+  position: relative;
+  z-index: 5;
+}
+
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.legendTotal {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Loading + error */
+.error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--destructive);
+}
+
+.pageError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 3rem auto;
+  padding: 0 1rem;
+  max-width: 26rem;
+  text-align: center;
+}
+
+.pageErrorTitle {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.pageErrorHint {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+.spin {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  animation: overview-spin 1s linear infinite;
+}
+
+@keyframes overview-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Icon-rail skeleton — matches the 2.25rem gutter buttons; the rail turns
+   into a horizontal icon row on mobile, same as the real rail. */
+.skelRail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.skelRailIcon {
+  height: 2.25rem;
+  width: 2.25rem;
+  border-radius: var(--radius-xl);
+}
+
+@media (max-width: 1024px) {
+  .skelRail {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+.skelChartRow {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
 }
 
 .skelLine {
+  height: 12.5rem;
   width: 100%;
+  border-radius: 8px;
+}
+
+.skelDonut {
+  width: 8.5rem;
+  height: 8.25rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.skelLegend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.skelLegendRow {
+  height: 1.125rem;
+  width: 100%;
+}
+
+.skelBars {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.skelBarRow {
+  flex: 1;
+  min-width: 0;
   height: 0.75rem;
-  border-radius: 0.25rem;
+  border-radius: 4px;
 }
 
-.skelLineShort {
-  width: 65%;
+.skelBarRowWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skelBarYLabel {
   height: 0.75rem;
-  border-radius: 0.25rem;
-}
-
-.skelChartGrid3 {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-  align-items: stretch;
-}
-
-@media (max-width: 1100px) {
-  .skelChartGrid3 {
-    grid-template-columns: 1fr;
-  }
-}
-
-.skelChartGrid2 {
-  display: grid;
-  grid-template-columns: 5fr 7fr;
-  gap: 0.75rem;
-  align-items: stretch;
-}
-
-@media (max-width: 1100px) {
-  .skelChartGrid2 {
-    grid-template-columns: 1fr;
-  }
-}
-
-.skelTableRow {
-  width: 100%;
-  height: 2.25rem;
-  border-radius: var(--radius-md);
-}
-
-.skelQueueGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-  align-items: stretch;
-}
-
-@media (max-width: 1100px) {
-  .skelQueueGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.skelQueueItem {
-  width: 100%;
-  height: 4.5rem;
-  border-radius: var(--radius-md);
-}
-
-.skelBtn {
-  width: 6rem;
-  height: 1.75rem;
-  border-radius: var(--radius-md);
+  width: 6.5rem;
+  flex-shrink: 0;
 }

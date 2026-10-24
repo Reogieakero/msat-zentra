@@ -42,6 +42,20 @@ function referredTimeMs(value: string | null | undefined): number {
   return d ? d.getTime() : Number.POSITIVE_INFINITY;
 }
 
+/** Newest-first ordering for the "Latest referred students" feed — rows
+    without a parseable referred time sink to the bottom instead of jumping
+    to the top like the Infinity sentinel would. */
+function newestReferredFirst(a: NurseQueueRow, b: NurseQueueRow): number {
+  const at = referredTimeMs(a.referredAt);
+  const bt = referredTimeMs(b.referredAt);
+  const aKnown = Number.isFinite(at);
+  const bKnown = Number.isFinite(bt);
+  if (aKnown && bKnown) return bt - at;
+  if (aKnown) return -1;
+  if (bKnown) return 1;
+  return 0;
+}
+
 function titleCase(raw: string): string {
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
@@ -85,6 +99,61 @@ export function chartBucketFor(
   return { key: "needs_review", label: "Needs review" };
 }
 
+/** Optimistic cache surgery for the board's "Endorse & forward": drops the
+    row from Needs review, flips it to Endorsed in the Latest referrals feed,
+    and moves its KPI/breakdown counts so the overview page never needs a
+    refetch after the action. */
+export function applyAdmEndorsedCase(old: unknown, row: NurseQueueRow): unknown {
+  if (!old || typeof old !== "object") return old;
+  const data = old as NurseOverviewData;
+  if (!Array.isArray(data.needsReview) || !data.kpis) return old;
+  if (!data.needsReview.some((r) => r.id === row.id)) return old;
+  const fromBucket = chartBucketFor(row.type, row.status, row.sessions);
+  const toBucket = chartBucketFor("ADM", "in_progress", []);
+  return {
+    ...data,
+    needsReview: data.needsReview.filter((r) => r.id !== row.id),
+    ...(Array.isArray(data.latestReferrals)
+      ? {
+          latestReferrals: data.latestReferrals.map((r) =>
+            r.id === row.id ? { ...r, status: "in_progress" } : r,
+          ),
+        }
+      : {}),
+    kpis: {
+      ...data.kpis,
+      needsReview: Math.max(0, data.kpis.needsReview - 1),
+      endorsedToAdm: data.kpis.endorsedToAdm + 1,
+    },
+    statusBreakdown: shiftBreakdown(data.statusBreakdown, fromBucket.key, toBucket),
+    admStatusBreakdown: shiftBreakdown(data.admStatusBreakdown, fromBucket.key, toBucket),
+  };
+}
+
+function shiftBreakdown(
+  rows: NurseBreakdownRow[],
+  fromKey: string,
+  to: { key: string; label: string },
+): NurseBreakdownRow[] {
+  if (!Array.isArray(rows)) return rows;
+  const from = rows.find((r) => r.key === fromKey);
+  if (!from || from.count < 1) return rows;
+  const next: NurseBreakdownRow[] = [];
+  for (const r of rows) {
+    if (r.key === fromKey) {
+      if (r.count > 1) next.push({ ...r, count: r.count - 1 });
+    } else if (r.key === to.key) {
+      next.push({ ...r, count: r.count + 1 });
+    } else {
+      next.push(r);
+    }
+  }
+  if (!next.some((r) => r.key === to.key)) {
+    next.push({ key: to.key, label: to.label, count: 1 });
+  }
+  return next.sort((a, b) => b.count - a.count);
+}
+
 export function isNurseScope(r: RawReferral): boolean {
   if (r.referredToRole === "nurse") return true;
   if (r.status === "escalated" && r.escalatedTo === "nurse") return true;
@@ -92,13 +161,20 @@ export function isNurseScope(r: RawReferral): boolean {
   return false;
 }
 
-function identityOf(r: RawReferral): { student: string; lrn: string; section: string; grade: string } {
+function identityOf(r: RawReferral): {
+  student: string;
+  lrn: string;
+  section: string;
+  grade: string;
+  mascot: string | null;
+} {
   if (r.roster) {
     return {
       student: r.roster.fullName?.trim() || (r.roster.lrn ? `Student ${r.roster.lrn}` : "Unknown student"),
       lrn: r.roster.lrn ?? "—",
       section: formatSection(r.roster.section?.name) || "—",
       grade: formatGrade(r.roster.gradeLevel) || "—",
+      mascot: r.roster.mascot ?? null,
     };
   }
   if (r.student) {
@@ -107,9 +183,12 @@ function identityOf(r: RawReferral): { student: string; lrn: string; section: st
       lrn: r.student.lrn,
       section: formatSection(r.student.section?.name) || "—",
       grade: formatGrade(r.student.gradeLevel) || "—",
+      // Desk rule: mascots come from roster records only — the account's
+      // stored mascot is never shown here.
+      mascot: null,
     };
   }
-  return { student: "Unknown student", lrn: "—", section: "—", grade: "—" };
+  return { student: "Unknown student", lrn: "—", section: "—", grade: "—", mascot: null };
 }
 
 export function toSessionItem(s: RawSession): NurseSessionItem {
@@ -180,6 +259,9 @@ export function toQueueRow(r: RawReferral): NurseQueueRow {
   };
 }
 
+/** The main board shows only the latest five students referred to the desk. */
+export const LATEST_REFERRALS_LIMIT = 5;
+
 export function buildNurseOverview(referrals: RawReferral[]): NurseOverviewData {
   const scoped = referrals.filter(isNurseScope);
 
@@ -202,6 +284,14 @@ export function buildNurseOverview(referrals: RawReferral[]): NurseOverviewData 
     .filter((r) => r.status === "pending" || (r.status === "escalated" && r.escalatedTo === "nurse"))
     .map(toQueueRow)
     .sort((a, b) => referredTimeMs(a.referredAt) - referredTimeMs(b.referredAt));
+
+  // The main board's feed: the latest five nurse-scoped cases, newest
+  // referral first. Needs-review (oldest first) stays as-is for the KPI
+  // rail preview, the waiting-time chart, and the optimistic endorse patch.
+  const latestReferrals = scoped
+    .map(toQueueRow)
+    .sort(newestReferredFirst)
+    .slice(0, LATEST_REFERRALS_LIMIT);
 
   const actionStatusBreakdown = (referrals: RawReferral[]): NurseBreakdownRow[] => {
     const counts = new Map<string, { label: string; count: number }>();
@@ -243,5 +333,5 @@ export function buildNurseOverview(referrals: RawReferral[]): NurseOverviewData 
     else dailyTrend[idx].clinic += 1;
   }
 
-  return { kpis, needsReview, statusBreakdown, clinicStatusBreakdown, admStatusBreakdown, dailyTrend };
+  return { kpis, needsReview, latestReferrals, statusBreakdown, clinicStatusBreakdown, admStatusBreakdown, dailyTrend };
 }

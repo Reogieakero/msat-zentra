@@ -4,6 +4,8 @@ import { MASCOT_CHARACTERS } from "../../services/mascot.js";
 
 export const masterTeacherSchema = z.object({ isMasterTeacher: z.boolean() });
 
+export const dataSharingSchema = z.object({ shareStudentData: z.boolean() });
+
 export const HEX_COLOR = z
   .string()
   .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a #RRGGBB hex value");

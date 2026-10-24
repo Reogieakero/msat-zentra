@@ -2,31 +2,11 @@
 
 import { useState } from "react";
 import { getAccessToken } from "@/lib/api/client";
+import { decodeTokenIdentity, type TokenIdentity } from "@/lib/auth/roles";
 
-export type Session = {
-  sub: string;
-  role: string;
-  gradeBand: "7-10" | "11-12" | null;
-} | null;
-
-function decode(token: string): Session {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return {
-      sub: payload.sub,
-      role: payload.role,
-      gradeBand: payload.gradeBand ?? null,
-    };
-  } catch {
-    return null;
-  }
-}
+export type Session = TokenIdentity | null;
 
 export function useSession(): Session {
-  const [session] = useState<Session>(() => {
-    const token = getAccessToken();
-    return token ? decode(token) : null;
-  });
-
+  const [session] = useState<Session>(() => decodeTokenIdentity(getAccessToken()));
   return session;
 }

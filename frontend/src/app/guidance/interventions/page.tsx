@@ -6,8 +6,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { HeartHandshake, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
-import { GuidancePageHeader } from "../components/GuidancePageHeader";
 import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { fetchAllGuidanceInterventions, fetchGuidanceInterventions } from "@/services/guidance/interventions.service";
 import type {
@@ -20,10 +18,10 @@ import {
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/guidance-interventions.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
-const GUIDANCE_INTERVENTIONS_PAGE_SIZE = PAGE_SIZE;
+// The board pages a 4×4 card grid; backend allow-lists 16 for this queue.
+const GUIDANCE_INTERVENTIONS_PAGE_SIZE = 16;
 
 function GuidanceInterventionsView({ highlightId }: { highlightId: string | null }) {
   const { activeTerm, termReady } = useTerm();
@@ -40,15 +38,16 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
   const debounced = useDebouncedValue(query.trim(), 300);
 
   // Sync debounced search to the URL and reset to page 1 when it changes.
-  const firstSearchSync = React.useRef(true);
+  // Only react to actual search changes — `setPage` is re-created whenever the
+  // URL changes, so depending on its identity would fire this effect on every
+  // pagination and bounce the page back to 1.
+  const lastSyncedSearch = React.useRef(debounced);
   React.useEffect(() => {
-    if (firstSearchSync.current) {
-      firstSearchSync.current = false;
-      return;
-    }
+    if (lastSyncedSearch.current === debounced) return;
+    lastSyncedSearch.current = debounced;
     pager.setFilters({ q: debounced || undefined });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- pager identity changes with URL; debounced + setPage are the real inputs
-  }, [debounced, setPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- guard above only lets real search changes through
+  }, [debounced]);
 
   const setQuery = React.useCallback((value: string) => {
     setQueryInput(value);
@@ -134,7 +133,6 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
     <section className={styles.page} aria-busy={isPending || undefined}>
       {isPending ? (
         <>
-          <ZentraPageHeaderSkeleton />
           <div aria-busy="true" className={styles.feed}>
           <div className={styles.skelToolbar}>
             <div className={styles.skelHeadText}>
@@ -206,30 +204,24 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
           centered
         />
       ) : (
-        <>
-          <GuidancePageHeader
-            title="Interventions"
-            description="High-risk students on the guidance desk — start, schedule, or close follow-through."
-          />
-          <GuidanceInterventionsTable
-            summary={data.summary}
-            students={Array.isArray(data.students) ? data.students : []}
-            page={safePage}
-            pageSize={data.pageSize}
-            total={data.total}
-            totalPages={totalPages}
-            unfilteredTotal={data.unfilteredTotal}
-            onPageChange={handlePageChange}
-            query={query}
-            onQueryChange={handleQueryChange}
-            level={takeover || !landing ? level : "All"}
-            onLevelChange={handleLevelChange}
-            onRetry={() => refetch()}
-            isRetrying={isRefetching}
-            isNavigating={isPlaceholderData}
-            highlightId={highlightId}
-          />
-        </>
+        <GuidanceInterventionsTable
+          summary={data.summary}
+          students={Array.isArray(data.students) ? data.students : []}
+          page={safePage}
+          pageSize={data.pageSize}
+          total={data.total}
+          totalPages={totalPages}
+          unfilteredTotal={data.unfilteredTotal}
+          onPageChange={handlePageChange}
+          query={query}
+          onQueryChange={handleQueryChange}
+          level={takeover || !landing ? level : "All"}
+          onLevelChange={handleLevelChange}
+          onRetry={() => refetch()}
+          isRetrying={isRefetching}
+          isNavigating={isPlaceholderData}
+          highlightId={highlightId}
+        />
       )}
     </section>
   );
@@ -237,7 +229,7 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
 
 export default function GuidanceInterventionsPage() {
   return (
-    <React.Suspense fallback={<ZentraPageHeaderSkeleton />}>
+    <React.Suspense fallback={<div className={styles.page} aria-busy="true" />}>
       <GuidanceInterventionsPageInner />
     </React.Suspense>
   );

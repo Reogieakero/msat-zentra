@@ -7,7 +7,7 @@ import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { RaiseFlagChat } from "./components/RaiseFlagChat";
 import { FlagHistory } from "./components/FlagHistory";
 import { TeacherEmptyCard } from "../components/TeacherEmptyCard";
-import { ZentraPageHeaderSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { KanbanBoardSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { ShieldAlert } from "lucide-react";
 import styles from "./components/grade-flags.module.css";
 
@@ -18,8 +18,11 @@ export default function TeacherGradeFlagsPage() {
   if (overview.isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading grade flags">
-        <ZentraPageHeaderSkeleton />
-        <ZentraTableSkeleton rows={6} columns={4} />
+        <div className={styles.body}>
+          <div className="w-full max-w-3xl">
+            <KanbanBoardSkeleton rows={5} />
+          </div>
+        </div>
       </section>
     );
   }

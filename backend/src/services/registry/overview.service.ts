@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { gradeLabel, schoolYearClause } from "../../modules/registry/registry.repository.js";
+import { normalizeApprovedLrnAt } from "./access.service.js";
 import type { RegistryContext } from "./registry.types.js";
 
 export interface OverviewTakes {
@@ -7,6 +8,77 @@ export interface OverviewTakes {
   missingTake?: number;
   pendingTake?: number;
   bareTake?: number;
+}
+
+/* ---- SF10 access-request daily activity ---------------------------------- */
+
+/** Days of request activity returned — backs the 7/30/90-day chart filter. */
+const REQUEST_WINDOW_DAYS = 90;
+
+export interface Sf10RequestDayRow {
+  date: string;
+  /** Requests submitted that day. */
+  pending: number;
+  /** Students granted that day, bucketed by their approve date. */
+  approved: number;
+  /** Students reported missing that day, bucketed by their report date. */
+  reported: number;
+  /** Requests denied that day. */
+  denied: number;
+}
+
+/** Local-date key ("YYYY-MM-DD") used to bucket the daily series. */
+function dayKey(d: Date): string {
+  const m = `${d.getMonth() + 1}`.padStart(2, "0");
+  const day = `${d.getDate()}`.padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/**
+ * Buckets request activity into its day. "Pending" and "denied" count the
+ * requests themselves (submitted / denied that day); "approved" and
+ * "reported" count the per-student decisions by their own timestamps —
+ * every LRN grant/report carries its date in approvedLrnAt/reportedLrnAt,
+ * so students land on the day the desk acted, not the day the request
+ * arrived.
+ */
+function buildRequestDaily(
+  rows: {
+    requestedAt: Date;
+    decidedAt: Date | null;
+    status: string;
+    approvedLrnAt: unknown;
+    reportedLrnAt: unknown;
+  }[],
+  since: Date
+): Sf10RequestDayRow[] {
+  const byDay = new Map<string, Sf10RequestDayRow>();
+  // Pre-seed every day so the chart keeps a continuous axis on quiet days.
+  for (let i = 0; i < REQUEST_WINDOW_DAYS; i++) {
+    const d = new Date(since);
+    d.setDate(since.getDate() + i);
+    const key = dayKey(d);
+    byDay.set(key, { date: key, pending: 0, approved: 0, reported: 0, denied: 0 });
+  }
+  const bump = (
+    ts: Date | string | null,
+    field: "pending" | "approved" | "reported" | "denied"
+  ) => {
+    if (!ts) return;
+    const day = ts instanceof Date ? ts : new Date(ts);
+    if (Number.isNaN(day.getTime())) return;
+    const row = byDay.get(dayKey(day));
+    if (row) row[field]++;
+  };
+  for (const r of rows) {
+    bump(r.requestedAt, "pending");
+    if (r.status === "denied") bump(r.decidedAt, "denied");
+    for (const at of Object.values(normalizeApprovedLrnAt(r.approvedLrnAt)))
+      bump(at, "approved");
+    for (const at of Object.values(normalizeApprovedLrnAt(r.reportedLrnAt)))
+      bump(at, "reported");
+  }
+  return [...byDay.values()];
 }
 
 export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, schoolYearId: string | null) {
@@ -50,7 +122,12 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
   const awaitingRows = readyRows;
   const reportCards = viewableFinalRows.length;
 
-  const [sf10ByStatus, sectionsGrouped, subjectsGrouped] = await Promise.all([
+  const requestSince = new Date();
+  requestSince.setHours(0, 0, 0, 0);
+  requestSince.setDate(requestSince.getDate() - (REQUEST_WINDOW_DAYS - 1));
+
+  const [sf10ByStatus, sectionsGrouped, subjectsGrouped, sf10Requests, rosterGradeCounts] =
+    await Promise.all([
     prisma.sf10Record.groupBy({
       by: ["status"],
       where: { student: { gradeLevel: { in: band } } },
@@ -66,6 +143,36 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
       where: { gradeLevel: { in: band } },
       _count: { _all: true },
     }),
+    // Adviser SF10 access-request activity in the trailing window — the daily
+    // chart buckets each event (submitted / granted / reported / decided) by
+    // day. Grants and reports live inside JSON columns (LRN → ISO), so the
+    // row is selected here and bucketed in JS; the pre-seeded window drops
+    // any out-of-window dates.
+    prisma.adviserSf10AccessRequest.findMany({
+      where: {
+        gradeLevel: { in: band },
+        OR: [
+          { requestedAt: { gte: requestSince } },
+          { checkedAt: { gte: requestSince } },
+          { decidedAt: { gte: requestSince } },
+        ],
+      },
+      select: {
+        requestedAt: true,
+        decidedAt: true,
+        status: true,
+        approvedLrnAt: true,
+        reportedLrnAt: true,
+      },
+    }),
+    // Per-grade roster counts (class-list learners) for the population chart.
+    Promise.all(
+      band.map((g) =>
+        prisma.studentRoster.count({
+          where: { gradeLevel: g, ...schoolYearClause(schoolYearId) },
+        })
+      )
+    ),
   ]);
 
   const sf10Total = sf10ByStatus.reduce((sum, r) => sum + r._count._all, 0);
@@ -80,6 +187,9 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
     orderBy: { validatedAt: "desc" },
     ...(takes.attachTake !== undefined ? { take: takes.attachTake } : {}),
     select: {
+      // The report overlay on the desk overview opens by record id, so the
+      // feed rows must carry it alongside the display fields.
+      id: true,
       validatedAt: true,
       student: {
         select: { lrn: true, gradeLevel: true, user: { select: { fullName: true } } },
@@ -87,6 +197,7 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
     },
   });
   const latestAttachments = latestAttachRows.map((r) => ({
+    id: r.id,
     student: r.student.user.fullName,
     lrn: r.student.lrn,
     grade: gradeLabel(r.student.gradeLevel),
@@ -221,6 +332,11 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
     subjectsByGrade: band.map((g) => ({
       grade: gradeLabel(g),
       count: subjectsGrouped.find((r) => r.gradeLevel === g)?._count._all ?? 0,
+    })),
+    sf10RequestsDaily: buildRequestDaily(sf10Requests, requestSince),
+    rosterByGrade: band.map((g, i) => ({
+      grade: gradeLabel(g),
+      count: rosterGradeCounts[i] ?? 0,
     })),
   };
 }

@@ -61,6 +61,7 @@ export interface AdviseeGrade {
   transmutedGrade: number | null;
   remarks: string | null;
   lockStatus: string;
+  hiddenByTeacher?: boolean;
 }
 
 export interface AdviseeReferral {
@@ -96,6 +97,7 @@ export interface AdviseeDetail {
   section: string;
   gradeLevel: string;
   grades: AdviseeGrade[];
+  hiddenGradesCount?: number;
   attendance: {
     rate: number;
     present: number;
@@ -103,6 +105,7 @@ export interface AdviseeDetail {
     late: number;
     excused: number;
     total: number;
+    restricted?: boolean;
   };
   anecdotal: {
     count: number;

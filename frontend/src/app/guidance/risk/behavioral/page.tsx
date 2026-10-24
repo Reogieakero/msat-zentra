@@ -6,14 +6,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FileText, Loader2, SearchX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { GuidancePageHeader } from "../../components/GuidancePageHeader";
@@ -108,82 +101,71 @@ function GuidanceBehavioralPageInner() {
       <section className={styles.page} aria-busy="true" aria-label="Loading behavioral records">
         <ZentraPageHeaderSkeleton withActions actionCount={1} />
 
-        <Card className={styles.card} aria-hidden="true">
-          <CardHeader>
-            <CardTitle className={styles.sectionTitle}>
-              <Skeleton style={{ width: "14rem", height: "1rem" }} />
-            </CardTitle>
-            <CardDescription className={styles.sectionDesc}>
-              <Skeleton style={{ width: "22rem", maxWidth: "100%", height: "0.8rem" }} />
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className={donutStyles.chartRow}>
-
-              <Skeleton style={{ width: "10.5rem", height: "10.5rem", borderRadius: "50%", flexShrink: 0 }} />
-              <div style={{ flex: "1 1 12rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} style={{ width: `${88 - i * 9}%`, height: "0.9rem" }} />
-                ))}
-              </div>
-            </div>
-            <Skeleton style={{ width: "100%", height: "3rem", marginTop: "0.875rem" }} />
-          </CardContent>
-        </Card>
-
-        <Card className={styles.card} aria-hidden="true">
-          <CardHeader>
-            <CardTitle className={styles.sectionTitle}>
-              <Skeleton style={{ width: "12rem", height: "1rem" }} />
-            </CardTitle>
-            <CardDescription className={styles.sectionDesc}>
-              <Skeleton style={{ width: "18rem", maxWidth: "100%", height: "0.8rem" }} />
-            </CardDescription>
-            <CardAction className={filterStyles.headerAction}>
-              <div className={filterStyles.filters} style={{ marginBottom: 0 }}>
-                <Skeleton style={{ width: "22rem", maxWidth: "100%", height: "2rem" }} />
-                <Skeleton style={{ width: "7rem", height: "2rem" }} />
-              </div>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            <ul className={cardsStyles.grid}>
-              {[0, 1, 2, 3, 4, 5].map((i) => (
-                <li key={i} className={cardsStyles.card}>
-                  <div className={cardsStyles.top}>
-                    <div style={{ flex: 1 }}>
-                      <Skeleton style={{ width: "60%", height: "0.9rem" }} />
-                      <Skeleton style={{ width: "40%", height: "0.75rem", marginTop: "0.375rem" }} />
-                    </div>
-                    <Skeleton style={{ width: "4.5rem", height: "1.25rem" }} />
-                  </div>
-                  <div className={cardsStyles.meta}>
-                    {[0, 1, 2, 3, 4, 5].map((j) => (
-                      <div key={j} className={cardsStyles.metaItem}>
-                        <Skeleton style={{ width: "45%", height: "0.65rem" }} />
-                        <Skeleton style={{ width: "80%", height: "0.8rem", marginTop: "0.375rem" }} />
-                      </div>
-                    ))}
-                  </div>
-                  <div className={cardsStyles.foot}>
-                    <Skeleton style={{ width: "6rem", height: "1.25rem" }} />
-                    <span className={cardsStyles.spacer} />
-                    <Skeleton style={{ width: "5.5rem", height: "1.5rem" }} />
-                  </div>
-                </li>
+        <KanbanBoard
+          title={<Skeleton style={{ width: "14rem", height: "1rem" }} />}
+          description={<Skeleton style={{ width: "22rem", maxWidth: "100%", height: "0.8rem" }} />}
+          className={styles.card}
+          ariaLabel="Loading behavioral summary"
+        >
+          <div className={donutStyles.chartRow}>
+            <Skeleton style={{ width: "10.5rem", height: "10.5rem", borderRadius: "50%", flexShrink: 0 }} />
+            <div style={{ flex: "1 1 12rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} style={{ width: `${88 - i * 9}%`, height: "0.9rem" }} />
               ))}
-            </ul>
-            <div className={styles.actionsRight} style={{ marginTop: "0.75rem" }}>
-              <Skeleton style={{ width: "4rem", height: "1.75rem" }} />
-              <Skeleton style={{ width: "7rem", height: "0.8rem" }} />
-              <Skeleton style={{ width: "4rem", height: "1.75rem" }} />
             </div>
-            <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
-              <Skeleton style={{ width: "9rem", height: "2rem" }} />
-              <Skeleton style={{ width: "8rem", height: "2rem" }} />
+          </div>
+          <Skeleton style={{ width: "100%", height: "3rem", marginTop: "0.875rem" }} />
+        </KanbanBoard>
+
+        <KanbanBoard
+          title={<Skeleton style={{ width: "12rem", height: "1rem" }} />}
+          description={<Skeleton style={{ width: "18rem", maxWidth: "100%", height: "0.8rem" }} />}
+          actions={
+            <div className={filterStyles.filters} style={{ marginBottom: 0 }}>
+              <Skeleton style={{ width: "22rem", maxWidth: "100%", height: "2rem" }} />
+              <Skeleton style={{ width: "7rem", height: "2rem" }} />
             </div>
-          </CardContent>
-        </Card>
+          }
+          className={styles.card}
+          ariaLabel="Loading behavioral feed"
+        >
+          <ul className={cardsStyles.grid}>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <li key={i} className={cardsStyles.card}>
+                <div className={cardsStyles.top}>
+                  <div style={{ flex: 1 }}>
+                    <Skeleton style={{ width: "60%", height: "0.9rem" }} />
+                    <Skeleton style={{ width: "40%", height: "0.75rem", marginTop: "0.375rem" }} />
+                  </div>
+                  <Skeleton style={{ width: "4.5rem", height: "1.25rem" }} />
+                </div>
+                <div className={cardsStyles.meta}>
+                  {[0, 1, 2, 3, 4, 5].map((j) => (
+                    <div key={j} className={cardsStyles.metaItem}>
+                      <Skeleton style={{ width: "45%", height: "0.65rem" }} />
+                      <Skeleton style={{ width: "80%", height: "0.8rem", marginTop: "0.375rem" }} />
+                    </div>
+                  ))}
+                </div>
+                <div className={cardsStyles.foot}>
+                  <Skeleton style={{ width: "6rem", height: "1.25rem" }} />
+                  <span className={cardsStyles.spacer} />
+                  <Skeleton style={{ width: "5.5rem", height: "1.5rem" }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className={styles.actionsRight} style={{ marginTop: "0.75rem" }}>
+            <Skeleton style={{ width: "4rem", height: "1.75rem" }} />
+            <Skeleton style={{ width: "7rem", height: "0.8rem" }} />
+            <Skeleton style={{ width: "4rem", height: "1.75rem" }} />
+          </div>
+          <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
+            <Skeleton style={{ width: "9rem", height: "2rem" }} />
+            <Skeleton style={{ width: "8rem", height: "2rem" }} />
+          </div>
+        </KanbanBoard>
         <Skeleton style={{ width: "100%", height: "2.5rem" }} />
       </section>
     );
@@ -193,29 +175,24 @@ function GuidanceBehavioralPageInner() {
     return (
       <section className={styles.page} aria-label="Behavioral records">
         <GuidancePageHeader title="Behavioral Records" />
-        <Card className={styles.card}>
-          <CardHeader>
-            <CardTitle className={styles.sectionTitle}>
-              We couldn&apos;t load the behavioral feed
-            </CardTitle>
-            <CardDescription className={styles.sectionDesc}>
-              Check your connection and try again.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => refetch()}
-              disabled={isFetching}
-            >
-              {isFetching ? (
-                <Loader2 className="animate-spin" aria-hidden style={{ width: "1rem", height: "1rem" }} />
-              ) : null}
-              {isFetching ? "Retrying…" : "Retry"}
-            </Button>
-          </CardContent>
-        </Card>
+        <KanbanBoard
+          title="We couldn&apos;t load the behavioral feed"
+          icon={<FileText className="size-3.5" aria-hidden="true" />}
+          description="Check your connection and try again."
+          className={styles.card}
+        >
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            {isFetching ? (
+              <Loader2 className="animate-spin" aria-hidden style={{ width: "1rem", height: "1rem" }} />
+            ) : null}
+            {isFetching ? "Retrying…" : "Retry"}
+          </Button>
+        </KanbanBoard>
       </section>
     );
   }
@@ -250,31 +227,21 @@ function GuidanceBehavioralPageInner() {
       ) : (
         <>
 
-      <Card className={styles.card}>
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>
-            Referred filings by category
-          </CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            Only records an adviser routed to guidance — unreferred filings
-            never appear here.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <GuidanceCategoryDonut summary={data.summary} />
-        </CardContent>
-      </Card>
+      <KanbanBoard
+        title="Referred filings by category"
+        icon={<FileText className="size-3.5" aria-hidden="true" />}
+        description="Only records an adviser routed to guidance — unreferred filings never appear here."
+        className={styles.card}
+      >
+        <GuidanceCategoryDonut summary={data.summary} />
+      </KanbanBoard>
 
-      <Card className={styles.card}>
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>
-            Behavioral signal feed
-          </CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            Category + tier rows, no clinical text. Showing {from}–{to} of{" "}
-            {data.total}.
-          </CardDescription>
-          <CardAction className={filterStyles.headerAction}>
+      <KanbanBoard
+        title="Behavioral signal feed"
+        icon={<FileText className="size-3.5" aria-hidden="true" />}
+        description={`Category + tier rows, no clinical text. Showing ${from}–${to} of ${data.total}.`}
+        actions={
+          <div className={filterStyles.headerAction}>
             <GuidanceBehavioralFilters
               query={queryInput}
               onQueryChange={(v) => {
@@ -288,35 +255,35 @@ function GuidanceBehavioralPageInner() {
               }}
               summary={data.summary}
             />
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          {data.records.length === 0 ? (
-            <GuidanceEmptyState
-              icon={SearchX}
-              title="No referred filings match"
-              hint="Try clearing the search or filter to see every referred filing."
-            />
-          ) : (
-            <GuidanceBehavioralCards records={data.records} />
-          )}
-
-          <Pagination
-            currentPage={safePage}
-            totalItems={data.total}
-            onPageChange={setPage}
-          />
-
-          <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
-            <Button size="sm" variant="outline" asChild>
-              <Link href="/guidance/alerts">Open at-risk queue</Link>
-            </Button>
-            <Button size="sm" variant="outline" asChild>
-              <Link href="/guidance/referrals">View referrals</Link>
-            </Button>
           </div>
-        </CardContent>
-      </Card>
+        }
+        className={styles.card}
+      >
+        {data.records.length === 0 ? (
+          <GuidanceEmptyState
+            icon={SearchX}
+            title="No referred filings match"
+            hint="Try clearing the search or filter to see every referred filing."
+          />
+        ) : (
+          <GuidanceBehavioralCards records={data.records} />
+        )}
+
+        <Pagination
+          currentPage={safePage}
+          totalItems={data.total}
+          onPageChange={setPage}
+        />
+
+        <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/guidance/alerts">Open at-risk queue</Link>
+          </Button>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/guidance/referrals">View referrals</Link>
+          </Button>
+        </div>
+      </KanbanBoard>
 
       <p className={styles.note}>
         Guidance sees owning + referred rows; the full write-up opens only

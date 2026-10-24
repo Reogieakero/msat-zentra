@@ -1,5 +1,7 @@
-/* Actions sit on the right in every modal state (CardModal has no
-   footer slot — the X owns closing). */
+/* Comparison content for the LRN verification dock (chrome lives in the
+   shared ProgressDock component) and the overview verification dialog. */
+
+/* Actions sit on the right below the comparison. */
 .actions {
   display: flex;
   justify-content: flex-end;
@@ -7,6 +9,142 @@
   flex-wrap: wrap;
 }
 
+/* ── Submitted vs Record comparison ── */
+.sectionLabel {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.compareCard {
+  margin-top: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background-color: color-mix(in oklch, var(--card), transparent 30%);
+}
+
+.compareHead {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--foreground), transparent 97%);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted-foreground);
+}
+
+.compareCol {
+  min-width: 0;
+  /* Left-aligned to line up with the row content below. */
+  text-align: left;
+}
+
+.compareRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.5625rem 0.875rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+}
+
+.compareRow:last-child {
+  border-bottom: none;
+}
+
+/* Each cell stacks its label, the value (amber rectangle pill in the JSX)
+   and — for the record side — the match verdict pill. */
+.compareCell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3125rem;
+}
+
+.cellLabel {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.cellStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.note {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.valueMuted {
+  color: var(--muted-foreground);
+  font-style: italic;
+  font-size: 0.75rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  border-left: 2px solid var(--muted-foreground);
+  padding-left: 0.5rem;
+}
+
+/* Kept for the compact LrnVerification panel. */
+.ok {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.bad {
+  color: var(--foreground);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Loading states — kept for the compact LrnVerification panel. */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem 0;
+}
+
+.spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  animation: lrnSpin 0.8s linear infinite;
+  color: var(--primary);
+}
+
+@keyframes lrnSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingText {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+/* ── Overview dialog (LrnVerifyDialog) ── */
 .process {
   padding: 0.5rem 0;
 }
@@ -42,41 +180,6 @@
   color: var(--primary);
 }
 
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 2rem 1rem;
-  text-align: center;
-}
-
-.spinner {
-  width: 2rem;
-  height: 2rem;
-  color: var(--primary);
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.loadingText {
-  font-size: 0.875rem;
-  color: var(--muted-foreground);
-}
-
-.hint {
-  margin: 0;
-  padding: 0.75rem 1rem;
-  font-size: 0.8125rem;
-  border-radius: var(--radius-md);
-  border: 1px solid;
-  background-color: color-mix(in oklch, var(--foreground), transparent 97%);
-}
-
 .verdict {
   display: flex;
   align-items: center;
@@ -106,70 +209,12 @@
   border: 1px solid var(--foreground);
 }
 
-.sectionLabel {
-  margin: 0 0 0.5rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.compareCard {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.compareHead {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted-foreground);
-  background-color: color-mix(in oklch, var(--foreground), transparent 97%);
-  border-bottom: 1px solid var(--border);
-}
-
-.compareCol {
-  /* Left-aligned to line up with the row content below. */
-  text-align: left;
-}
-
-.compareRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
-}
-
-.compareRow:last-child {
-  border-bottom: none;
-}
-
 .value {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.8125rem;
   color: var(--foreground);
-}
-
-.valueMuted {
-  color: var(--muted-foreground);
-}
-
-.ok {
-  color: var(--foreground);
-  font-weight: 600;
-}
-
-.bad {
-  color: var(--foreground);
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 @media (max-width: 480px) {

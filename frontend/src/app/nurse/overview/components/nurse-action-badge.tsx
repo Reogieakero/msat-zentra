@@ -2,24 +2,30 @@
 import { Badge } from "@/components/ui/badge";
 import { deriveActionStatus } from "@/services/nurse/labels";
 import type { NurseQueueRow } from "@/services/nurse/nurse.types";
-export function NurseActionBadge({ row }: { row: NurseQueueRow }) {
+export function NurseActionBadge({
+  row,
+  className,
+}: {
+  row: NurseQueueRow;
+  className?: string;
+}) {
   const action = deriveActionStatus(row.type, row.status, row.sessions);
   switch (action.key) {
     case "endorsed":
     case "done":
     case "done_session":
-      return <Badge variant="green">{action.label}</Badge>;
+      return <Badge variant="green" className={className}>{action.label}</Badge>;
     case "rejected":
-      return <Badge variant="red">{action.label}</Badge>;
+      return <Badge variant="red" className={className}>{action.label}</Badge>;
     case "needs_review":
-      return <Badge variant="amber">{action.label}</Badge>;
+      return <Badge variant="amber" className={className}>{action.label}</Badge>;
     case "escalated":
-      return <Badge variant="red">{action.label}</Badge>;
+      return <Badge variant="red" className={className}>{action.label}</Badge>;
     case "booked":
     case "followup":
-      return <Badge variant="blue">{action.label}</Badge>;
+      return <Badge variant="blue" className={className}>{action.label}</Badge>;
     default:
-      return <Badge variant="outline">{action.label}</Badge>;
+      return <Badge variant="outline" className={className}>{action.label}</Badge>;
   }
 }
 export function waitingElapsed(referredAt: string, nowMs: number): string {

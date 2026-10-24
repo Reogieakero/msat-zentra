@@ -8,7 +8,7 @@ import type {
 import { formatDate as sharedFormatDate, timeAgo as sharedTimeAgo, formatTime as sharedFormatTime, formatDateTime as sharedFormatDateTime, formatActionTime as sharedFormatActionTime, toDateInputValue as sharedToDateInputValue, toTimeInputValue as sharedToTimeInputValue, combineDateTime as sharedCombineDateTime, formatCountdown as sharedFormatCountdown } from "@/lib/labels/datetime";
 import { formatStatus as sharedFormatStatus, initials as sharedInitials } from "@/lib/labels/text";
 import { anecdotalCategoryColor as sharedAnecdotalCategoryColor, ANECDOTAL_CATEGORY_COLORS as sharedAnecdotalColors } from "@/lib/labels/anecdotal";
-import { isEndorsed as sharedIsEndorsed, isWithdrawn as sharedIsWithdrawn, hasScheduledSession as sharedHasScheduledSession, activeSessionOf as sharedActiveSessionOf, statusLabel as sharedStatusLabel, statusHelp as sharedStatusHelp, rowStatusLabel as sharedRowStatusLabel, rowStatusHelp as sharedRowStatusHelp, statusVariant as sharedStatusVariant, watermarkLabel as sharedWatermarkLabel, watermarkColor as sharedWatermarkColor } from "@/lib/labels/referral-status";
+import { isEndorsed as sharedIsEndorsed, isWithdrawn as sharedIsWithdrawn, hasScheduledSession as sharedHasScheduledSession, activeSessionOf as sharedActiveSessionOf, latestSessionOf as sharedLatestSessionOf, statusLabel as sharedStatusLabel, statusHelp as sharedStatusHelp, rowStatusLabel as sharedRowStatusLabel, rowStatusHelp as sharedRowStatusHelp, statusVariant as sharedStatusVariant, watermarkLabel as sharedWatermarkLabel, watermarkColor as sharedWatermarkColor } from "@/lib/labels/referral-status";
 import { latestActionOf as sharedLatestActionOf } from "@/lib/labels/referral-activity";
 import { roleLabel as sharedRoleLabel } from "@/lib/labels/roles";
 import { sessionTypeLabel as sharedSessionTypeLabel, SESSION_KIND_OPTIONS as sharedSessionKindOptions } from "@/lib/labels/sessions";
@@ -134,6 +134,9 @@ export function statusVariant(
 }
 export function activeSessionOf(sessions: CounselingSessionItem[]): CounselingSessionItem | null {
   return sharedActiveSessionOf(sessions);
+}
+export function latestSessionOf(sessions: CounselingSessionItem[]): CounselingSessionItem | null {
+  return sharedLatestSessionOf(sessions);
 }
 export const hasScheduledSession = sharedHasScheduledSession;
 export const isWithdrawn = sharedIsWithdrawn;

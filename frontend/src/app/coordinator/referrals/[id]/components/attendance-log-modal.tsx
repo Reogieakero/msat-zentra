@@ -1,8 +1,7 @@
 "use client";
-import { Badge } from "@/components/ui/badge";
+import { CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanOverlay, KanbanPill } from "@/components/ui/kanban-overlay";
 import {
   attendeeLabel,
   formatManilaDate,
@@ -41,12 +40,42 @@ export function AttendanceLogModal({
 }) {
   const m = meeting;
   return (
-    <CardModal
+    <KanbanOverlay
       open={open}
       onClose={onClose}
       title="Attendance log"
+      icon={
+        <span className="text-primary" aria-hidden>
+          <CalendarCheck size={14} />
+        </span>
+      }
       description="Full record of this parent meeting."
-      size="md"
+      width="lg"
+      footer={
+        needsOutcome ? (
+          <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+            <Button
+              type="button"
+              size="sm"
+              className="h-6 px-3 text-xs"
+              disabled={pending}
+              onClick={onYes}
+            >
+              Yes
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 px-3 text-xs"
+              disabled={pending}
+              onClick={onNo}
+            >
+              No
+            </Button>
+          </div>
+        ) : undefined
+      }
     >
       <div
         className={styles.modalBody}
@@ -75,15 +104,15 @@ export function AttendanceLogModal({
             <dt className={styles.metaLabel}>Status</dt>
             <dd style={{ margin: 0 }}>
               {m.attended ? (
-                <Badge variant="success">Attended</Badge>
+                <KanbanPill tone="success">Attended</KanbanPill>
               ) : timing.state === "live" ? (
-                <Badge variant="success">Live now</Badge>
+                <KanbanPill tone="success">Live now</KanbanPill>
               ) : timing.state === "overdue" ? (
-                <Badge variant="destructive">Overdue</Badge>
+                <KanbanPill tone="danger">Overdue</KanbanPill>
               ) : timing.state === "upcoming" ? (
-                <Badge variant="outline">Upcoming</Badge>
+                <KanbanPill tone="accent">Upcoming</KanbanPill>
               ) : (
-                <Badge variant="outline">Booked</Badge>
+                <KanbanPill>Booked</KanbanPill>
               )}
             </dd>
           </div>
@@ -116,7 +145,7 @@ export function AttendanceLogModal({
             >
               {(m.invitees ?? []).map((u) => (
                 <li key={u.id}>
-                  <Badge variant="secondary">{meetingInviteeLabel(u)}</Badge>
+                  <KanbanPill>{meetingInviteeLabel(u)}</KanbanPill>
                 </li>
               ))}
             </ul>
@@ -133,7 +162,7 @@ export function AttendanceLogModal({
             >
               {m.attendees.map((a, idx) => (
                 <li key={`${a.name}-${idx}`}>
-                  <Badge variant="secondary">{attendeeLabel(a)}</Badge>
+                  <KanbanPill>{attendeeLabel(a)}</KanbanPill>
                 </li>
               ))}
             </ul>
@@ -196,30 +225,6 @@ export function AttendanceLogModal({
           </div>
         ) : null}
       </div>
-      {needsOutcome ? (
-        <div className={styles.attendBtns}>
-          <Button disabled={pending} onClick={onYes}>
-            {pending ? (
-              <Loader2
-                className="animate-spin"
-                aria-hidden="true"
-                style={{ width: "0.875rem", height: "0.875rem" }}
-              />
-            ) : null}
-            Yes
-          </Button>
-          <Button variant="outline" disabled={pending} onClick={onNo}>
-            {pending ? (
-              <Loader2
-                className="animate-spin"
-                aria-hidden="true"
-                style={{ width: "0.875rem", height: "0.875rem" }}
-              />
-            ) : null}
-            No
-          </Button>
-        </div>
-      ) : null}
-    </CardModal>
+    </KanbanOverlay>
   );
 }

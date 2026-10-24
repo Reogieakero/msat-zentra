@@ -1,16 +1,9 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanModal } from "@/components/ui/kanban-modal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Loader2, Printer } from "lucide-react";
+import { FileDown, ImageDown, Loader2, Printer } from "lucide-react";
 import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
 import { CONCERN_OPTIONS, type GcForm03Data } from "@/services/guidance/gcform03.types";
 import { buildGcForm03Data } from "@/services/guidance/gcform03.service";
@@ -56,6 +49,20 @@ function savedConcernsRecord(labels: string[]): GcForm03Data["concerns"] {
   if (extras.length > 0) record.othersText = extras.join(", ");
   return record;
 }
+/** File name for the exported PNG/JPG/PDF of the referral form. */
+function exportFilename(
+  studentName: string,
+  extension: "png" | "jpg" | "pdf"
+): string {
+  const safe =
+    (studentName ?? "")
+      .trim()
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "referral";
+  const date = new Date().toISOString().slice(0, 10);
+  return `GCForm-03_${safe}_${date}.${extension}`;
+}
 export function NurseReferralFormViewModal({
   row,
   open,
@@ -65,7 +72,6 @@ export function NurseReferralFormViewModal({
   const [built, setBuilt] = React.useState<GcForm03Data | null>(null);
   const [sheetHtml, setSheetHtml] = React.useState<string | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [downloadError, setDownloadError] = React.useState<string | null>(null);
   const endorseMutation = useNurseMutation({
     mutationFn: () => forwardNurseAdmCase(row.id),
     successTitle: "Case endorsed",
@@ -82,7 +88,10 @@ export function NurseReferralFormViewModal({
   const endorseError = endorseMutation.error
     ? apiErrorMessage(endorseMutation.error, "Could not endorse this case. Try again.")
     : null;
-  const [downloadPending, setDownloadPending] = React.useState(false);
+  const [exporting, setExporting] = React.useState<"png" | "jpg" | "pdf" | null>(null);
+  const [exportError, setExportError] = React.useState<string | null>(null);
+  /* Visible export box (sheet + 16px white gutters) captured for PNG/JPG/PDF. */
+  const exportRef = React.useRef<HTMLDivElement | null>(null);
   const needsEndorse = row.status === "pending" && row.referralReady;
   React.useEffect(() => {
     if (!open) return;
@@ -160,36 +169,195 @@ export function NurseReferralFormViewModal({
     };
   }, [open, row]);
   if (!open) return null;
-  async function download() {
-    if (!built || downloadPending) return;
-    setDownloadPending(true);
-    setDownloadError(null);
+  function endorse() {
+    // Close at once — the shared Dock reports the endorsement until it settles.
+    onClose();
+    endorseMutation.mutate();
+  }
+  // Renders the export box (sheet + 16px gutters) to a 2× PNG/JPG data URL.
+  // Shared by the PNG/JPG downloads and the PDF download so all three stay
+  // intact and identical — same treatment as the anecdotal record.
+  async function renderExportNode(
+    format: "png" | "jpg"
+  ): Promise<{ dataUrl: string; pxW: number; pxH: number }> {
+    const node = exportRef.current;
+    if (!node) throw new Error("Export node not ready");
     try {
-      const { downloadGcForm03 } = await import(
-        "@/app/guidance/adm/components/gcform03-workbook"
-      );
-      await downloadGcForm03(built);
+      await document.fonts?.ready;
     } catch {
-      setDownloadError("The .xlsx could not be prepared. Check your connection and try again.");
+      /* Fonts are best-effort — the sheet falls back to Calibri/Arial. */
+    }
+    const width = node.scrollWidth || node.offsetWidth || 852;
+    const height = node.scrollHeight || node.offsetHeight || undefined;
+    // `style.margin` resets the centering margin (`margin: 0 auto`) that
+    // html-to-image would otherwise copy onto the export clone.
+    const base = {
+      cacheBust: true,
+      pixelRatio: 2,
+      backgroundColor: "#ffffff",
+      width,
+      height,
+      style: { margin: "0" },
+    };
+    let dataUrl: string;
+    if (format === "jpg") {
+      const { toJpeg } = await import("html-to-image");
+      dataUrl = await toJpeg(node, { ...base, quality: 0.95 });
+    } else {
+      const { toPng } = await import("html-to-image");
+      dataUrl = await toPng(node, base);
+    }
+    const size = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => reject(new Error("Could not read export image"));
+      img.src = dataUrl;
+    });
+    return { dataUrl, pxW: size.w, pxH: size.h };
+  }
+  async function handleSaveImage(format: "png" | "jpg") {
+    if (exporting || !built || !sheetHtml) return;
+    setExporting(format);
+    setExportError(null);
+    try {
+      const { dataUrl } = await renderExportNode(format);
+      const anchor = document.createElement("a");
+      anchor.href = dataUrl;
+      anchor.download = exportFilename(row.student, format);
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch {
+      setExportError("The image could not be saved. Try again.");
     } finally {
-      setDownloadPending(false);
+      setExporting(null);
     }
   }
-  function endorse() {
-    endorseMutation.mutate();
+  async function handleSavePdf() {
+    if (exporting || !built || !sheetHtml) return;
+    setExporting("pdf");
+    setExportError(null);
+    try {
+      const { dataUrl, pxW, pxH } = await renderExportNode("png");
+      const { jsPDF } = await import("jspdf");
+      // A4 portrait with the same 16px gutters as the PNG/JPG export
+      // (16px at 96dpi = 4.233mm). The intact sheet image is fitted inside.
+      const GUTTER_MM = (16 * 25.4) / 96;
+      const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const boxW = pageW - GUTTER_MM * 2;
+      const boxH = pageH - GUTTER_MM * 2;
+      const aspect = pxW / pxH;
+      let fitW = boxW;
+      let fitH = fitW / aspect;
+      if (fitH > boxH) {
+        fitH = boxH;
+        fitW = fitH * aspect;
+      }
+      doc.addImage(dataUrl, "PNG", (pageW - fitW) / 2, (pageH - fitH) / 2, fitW, fitH);
+      doc.save(exportFilename(row.student, "pdf"));
+    } catch {
+      setExportError("The PDF could not be saved. Try again.");
+    } finally {
+      setExporting(null);
+    }
   }
   const loading = !sheetHtml && !loadError;
   return (
-    <Dialog open onOpenChange={(next) => { if (!next && !endorsing) { onClose(); } }}>
-      <DialogContent className={styles.dialogScrollHidden} style={{ maxWidth: 900, maxHeight: "90vh", overflowY: "auto" }} aria-busy={endorsing || undefined}>
-        <DialogHeader>
-          <DialogTitle>Referral form — {row.student}</DialogTitle>
-          <DialogDescription>
-            {needsEndorse
-              ? "Saved answers, autofilled on the official template. Confirm below to endorse to the ADM coordinator."
-              : "Confirmed referral, autofilled on the official template. Read-only."}
-          </DialogDescription>
-        </DialogHeader>
+    <KanbanModal
+      open={open}
+      onClose={onClose}
+      title={`Referral form — ${row.student}`}
+      description={
+        needsEndorse
+          ? "Saved answers, autofilled on the official template. Confirm below to endorse to the ADM coordinator."
+          : "Confirmed referral, autofilled on the official template. Read-only."
+      }
+      size="xl"
+      dismissable={!endorsing}
+      footer={
+        <span className="inline-flex flex-wrap items-center justify-end gap-2 print:hidden">
+          {endorseError || exportError ? (
+            <span className="text-sm text-destructive" role="alert">
+              {endorseError ?? exportError}
+            </span>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            onClick={() => window.print()}
+            disabled={!built || !sheetHtml}
+          >
+            <Printer aria-hidden />
+            Print
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            disabled={!built || !sheetHtml || exporting !== null}
+            onClick={() => void handleSaveImage("png")}
+            aria-busy={exporting === "png" || undefined}
+          >
+            {exporting === "png" ? (
+              <Loader2 size={14} className="animate-spin" aria-hidden />
+            ) : (
+              <ImageDown aria-hidden />
+            )}
+            {exporting === "png" ? "Saving…" : "Save PNG"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            disabled={!built || !sheetHtml || exporting !== null}
+            onClick={() => void handleSaveImage("jpg")}
+            aria-busy={exporting === "jpg" || undefined}
+          >
+            {exporting === "jpg" ? (
+              <Loader2 size={14} className="animate-spin" aria-hidden />
+            ) : (
+              <ImageDown aria-hidden />
+            )}
+            {exporting === "jpg" ? "Saving…" : "Save JPG"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            disabled={!built || !sheetHtml || exporting !== null}
+            onClick={() => void handleSavePdf()}
+            aria-busy={exporting === "pdf" || undefined}
+          >
+            {exporting === "pdf" ? (
+              <Loader2 size={14} className="animate-spin" aria-hidden />
+            ) : (
+              <FileDown aria-hidden />
+            )}
+            {exporting === "pdf" ? "Saving…" : "Save PDF"}
+          </Button>
+          {needsEndorse ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              disabled={endorsing}
+              onClick={() => endorse()}
+              aria-busy={endorsing || undefined}
+            >
+              {endorsing ? <Loader2 size={14} className="animate-spin" aria-hidden /> : null}
+              {endorsing ? "Endorsing…" : "Confirm & endorse"}
+            </Button>
+          ) : null}
+        </span>
+      }
+    >
         {loading ? (
           <div
             aria-busy="true"
@@ -197,7 +365,7 @@ export function NurseReferralFormViewModal({
             aria-label="Loading referral form"
           >
             <div
-              className={`gcform03-print-sheet ${sheetStyles.sheetWrap}`}
+              className={`gcform03-print-sheet ${sheetStyles.exportWrap}`}
               aria-hidden="true"
             >
               <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start", marginBottom: "0.5rem" }}>
@@ -239,52 +407,13 @@ export function NurseReferralFormViewModal({
           <p className={styles.errorText} role="alert">{loadError}</p>
         ) : null}
         {sheetHtml ? (
-          <div
-            className={`gcform03-print-sheet ${sheetStyles.sheetWrap}`}
-            dangerouslySetInnerHTML={{ __html: sheetHtml }}
-          />
-        ) : null}
-        {downloadError ? (
-          <p className={styles.errorText} role="alert">{downloadError}</p>
-        ) : null}
-        {endorseError ? (
-          <p className={styles.errorText} role="alert">{endorseError}</p>
-        ) : null}
-        <DialogFooter>
-          <div className="flex gap-2 justify-end pt-4 print:hidden" style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", width: "100%" }}>
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={endorsing}>
-              Close
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => window.print()}
-              disabled={!built || !sheetHtml}
-            >
-              <Printer aria-hidden />
-              Print
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!built || downloadPending}
-              onClick={() => void download()}
-            >
-              <Download aria-hidden />
-              {downloadPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
-              {downloadPending ? "Preparing…" : "Download .xlsx"}
-            </Button>
-            {needsEndorse ? (
-              <Button type="button" size="sm" disabled={endorsing} onClick={() => endorse()} aria-busy={endorsing || undefined}>
-                {endorsing ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                {endorsing ? "Endorsing…" : "Confirm & endorse"}
-              </Button>
-            ) : null}
+          <div ref={exportRef} className={sheetStyles.exportWrap}>
+            <div
+              className="gcform03-print-sheet"
+              dangerouslySetInnerHTML={{ __html: sheetHtml }}
+            />
           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        ) : null}
+    </KanbanModal>
   );
 }

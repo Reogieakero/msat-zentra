@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { type QueryClient } from "@tanstack/react-query";
-import { toast } from "@/components/ui/sonner";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import type {
   CounselingSessionType,
@@ -39,6 +38,39 @@ import {
   useGuidanceInvalidate,
   useGuidanceMutation,
 } from "../../overview/components/use-guidance-mutation";
+
+function referralActionDockTitle(action: string): string {
+  switch (action) {
+    case "escalate":
+      return "Escalating referral";
+    case "reassign":
+      return "Passing case on";
+    case "note":
+      return "Adding case note";
+    case "followUp":
+      return "Setting check-back reminder";
+    case "dismiss":
+      return "Closing referral";
+    case "specialist":
+      return "Sending to a specialist";
+    case "adm":
+      return "Starting ADM process";
+    case "accept":
+      return "Accepting referral";
+    case "schedule":
+      return "Booking session";
+    case "finish":
+      return "Completing session";
+    case "move":
+      return "Moving session";
+    case "cancelSess":
+      return "Cancelling session";
+    case "deleteSess":
+      return "Deleting session";
+    default:
+      return "Updating referral";
+  }
+}
 
 function referralActionMessage(action: string): { title: string; description: string } | null {
   switch (action) {
@@ -365,6 +397,11 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
       "The closing summary was saved and the case left your active list.",
     errorTitle: "Could not close the case",
     errorFallback: "The change did not go through. Check your connection and try again.",
+    dock: {
+      title: "Closing case",
+      description: "Saving the closing summary.",
+      done: "The closing summary was saved and the case left your active list.",
+    },
   });
   const actionMutation = useGuidanceMutation<
     unknown,
@@ -379,12 +416,17 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
     silentSuccess: true,
     successTitle: "Saved",
     errorFallback: "The action did not go through. Check your connection and try again.",
-    onSuccessExtra: (_data, variables) => {
-      const message = referralActionMessage(variables.action);
-      // UI is already updated optimistically — recompute reminders then pop
-      // the sileo toast instantly on server success.
+    dock: {
+      title: (variables) => referralActionDockTitle(variables.action),
+      description: "Updating the referral case.",
+      done: (variables) =>
+        referralActionMessage(variables.action)?.description ??
+        "The referral case was updated.",
+    },
+    onSuccessExtra: () => {
+      // UI is already updated optimistically — recompute booking reminders.
+      // The shared Dock row carries the outcome; no second toast on top.
       refreshBookingReminders(true);
-      if (message) toast.success(message);
     },
     mutationFn: async ({
       id,

@@ -14,6 +14,7 @@ import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
+import { KanbanBoardSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import styles from "./teacher-overview-advisory.module.css";
 
 interface AnecdoteRow {
@@ -58,11 +59,7 @@ export function TeacherOverviewAnecdotes() {
   return (
     <section aria-label="Advisory anecdotal records" className="flex min-w-0 flex-col gap-3">
       {anecdotesQuery.isPending ? (
-        <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading anecdotes">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-12 rounded-md bg-muted" />
-          ))}
-        </div>
+        <KanbanBoardSkeleton rows={3} titleWidth="7rem" />
       ) : anecdotesQuery.isError ? (
         <p role="alert" className="text-sm text-destructive">
           Could not load anecdotal records.

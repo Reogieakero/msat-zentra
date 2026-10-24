@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { markSelfNotified } from "@/lib/realtime/nurseChannel";
 import { apiErrorMessage } from "@/lib/api/errors";
 
@@ -49,22 +50,48 @@ interface NurseMutationOptions<TData, TVariables> {
   silentError?: boolean;
   onSuccessExtra?: (data: TData, variables: TVariables) => void;
 
+  /**
+   * Runs on failure in addition to the shared error handling — e.g. to fail a
+   * Dock task that the caller handed the request to. Mutation-level callbacks
+   * fire even after the component unmounts (unlike `mutate` per-call options),
+   * so an action may close its overlay at submit and still report here.
+   */
+  onErrorExtra?: (err: Error, variables: TVariables) => void;
+
   sourceId?: string | ((variables: TVariables) => string);
 
   scopes?: NurseScope | NurseScope[];
 
   /**
+   * Skip the automatic scope invalidation on success — for actions that
+   * patch every cached copy themselves, so the page never visibly refetches.
+   */
+  skipInvalidate?: boolean;
+
+  /**
    * Optional optimistic patch applied to every cached query under `scopes`
+   * (page keys are prefixed, e.g. ["nurse-overview", "preview", termKey])
    * before the mutation runs. Snapshots are restored on error (rollback)
-   * and the keys are invalidated on success.
+   * and the keys are invalidated on success unless `skipInvalidate`.
    */
   optimisticUpdate?: (old: unknown, variables: TVariables) => unknown;
+
+  /**
+   * Report the request to the shared Dock. On by default so every nurse
+   * action surfaces in the bottom-right; callers that already own a Dock
+   * task (custom kind/labels) opt out with `dock: false`.
+   */
+  dock?: boolean;
+
+  /** Optional completion line shown in the Dock (falls back to the title). */
+  dockMessage?: (variables: TVariables, data: TData) => string | undefined;
 }
 
 export function useNurseMutation<TData = unknown, TVariables = void>(
   options: NurseMutationOptions<TData, TVariables>
 ) {
   const queryClient = useQueryClient();
+  const dock = useDock();
   const invalidate = () => invalidateNurseQueries(queryClient, options.scopes);
   const scopeKeys = (
     !options.scopes
@@ -73,21 +100,39 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
           (s) => NURSE_SCOPE_KEYS[s],
         )
   ).map((k) => [...k]);
-  return useMutation<TData, Error, TVariables, { snapshots: [readonly string[], unknown][] }>({
+  return useMutation<TData, Error, TVariables, { snapshots: [QueryKey, unknown][]; taskId: string | null }>({
     mutationFn: async (variables) => options.mutationFn(variables),
     onMutate: async (variables) => {
-      if (!options.optimisticUpdate) return { snapshots: [] };
-      const snapshots: [readonly string[], unknown][] = [];
-      for (const key of scopeKeys) {
-        await queryClient.cancelQueries({ queryKey: key });
-        snapshots.push([key, queryClient.getQueryData(key)]);
-        queryClient.setQueryData(key, (old: unknown) =>
-          options.optimisticUpdate!(old, variables),
-        );
+      const snapshots: [QueryKey, unknown][] = [];
+      if (options.optimisticUpdate) {
+        for (const key of scopeKeys) {
+          await queryClient.cancelQueries({ queryKey: key });
+          // Patch every cached query under the scope key (page keys are
+          // prefixed) and snapshot each one so rollback restores the exact
+          // entries — `setQueryData` on the bare scope key would instead
+          // create a phantom entry nothing reads.
+          const matches = queryClient.getQueryCache().findAll({ queryKey: key });
+          for (const query of matches) {
+            snapshots.push([query.queryKey, query.state.data]);
+          }
+          for (const query of matches) {
+            queryClient.setQueryData(query.queryKey, (old: unknown) =>
+              options.optimisticUpdate!(old, variables),
+            );
+          }
+        }
       }
-      return { snapshots };
+      let taskId: string | null = null;
+      if (options.dock !== false) {
+        try {
+          taskId = dock.startTask({ kind: "generic", title: options.successTitle, description: "Nurse desk" });
+        } catch {
+          taskId = null;
+        }
+      }
+      return { snapshots, taskId };
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (data, variables, context) => {
 
       const fromData =
         typeof data === "string"
@@ -104,7 +149,10 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
             ? fromData
             : null;
       if (sourceId) markSelfNotified(sourceId);
-      invalidate();
+      if (!options.skipInvalidate) invalidate();
+      if (context?.taskId) {
+        dock.completeTask(context.taskId, options.dockMessage?.(variables, data));
+      }
       toast.success({
         title: options.successTitle,
         ...(options.successDescription
@@ -114,9 +162,13 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
       options.onSuccessExtra?.(data, variables);
     },
 
-    onError: (err, _variables, context) => {
+    onError: (err, variables, context) => {
       for (const [key, snapshot] of context?.snapshots ?? []) {
         queryClient.setQueryData(key, snapshot);
+      }
+      options.onErrorExtra?.(err, variables);
+      if (context?.taskId) {
+        dock.failTask(context.taskId, apiErrorMessage(err, options.errorFallback));
       }
       if (!options.silentError) {
         toast.error({

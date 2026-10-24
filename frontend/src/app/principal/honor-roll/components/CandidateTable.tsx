@@ -14,7 +14,7 @@ import {
 } from "@tanstack/react-table";
 import { SearchIcon, Trophy } from "lucide-react";
 import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
-import { Badge } from "@/components/ui/badge";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
   Table,
@@ -24,8 +24,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import type { HonorRollCandidate } from "@/services/principal/honorRoll.types";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./CandidateTable.module.css";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
@@ -37,7 +37,7 @@ interface Props {
   loading?: boolean;
 }
 
-const BAND_VARIANT: Record<string, "green" | "blue" | "amber" | "red"> = {
+const BAND_VARIANT: Record<string, PillTone> = {
   Advancing: "green",
   Benchmarking: "blue",
   Connecting: "amber",
@@ -98,9 +98,13 @@ export function CandidateTable({
         minSize: 140,
         maxSize: 140,
         cell: ({ row }) => (
-          <Badge variant={BAND_VARIANT[row.original.band] ?? "secondary"} className={styles.tierBadge}>
+          <Pill
+            tone={BAND_VARIANT[row.original.band] ?? "neutral"}
+            label="Descriptor band"
+            className={styles.tierBadge}
+          >
             {row.original.band}
-          </Badge>
+          </Pill>
         ),
       },
     ],
@@ -122,38 +126,35 @@ export function CandidateTable({
   });
 
   return (
-    <section aria-label="Honor roll candidates" className="flex min-w-0 flex-col gap-3">
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
+    <KanbanBoard
+      title={`Grade ${activeGrade} — Academic Excellence`}
+      icon={
+        <span className="text-amber-600 dark:text-amber-400" aria-hidden="true">
+          <Trophy size={14} />
         </span>
-        <div className="relative flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className={styles.headTitle}>
-              Grade {activeGrade} — Academic Excellence
-            </h2>
-            <p className={styles.sectionDesc} aria-live="polite">
-              {candidates.length === 0
-                ? "No awardees this term."
-                : `${candidates.length} awardee${candidates.length === 1 ? "" : "s"} — general average ≥ 90, no subject below 80.`}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <InputGroup className="max-w-40 shrink-0">
-              <InputGroupInput
-                placeholder="Filter students..."
-                value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-                onChange={(event) =>
-                  table.getColumn("name")?.setFilterValue(event.target.value)
-                }
-                aria-label="Filter students"
-              />
-              <InputGroupAddon>
-                <SearchIcon />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-        </div>
+      }
+      count={candidates.length}
+      description={
+        candidates.length === 0
+          ? "No awardees this term."
+          : `${candidates.length} awardee${candidates.length === 1 ? "" : "s"} — general average ≥ 90, no subject below 80.`
+      }
+      actions={
+        <InputGroup className="max-w-40 shrink-0">
+          <InputGroupInput
+            placeholder="Filter students..."
+            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+            onChange={(event) =>
+              table.getColumn("name")?.setFilterValue(event.target.value)
+            }
+            aria-label="Filter students"
+          />
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+        </InputGroup>
+      }
+      toolbar={
         <div className="relative" role="tablist" aria-label="Grade level">
           <div className={styles.tabs}>
             {grades.map((g) => (
@@ -172,7 +173,15 @@ export function CandidateTable({
             ))}
           </div>
         </div>
-
+      }
+      footer={
+        <Pagination
+          currentPage={table.getState().pagination.pageIndex + 1}
+          totalItems={table.getFilteredRowModel().rows.length}
+          onPageChange={(p) => table.setPageIndex(p - 1)}
+        />
+      }
+    >
         {loading ? (
           <div className="relative overflow-x-auto rounded-md border">
             <Table className="w-full table-fixed" aria-label="Loading honor roll">
@@ -258,14 +267,8 @@ export function CandidateTable({
                 </TableBody>
               </Table>
             </div>
-          <Pagination
-            currentPage={table.getState().pagination.pageIndex + 1}
-            totalItems={table.getFilteredRowModel().rows.length}
-            onPageChange={(p) => table.setPageIndex(p - 1)}
-          />
           </>
         )}
-      </div>
-    </section>
+    </KanbanBoard>
   );
 }

@@ -14,14 +14,14 @@ import {
   ShieldCheck,
   Bell,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
+  HeartHandshake,
   X,
 } from "lucide-react";
 import { useTerm } from "@/lib/term/TermContext";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
   DropdownMenu,
@@ -40,9 +40,9 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sonner";
-import { StatusBadge } from "@/app/teacher/overview/components/teacher-overview-advisory";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { PrincipalEmptyCard, PrincipalEmptyState } from "../../../components/PrincipalEmptyCard";
+import { outcomeLabel, outcomeTone, riskTone } from "@/lib/labels/status-tone";
+import { Pagination } from "@/components/shared/pagination";
 import type { RiskSnapshotStudent, RiskLevelKey } from "../types";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { alertGuidance, fetchInterventionStudents } from "@/services/principal/riskInterventions.service";
@@ -70,7 +70,7 @@ export function InterventionsListTable() {
     hasActiveFilters,
   } = useInterventionFilters();
   const debouncedQuery = useDebouncedValue(query, 300);
-  const { data, isPending, isFetching, isError, refetch } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["interventions-list", termId, schoolYearId, page, debouncedQuery, riskFilter],
     queryFn: ({ signal }) =>
       fetchInterventionStudents(
@@ -125,7 +125,11 @@ export function InterventionsListTable() {
         size: 130,
         minSize: 130,
         maxSize: 130,
-        cell: ({ row }) => <StatusBadge level={row.original.riskLevel} />,
+        cell: ({ row }) => (
+          <Pill tone={riskTone(row.original.riskLevel)} label="Risk level">
+            {row.original.riskLevel}
+          </Pill>
+        ),
       },
       {
         id: "factor",
@@ -192,21 +196,9 @@ export function InterventionsListTable() {
           const iv = row.original.intervention;
           if (!iv) return <span className={styles.noIntervention}>No plan</span>;
           return (
-            <Badge
-              variant={
-                iv.outcomeStatus === "resolved"
-                  ? "secondary"
-                  : iv.outcomeStatus === "unresolved"
-                    ? "destructive"
-                    : "default"
-              }
-            >
-              {iv.outcomeStatus === "ongoing"
-                ? "Ongoing"
-                : iv.outcomeStatus === "resolved"
-                  ? "Resolved"
-                  : "Unresolved"}
-            </Badge>
+            <Pill tone={outcomeTone(iv.outcomeStatus)} label="Plan status">
+              {outcomeLabel(iv.outcomeStatus)}
+            </Pill>
           );
         },
       },
@@ -222,8 +214,6 @@ export function InterventionsListTable() {
     getSortedRowModel: getSortedRowModel(),
     state: { sorting },
   });
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
   const alertMutation = useMutation({
     mutationFn: ({ id, note }: { id: string; note: string }) =>
       alertGuidance(id, note),
@@ -269,79 +259,86 @@ export function InterventionsListTable() {
     );
   }
   return (
-    <section aria-label="Intervention cases" className="flex min-w-0 flex-col gap-3">
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
+    <>
+    <KanbanBoard
+      title="Intervention cases"
+      icon={
+        <span className="text-amber-600 dark:text-amber-400" aria-hidden="true">
+          <HeartHandshake size={14} />
         </span>
-        <div className="relative flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className={styles.sectionTitle}>Intervention cases</h2>
-            <p className={styles.sectionDesc}>
-              Flagged by the system. Category only, never the private
-              write-up.
-            </p>
-          </div>
-          <div className={styles.headerActions}>
-            <InputGroup className="max-w-40 shrink-0">
-              <InputGroupInput
-                placeholder="Filter students..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-label="Filter students"
-              />
-              <InputGroupAddon>
-                <SearchIcon />
-              </InputGroupAddon>
-            </InputGroup>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`${styles.filterBtn} ${
-                    riskFilter !== "all" ? styles.filterActive : ""
-                  }`}
-                >
-                  Risk
-                  {riskFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
-                  <ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.filterMenu}>
-                <DropdownMenuCheckboxItem
-                  checked={riskFilter === "all"}
-                  onCheckedChange={() => setRiskFilter("all")}
-                >
-                  All levels
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                {(["High", "Moderate", "Low"] as RiskLevelKey[]).map((lvl) => (
-                  <DropdownMenuCheckboxItem
-                    key={lvl}
-                    checked={riskFilter === lvl}
-                    onCheckedChange={() => setRiskFilter(lvl)}
-                  >
-                    {lvl}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {hasActiveFilters && (
+      }
+      count={total}
+      description="Flagged by the system. Category only, never the private write-up."
+      actions={
+        <div className={styles.headerActions}>
+          <InputGroup className="max-w-40 shrink-0">
+            <InputGroupInput
+              placeholder="Filter students..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Filter students"
+            />
+            <InputGroupAddon>
+              <SearchIcon />
+            </InputGroupAddon>
+          </InputGroup>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className={styles.clearBtn}
-                onClick={() => {
-                  setRiskFilter("all");
-                }}
+                className={`${styles.filterBtn} ${
+                  riskFilter !== "all" ? styles.filterActive : ""
+                }`}
               >
-                <X aria-hidden />
-                Clear
+                Risk
+                {riskFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
+                <ChevronDown aria-hidden />
               </Button>
-            )}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className={styles.filterMenu}>
+              <DropdownMenuCheckboxItem
+                checked={riskFilter === "all"}
+                onCheckedChange={() => setRiskFilter("all")}
+              >
+                All levels
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator />
+              {(["High", "Moderate", "Low"] as RiskLevelKey[]).map((lvl) => (
+                <DropdownMenuCheckboxItem
+                  key={lvl}
+                  checked={riskFilter === lvl}
+                  onCheckedChange={() => setRiskFilter(lvl)}
+                >
+                  {lvl}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={styles.clearBtn}
+              onClick={() => {
+                setRiskFilter("all");
+              }}
+            >
+              <X aria-hidden />
+              Clear
+            </Button>
+          )}
         </div>
+      }
+      footer={
+        <Pagination
+          currentPage={safePage}
+          totalItems={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      }
+    >
         {isPending ? (
           <div className="relative overflow-x-auto rounded-md border">
             <Table className="w-full table-fixed" aria-label="Loading intervention cases">
@@ -441,47 +438,20 @@ export function InterventionsListTable() {
                 </TableBody>
               </Table>
             </div>
-            <div className="relative flex items-center justify-between gap-2">
-              <p className="text-muted-foreground text-[0.8125rem] tabular-nums" aria-live="polite">
-                {total > 0 ? `${start}–${end} of ${total} · Page ${safePage} of ${totalPages}` : "0 of 0"}
-              </p>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={safePage <= 1 || isFetching}
-                  >
-                    <ChevronLeft aria-hidden />
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={safePage >= totalPages || isFetching}
-                  >
-                    Next
-                    <ChevronRight aria-hidden />
-                  </Button>
-                </div>
-              )}
-            </div>
           </>
         )}
-      </div>
-      <AlertGuidanceDialog
-        target={alertTarget}
-        note={note}
-        onNoteChange={setNote}
-        pending={alertMutation.isPending}
-        onClose={closeAlert}
-        onSubmit={() => {
-          if (!alertTarget) return;
-          alertMutation.mutate({ id: alertTarget.studentId, note });
-        }}
-      />
-    </section>
+    </KanbanBoard>
+    <AlertGuidanceDialog
+      target={alertTarget}
+      note={note}
+      onNoteChange={setNote}
+      pending={alertMutation.isPending}
+      onClose={closeAlert}
+      onSubmit={() => {
+        if (!alertTarget) return;
+        alertMutation.mutate({ id: alertTarget.studentId, note });
+      }}
+    />
+    </>
   );
 }

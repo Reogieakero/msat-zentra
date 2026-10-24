@@ -1,8 +1,11 @@
 "use client";
 import * as React from "react";
+import { useDock } from "@/components/dock/dock-store";
 import type { AdmReviewCopy } from "./AdmReviewDialog";
 export function useAdmReviewDraft({
   open,
+  student,
+  sessionNoun,
   hasActiveSession,
   copy,
   formatError,
@@ -12,6 +15,8 @@ export function useAdmReviewDraft({
   onClose,
 }: {
   open: boolean;
+  student: string;
+  sessionNoun: "clinic" | "counseling";
   hasActiveSession: boolean;
   copy: AdmReviewCopy;
   formatError?: (err: unknown, fallback: string) => string;
@@ -42,8 +47,12 @@ export function useAdmReviewDraft({
   } else if (!open && prevOpen) {
     setPrevOpen(false);
   }
-  function fail(err: unknown, fallback: string) {
-    setError(formatError ? formatError(err, fallback) : fallback);
+  const dock = useDock();
+  // Returns the message so the shared Dock can report the same problem.
+  function fail(err: unknown, fallback: string): string {
+    const message = formatError ? formatError(err, fallback) : fallback;
+    setError(message);
+    return message;
   }
   function resolveSession(): string | null | undefined {
     if (!sessionDate && !sessionTime) return undefined;
@@ -104,15 +113,29 @@ export function useAdmReviewDraft({
     }
     setError(null);
     setBooking(true);
+    // Hand the request to the bottom-right Dock and close the confirmation
+    // and the review overlay at once — the Dock reports the outcome, so a
+    // slow request never leaves the review stuck on "Booking…".
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "generic",
+        title: `Booking ${sessionNoun} session`,
+        description: `${student} · ${sessionDate} ${sessionTime}`,
+      });
+    } catch {
+      taskId = null;
+    }
+    setSessionDate("");
+    setSessionTime("");
+    setConfirmFor(null);
+    onClose();
     try {
       await onBookSession(scheduledAt);
-      setSessionDate("");
-      setSessionTime("");
-      setConfirmFor(null);
-      onClose();
+      if (taskId) dock.completeTask(taskId);
     } catch (err) {
-      setConfirmFor(null);
-      fail(err, copy.bookFailed);
+      const message = fail(err, copy.bookFailed);
+      if (taskId) dock.failTask(taskId, message);
     } finally {
       setBooking(false);
     }
@@ -126,12 +149,26 @@ export function useAdmReviewDraft({
     }
     setError(null);
     setActing(true);
+    // Same as booking: the Dock carries the request, the confirmation and
+    // the review overlay close right away.
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "generic",
+        title: "Rejecting ADM case",
+        description: `${student} · closed without ADM`,
+      });
+    } catch {
+      taskId = null;
+    }
+    setConfirmFor(null);
+    onClose();
     try {
       await onReject(recommendation.trim());
-      setConfirmFor(null);
-      onClose();
+      if (taskId) dock.completeTask(taskId);
     } catch (err) {
-      fail(err, copy.rejectFailed);
+      const message = fail(err, copy.rejectFailed);
+      if (taskId) dock.failTask(taskId, message);
     } finally {
       setActing(false);
     }

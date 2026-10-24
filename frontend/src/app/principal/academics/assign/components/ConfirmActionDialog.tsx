@@ -1,8 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { CardModal } from "@/components/ui/CardModal";
-import styles from "./form.module.css";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 
 type Props = {
   title: string;
@@ -22,21 +21,22 @@ export function ConfirmActionDialog({
   onCancel,
 }: Props) {
   return (
-    <CardModal
+    <KanbanOverlay
       open
       onClose={onCancel}
-      size="sm"
+      width="sm"
       title={title}
       description={description}
-    >
-      <div className={styles.dialogFooter}>
-        <Button variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button variant={destructive ? "destructive" : "default"} onClick={onConfirm}>
-          {confirmLabel}
-        </Button>
-      </div>
-    </CardModal>
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant={destructive ? "destructive" : "default"} onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </div>
+      }
+    />
   );
 }

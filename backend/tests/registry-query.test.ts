@@ -37,12 +37,12 @@ describe("Adviser access advisory identity (profiles + roster-only)", () => {
     expect([...(bySection.get("sec-1")?.keys() ?? [])].sort()).toEqual(["111", "222"]);
   });
 
-  it("prefers the section profile name over the roster name for the same LRN", () => {
+  it("prefers the section profile name (and mascot) over the roster for the same LRN", () => {
     const bySection = buildAdvisoryIdentity(
-      [{ sectionId: "sec-1", lrn: "111", name: "Profile Name" }],
-      [{ sectionId: "sec-1", lrn: "111", name: "Roster Name" }],
+      [{ sectionId: "sec-1", lrn: "111", name: "Profile Name", mascot: "cat" }],
+      [{ sectionId: "sec-1", lrn: "111", name: "Roster Name", mascot: "dog" }],
     );
-    expect(bySection.get("sec-1")?.get("111")).toEqual({ name: "Profile Name" });
+    expect(bySection.get("sec-1")?.get("111")).toEqual({ name: "Profile Name", mascot: "cat" });
   });
 
   it("keeps profile-only and mixed sections intact", () => {

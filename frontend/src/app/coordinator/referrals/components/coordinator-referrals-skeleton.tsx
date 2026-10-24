@@ -3,124 +3,74 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./coordinator-referrals-skeleton.module.css";
 
-const HEADS = [
-  "Student",
-  "Referred by",
-  "Case status",
-  "Eligibility",
-  "Meeting time",
-  "Date referred",
-  "Latest action",
-  "",
-];
-
-function TableCardSkeleton({ rows }: { rows: number }) {
+function BoardSkeleton({ rows }: { rows: number }) {
   return (
-    <div className={styles.tableCard} aria-hidden="true">
-      <div className={styles.cardHeadRow}>
-        <div className={styles.cardHeadText}>
-          <Skeleton className={styles.cardTitle} />
-          <Skeleton className={styles.cardDesc} />
+    <div className={styles.boardShell} aria-hidden="true">
+      <div className={styles.headRow}>
+        <div className={styles.headText}>
+          <Skeleton className={styles.title} />
+          <Skeleton className={styles.desc} />
         </div>
-        <div className={styles.cardHeadActions}>
+        <div className={styles.headActions}>
           <Skeleton className={styles.search} />
           <Skeleton className={styles.filterBtn} />
         </div>
       </div>
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              {HEADS.map((h, i) => (
-                <th key={i} scope="col">
-                  {h ? <span className={styles.thText}>{h}</span> : null}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: rows }).map((_, i) => (
-              <tr key={i}>
-                <td>
-                  <Skeleton className={styles.name} />
-                  <Skeleton className={styles.sub} />
-                </td>
-                <td>
-                  <Skeleton className={styles.dateSm} />
-                </td>
-                <td>
-                  <Skeleton className={styles.badgeLg} />
-                </td>
-                <td>
-                  <Skeleton className={styles.badgeMd} />
-                </td>
-                <td>
-                  <Skeleton className={styles.date} />
-                  <Skeleton className={styles.sub} />
-                </td>
-                <td>
-                  <Skeleton className={styles.dateSm} />
-                </td>
-                <td>
-                  <Skeleton className={styles.date} />
-                  <Skeleton className={styles.sub} />
-                </td>
-                <td>
-                  <Skeleton className={styles.kebab} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className={styles.grid}>
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className={styles.skelCard}>
+            <div className={styles.skelHead}>
+              <Skeleton className={styles.skelAvatar} />
+              <div className={styles.skelId}>
+                <Skeleton className={styles.line} />
+                <Skeleton className={styles.lineSm} />
+              </div>
+            </div>
+            <div className={styles.skelPills}>
+              <Skeleton className={styles.skelPill} />
+              <Skeleton className={styles.skelPillSm} />
+            </div>
+            <Skeleton className={styles.skelBlock} />
+          </div>
+        ))}
       </div>
       <Skeleton className={styles.interpretation} />
     </div>
   );
 }
 
-function RailSkeleton() {
-  return (
-    <div aria-hidden="true" className={styles.railRow}>
-      {[4, 2, 3, 4].map((lines, i) => (
-        <div key={i} className={styles.railCard}>
-          <Skeleton className={styles.railTitle} />
-          <Skeleton className={styles.railDesc} />
-          {Array.from({ length: lines }).map((_, j) => (
-            <Skeleton key={j} className={styles.railLine} />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function CoordinatorReferralsSkeleton({
-  rows = 10,
+  rows = 9,
   layout = "full",
 }: {
   rows?: number;
-  layout?: "full" | "table";
+  layout?: "full" | "board";
 }) {
-  if (layout === "table") {
+  if (layout === "board") {
     return (
       <div aria-busy="true" aria-label="Loading referrals">
-        <TableCardSkeleton rows={rows} />
+        <BoardSkeleton rows={rows} />
       </div>
     );
   }
   return (
     <div aria-busy="true" aria-label="Loading referrals">
-      <div className={styles.main} aria-hidden="true">
-        <TableCardSkeleton rows={rows} />
-        <div className={styles.pager}>
-          <Skeleton className={styles.range} />
-          <div className={styles.pagerButtons}>
-            <Skeleton className={styles.pageBtn} />
-            <Skeleton className={styles.pageLabel} />
-            <Skeleton className={styles.pageBtn} />
+      <div className={styles.body}>
+        <div className={styles.mainCol}>
+          <BoardSkeleton rows={rows} />
+          <div className={styles.pager}>
+            <Skeleton className={styles.range} />
+            <div className={styles.pagerButtons}>
+              <Skeleton className={styles.pageBtn} />
+              <Skeleton className={styles.pageLabel} />
+              <Skeleton className={styles.pageBtn} />
+            </div>
           </div>
         </div>
-        <RailSkeleton />
+        <div className={styles.railIcons} aria-hidden="true">
+          <Skeleton className={styles.railIcon} />
+          <Skeleton className={styles.railIcon} />
+        </div>
       </div>
     </div>
   );

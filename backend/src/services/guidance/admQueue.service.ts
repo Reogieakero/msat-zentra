@@ -268,6 +268,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
                   select: {
                     studentId: true,
                     rosterId: true,
+                    subjectId: true,
                     computedAverage: true,
                     transmutedGrade: true,
                   },
@@ -281,6 +282,9 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
                     rosterId: true,
                     status: true,
                     subjectId: true,
+                    assignmentId: true,
+                    recordedBy: true,
+                    assignment: { select: { teacherId: true } },
                   },
                 })
               : [],
@@ -301,7 +305,44 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
             sectionHeadcounts(sectionIds),
           ]);
         const gradesByKey = new Map<string, { computedAverage: number | null; transmutedGrade: number | null }[]>();
-        for (const g of grades) {
+        // Sharing filter: guidance respects Connect/Sync OFF. Resolve owners
+        // per (subject, section, term) and drop private teachers' grades.
+        const { resolveGradeOwnerIds, sharingMap } = await import("../teacher/dataShare.service.js");
+        const sectionByKey = new Map<string, string>();
+        for (const r of earlyReferrals) {
+          const key = r.student?.userId ?? (r.roster?.id ? `roster:${r.roster.id}` : null);
+          const sid = r.student?.section?.id ?? r.roster?.section?.id ?? "";
+          if (key && sid) sectionByKey.set(key, sid);
+        }
+        const gradeSubjectSections = [...new Set(grades.map((g) => {
+          const key = g.studentId ?? (g.rosterId ? `roster:${g.rosterId}` : "");
+          const sid = sectionByKey.get(key ?? "") ?? "";
+          return `${g.subjectId}|${sid}`;
+        }).filter((s) => s.includes("|") && !s.endsWith("|")))];
+        const ownerBySubjSec = new Map<string, string[]>();
+        await Promise.all(
+          gradeSubjectSections.map(async (combo) => {
+            const [subj, sec] = combo.split("|");
+            ownerBySubjSec.set(combo, await resolveGradeOwnerIds(subj, sec, termId));
+          }),
+        );
+        const allGradeOwners = [...new Set([...ownerBySubjSec.values()].flat())];
+        const gradeShareMap = await sharingMap(allGradeOwners);
+        const visibleGrades = grades.filter((g) => {
+          const key = g.studentId ?? (g.rosterId ? `roster:${g.rosterId}` : "");
+          const sid = sectionByKey.get(key ?? "") ?? "";
+          const owners = ownerBySubjSec.get(`${g.subjectId}|${sid}`) ?? [];
+          if (owners.length === 0) return true;
+          return owners.some((id) => gradeShareMap.get(id) === true);
+        });
+        const attOwnerIds = [...new Set(visibleGrades.length >= 0 ? attendance.map((a) => a.assignment?.teacherId ?? a.recordedBy).filter((v): v is string => !!v) : [])];
+        const attShareMap = await sharingMap(attOwnerIds);
+        const visibleAttendance = attendance.filter((a) => {
+          const owner = a.assignment?.teacherId ?? a.recordedBy;
+          if (!owner) return true;
+          return attShareMap.get(owner) === true;
+        });
+        for (const g of visibleGrades) {
           const key = g.studentId ?? (g.rosterId ? `roster:${g.rosterId}` : null);
           if (!key) continue;
           const list = gradesByKey.get(key) ?? [];
@@ -309,7 +350,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
           gradesByKey.set(key, list);
         }
         const attendanceByKey = new Map<string, { status: string; subjectId: string | null }[]>();
-        for (const a of attendance) {
+        for (const a of visibleAttendance) {
           const key = a.studentId ?? (a.rosterId ? `roster:${a.rosterId}` : null);
           if (!key) continue;
           const list = attendanceByKey.get(key) ?? [];

@@ -1,7 +1,16 @@
+/* Coordinator KPI strip — kanban stat columns mirroring the record-keeper
+   overview stats board: tinted column shell, KanbanBoardHeader, number-first
+   stat card with a mascot chip, and a pinned footer action. */
+
+.kpiBoard {
+  min-width: 0;
+}
+
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.75rem;
+  min-width: 0;
 }
 
 @media (max-width: 1100px) {
@@ -12,86 +21,80 @@
 
 @media (max-width: 640px) {
   .kpiGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.card {
-  position: relative;
-  overflow: visible;
+.kpiColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.625rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
+  background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+
+:global(.dark) .kpiColumn {
+  background-color: color-mix(in oklch, var(--muted) 20%, transparent);
+}
+
+.kpiStat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   background-color: var(--card);
-  box-shadow: none;
-  transition:
-    transform 180ms ease-out,
-    box-shadow 180ms ease-out,
-    border-color 180ms ease-out;
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
 }
 
-.card:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in oklch, var(--primary), transparent 55%);
-  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+.kpiStatTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
-.glowClip {
-  position: absolute;
-  inset: 0;
+/* Column mascot — decorative sprite chip (same framing as the overview
+   stats columns). */
+.kpiMascot {
+  display: inline-flex;
+  flex-shrink: 0;
   overflow: hidden;
-  border-radius: var(--radius-md);
-  pointer-events: none;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background-color: color-mix(in oklch, var(--muted) 40%, transparent);
 }
 
-.cardGlow {
-  position: absolute;
-  inset: auto -25% -50% -25%;
-  height: 75%;
-  background: radial-gradient(
-    ellipse at center,
-    color-mix(in oklch, var(--primary), transparent 80%),
-    transparent 70%
-  );
-  filter: blur(24px);
-  pointer-events: none;
-}
-
-.kpiLabel {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--muted-foreground);
-}
-
-.kpiValue {
-  margin: 0.125rem 0 0;
-  font-size: 1.5rem;
+.kpiNumber {
+  font-size: 1.75rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
+  line-height: 1;
   color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Zeroed KPIs read calm; any count stands out. */
+.kpiNumberZero {
+  color: var(--muted-foreground);
 }
 
 .kpiHint {
-  margin: 0.125rem 0 0;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
+  line-height: 1.5;
   color: var(--muted-foreground);
 }
 
-/* Card body stretches to the full card height so the action row can pin
-   itself to the bottom-right corner of every card. */
-.cardBody {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
 .kpiAction {
-  margin-top: auto;
-  padding-top: 0.5rem;
   display: flex;
   justify-content: flex-end;
-  position: relative;
+  margin-top: auto;
 }
 
 /* Solid 32px button — primary tokens flip with the theme (next-themes
@@ -100,9 +103,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
-  padding: 0 0.75rem;
-  font-size: 0.75rem;
+  height: 24px;
+  padding: 0 0.625rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
@@ -128,4 +131,43 @@
 .kpiBtnSolid:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--ring);
+}
+
+/* Columns cascade in so the number-first board settles instead of popping
+   (same ~1s glide as the overview stats board). */
+@keyframes kpi-column-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kpiGrid > .kpiColumn {
+  animation: kpi-column-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.kpiGrid > .kpiColumn:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.kpiGrid > .kpiColumn:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.kpiGrid > .kpiColumn:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.kpiGrid > .kpiColumn:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpiGrid > .kpiColumn {
+    animation: none;
+  }
 }

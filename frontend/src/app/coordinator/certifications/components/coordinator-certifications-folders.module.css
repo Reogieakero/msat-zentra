@@ -127,71 +127,194 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 0.875rem;
 }
 
-.studentBlock {
+/* Kanban-style certification card — same muted column shell as the anecdotal
+   record card: status header, student pills, amber folder, action footer. */
+.certCard {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background-color: color-mix(in oklch, var(--muted), transparent 40%);
+  padding: 0.625rem;
+  font-family: var(--font-inter);
+}
+
+.certCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+  margin: -0.625rem -0.625rem 0;
+  padding: 0.625rem 0.875rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.certStatusPill {
+  display: inline-flex;
   min-width: 0;
-}
-
-.folderWrap {
-  position: relative;
-  display: inline-block;
   max-width: 100%;
-}
-
-.folderBadge {
-  position: absolute;
-  right: 0.375rem;
-  bottom: 2.5rem;
-  left: 0.375rem;
-  /* Must stay below the dialog overlay/content layer (z-50) so the
-     endorse confirm and help dialog always open above the folders. */
-  z-index: 10;
-  pointer-events: none;
-  text-align: right;
-}
-
-.statusText {
-  display: block;
+  align-items: center;
+  gap: 0.25rem;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.0625rem 0.5rem;
   font-size: 0.6875rem;
   font-weight: 600;
+  line-height: 1.35;
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
 }
 
-.studentFolderBtn {
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
+.certStatusPill svg {
+  flex-shrink: 0;
+}
+
+.certCardAge {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.certCardBody {
+  display: flex;
   min-width: 0;
-  text-align: left;
   cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: transform 120ms ease-out;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: var(--card);
+  padding: 0.75rem;
   color: inherit;
+  text-align: left;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  transition: border-color 120ms ease-out, box-shadow 120ms ease-out;
 }
 
-.studentFolderBtn:hover {
-  transform: translateY(-2px);
+.certCardBody:hover {
+  border-color: color-mix(in oklch, #f59e0b, transparent 40%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
 }
 
-.studentFolderBtn:focus-visible {
+.certCardBody:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+.certPills {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.certPill {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.certStudentPill {
+  border: 1px solid color-mix(in oklch, #f59e0b, transparent 60%);
+  background-color: color-mix(in oklch, #f59e0b, transparent 85%);
+  color: #b45309;
+  font-weight: 600;
+}
+
+:global(.dark) .certStudentPill {
+  color: #fbbf24;
+}
+
+.certMetaPill {
+  border: 1px solid var(--border);
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  font-weight: 500;
+}
+
+.certFolderRow {
+  display: flex;
+  width: 100%;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.certFolderWrap {
+  display: flex;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+.certMascot {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.signedRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+/* Green rectangle pill for the signed state. */
+.signedPill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in oklch, #22c55e, transparent 55%);
+  border-radius: 0.375rem;
+  background-color: color-mix(in oklch, #22c55e, transparent 85%);
+  padding: 0.0625rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #15803d;
+}
+
+:global(.dark) .signedPill {
+  color: #4ade80;
+}
+
+.approverPill {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background-color: var(--secondary);
+  padding: 0.0625rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--secondary-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .folderActions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.375rem;
 }
 

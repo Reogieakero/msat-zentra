@@ -10,6 +10,11 @@ const TEMPLATE_URL = encodeURI(
   "/referral forms/Referral Form - GCForm-03 v11.xlsx"
 );
 const SHEET_NAME = "Referral Form";
+const CREST_URL = encodeURI(
+  "/ocform01/Mati School of Arts and Trades Crest.png"
+);
+/** 1 css/excel px = 9525 EMU — anchor offsets are stored in EMU. */
+const EMU_PER_PX = 9525;
 
 type ExcelJSModule = {
   default?: { Workbook: new () => Workbook };
@@ -87,6 +92,56 @@ export async function loadGcForm03Template(): Promise<{
   return { wb, ws };
 }
 
+/** Embedded image (template logo / stamped crest) as ExcelJS keeps it. */
+type EmbeddedImage = {
+  imageId?: number;
+  range?: {
+    tl?: {
+      nativeCol?: number;
+      nativeColOff?: number;
+      nativeRow?: number;
+      nativeRowOff?: number;
+    };
+  };
+};
+
+function embeddedImages(ws: Worksheet): EmbeddedImage[] {
+  const getImages = (
+    ws as unknown as { getImages?: () => EmbeddedImage[] }
+  ).getImages;
+  return typeof getImages === "function" ? getImages.call(ws) : [];
+}
+
+/** Position an embedded image `offset.x` px right / `offset.y` px down
+    inside its anchor cell. Offsets are stored as EMU both in the file and
+    in the sheet preview, so both stay in sync. */
+function setImageOffsets(
+  ws: Worksheet,
+  imageId: number,
+  offset: { x?: number; y?: number }
+): void {
+  const image = embeddedImages(ws).find((img) => img.imageId === imageId);
+  const tl = image?.range?.tl;
+  if (!tl) return;
+  if (offset.x !== undefined) tl.nativeColOff = Math.round(offset.x * EMU_PER_PX);
+  if (offset.y !== undefined) tl.nativeRowOff = Math.round(offset.y * EMU_PER_PX);
+}
+
+/**
+ * Header composition tweaks, applied in-memory so the sheet preview, the
+ * print output, and the downloaded .xlsx stay in sync:
+ * - header text (rows 1–7) centers across B:I instead of B:J — dropping
+ *   column J, which the crest sits in — so the block sits a little left;
+ * - the DepEd logo (template image 0) is inset 60px from the left edge.
+ */
+function applyHeaderLayout(ws: Worksheet): void {
+  setImageOffsets(ws, 0, { x: 60 });
+  for (let r = 1; r <= 7; r++) {
+    ws.unMergeCells(`B${r}:J${r}`);
+    ws.mergeCells(`B${r}:I${r}`);
+  }
+}
+
 export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
 
   setValue(ws, "C11", data.studentName);
@@ -160,15 +215,54 @@ export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
   centerCell(ws, "G46");
 }
 
+/**
+ * Stamp the school crest on the top-right of the header (row 1, inset 60px
+ * from the right edge). Runs on the in-memory workbook, so the sheet HTML
+ * preview, the printed sheet, and the downloaded .xlsx all carry it; a
+ * failed fetch (offline) simply leaves the crest off the form.
+ */
+async function stampSchoolCrest(wb: Workbook, ws: Worksheet): Promise<void> {
+  try {
+    const res = await fetch(CREST_URL);
+    if (!res.ok) return;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let binary = "";
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(
+        null,
+        Array.from(bytes.subarray(i, i + CHUNK))
+      );
+    }
+    const imageId = wb.addImage({ base64: btoa(binary), extension: "png" });
+    ws.addImage(imageId, {
+      tl: { col: 8, row: 0 },
+      ext: { width: 90, height: 90 },
+    });
+    // 36px into column I → 60px in from the sheet's right edge, mirroring the
+    // DepEd logo inset; 12.5px down so its centre (57.5) matches the DepEd
+    // logo's centre (the two logos then share one horizontal line).
+    setImageOffsets(ws, imageId, { x: 36, y: 12.5 });
+  } catch {
+    // Crest asset unavailable — render the form without it.
+  }
+}
+
 export async function buildFilledGcForm03Workbook(
   data: GcForm03Data
 ): Promise<Workbook> {
   const { wb, ws } = await loadGcForm03Template();
   fillGcForm03Sheet(ws, data);
+  applyHeaderLayout(ws);
+  await stampSchoolCrest(wb, ws);
   return wb;
 }
 
-function filenameFor(studentName: string): string {
+/** Shared export filename: `GCForm-03_<student>_<date>.<extension>`. */
+export function gcForm03Filename(
+  studentName: string,
+  extension: string,
+): string {
   const safe =
     (studentName ?? "")
       .trim()
@@ -176,7 +270,11 @@ function filenameFor(studentName: string): string {
       .replace(/^-+|-+$/g, "")
       .slice(0, 60) || "referral";
   const date = new Date().toISOString().slice(0, 10);
-  return `GCForm-03_${safe}_${date}.xlsx`;
+  return `GCForm-03_${safe}_${date}.${extension}`;
+}
+
+function filenameFor(studentName: string): string {
+  return gcForm03Filename(studentName, "xlsx");
 }
 
 export async function downloadGcForm03(data: GcForm03Data): Promise<void> {

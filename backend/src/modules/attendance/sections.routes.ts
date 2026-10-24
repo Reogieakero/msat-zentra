@@ -52,9 +52,7 @@ router.get(
 
 async function teachableScope(req: Request, sectionId: string) {
   const teacherId = req.user!.id;
-  const q = req.query as Record<string, unknown>;
-  const queryTermId = typeof q.termId === "string" ? q.termId : undefined;
-  const termId = queryTermId ?? req.termScope?.termId ?? (await scopedTermRow(req))?.id;
+  const termId = req.termScope?.termId ?? (await scopedTermRow(req))?.id;
   if (!termId) {
     throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
   }

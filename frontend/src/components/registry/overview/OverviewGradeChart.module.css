@@ -114,3 +114,51 @@
   line-height: 1.6;
   color: var(--muted-foreground);
 }
+
+/* Kanban variant (record keeper) — the shell supplies padding; the chart
+   stays pinned to the bottom of the box like the glow card. Compact chart
+   height keeps the duo row from towering over the board. */
+.kanbanBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.kanbanBody .chartWrap {
+  height: 7rem;
+}
+
+.kanbanBody .skel {
+  height: 7rem;
+}
+
+/* The kanban chart mounts after the skeleton — fade chart + legend in
+   instead of a hard swap. */
+@keyframes grade-chart-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kanbanBody > .chartWrap,
+.kanbanBody > .legend {
+  animation: grade-chart-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.kanbanBody > .legend {
+  animation-delay: 0.08s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanbanBody > .chartWrap,
+  .kanbanBody > .legend {
+    animation: none;
+  }
+}

@@ -20,7 +20,7 @@ import {
 import { getOverview } from "../../services/registry/overview.service.js";
 import { listFinalGrades } from "../../services/registry/finals.service.js";
 import {
-  buildRecordKeeperBreakdown,
+  buildAccountBreakdown,
   getAccountBreakdown,
   getAccountsAudit,
   listBandStudents,
@@ -93,8 +93,8 @@ router.get(
   async (req, res, next) => {
     try {
       const schoolYearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
-      const { roster, statusByLrn } = await getAccountBreakdown(ctxOf(req), { schoolYearId });
-      res.json({ data: await buildRecordKeeperBreakdown(GRADE_BAND_7_10, roster, statusByLrn) });
+      const { roster, statusByLrn, profilesWithoutRoster } = await getAccountBreakdown(ctxOf(req), { schoolYearId });
+      res.json({ data: buildAccountBreakdown(roster, statusByLrn, profilesWithoutRoster) });
     } catch (e) {
       next(e);
     }
@@ -379,13 +379,15 @@ router.patch(
   validate("body", registryProfileSchema),
   async (req, res, next) => {
     try {
-      const { fullName, primaryColor, secondaryColor } = req.body as {
+      const { fullName, mascot, primaryColor, secondaryColor } = req.body as {
         fullName?: string;
+        mascot?: string | null;
         primaryColor?: string | null;
         secondaryColor?: string | null;
       };
       const result = await updateProfileSettings(ctxOf(req), RECORD_KEEPER_IDENTITY, {
         fullName,
+        mascot,
         primaryColor,
         secondaryColor,
       });

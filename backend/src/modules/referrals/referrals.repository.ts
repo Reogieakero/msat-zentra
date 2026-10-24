@@ -1,9 +1,10 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
-import { MAX_PAGE_SIZE, PAGE_SIZE, resolvePaging } from "../../lib/pagination.js";
+import { PAGE_SIZE, resolvePaging } from "../../lib/pagination.js";
+import { NURSE_QUEUE_MAX_PAGE_SIZE } from "./referrals.schemas.js";
 
 export const NURSE_QUEUE_PAGE_SIZE = PAGE_SIZE;
-export const NURSE_QUEUE_MAX_PAGE_SIZE = MAX_PAGE_SIZE;
+export { NURSE_QUEUE_MAX_PAGE_SIZE };
 
 export const NURSE_CACHE_TAGS = [
   "nurse",

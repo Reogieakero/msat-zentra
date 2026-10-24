@@ -30,6 +30,8 @@ export interface AdmCaseRow {
   approvalDate: string | null;
   forms: AdmFormRef[];
   studentId?: string;
+  section?: string;
+  anecdotalRecordId?: string | null;
 
   meeting?: {
     id: string;

@@ -3,14 +3,11 @@
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
-import { NursePageHeader } from "../components/NursePageHeader";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import { NurseOverviewKpis } from "./components/NurseOverviewKpis";
-import { NurseNeedsReviewPanel } from "./components/NurseOverviewQueues";
+import { KanbanBoardSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { NurseOverviewKpiRail } from "./components/NurseOverviewKpiRail";
+import { NurseLatestReferralsPanel } from "./components/NurseOverviewQueues";
 import { NurseOverviewBreakdown } from "./components/NurseOverviewBreakdown";
 import { NurseOverviewTrends } from "./components/NurseOverviewTrends";
-import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import { fetchNurseOverview } from "@/services/nurse/overview.service";
 import type { NurseOverviewData } from "@/services/nurse/nurse.types";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -30,94 +27,92 @@ export default function NurseOverviewPage() {
     });
 
   if (isPending) {
-
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading clinic overview">
-        <ZentraPageHeaderSkeleton />
         <div className={styles.body}>
           <div className={styles.mainCol}>
-            <div className={assign.card}>
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative">
-                <Skeleton className={styles.skelCardTitle} />
-                <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
-              </div>
-              <div className="relative overflow-x-auto rounded-md border p-2">
-                <div className={styles.skelThead} aria-hidden="true">
-                  {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                    <Skeleton key={i} className={styles.skelTheadCell} />
-                  ))}
-                </div>
-                {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                  <Skeleton key={i} className={styles.skelRow} />
+            {/* Latest referred students — real KanbanBoard shell + flat case rows. */}
+            <KanbanBoardSkeleton
+              titleWidth="12rem"
+              rows={0}
+              showDescription
+              actions={<Skeleton className="h-4 w-12 shrink-0" />}
+            >
+              <ul className={styles.caseList}>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <li key={i} className={styles.caseRow} aria-hidden="true">
+                    <div className={styles.caseInfo}>
+                      <Skeleton className="size-8 shrink-0 rounded-full" />
+                      <Skeleton className="h-4 w-40 min-w-0" />
+                      <Skeleton className="h-5 w-20 shrink-0 rounded-md" />
+                      <Skeleton className="h-5 w-10 shrink-0 rounded-md" />
+                      <Skeleton className="h-5 w-16 shrink-0 rounded-md" />
+                    </div>
+                    <div className={styles.cellActions}>
+                      <Skeleton className="h-5 w-16 shrink-0 rounded-md" />
+                      <Skeleton className="h-5 w-16 shrink-0 rounded-md" />
+                      <Skeleton className="h-5 w-12 shrink-0 rounded-md" />
+                      <Skeleton className="size-7 shrink-0 rounded-md" />
+                    </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
+            </KanbanBoardSkeleton>
+
+            <div className={styles.threeCol}>
+              {[0, 1, 2].map((col) => (
+                <KanbanBoardSkeleton
+                  key={col}
+                  titleWidth="10rem"
+                  rows={0}
+                  showCount
+                  showDescription
+                  className="flex-1"
+                >
+                  {col === 0 ? (
+                    <div className={styles.skelChartRow} aria-hidden="true">
+                      <Skeleton className={styles.skelDonut} />
+                      <div className={styles.skelLegend}>
+                        {[0, 1, 2, 3].map((i) => (
+                          <Skeleton key={i} className={styles.skelLegendRow} />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.skelBars} aria-hidden="true">
+                      {[0, 1, 2, 3].map((i) => (
+                        <div key={i} className={styles.skelBarRowWrap}>
+                          <Skeleton className={styles.skelBarYLabel} />
+                          <Skeleton className={styles.skelBarRow} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </KanbanBoardSkeleton>
+              ))}
+            </div>
+
+            <div className={styles.twoCol}>
+              {[0, 1].map((col) => (
+                <KanbanBoardSkeleton
+                  key={col}
+                  titleWidth="10rem"
+                  rows={0}
+                  showCount
+                  showDescription
+                  className="flex-1"
+                >
+                  <Skeleton className={styles.skelLine} aria-hidden="true" />
+                </KanbanBoardSkeleton>
+              ))}
             </div>
           </div>
 
-          <aside className={styles.sideCol} style={{ top: "4rem" }}>
-            <div className={assign.card}>
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative">
-                <Skeleton className={styles.skelCardTitle} />
-                <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
-              </div>
-              <div className="relative flex flex-col gap-3">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <div className="flex flex-1 flex-col gap-1">
-                      <Skeleton className={styles.skelKpiLabel} />
-                      <Skeleton className={styles.skelKpiHint} aria-hidden="true" />
-                    </div>
-                    <Skeleton className="h-6 w-8" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
-        </div>
-
-        <hr className={styles.divider} />
-
-        <div className={styles.threeCol}>
-          {[0, 1, 2].map((col) => (
-            <div key={col} className={assign.card}>
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative">
-                <Skeleton className={styles.skelCardTitle} />
-                <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
-              </div>
-              <div className="relative">
-                <Skeleton className={styles.skelLine} aria-hidden="true" />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <hr className={styles.divider} />
-
-        <div className={styles.twoCol}>
-          {[0, 1].map((col) => (
-            <div key={col} className={assign.card}>
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative">
-                <Skeleton className={styles.skelCardTitle} />
-                <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
-              </div>
-              <div className="relative">
-                <Skeleton className={styles.skelLine} aria-hidden="true" />
-              </div>
-            </div>
-          ))}
+          <div className={styles.skelRail}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className={styles.skelRailIcon} aria-hidden="true" />
+            ))}
+          </div>
         </div>
       </section>
     );
@@ -148,41 +143,31 @@ export default function NurseOverviewPage() {
   }
 
   const refreshing = isFetching && !isPending;
-  const isTrueEmpty =
-    data.needsReview.length === 0 && data.kpis.total === 0;
 
   return (
     <section className={styles.page} aria-busy={refreshing} aria-label="Clinic overview">
-      {isTrueEmpty ? null : (
-        <NursePageHeader
-          title="Overview"
-          description="Clinic queue, caseload, and health trends across the nurse desk this term."
-        />
-      )}
-
-      {refreshing ? <NurseRefreshBadge label="Refreshing overview…" /> : null}
-
       <div className={styles.body}>
         <div className={styles.mainCol}>
-          <NurseNeedsReviewPanel needsReview={data.needsReview} />
+          {/* ?? [] guards a stale in-memory cache entry built before the
+              latestReferrals feed existed (dev hot reload / open tab). */}
+          <NurseLatestReferralsPanel latestReferrals={data.latestReferrals ?? []} />
+
+          {/* Charts stay inside the left column — the sticky icon rail owns
+              the right strip, so no section may cross into it. */}
+          <NurseOverviewBreakdown
+            statusBreakdown={data.statusBreakdown}
+            clinicStatusBreakdown={data.clinicStatusBreakdown}
+            admStatusBreakdown={data.admStatusBreakdown}
+          />
+
+          <NurseOverviewTrends dailyTrend={data.dailyTrend} needsReview={data.needsReview} />
         </div>
 
-        <aside className={styles.sideCol} style={{ top: "4rem" }}>
-          <NurseOverviewKpis kpis={data.kpis} />
-        </aside>
+        <NurseOverviewKpiRail
+          kpis={data.kpis}
+          needsReview={data.needsReview}
+        />
       </div>
-
-      <hr className={styles.divider} />
-
-      <NurseOverviewBreakdown
-        statusBreakdown={data.statusBreakdown}
-        clinicStatusBreakdown={data.clinicStatusBreakdown}
-        admStatusBreakdown={data.admStatusBreakdown}
-      />
-
-      <hr className={styles.divider} />
-
-      <NurseOverviewTrends dailyTrend={data.dailyTrend} needsReview={data.needsReview} />
     </section>
   );
 }

@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, ChevronLeft, ChevronRight, CircleDot, FileText } from "lucide-react";
+import { Search, CircleDot, FileText } from "lucide-react";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { FolderCard } from "@/components/ui/FolderCard";
@@ -12,7 +11,7 @@ import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import styles from "./RecordsHeatblocks.module.css";
 import { CATEGORY_META, fetchRecords } from "@/services/principal/records.service";
 import type { BehavioralRecord } from "../types";
-import { PAGE_SIZE } from "@/components/shared/pagination";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 
 
@@ -54,8 +53,6 @@ export function RecordsHeatblocks() {
     (safePage - 1) * PAGE_SIZE,
     safePage * PAGE_SIZE
   );
-  const rangeStart = shownReports.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(safePage * PAGE_SIZE, shownReports.length);
 
   return (
     <>
@@ -148,31 +145,12 @@ export function RecordsHeatblocks() {
               ))}
             </div>
             {totalPages > 1 ? (
-              <div className={styles.pager}>
-                <p className={styles.range} aria-live="polite">
-                  {shownReports.length > 0 ? `${rangeStart}–${rangeEnd} of ${shownReports.length} · Page ${safePage} of ${totalPages}` : "0 of 0"}
-                </p>
-                <div className={styles.pagerButtons}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={safePage <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    <ChevronLeft aria-hidden />
-                    Previous
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={safePage >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  >
-                    Next
-                    <ChevronRight aria-hidden />
-                  </Button>
-                </div>
-              </div>
+              <Pagination
+                currentPage={safePage}
+                totalItems={shownReports.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setPage}
+              />
             ) : null}
           </>
         )}

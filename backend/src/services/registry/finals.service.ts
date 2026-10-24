@@ -29,6 +29,7 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
       student: {
         select: {
           lrn: true,
+          mascot: true,
           gradeLevel: true,
           sectionId: true,
           section: { select: { name: true } },
@@ -39,12 +40,13 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
         select: {
           lrn: true,
           fullName: true,
+          mascot: true,
           gradeLevel: true,
           sectionId: true,
           section: { select: { name: true } },
         },
       },
-      subject: { select: { name: true } },
+      subject: { select: { name: true, code: true } },
       term: { select: { id: true, termNumber: true, schoolYear: { select: { name: true } } } },
     },
     orderBy: [{ termId: "asc" }, { student: { user: { fullName: "asc" } } }, { subject: { name: "asc" } }],
@@ -117,7 +119,6 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
   const readyCount = viewableGroups.reduce((sum, g) => sum + g.length, 0);
   const completeCount = viewableGroups.length;
   const lockedCount = rows.filter((r) => r.lockStatus === "locked").length;
-  const adviserApprovedCount = rows.filter((r) => r.lockStatus === "adviser_approved").length;
 
   const students = slice.map((group) => {
     const r0 = group[0];
@@ -127,6 +128,7 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
       name: nameOf(r0),
       gradeLevel: r0.student?.gradeLevel ?? r0.roster?.gradeLevel ?? "",
       section: r0.student?.section?.name ?? r0.roster?.section?.name ?? "—",
+      mascot: r0.student?.mascot ?? r0.roster?.mascot ?? null,
       hasAccount: r0.student != null,
       term: `${r0.term.schoolYear.name.split(" ")[0]} T${r0.term.termNumber}`,
       overall: Math.round(
@@ -137,6 +139,7 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
         return {
           id: r.id,
           subject: r.subject.name,
+          code: r.subject.code,
           teacher: teacherMap.get(teacherKey) ?? "—",
           computedAverage: r.computedAverage ?? 0,
           transmutedGrade: r.transmutedGrade ?? 0,
@@ -154,7 +157,6 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
     ready: readyCount,
     complete: completeCount,
     locked: lockedCount,
-    adviserApproved: adviserApprovedCount,
     page: clampedPage,
     pageSize,
   };

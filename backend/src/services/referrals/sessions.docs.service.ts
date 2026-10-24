@@ -30,10 +30,17 @@ export async function addAttachments(
   files: SessionFile[],
 ) {
   const referral = await getSessionReferral(referralId, ctx.role, ctx.termId);
-  if (referral.status === "resolved" || referral.status === "dismissed") {
+  const session = await getSession(referral.id, sessionId);
+  // Completed sessions stay documentable after the case closes — the nurse
+  // files photos "now or later", and closing a case on session completion
+  // must not strand that promise. A dismissed case (or an unfinished
+  // session on a closed one) is still off-limits.
+  if (referral.status === "dismissed") {
+    throw new AppError(400, "INVALID_ACTION", "Cannot add documentation to a dismissed case");
+  }
+  if (referral.status === "resolved" && session.status !== "completed") {
     throw new AppError(400, "INVALID_ACTION", "Cannot add documentation to a closed case");
   }
-  const session = await getSession(referral.id, sessionId);
 
   if (session.status === "scheduled") {
     ensureSessionStarted(session);

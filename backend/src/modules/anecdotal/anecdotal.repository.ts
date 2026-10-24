@@ -194,7 +194,9 @@ export async function loadOcForm01Data(recordId: string, requesterId: string, re
   };
 
   const canSign =
-    isSectionAdviser || (!record.section.adviserId && isObserver);
+    requesterRole !== "guidance_counselor" &&
+    requesterRole !== "nurse" &&
+    (isSectionAdviser || (!record.section.adviserId && isObserver));
   return {
     data,
     filename: ocForm01Filename(data.studentName, when),

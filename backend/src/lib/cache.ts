@@ -40,7 +40,12 @@ export function cache(options: CacheOptions = {}) {
 
     if (req.method !== "GET") return next();
     const redis = getRedis();
-    const cacheControl = options.cacheControl ?? "private, max-age=30";
+    // Never let the browser reuse an API payload: Redis is the cache, and a
+    // client-side max-age kept serving pre-write lists for up to 30s after a
+    // PATCH (a completed ADM case popped back onto its board on refetch).
+    // Awaited tag invalidation completes before the write responds, so the
+    // refetch that follows always misses the stale entry.
+    const cacheControl = options.cacheControl ?? "private, no-store";
     res.setHeader("Cache-Control", cacheControl);
     if (!redis) return next();
 

@@ -3,14 +3,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api/client";
 import {
   guidanceNotificationTarget,
   nurseNotificationTarget,
   teacherNotificationTarget,
 } from "@/lib/notifications/label";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { ReminderStack } from "./ReminderStack";
 import styles from "./booking-reminder.module.css";
 
@@ -19,9 +17,17 @@ export interface BookingReminder {
   title: string;
   message: string;
   href: string | null;
+  overdue: boolean;
+  /** Structured pieces so the name and date can be highlighted inline. */
+  student: string;
+  kind: string;
+  when: string;
+  venue: string;
 }
 
-const UPCOMING_WINDOW_MS = 5 * 60 * 1000;
+// 30-minute lead time: a clinic desk gets a useful heads-up without the pop-up
+// arriving so early it becomes noise. Overdue sessions still render regardless.
+const UPCOMING_WINDOW_MS = 30 * 60 * 1000;
 
 interface DeskSession {
   sessionId: string;
@@ -91,9 +97,25 @@ const SESSION_KIND_LABELS: Record<string, string> = {
   home_visit: "Home visit",
 };
 
-function sessionMessage(s: DeskSession, now: number): string {
+function sessionMessage(p: SessionText): string {
+  const venue = p.venue ? ` · ${p.venue}` : "";
+  if (!p.overdue) {
+    return `${p.student} — upcoming ${p.kind} meetup, ${p.when}${venue}`;
+  }
+  return `${p.student} — overdue ${p.kind} meetup, ${p.when}${venue} — still unattended`;
+}
+
+interface SessionText {
+  student: string;
+  kind: string;
+  when: string;
+  venue: string;
+  overdue: boolean;
+}
+
+function sessionParts(s: DeskSession, now: number): SessionText {
   const kind = SESSION_KIND_LABELS[s.sessionType] ?? s.sessionType.replace(/_/g, " ");
-  const venue = s.venue?.trim() ? ` · ${s.venue.trim()}` : "";
+  const venue = s.venue?.trim() ?? "";
   const d = new Date(s.scheduledAt);
   const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const day = d.toLocaleDateString("en-US", {
@@ -106,12 +128,14 @@ function sessionMessage(s: DeskSession, now: number): string {
   const startOfDay = new Date(d);
   startOfDay.setHours(0, 0, 0, 0);
   const overdue = d.getTime() <= now;
+  let when: string;
   if (!overdue) {
     const diffDays = Math.round((startOfDay.getTime() - startOfToday.getTime()) / 86_400_000);
-    const when = diffDays === 0 ? `today at ${time}` : `${day} at ${time}`;
-    return `${s.student} — upcoming ${kind} meetup, ${when}${venue}`;
+    when = diffDays === 0 ? `today at ${time}` : `${day} at ${time}`;
+  } else {
+    when = `${day} at ${time}`;
   }
-  return `${s.student} — overdue ${kind} meetup, ${day} at ${time}${venue} — still unattended`;
+  return { student: s.student, kind, when, venue, overdue };
 }
 
 function evaluateSessions(desk: ReminderDesk): void {
@@ -128,12 +152,18 @@ function evaluateSessions(desk: ReminderDesk): void {
         const id = sessionKey(s);
         if (reminders.some((x) => x.id === id)) continue;
         if (isHandled(id)) continue;
+        const parts = sessionParts(s, now);
         reminders = [
           {
             id,
             title: "Upcoming session",
-            message: sessionMessage(s, now),
+            message: sessionMessage(parts),
             href: hrefFor(desk, s),
+            overdue: parts.overdue,
+            student: parts.student,
+            kind: parts.kind,
+            when: parts.when,
+            venue: parts.venue,
           },
           ...reminders,
         ];
@@ -265,52 +295,56 @@ export function BookingReminderStack({ desk }: { desk: ReminderDesk }) {
     if (r.href) router.push(r.href);
   };
 
-  const renderCard = (id: string) => {
+  const renderCard = (id: string, isTop: boolean) => {
     const r = byId.get(id);
     if (!r) return null;
     return (
       <div
-        className={`${assign.card} ${styles.drop}`}
+        className={`${styles.tile} ${r.overdue ? styles.tileOverdue : ""}`}
         role="alert"
-        onClick={(e) => e.stopPropagation()}
+        aria-hidden={!isTop}
       >
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className={styles.cardRow}>
-        <span className={styles.icon} aria-hidden="true">
-          <CalendarClock size={20} />
-        </span>
-        <div className={styles.body}>
-          <p className={styles.title}>{r.title}</p>
-          <p className={styles.message}>{r.message}</p>
-        </div>
-        <div className={styles.actions}>
-          {r.href ? (
-            <Button
+        <div className={styles.tileHead}>
+          <span className={styles.status}>
+            <span className={styles.statusIcon} aria-hidden="true">
+              <CalendarClock size={12} strokeWidth={2.25} />
+            </span>
+            <span className={styles.statusDot} aria-hidden="true" />
+            {r.overdue ? "Overdue" : "Upcoming"}
+          </span>
+          <div className={styles.actions}>
+            {r.href ? (
+              <button
+                type="button"
+                className={styles.cta}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  viewCase(r);
+                }}
+              >
+                View case
+              </button>
+            ) : null}
+            <button
               type="button"
-              size="sm"
+              className={styles.dismiss}
               onClick={(e) => {
                 e.stopPropagation();
-                viewCase(r);
+                dismissBookingReminder(r.id);
               }}
+              aria-label="Dismiss booking reminder"
             >
-              View case
-            </Button>
-          ) : null}
-          <button
-            type="button"
-            className={styles.dismiss}
-            onClick={(e) => {
-              e.stopPropagation();
-              dismissBookingReminder(r.id);
-            }}
-            aria-label="Dismiss booking reminder"
-          >
-            <X size={16} aria-hidden="true" />
-          </button>
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
         </div>
-        </div>
+        <p className={styles.message}>
+          <span className={styles.pill}>{r.student}</span>
+          {` — ${r.overdue ? "overdue" : "upcoming"} ${r.kind} meetup, `}
+          <span className={styles.pill}>{r.when}</span>
+          {r.venue ? ` · ${r.venue}` : null}
+          {r.overdue ? " — still unattended" : null}
+        </p>
       </div>
     );
   };

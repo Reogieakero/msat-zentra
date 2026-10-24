@@ -29,7 +29,7 @@ export function OcForm01Print({ detail }: OcForm01PrintProps) {
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/ocform01/msat-logo.png"
+          src="/ocform01/msat-crest.png"
           alt="Mati School of Arts and Trades logo"
           className={styles.logoMsat}
         />

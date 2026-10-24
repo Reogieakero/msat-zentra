@@ -17,19 +17,11 @@ import {
 } from "@/components/ui/chart";
 import { MessageSquareText, CalendarDays } from "lucide-react";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { Button } from "@/components/ui/button";
 import { usePrincipalProfileSettings } from "@/services/settings/profile-settings";
 import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
@@ -276,68 +268,47 @@ export function SchoolTrend() {
     statusLine && interpretation.length > 1 ? interpretation.slice(0, -1) : interpretation;
 
   const isEmpty = !isPending && (chartData.length === 0 || series.length === 0);
-  if (isEmpty) {
-    return (
-      <Card className="relative">
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <CardContent className="relative flex flex-col gap-4 px-4">
-          <PrincipalEmptyState
-            icon={CalendarDays}
-            title="No trend data yet"
-            hint="No trend data yet — blocks appear once school days elapse."
-          />
-        </CardContent>
-      </Card>
-    );
-  }
   return (
-      <Card className="relative">
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <CardHeader className="relative">
-          <div>
-            <CardTitle>
-              {mode === "subject" ? "Subject Trends" : "Grade Trends"}
-            </CardTitle>
-            <CardDescription>
-              One line per {noun} plus the school average — daily present
-              share of enrolled headcount
-              {termNumber ? ` · Term ${termNumber}` : ""}.
-            </CardDescription>
-          </div>
-          <CardAction className="flex items-center gap-2">
-            <div className="flex items-center gap-1" role="group" aria-label="Trend grouping">
-              {(["subject", "grade"] as const).map((m) => (
-                <Button
-                  key={m}
-                  type="button"
-                  variant={mode === m ? "default" : "outline"}
-                  size="sm"
-                  aria-pressed={mode === m}
-                  onClick={() => setMode(m)}
-                >
-                  {m === "subject" ? "Subjects" : "Grades"}
-                </Button>
-              ))}
-            </div>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="relative flex flex-col gap-4 px-4">
-          {isPending ? (
-            <>
-              <Skeleton className={styles.skelChart} />
-              <Skeleton className={styles.skelLine} />
-              <Skeleton className={styles.skelLineShort} />
-            </>
-          ) : chartData.length === 0 || series.length === 0 ? (
+    <KanbanBoard
+      title={mode === "subject" ? "Subject Trends" : "Grade Trends"}
+      icon={<CalendarDays size={14} aria-hidden="true" />}
+      description={
+        <>
+          One line per {noun} plus the school average — daily present
+          share of enrolled headcount
+          {termNumber ? ` · Term ${termNumber}` : ""}.
+        </>
+      }
+      actions={
+        <div className="flex items-center gap-1" role="group" aria-label="Trend grouping">
+          {(["subject", "grade"] as const).map((m) => (
+            <Button
+              key={m}
+              type="button"
+              variant={mode === m ? "default" : "outline"}
+              size="sm"
+              aria-pressed={mode === m}
+              onClick={() => setMode(m)}
+            >
+              {m === "subject" ? "Subjects" : "Grades"}
+            </Button>
+          ))}
+        </div>
+      }
+    >
+      <div className="relative flex flex-col gap-4 px-1">
+          {isEmpty ? (
             <PrincipalEmptyState
               icon={CalendarDays}
               title="No trend data yet"
               hint="No trend data yet — blocks appear once school days elapse."
             />
+          ) : isPending ? (
+            <>
+              <Skeleton className={styles.skelChart} />
+              <Skeleton className={styles.skelLine} />
+              <Skeleton className={styles.skelLineShort} />
+            </>
           ) : (
             <>
               <div className={styles.chartWrap}>
@@ -482,12 +453,13 @@ export function SchoolTrend() {
                     />
                     What this means
                     {statusLine ? (
-                      <Badge
-                        variant={atRisk ? "destructive" : "success"}
+                      <Pill
+                        tone={atRisk ? "red" : "green"}
+                        label="Status"
                         className={styles.messageBadge}
                       >
                         {atRisk ? "Needs attention" : "On track"}
-                      </Badge>
+                      </Pill>
                     ) : null}
                   </p>
                   <p className={styles.messageSub}>
@@ -507,7 +479,7 @@ export function SchoolTrend() {
               ) : null}
             </>
           )}
-        </CardContent>
-      </Card>
+      </div>
+    </KanbanBoard>
   );
 }

@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import { KanbanModal } from "@/components/ui/kanban-modal";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ImageDown, Loader2, PenLine, Printer, Trash2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { FileDown, ImageDown, Loader2, PenLine, Printer, Trash2 } from "lucide-react";
 import { OcForm01Print } from "./OcForm01Print";
 import { SignaturePad } from "./SignaturePad";
 import styles from "./OcForm01PreviewDialog.module.css";
@@ -31,7 +37,7 @@ export function OcForm01PreviewDialog({
   const [detail, setDetail] = useState<OcForm01Detail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState<"png" | "jpg" | null>(null);
+  const [exporting, setExporting] = useState<"png" | "jpg" | "pdf" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [signing, setSigning] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -84,56 +90,113 @@ export function OcForm01PreviewDialog({
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [recordId, refreshDetail, resetDialog]);
 
+  // Renders the export box (sheet + 16px gutters) to a PNG data URL.
+  // Shared by the PNG/JPG download and the PDF download so all three stay
+  // intact and identical.
+  async function renderExportPng(): Promise<{ dataUrl: string; pxW: number; pxH: number }> {
+    const node = exportRef.current;
+    if (!node) throw new Error("Export node not ready");
+    try {
+      await document.fonts?.ready;
+    } catch {
+      /* Fonts are best-effort — the sheet uses Arial fallbacks. */
+    }
+    const { toPng } = await import("html-to-image");
+    // Full content size so the sheet is captured intact with its 16px
+    // gutters and nothing cut. `style.margin` resets the centering margin
+    // (`margin: 0 auto`) that html-to-image would otherwise copy from the
+    // live page onto the export clone and shift the sheet right.
+    const width = node.scrollWidth || node.offsetWidth || 852;
+    const height = node.scrollHeight || node.offsetHeight || undefined;
+    const dataUrl = await toPng(node, {
+      cacheBust: true,
+      pixelRatio: 2,
+      backgroundColor: "#ffffff",
+      width,
+      height,
+      style: { margin: "0" },
+    });
+    const size = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => reject(new Error("Could not read export image"));
+      img.src = dataUrl;
+    });
+    return { dataUrl, pxW: size.w, pxH: size.h };
+  }
+
   async function handleSaveImage(format: "png" | "jpg") {
     const node = exportRef.current;
     if (!node || exporting || !detail) return;
     setExporting(format);
     setExportError(null);
     try {
-      try {
-        await document.fonts?.ready;
-      } catch {
-        /* Fonts are best-effort — the sheet uses Arial fallbacks. */
+      const { dataUrl } = await renderExportPng();
+      let downloadUrl = dataUrl;
+      if (format === "jpg") {
+        const { toJpeg } = await import("html-to-image");
+        const width = node.scrollWidth || node.offsetWidth || 852;
+        const height = node.scrollHeight || node.offsetHeight || undefined;
+        downloadUrl = await toJpeg(node, {
+          cacheBust: true,
+          pixelRatio: 2,
+          quality: 0.95,
+          backgroundColor: "#ffffff",
+          width,
+          height,
+          style: { margin: "0" },
+        });
       }
-      const { toPng, toJpeg } = await import("html-to-image");
-      const ext = format === "png" ? "png" : "jpg";
-      // Full content size so the sheet is captured intact with its 16px
-      // gutters and nothing cut. `style.margin` resets the centering margin
-      // (`margin: 0 auto`) that html-to-image would otherwise copy from the
-      // live page onto the export clone and shift the sheet right.
-      const width = node.scrollWidth || node.offsetWidth || 852;
-      const height = node.scrollHeight || node.offsetHeight || undefined;
-      const dataUrl =
-        format === "png"
-          ? await toPng(node, {
-              cacheBust: true,
-              pixelRatio: 2,
-              backgroundColor: "#ffffff",
-              width,
-              height,
-              style: { margin: "0" },
-            })
-          : await toJpeg(node, {
-              cacheBust: true,
-              pixelRatio: 2,
-              quality: 0.95,
-              backgroundColor: "#ffffff",
-              width,
-              height,
-              style: { margin: "0" },
-            });
       const anchor = document.createElement("a");
-      anchor.href = dataUrl;
+      anchor.href = downloadUrl;
       anchor.download = buildOcForm01ImageFilename(
         { studentName: detail.studentName, observationDate: detail.observationDate },
         recordId ?? "record",
-        ext,
+        format,
       );
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
     } catch {
       setExportError("The image could not be saved. Try again.");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function handleSavePdf() {
+    if (!exportRef.current || exporting || !detail) return;
+    setExporting("pdf");
+    setExportError(null);
+    try {
+      const { dataUrl, pxW, pxH } = await renderExportPng();
+      const { jsPDF } = await import("jspdf");
+      // A4 portrait with the same 16px gutters as the PNG/JPG export
+      // (16px at 96dpi = 4.233mm). The intact sheet image is fitted inside,
+      // shrunk only if a very long write-up overflows one page.
+      const GUTTER_MM = (16 * 25.4) / 96;
+      const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const boxW = pageW - GUTTER_MM * 2;
+      const boxH = pageH - GUTTER_MM * 2;
+      const aspect = pxW / pxH;
+      let fitW = boxW;
+      let fitH = fitW / aspect;
+      if (fitH > boxH) {
+        fitH = boxH;
+        fitW = fitH * aspect;
+      }
+      doc.addImage(dataUrl, "PNG", (pageW - fitW) / 2, (pageH - fitH) / 2, fitW, fitH);
+      doc.save(
+        buildOcForm01ImageFilename(
+          { studentName: detail.studentName, observationDate: detail.observationDate },
+          recordId ?? "record",
+          "pdf",
+        ),
+      );
+    } catch {
+      setExportError("The PDF could not be saved. Try again.");
     } finally {
       setExporting(null);
     }
@@ -198,11 +261,12 @@ export function OcForm01PreviewDialog({
       open={recordId !== null}
       onClose={onClose}
       title="GCForm-01 — Anecdotal Report"
-      description="Official template preview (GCForm-01). Prints to A4 portrait. Save as PNG/JPG (16px gutters)."
+      description="Official template preview (GCForm-01). Prints to A4 portrait. Save as PNG/JPG/PDF (16px gutters)."
       size="xl"
       dismissable={!applying && !saving && exporting === null}
       footer={
         signing ? undefined : (
+        <TooltipProvider delayDuration={100}>
         <span className="inline-flex flex-wrap items-center justify-end gap-2 print:hidden">
           {signError || exportError ? (
             <span className="text-sm text-destructive" role="alert">
@@ -211,107 +275,180 @@ export function OcForm01PreviewDialog({
           ) : null}
           {detail && !signing && detail.canSign && !detail.signature && mySignatureUrl ? (
             <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    disabled={applying}
+                    onClick={() => void handleApplySignature()}
+                  >
+                    {applying ? (
+                      <Loader2 size={14} className="animate-spin" aria-hidden />
+                    ) : (
+                      <PenLine aria-hidden />
+                    )}
+                    {applying ? "Applying…" : "Apply my signature"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  Apply your saved signature to this report
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => {
+                      setSignError(null);
+                      setSigning(true);
+                    }}
+                  >
+                    Replace
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Draw a different signature</TooltipContent>
+              </Tooltip>
+            </>
+          ) : null}
+          {detail && !signing && detail.canSign && !detail.signature && !mySignatureUrl && !mySigLoading ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => {
+                    setSignError(null);
+                    setSigning(true);
+                  }}
+                >
+                  <PenLine aria-hidden />
+                  Create my signature
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                Draw once and reuse your signature on reports
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+          {detail && !signing && detail.canSign && detail.signature ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={`h-6 px-2 text-[11px] ${confirmingRemove ? styles.dangerBtn : ""}`}
+                  onClick={() => void handleRemoveSignature()}
+                  onBlur={() => setConfirmingRemove(false)}
+                >
+                  <Trash2 aria-hidden />
+                  {confirmingRemove ? "Confirm remove" : "Remove signature"}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {confirmingRemove
+                  ? "Click again to remove your signature"
+                  : "Remove the applied signature"}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 className="h-6 px-2 text-[11px]"
-                disabled={applying}
-                onClick={() => void handleApplySignature()}
+                onClick={() => window.print()}
+                disabled={!detail}
               >
-                {applying ? (
-                  <Loader2 size={14} className="animate-spin" aria-hidden />
-                ) : (
-                  <PenLine aria-hidden />
-                )}
-                {applying ? "Applying…" : "Apply my signature"}
+                <Printer aria-hidden />
+                Print
               </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              Print the anecdotal report (A4 portrait)
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 className="h-6 px-2 text-[11px]"
-                onClick={() => {
-                  setSignError(null);
-                  setSigning(true);
-                }}
+                disabled={!detail || exporting !== null}
+                onClick={() => void handleSaveImage("png")}
+                aria-busy={exporting === "png" || undefined}
               >
-                Replace
+                {exporting === "png" ? (
+                  <Loader2 size={14} className="animate-spin" aria-hidden />
+                ) : (
+                  <ImageDown aria-hidden />
+                )}
+                {exporting === "png" ? "Saving…" : "Save PNG"}
               </Button>
-            </>
-          ) : null}
-          {detail && !signing && detail.canSign && !detail.signature && !mySignatureUrl && !mySigLoading ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-[11px]"
-              onClick={() => {
-                setSignError(null);
-                setSigning(true);
-              }}
-            >
-              <PenLine aria-hidden />
-              Create my signature
-            </Button>
-          ) : null}
-          {detail && !signing && detail.canSign && detail.signature ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={`h-6 px-2 text-[11px] ${confirmingRemove ? styles.dangerBtn : ""}`}
-              onClick={() => void handleRemoveSignature()}
-              onBlur={() => setConfirmingRemove(false)}
-            >
-              <Trash2 aria-hidden />
-              {confirmingRemove ? "Confirm remove" : "Remove signature"}
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-6 px-2 text-[11px]"
-            onClick={() => window.print()}
-            disabled={!detail}
-          >
-            <Printer aria-hidden />
-            Print
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-6 px-2 text-[11px]"
-            disabled={!detail || exporting !== null}
-            onClick={() => void handleSaveImage("png")}
-            aria-busy={exporting === "png" || undefined}
-          >
-            {exporting === "png" ? (
-              <Loader2 size={14} className="animate-spin" aria-hidden />
-            ) : (
-              <ImageDown aria-hidden />
-            )}
-            {exporting === "png" ? "Saving…" : "Save PNG"}
-          </Button>
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            className="h-6 px-2 text-[11px]"
-            disabled={!detail || exporting !== null}
-            onClick={() => void handleSaveImage("jpg")}
-            aria-busy={exporting === "jpg" || undefined}
-          >
-            {exporting === "jpg" ? (
-              <Loader2 size={14} className="animate-spin" aria-hidden />
-            ) : (
-              <ImageDown aria-hidden />
-            )}
-            {exporting === "jpg" ? "Saving…" : "Save JPG"}
-          </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              Save the report as a PNG image (16px gutters)
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-[11px]"
+                disabled={!detail || exporting !== null}
+                onClick={() => void handleSaveImage("jpg")}
+                aria-busy={exporting === "jpg" || undefined}
+              >
+                {exporting === "jpg" ? (
+                  <Loader2 size={14} className="animate-spin" aria-hidden />
+                ) : (
+                  <ImageDown aria-hidden />
+                )}
+                {exporting === "jpg" ? "Saving…" : "Save JPG"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              Save the report as a JPG image (16px gutters)
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                className="h-6 px-2 text-[11px]"
+                disabled={!detail || exporting !== null}
+                onClick={() => void handleSavePdf()}
+                aria-busy={exporting === "pdf" || undefined}
+              >
+                {exporting === "pdf" ? (
+                  <Loader2 size={14} className="animate-spin" aria-hidden />
+                ) : (
+                  <FileDown aria-hidden />
+                )}
+                {exporting === "pdf" ? "Saving…" : "Save PDF"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              Save the report as a PDF (A4 portrait)
+            </TooltipContent>
+          </Tooltip>
         </span>
+        </TooltipProvider>
         )
       }
     >
@@ -349,7 +486,7 @@ export function OcForm01PreviewDialog({
                 <Badge variant="green" className="rounded-md">Signed</Badge>
               </p>
             ) : null}
-            {/* Official template — export box adds exactly 16px gutters for PNG/JPG. */}
+            {/* Official template — export box adds exactly 16px gutters for PNG/JPG/PDF. */}
             <div ref={exportRef} className={styles.exportWrap}>
               <OcForm01Print detail={detail} />
             </div>

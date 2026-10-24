@@ -1,90 +1,23 @@
 "use client";
 
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  KanbanBoardSkeleton,
+  RowListSkeleton,
+} from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import {
   TeacherOverviewActions,
   type QuickAction,
 } from "./teacher-overview-actions";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import layout from "./teacher-overview.module.css";
-import header from "./teacher-overview-header.module.css";
-import skel from "./teacher-overview-skeleton.module.css";
-
-function ProfileSkeleton() {
-  return (
-    <article
-      className={assign.card}
-      aria-hidden="true"
-    >
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className="relative flex flex-col gap-1">
-        <div className={assign.cardHead}>
-          <Skeleton className={skel.skelAvatar} />
-          <div className="flex flex-1 flex-col gap-1">
-            <Skeleton className={skel.skelHeroTitle} />
-            <Skeleton className={skel.skelAdvisory} />
-          </div>
-        </div>
-      </div>
-      <div className={`${header.profileFoot} relative`}>
-        {[0, 1].map((i) => (
-          <div key={i} className={header.stat}>
-            <Skeleton className={skel.skelStatIcon} />
-            <div className={header.statText}>
-              <Skeleton className={skel.skelStatValue} />
-              <Skeleton className={skel.skelStatLabel} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </article>
-  );
-}
-
-function RiskChartSkeleton() {
-  return (
-    <div
-      className={assign.card}
-      aria-hidden="true"
-    >
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className="relative flex items-center gap-3">
-        <Skeleton className={skel.skelAvatar} />
-        <div className="flex flex-1 flex-col gap-1">
-          <Skeleton className={skel.skelSectionTitle} />
-          <Skeleton className={skel.skelSectionMeta} />
-        </div>
-      </div>
-      <div className="relative">
-        <div className={header.riskBlock}>
-          <div className={header.riskChart}>
-            <Skeleton className={skel.skelRiskCircle} />
-          </div>
-          <ul className={header.riskLegend}>
-            {[0, 1, 2].map((i) => (
-              <li key={i} className={header.riskLegendItem}>
-                <Skeleton className={skel.skelLegendDot} />
-                <div className={header.riskLegendBody}>
-                  <Skeleton className={skel.skelLegendTop} />
-                  <Skeleton className={skel.skelLegendCount} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface TeacherOverviewSkeletonProps {
   actions: QuickAction[];
 }
 
+/* Mirrors the real overview: Actions, then the adviser/class RiskTable +
+   Attendance + Anecdotes boards (each a KanbanBoard around a RowList), and
+   the Profile + RiskLane rail. Uses the shared kit so board geometry is the
+   same component shell the loaded page renders. */
 export function TeacherOverviewSkeleton({ actions }: TeacherOverviewSkeletonProps) {
   return (
     <section
@@ -94,48 +27,20 @@ export function TeacherOverviewSkeleton({ actions }: TeacherOverviewSkeletonProp
     >
       <div className={layout.body}>
         <div className={layout.mainCol}>
-          <TeacherOverviewActions actions={actions} row />
-          <div className="rounded-xl border border-input bg-card p-5" aria-hidden="true">
-            <div className="h-5 w-48 rounded bg-muted" />
-            <div className="mt-4 flex flex-col gap-2">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-10 rounded-md bg-muted" />
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2" aria-hidden="true">
-            <div className="h-5 w-40 rounded bg-muted" />
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-12 rounded-md bg-muted" />
-            ))}
-          </div>
-          <div className="rounded-xl border border-input bg-card p-5" aria-hidden="true">
-            <div className="h-5 w-56 rounded bg-muted" />
-            <div className="mt-4 flex flex-col gap-2">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="h-10 rounded-md bg-muted" />
-              ))}
-            </div>
-          </div>
+          <TeacherOverviewActions actions={actions} />
+          <KanbanBoardSkeleton rows={0} titleWidth="10rem" showCount>
+            <RowListSkeleton rows={5} gutter="0.625rem" withDatePill />
+          </KanbanBoardSkeleton>
+          <KanbanBoardSkeleton rows={0} titleWidth="9rem" showCount>
+            <RowListSkeleton rows={4} gutter="0.625rem" />
+          </KanbanBoardSkeleton>
+          <KanbanBoardSkeleton rows={0} titleWidth="8rem" showCount>
+            <RowListSkeleton rows={4} gutter="0.625rem" />
+          </KanbanBoardSkeleton>
         </div>
-        <aside className={layout.sideCol}>
-          <ProfileSkeleton />
-          <aside
-            className={header.populationPanel}
-            aria-hidden="true"
-          >
-            <section className={header.chartColumn}>
-              <header className={header.sectionHead}>
-                <Skeleton className={skel.skelSectionTitle} />
-              </header>
-              <div className="flex flex-col gap-2">
-                {[0, 1].map((i) => (
-                  <Skeleton key={i} className={skel.skelName} />
-                ))}
-              </div>
-            </section>
-          </aside>
-          <RiskChartSkeleton />
+        <aside className={layout.sideCol} style={{ top: "4rem" }}>
+          <KanbanBoardSkeleton rows={3} titleWidth="6rem" />
+          <KanbanBoardSkeleton rows={4} titleWidth="7rem" />
         </aside>
       </div>
     </section>

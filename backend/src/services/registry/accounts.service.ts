@@ -55,7 +55,10 @@ export interface BreakdownResultGroup {
   total: number;
 }
 
-export function buildRegistrarBreakdown(
+// Shared by /registrar/accounts and /record-keeper/accounts — the band
+// (G11–12 vs G7–10) is already applied by getAccountBreakdown's ctx before
+// the roster reaches this grouping step, so the desks only differ in scope.
+export function buildAccountBreakdown(
   roster: { lrn: string; gradeLevel: string; section: { name: string } | null }[],
   statusByLrn: Map<string, string>,
   profilesWithoutRoster: { gradeLevel: string; section: { name: string } | null; user: { status: string } }[],
@@ -84,45 +87,6 @@ export function buildRegistrarBreakdown(
     ...g,
     total: g.withAccount + g.pending + g.noAccount,
   }));
-}
-
-export interface KeeperBreakdownGroup {
-  id: string;
-  label: string;
-  grade: string;
-  withAccount: number;
-  pending: number;
-}
-
-export async function buildRecordKeeperBreakdown(
-  band: GradeLevel[],
-  roster: { lrn: string; gradeLevel: string; section: { name: string } | null }[],
-  statusByLrn: Map<string, string>,
-): Promise<KeeperBreakdownGroup[]> {
-  const groups = new Map<string, { label: string; grade: string; withAccount: number; pending: number }>();
-  for (const r of roster) {
-    const label = `${gradeLabel(r.gradeLevel)} · ${r.section?.name ?? "Unsectioned"}`;
-    if (!groups.has(label))
-      groups.set(label, { label, grade: gradeLabel(r.gradeLevel), withAccount: 0, pending: 0 });
-    const g = groups.get(label)!;
-    const status = statusByLrn.get(r.lrn);
-    if (status === "active") g.withAccount++;
-    else if (status === "pending") g.pending++;
-  }
-
-  const rosteredLrns = new Set(roster.map((r) => r.lrn));
-  const pendingUsers = await prisma.studentProfile.findMany({
-    where: { gradeLevel: { in: band }, user: { status: "pending" }, lrn: { notIn: Array.from(rosteredLrns) } },
-    select: { gradeLevel: true, section: { select: { name: true } } },
-  });
-  for (const p of pendingUsers) {
-    const label = `${gradeLabel(p.gradeLevel)} · ${p.section?.name ?? "Unsectioned"}`;
-    if (!groups.has(label))
-      groups.set(label, { label, grade: gradeLabel(p.gradeLevel), withAccount: 0, pending: 0 });
-    groups.get(label)!.pending++;
-  }
-
-  return Array.from(groups.values()).map((g, i) => ({ id: `g${i}-${g.label}`, ...g }));
 }
 
 export interface StudentsQuery {

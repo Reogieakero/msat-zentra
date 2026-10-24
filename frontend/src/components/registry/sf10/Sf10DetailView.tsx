@@ -6,18 +6,31 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import {
   AlertTriangle,
   Archive,
-  BadgeCheck,
   CheckCircle2,
   ChevronLeft,
   Download,
   ExternalLink,
+  FileSearch,
   FileText,
+  GitBranch,
   GraduationCap,
+  History,
   Loader2,
+  SlidersHorizontal,
+  Table2,
+  UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { useDock } from "@/components/dock/dock-store";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -26,8 +39,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import ThoughtLine from "@/components/ui/thought-line/ThoughtLine";
 import { StatusBadge, displaySubjectName, formatRelativeTime } from "@/components/registry/sf10/shared";
 import {
@@ -38,10 +51,11 @@ import {
 import {
   fetchSf10Detail,
   releaseSf10,
+  validateSf10,
+  verifySf10,
 } from "@/services/registry/sf10.service";
 import { markSelfNotified as markRegistrarNotified } from "@/lib/realtime/registrarChannel";
 import { markSelfNotified as markRecordKeeperNotified } from "@/lib/realtime/recordKeeperChannel";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./sf10.module.css";
 
 const GRADE_ORDER = ["G7", "G8", "G9", "G10", "G11", "G12"];
@@ -64,8 +78,8 @@ function isSpreadsheetUrl(url: string, mime?: string | null): boolean {
   );
 }
 
-function QuarterCells({ quarters }: { quarters?: Array<number | null> | null }) {
-  const cells = [quarters?.[0] ?? null, quarters?.[1] ?? null, quarters?.[2] ?? null, quarters?.[3] ?? null];
+function QuarterCells({ quarters, count = 4 }: { quarters?: Array<number | null> | null; count?: number }) {
+  const cells = [quarters?.[0] ?? null, quarters?.[1] ?? null, quarters?.[2] ?? null, quarters?.[3] ?? null].slice(0, count);
   return (
     <>
       {cells.map((q, i) => (
@@ -83,11 +97,352 @@ function finalOf(entry: { rating?: number | null; quarters?: Array<number | null
   return qs.length > 0 ? qs[qs.length - 1] : "—";
 }
 
-export function Sf10DetailView({ desk }: { desk: "registrar" | "record-keeper" }) {
-  const params = useParams<{ id: string }>();
-  const router = useRouter();
+/** Pill-tab styling for the grade switcher — amber when active, muted outline otherwise. */
+function gradeTabClass(active: boolean): string {
+  return `inline-flex h-6 items-center rounded-md border px-2 text-xs font-medium transition-colors ${
+    active
+      ? "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-400"
+      : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+  }`;
+}
+
+/** Icon toggle for the trail / version boards — same 9×9 gutter-icon look as
+ * the record-keeper overview rail (amber while its board is open). */
+function MetaIconButton({
+  label,
+  expanded,
+  onToggle,
+  children,
+}: {
+  label: string;
+  expanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-haspopup="dialog"
+          aria-label={expanded ? `Hide ${label}` : `Show ${label}`}
+          className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border transition-colors ${
+            expanded
+              ? "border-amber-500/60 bg-amber-500/10"
+              : "border-border bg-card hover:border-amber-500/60 hover:bg-amber-500/10"
+          }`}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="left" sideOffset={10}>
+        <span className="font-medium">{label}</span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// Flyout panel — same look + motion as the record-keeper overview KPI rail:
+// solid surface, shadow + ring, anchored beside its icon.
+const META_PANEL =
+  "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
+
+/** Small label/value cell — the record trail's 2×2 info cards. */
+function MetaCell({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-md border border-border bg-muted/30 px-2 py-1.5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-medium">{value}</p>
+    </div>
+  );
+}
+
+/** Trail stamp row — shows who verified/validated, plus the one-click
+ * button that records the stamp (disabled once stamped or released). */
+function MetaStampRow({
+  label,
+  verb,
+  doneVerb,
+  name,
+  at,
+  busy,
+  disabled,
+  title,
+  onAction,
+}: {
+  label: string;
+  verb: string;
+  doneVerb: string;
+  name: string | null;
+  at: string | null;
+  busy: boolean;
+  disabled: boolean;
+  title?: string;
+  onAction: () => void;
+}) {
+  const done = at !== null;
+  return (
+    <div className="rounded-md border border-border px-2 py-1.5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          {name ? (
+            <Badge
+              variant="amber"
+              className="max-w-full rounded-md font-normal"
+              title={at ? `${name} · ${formatRelativeTime(at)}` : name}
+            >
+              <span className="min-w-0 truncate">
+                {name}
+                {at ? ` · ${formatRelativeTime(at)}` : ""}
+              </span>
+            </Badge>
+          ) : (
+            <p className="text-sm">—</p>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className={`h-6 shrink-0 gap-1 px-2 text-xs ${
+            done ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400" : ""
+          }`}
+          disabled={disabled}
+          title={title}
+          onClick={onAction}
+        >
+          {busy ? (
+            <Loader2 className="size-3.5 animate-spin" aria-hidden />
+          ) : done ? (
+            <CheckCircle2 className="size-3.5" aria-hidden />
+          ) : null}
+          {done ? doneVerb : verb}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Trail / version icon toggles — sit in the chrome header (overlay dialog
+ * title row, page header) right side. Each icon opens its kanban board as a
+ * flyout beside it, same interaction as the overview KPI rail. */
+export function Sf10MetaToggles({ desk, id }: { desk: "registrar" | "record-keeper"; id: string }) {
+  const [openKey, setOpenKey] = React.useState<"trail" | "versions" | null>(null);
+  const railRef = React.useRef<HTMLDivElement>(null);
+  // Shares the report body's query key — the flyouts render from cache.
+  const detailQuery = useSf10Detail(desk, id);
+  const record = detailQuery.data?.record ?? null;
+  const versions = detailQuery.data?.versions ?? [];
   const queryClient = useQueryClient();
-  const id = React.useMemo(() => decodeURIComponent(params.id), [params.id]);
+  const dock = useDock();
+  const [acting, setActing] = React.useState<"verify" | "validate" | null>(null);
+  const markNotified = desk === "registrar" ? markRegistrarNotified : markRecordKeeperNotified;
+
+  React.useEffect(() => {
+    if (!openKey) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Element | null;
+      // Portaled tooltips live outside the rail — interacting with them
+      // must not dismiss the open panel.
+      if (target?.closest?.('[data-slot="tooltip-content"]')) return;
+      if (railRef.current && !railRef.current.contains(e.target as Node)) {
+        setOpenKey(null);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [openKey]);
+
+  // One-click verify / validate stamps — the trail buttons call these and
+  // every board reading this record refreshes after.
+  const stamp = async (kind: "verify" | "validate") => {
+    if (!record || acting) return;
+    setActing(kind);
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "generic",
+        title: kind === "verify" ? "Verifying SF10 record" : "Validating SF10 record",
+        description: record.fullName,
+      });
+    } catch {
+      taskId = null;
+    }
+    try {
+      if (kind === "verify") await verifySf10(record.id);
+      else await validateSf10(record.id);
+      // The validate stamp files a self-notification — suppress its toast.
+      if (kind === "validate") markNotified(record.id);
+      if (taskId) {
+        dock.completeTask(
+          taskId,
+          kind === "verify" ? "Record verified." : "Record validated.",
+        );
+      }
+      toast.success({
+        title: kind === "verify" ? "Verified" : "Validated",
+        description: `${record.fullName} marked as ${kind === "verify" ? "verified" : "validated"}.`,
+      });
+      void queryClient.invalidateQueries({ queryKey: [`${desk}-sf10`] });
+      void queryClient.invalidateQueries({ queryKey: [`${desk}-overview`] });
+      void queryClient.invalidateQueries({ queryKey: [`${desk}-notifications`] });
+    } catch {
+      if (taskId) dock.failTask(taskId, "Nothing was changed.");
+      toast.error({
+        title: kind === "verify" ? "Verify failed" : "Validate failed",
+        description: "Nothing was changed.",
+      });
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const toggle = (key: "trail" | "versions") =>
+    setOpenKey((prev) => (prev === key ? null : key));
+  const panelClass = (open: boolean) =>
+    `${META_PANEL} ${styles.metaMenu} ${open ? styles.metaMenuOpen : styles.metaMenuClosed}`;
+
+  return (
+    <TooltipProvider delayDuration={100}>
+      <div ref={railRef} className="flex items-center gap-2">
+        <div className="relative">
+          <MetaIconButton
+            label="Record trail"
+            expanded={openKey === "trail"}
+            onToggle={() => toggle("trail")}
+          >
+            <span className="text-amber-500" aria-hidden>
+              <History size={16} />
+            </span>
+          </MetaIconButton>
+          <div
+            role="dialog"
+            aria-label="Record trail"
+            aria-hidden={openKey === "trail" ? undefined : true}
+            className={panelClass(openKey === "trail")}
+          >
+            <KanbanBoard
+              title="Record trail"
+              icon={<History size={14} className="text-amber-500" aria-hidden />}
+              ariaLabel="Record trail"
+              className="border-0"
+            >
+              {record ? (
+                <div className="space-y-2 px-1 pb-1">
+                  <div className="grid grid-cols-2 gap-2">
+                    <MetaCell label="Uploaded" value={formatRelativeTime(record.uploadedAt)} />
+                    <MetaCell label="Version" value={`v${record.currentVersion}`} />
+                    <MetaCell label="Released" value={formatRelativeTime(record.releasedAt)} />
+                    <MetaCell label="Updated" value={formatRelativeTime(record.updatedAt)} />
+                  </div>
+                  <MetaStampRow
+                    label="Verified by"
+                    verb="Verify"
+                    doneVerb="Verified"
+                    name={record.verifiedByName ?? null}
+                    at={record.verifiedAt}
+                    busy={acting === "verify"}
+                    disabled={record.status === "released" || record.verifiedAt !== null || acting !== null}
+                    title={
+                      record.status === "released"
+                        ? "This record is released & archived — verification is closed"
+                        : undefined
+                    }
+                    onAction={() => stamp("verify")}
+                  />
+                  <MetaStampRow
+                    label="Validated by"
+                    verb="Validate"
+                    doneVerb="Validated"
+                    name={record.validatedByName ?? null}
+                    at={record.validatedAt}
+                    busy={acting === "validate"}
+                    disabled={record.status === "released" || record.validatedAt !== null || acting !== null}
+                    title={
+                      record.status === "released"
+                        ? "This record is released & archived — validation is closed"
+                        : undefined
+                    }
+                    onAction={() => stamp("validate")}
+                  />
+                </div>
+              ) : (
+                <p className="px-1 pb-1 text-xs text-muted-foreground">Loading…</p>
+              )}
+            </KanbanBoard>
+          </div>
+        </div>
+
+        <div className="relative">
+          <MetaIconButton
+            label="Version history"
+            expanded={openKey === "versions"}
+            onToggle={() => toggle("versions")}
+          >
+            <span className="text-amber-500" aria-hidden>
+              <GitBranch size={16} />
+            </span>
+          </MetaIconButton>
+          <div
+            role="dialog"
+            aria-label="Version history"
+            aria-hidden={openKey === "versions" ? undefined : true}
+            className={panelClass(openKey === "versions")}
+          >
+            <KanbanBoard
+              title="Version history"
+              icon={<GitBranch size={14} className="text-amber-500" aria-hidden />}
+              ariaLabel="Version history"
+              className="border-0"
+            >
+              {detailQuery.isPending ? (
+                <p className="px-1 pb-1 text-xs text-muted-foreground">Loading…</p>
+              ) : versions.length === 0 ? (
+                <p className="px-1 pb-1 text-sm text-muted-foreground">No versions yet.</p>
+              ) : (
+                <div className={`${styles.timeline} px-1 pb-1`}>
+                  {versions.map((v) => (
+                    <div key={v.versionNumber} className={styles.timelineRow}>
+                      <span>
+                        <span className={styles.name}>v{v.versionNumber}</span>{" "}
+                        <span className={styles.timelineReason}>— {v.changeReason}</span>
+                      </span>
+                      <span className={styles.muted}>{formatRelativeTime(v.changedAt)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </KanbanBoard>
+          </div>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}
+
+/** Shared detail fetch — the report body and the header meta toggles read
+ * the same query key, so the flyouts never trigger a second request. */
+function useSf10Detail(desk: "registrar" | "record-keeper", id: string) {
+  return useQuery({
+    queryKey: [`${desk}-sf10`, "detail", id],
+    queryFn: ({ signal }) => fetchSf10Detail(id, signal),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    refetchInterval: (query) =>
+      query.state.data?.map.ocrStatus === "processing" ? 4000 : false,
+  });
+}
+
+/**
+ * Record report body — the one source of truth for the SF10 detail, shared
+ * by the dedicated route (deep-link fallback) and the board overlay. Layout
+ * is the kanban board language (KanbanBoard shells) instead of glow cards.
+ */
+export function Sf10DetailContent({ desk, id }: { desk: "registrar" | "record-keeper"; id: string }) {
+  const queryClient = useQueryClient();
+  const dock = useDock();
   const [acting, setActing] = React.useState<"release" | null>(null);
   const [downloading, setDownloading] = React.useState(false);
   // Prefetched same-origin URL for view-only opening, tagged with the file
@@ -96,22 +451,19 @@ export function Sf10DetailView({ desk }: { desk: "registrar" | "record-keeper" }
     forUrl: null,
     objectUrl: null,
   });
+  // Grade tab for the report board — one grade table at a time.
+  const [gradeTab, setGradeTab] = React.useState<string | null>(null);
 
-  const detailQuery = useQuery({
-    queryKey: [`${desk}-sf10`, "detail", id],
-    queryFn: ({ signal }) => fetchSf10Detail(id, signal),
-    placeholderData: keepPreviousData,
-    staleTime: 30_000,
-    refetchInterval: (query) =>
-      query.state.data?.map.ocrStatus === "processing" ? 4000 : false,
-  });
+  const detailQuery = useSf10Detail(desk, id);
 
   const data = detailQuery.data;
   const record = data?.record ?? null;
   const map = data?.map ?? null;
-  const versions = data?.versions ?? [];
 
   const markNotified = desk === "registrar" ? markRegistrarNotified : markRecordKeeperNotified;
+  // Quarter column labels — same Q1..Q4 set on both desks (the semester tabs
+  // split them: Q1/Q2 in 1st Sem, Q3/Q4 in 2nd Sem).
+  const quarterLabels = ["Q1", "Q2", "Q3", "Q4"];
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: [`${desk}-sf10`] });
@@ -122,12 +474,24 @@ export function Sf10DetailView({ desk }: { desk: "registrar" | "record-keeper" }
   const handleRelease = async () => {
     if (!record) return;
     setActing("release");
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "generic",
+        title: "Releasing SF10 record",
+        description: record.fullName,
+      });
+    } catch {
+      taskId = null;
+    }
     try {
       await releaseSf10(record.id);
       markNotified(record.id);
+      if (taskId) dock.completeTask(taskId, "Released & archived.");
       toast.success({ title: "Released", description: `${record.fullName} released & archived.` });
       refresh();
     } catch {
+      if (taskId) dock.failTask(taskId, "Nothing was changed.");
       toast.error({ title: "Release failed", description: "Nothing was changed." });
     } finally {
       setActing(null);
@@ -246,6 +610,74 @@ export function Sf10DetailView({ desk }: { desk: "registrar" | "record-keeper" }
     );
   }, [map]);
 
+  // SHS records are split into per-semester tabs (Grade 11 — 1st/2nd Sem)
+  // instead of a single grade-level tab, so each semester's subjects and
+  // quarterly grades are reviewed independently. Both catalog-matched rows
+  // and file-only rows are included: the school catalog can absorb SHS
+  // subjects by name (e.g. "General Mathematics" → "General Mathematics 11")
+  // and dropping those rows would hide them from the report.
+  const isShs = desk === "registrar";
+  const gradeTabs = React.useMemo(() => {
+    if (!isShs) {
+      return perGrade.map((r) => ({
+        id: r.gradeLevel,
+        label: GRADE_LABEL[r.gradeLevel] ?? r.gradeLevel,
+        row: r,
+        qSlots: undefined as readonly [number, number] | undefined,
+      }));
+    }
+    const SEMS = [
+      { id: "S1", label: "1st Sem", idx: 0, a: 0, b: 1 },
+      { id: "S2", label: "2nd Sem", idx: 1, a: 2, b: 3 },
+    ] as const;
+    const inSem = (q: Array<number | null> | null | undefined, a: number, b: number) =>
+      (q?.[a] ?? null) !== null || (q?.[b] ?? null) !== null;
+    const hasQuarters = (q: Array<number | null> | null | undefined) =>
+      Array.isArray(q) && q.some((v) => v !== null && v !== undefined);
+    const sliceQ = (q: Array<number | null> | null | undefined, a: number, b: number) =>
+      [q?.[a] ?? null, q?.[b] ?? null] as Array<number | null>;
+    const out: Array<{
+      id: string;
+      label: string;
+      row: typeof perGrade[number];
+      qSlots: readonly [number, number] | undefined;
+    }> = [];
+    for (const row of perGrade) {
+      const gLabel = GRADE_LABEL[row.gradeLevel] ?? row.gradeLevel;
+      for (const sem of SEMS) {
+        // A row with no quarterly grades at all cannot be placed by semester —
+        // keep it visible in the first tab rather than dropping it silently.
+        const belongs = (q: Array<number | null> | null | undefined) =>
+          hasQuarters(q) ? inSem(q, sem.a, sem.b) : sem.id === "S1";
+        const matched = row.matched
+          .filter((m) => belongs(m.quarters))
+          .map((m) => ({
+            ...m,
+            name: m.rawName || m.name,
+            quarters: sliceQ(m.quarters, sem.a, sem.b),
+            // Each semester shows its own final — the merged rating keeps only
+            // the latest one for subjects that span both semesters.
+            rating: m.semFinals?.[sem.idx] ?? m.rating,
+          }));
+        const extras = row.extras
+          .filter((x) => belongs(x.quarters))
+          .map((x) => ({
+            ...x,
+            quarters: sliceQ(x.quarters, sem.a, sem.b),
+            rating: x.semFinals?.[sem.idx] ?? x.rating,
+          }));
+        if (matched.length + extras.length === 0) continue;
+        out.push({
+          id: `${row.gradeLevel}-${sem.id}`,
+          label: `${gLabel} — ${sem.label}`,
+          row: { ...row, matched, extras, missing: [], total: 0 },
+          qSlots: [sem.a, sem.b],
+        });
+      }
+    }
+    return out;
+  }, [perGrade, isShs]);
+
   // Blank rows (no subject name) carry no information — drop them so the
   // Add-on section never renders an empty list.
   const visibleAddons = React.useMemo(
@@ -257,57 +689,285 @@ export function Sf10DetailView({ desk }: { desk: "registrar" | "record-keeper" }
   // The school catalog is only the basis for not-taken: grade tables always
   // show the file's own rows, even when no catalog subjects are set.
   const hasCatalog = (map?.schoolSubjectCount ?? 0) > 0 || perGrade.some((r) => r.total > 0);
-  const initial = record?.fullName?.charAt(0)?.toUpperCase() ?? "?";
+  // Grade pill tabs — grades in order, add-ons as the last tab when present.
+  // Falls back to the first tab if the stored pick is gone (record switched,
+  // or OCR finished and re-shaped the grades).
+  const gradeTabIds = [
+    ...gradeTabs.map((t) => t.id),
+    ...(visibleAddons.length > 0 ? ["addons"] : []),
+  ];
+  const activeGradeTab = gradeTab && gradeTabIds.includes(gradeTab) ? gradeTab : (gradeTabIds[0] ?? null);
+  const activeTabMeta = gradeTabs.find((t) => t.id === activeGradeTab) ?? null;
+  const activeGradeRow = activeTabMeta?.row ?? null;
+  // Semester tabs show only their own two quarter columns (Q1/Q2 or Q3/Q4);
+  // grade-level tabs keep all four.
+  const viewQSlots = activeTabMeta?.qSlots ?? null;
+  const viewQLabels = viewQSlots ? viewQSlots.map((i) => quarterLabels[i]) : quarterLabels;
+  // Top-right count for the report board — the active grade is already the
+  // tab label, so only the ratio rides in the header ("7/8 taken").
+  const activeTabCount = activeGradeRow
+    ? activeGradeRow.total > 0
+      ? `${activeGradeRow.matched.length}/${activeGradeRow.total} taken`
+      : `${activeGradeRow.matched.length + activeGradeRow.extras.length} on record`
+    : visibleAddons.length > 0
+      ? `${visibleAddons.length} add-on${visibleAddons.length === 1 ? "" : "s"}`
+      : undefined;
+
+  if (detailQuery.isPending) {
+    return <DetailSkeleton />;
+  }
+
+  if (detailQuery.isError || !record || !map) {
+    return (
+      <KanbanBoard
+        title="Record not found"
+        icon={<GraduationCap size={14} className="text-muted-foreground" aria-hidden />}
+        ariaLabel="Record not found"
+        description={
+          detailQuery.isError
+            ? "Could not load this SF10 report."
+            : "No SF10 record exists for this learner."
+        }
+      >
+        <div className="flex justify-center px-0.5 pb-0.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={() => detailQuery.refetch()}
+          >
+            Try again
+          </Button>
+        </div>
+      </KanbanBoard>
+    );
+  }
 
   return (
-    <section className="space-y-4 lg:space-y-6">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          SF10 Record Report
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8"
-          onClick={() => router.push(`/${desk}/sf10`)}
-        >
-          <ChevronLeft className="mr-1" aria-hidden />
-          Back to records
-        </Button>
-      </div>
+    <div className="space-y-4 lg:space-y-6">
+      <div className="grid items-start gap-4 lg:grid-cols-3 lg:gap-6">
+        <div className="space-y-4 lg:col-span-2 lg:space-y-6">
+          {/* Learner — top of the main column, same width as the report below. */}
+          <KanbanBoard
+            title="Learner"
+            icon={<UserRound size={14} className="text-amber-500" aria-hidden />}
+            ariaLabel="Learner"
+          >
+            <div className="px-0.5 pb-0.5">
+              <div className="flex items-center gap-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-semibold">{record.fullName}</h3>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <Badge variant="secondary" className="rounded-md font-normal">
+                      {record.lrn}
+                    </Badge>
+                    <StatusBadge status={record.status} className="rounded-md" />
+                    <Badge variant="amber" className="rounded-md font-normal">
+                      {SF10_SOURCE_LABEL[record.source]}
+                    </Badge>
+                  </div>
+                </div>
+                <StudentMascot name={record.fullName} seed={record.id} size={56} />
+              </div>
+            </div>
+          </KanbanBoard>
 
-      {detailQuery.isPending ? (
-        <DetailSkeleton />
-      ) : detailQuery.isError || !record || !map ? (
-        <section className={assign.card} aria-label="Record not found">
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-col items-center justify-center gap-1.5 py-12 text-center">
-            <span className="mb-1.5 inline-flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden="true">
-              <GraduationCap className="size-5" />
-            </span>
-            <p className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
-              Record not found
-            </p>
-            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-              {detailQuery.isError
-                ? "Could not load this SF10 report."
-                : "No SF10 record exists for this learner."}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => detailQuery.refetch()}
+          {/* Grade-by-grade report — one grade table at a time via pill tabs;
+              add-ons ride along as their own tab when the file has them. */}
+          {perGrade.length > 0 || visibleAddons.length > 0 ? (
+            <KanbanBoard
+              title="Grade-by-grade report"
+              icon={<Table2 size={14} className="text-amber-500" aria-hidden />}
+              ariaLabel="Grade-by-grade report"
+              count={activeTabCount}
+              description={
+                hasCatalog
+                  ? `Each record year checked against that grade's catalog — ${map.ocrSubjectCount} subjects read from the file.`
+                  : `Subjects read straight from the file — ${map.ocrSubjectCount} found. Add school subjects to check not-taken.`
+              }
             >
-              Try again
-            </Button>
-          </div>
-        </section>
-      ) : (
-        <>
-          {/* Filing progress: chat-style steps while the file is being read. */}
+              <div className="flex flex-col gap-3 px-0.5 pb-0.5">
+                <div
+                  role="tablist"
+                  aria-label="Grade levels and add-ons"
+                  className="flex flex-wrap items-center gap-1.5"
+                >
+                  {gradeTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={tab.id === activeGradeTab}
+                      onClick={() => setGradeTab(tab.id)}
+                      className={gradeTabClass(tab.id === activeGradeTab)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                  {visibleAddons.length > 0 ? (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeGradeTab === "addons"}
+                      onClick={() => setGradeTab("addons")}
+                      className={gradeTabClass(activeGradeTab === "addons")}
+                    >
+                      Add-ons
+                    </button>
+                  ) : null}
+                </div>
+
+                {activeGradeRow ? (
+                  <div role="tabpanel">
+                    <div className="overflow-x-auto rounded-lg border border-border">
+                      <Table className={styles.reportTable}>
+                        <colgroup>
+                          <col />
+                          {viewQLabels.map((label) => (
+                            <col key={label} style={{ width: "3.25rem" }} />
+                          ))}
+                          <col style={{ width: "4rem" }} />
+                        </colgroup>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Learning area</TableHead>
+                            {viewQLabels.map((label) => (
+                              <TableHead key={label} className="text-right">
+                                {label}
+                              </TableHead>
+                            ))}
+                            <TableHead className="text-right">Final</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {[
+                            ...activeGradeRow.matched.map((m) => ({
+                              kind: "matched" as const,
+                              order: m.order ?? Number.MAX_SAFE_INTEGER,
+                              item: m,
+                            })),
+                            ...activeGradeRow.extras.map((x) => ({
+                              kind: "extra" as const,
+                              order: x.order ?? Number.MAX_SAFE_INTEGER,
+                              item: x,
+                            })),
+                          ]
+                            .sort((a, b) => a.order - b.order)
+                            .map((r, ri) =>
+                              r.kind === "matched" ? (
+                                <TableRow key={r.item.code}>
+                                  <TableCell className="font-medium text-foreground">{displaySubjectName(r.item.name)}</TableCell>
+                                  <QuarterCells quarters={r.item.quarters} count={viewQLabels.length} />
+                                  <TableCell className="text-right font-mono tabular-nums">
+                                    {finalOf(r.item)}
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                <TableRow key={`extra-${r.item.norm}-${r.item.rawName}-${ri}`}>
+                                  <TableCell className="font-medium text-foreground">
+                                    {r.item.rawName}
+                                  </TableCell>
+                                  <QuarterCells quarters={r.item.quarters} count={viewQLabels.length} />
+                                  <TableCell className="text-right font-mono tabular-nums">
+                                    {r.item.rating ?? "—"}
+                                  </TableCell>
+                                </TableRow>
+                              ),
+                            )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeGradeTab === "addons" && visibleAddons.length > 0 ? (
+                  <div role="tabpanel">
+                    <p className="text-sm font-semibold text-foreground">Add-on subjects</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Read from the file with no grade level indicated — kept on record as-is, outside the grade tables.
+                    </p>
+                    <div className="mt-2 overflow-x-auto rounded-lg border border-border">
+                      <Table className={styles.reportTable}>
+                        <colgroup>
+                          <col />
+                          <col style={{ width: "3.25rem" }} />
+                          <col style={{ width: "3.25rem" }} />
+                          <col style={{ width: "3.25rem" }} />
+                          <col style={{ width: "3.25rem" }} />
+                          <col style={{ width: "4rem" }} />
+                          <col style={{ width: "8.5rem" }} />
+                        </colgroup>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Learning area</TableHead>
+                            <TableHead className="text-right">{quarterLabels[0]}</TableHead>
+                            <TableHead className="text-right">{quarterLabels[1]}</TableHead>
+                            <TableHead className="text-right">{quarterLabels[2]}</TableHead>
+                            <TableHead className="text-right">{quarterLabels[3]}</TableHead>
+                            <TableHead className="text-right">Final</TableHead>
+                            <TableHead>Remarks</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {visibleAddons.map((a, ai) => (
+                            <TableRow key={`addon-${a.norm}-${a.rawName}-${ai}`}>
+                              <TableCell>
+                                <span className="font-medium text-foreground">{a.rawName}</span>
+                                <Badge variant="outline" className="ml-2 font-normal">
+                                  Add-on
+                                </Badge>
+                              </TableCell>
+                              <QuarterCells quarters={a.quarters} />
+                              <TableCell className="text-right font-mono tabular-nums">
+                                {a.rating ?? "—"}
+                              </TableCell>
+                              <TableCell>
+                                {a.remarks ? (
+                                  <Badge variant="outline" className="font-normal">
+                                    {a.remarks}
+                                  </Badge>
+                                ) : (
+                                  "—"
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </KanbanBoard>
+          ) : null}
+
+          {map.needsReview ? (
+            <p className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              Some years or names could not be read confidently — compare with the file before validating.
+            </p>
+          ) : null}
+
+          {map.sf10Only.length > 0 && perGrade.length === 0 ? (
+            <KanbanBoard
+              title="In the file only"
+              icon={<FileSearch size={14} className="text-amber-500" aria-hidden />}
+              ariaLabel="In the file only"
+              description="Subjects found in the file that aren't in the school catalog."
+            >
+              <div className="flex flex-wrap gap-1.5 px-0.5 pb-0.5">
+                {map.sf10Only.map((s, i) => (
+                  <Badge key={`${s.norm}-${i}`} variant="outline" className="font-normal">
+                    {s.rawName}
+                  </Badge>
+                ))}
+              </div>
+            </KanbanBoard>
+          ) : null}
+        </div>
+
+        <div className="space-y-4 lg:space-y-6">
+          {/* Filing / status — small board pinned to the right column. */}
           {map.ocrStatus === "processing" ? (
             <FilingProgress
               fullName={record.fullName}
@@ -315,450 +975,149 @@ export function Sf10DetailView({ desk }: { desk: "registrar" | "record-keeper" }
               gradesDetected={map.coverage.gradesDetected}
             />
           ) : !hasCatalog ? (
-            <section
-              className={`${assign.card} border-muted`}
-              aria-label="Subjects on record"
+            <KanbanBoard
+              title="Subjects on record"
+              icon={<FileText size={14} className="text-amber-500" aria-hidden />}
+              ariaLabel="Subjects on record"
+              count={map.ocrSubjectCount}
+              description="Read straight from the file — no school subjects set yet, so not-taken can't be checked."
             >
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative flex items-center gap-3">
-                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden="true">
-                  <FileText className="size-5" />
-                </span>
-                <div>
-                  <p className="text-lg font-bold tracking-tight text-foreground">
-                    {map.ocrSubjectCount} subject{map.ocrSubjectCount === 1 ? "" : "s"} on record
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Read straight from the file — no school subjects set yet, so not-taken can&apos;t be checked.
-                  </p>
-                </div>
-              </div>
-            </section>
+              {null}
+            </KanbanBoard>
           ) : totalMissing > 0 ? (
-            <section
-              className={`${assign.card} border-destructive/40 bg-destructive/[0.04]`}
-              aria-label="Subjects not taken"
+            <KanbanBoard
+              title="Subjects not taken"
+              icon={<AlertTriangle size={14} className="text-destructive" aria-hidden />}
+              ariaLabel="Subjects not taken"
+              count={totalMissing}
+              description="Compared grade by grade against the school catalog — blank or zero in the file means not taken."
+              className="bg-destructive/[0.04]"
+              style={{ borderColor: "color-mix(in oklch, var(--destructive), transparent 60%)" }}
             >
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative flex flex-col gap-3">
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive" aria-hidden="true">
-                    <AlertTriangle className="size-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-lg font-bold tracking-tight text-foreground">
-                      {totalMissing} subject{totalMissing === 1 ? "" : "s"} not taken
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Compared grade by grade against the school catalog — blank or zero in the file means not taken.
-                    </p>
-                  </div>
-                </div>
-                <ul className="flex flex-col gap-2.5">
-                  {deficiencyGroups.map(([grade, items]) => (
-                    <li key={grade} className="flex flex-col gap-1.5 rounded-lg border border-destructive/25 bg-background/60 p-3">
-                      <p className="text-sm font-semibold text-foreground">
-                        {GRADE_LABEL[grade] ?? grade} — has not taken:
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {items.map((d) => (
-                          <Badge
-                            key={d.code}
-                            variant="destructive"
-                            className="font-normal"
-                            title={`${d.category} · blank or 0 rating in the file`}
-                          >
-                            {displaySubjectName(d.name)}
-                          </Badge>
-                        ))}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </section>
-          ) : (
-            <section
-              className={`${assign.card} border-emerald-500/30 bg-emerald-500/[0.05]`}
-              aria-label="All subjects taken"
-            >
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative flex items-center gap-3">
-                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" aria-hidden="true">
-                  <CheckCircle2 className="size-5" />
-                </span>
-                <div>
-                  <p className="text-lg font-bold tracking-tight text-foreground">
-                    All subjects taken
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Every cataloged subject for the covered years appears in this record.
-                  </p>
-                </div>
-              </div>
-            </section>
-          )}
-
-          <div className="grid items-start gap-4 lg:gap-6 lg:grid-cols-3">
-            <div className="space-y-4 lg:space-y-6 lg:col-span-2">
-              {/* Learner */}
-              <section className={assign.card} aria-label="Learner">
-                <span className={assign.glowClip} aria-hidden="true">
-                  <span className={assign.cardGlow} />
-                </span>
-                <div className="relative flex items-center gap-4">
-                  <Avatar className="size-12">
-                    <AvatarFallback>{initial}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-semibold">{record.fullName}</h3>
-                    <p className="mt-1 truncate text-sm text-muted-foreground">
-                      {GRADE_LABEL[record.gradeLevel] ?? record.gradeLevel} · {record.section}
-                    </p>
-                    <p className="font-mono text-sm text-muted-foreground">{record.lrn}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <StatusBadge status={record.status} />
-                      <span className={styles.muted}>{SF10_SOURCE_LABEL[record.source]}</span>
-                      <span className={styles.muted}>
-                        · Filed by {record.desk === "registrar" ? "Registrar" : "Record keeper"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                {map.learner?.fullName || map.learner?.lrn ? (
-                  <div className="relative mt-3 flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-sm">
-                    <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                    <p className="text-muted-foreground">
-                      Name on file:{" "}
-                      <span className="font-semibold text-foreground">
-                        {map.learner.fullName ?? "—"}
-                      </span>
-                      {map.learner.lrn ? ` · LRN ${map.learner.lrn}` : null}{" "}
-                      {map.learner.lrn && map.learner.lrn === record.lrn ? (
-                        <Badge variant="default" className="ml-1 font-normal">
-                          <BadgeCheck className="mr-1 size-3" aria-hidden />
-                          LRN match
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="ml-1 font-normal">
-                          check against the file
-                        </Badge>
-                      )}
-                    </p>
-                  </div>
-                ) : null}
-              </section>
-
-              {/* Grade-by-grade report */}
-              {perGrade.length > 0 ? (
-                <section className={assign.card} aria-labelledby="grade-report">
-                  <span className={assign.glowClip} aria-hidden="true">
-                    <span className={assign.cardGlow} />
-                  </span>
-                  <div className="relative">
-                    <h2 id="grade-report" className="text-base font-semibold">
-                      Grade-by-grade report
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {hasCatalog
-                        ? `Each record year checked against that grade's catalog — ${map.ocrSubjectCount} subjects read from the file.`
-                        : `Subjects read straight from the file — ${map.ocrSubjectCount} found. Add school subjects to check not-taken.`}
-                    </p>
-                  </div>
-                  <div className="relative mt-3 flex flex-col gap-4">
-                    {perGrade.map((row) => (
-                      <div key={row.gradeLevel}>
-                        <p className="text-sm font-semibold text-foreground">
-                          {GRADE_LABEL[row.gradeLevel] ?? row.gradeLevel} ·{" "}
-                          {row.total > 0
-                            ? `${row.matched.length}/${row.total} taken`
-                            : `${row.matched.length + row.extras.length} on record`}
-                        </p>
-                        <div className="mt-2 overflow-x-auto rounded-lg border border-border">
-                          <Table className={styles.reportTable}>
-                            <colgroup>
-                              <col />
-                              <col style={{ width: "3.25rem" }} />
-                              <col style={{ width: "3.25rem" }} />
-                              <col style={{ width: "3.25rem" }} />
-                              <col style={{ width: "3.25rem" }} />
-                              <col style={{ width: "4rem" }} />
-                            </colgroup>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Learning area</TableHead>
-                                <TableHead className="text-right">Q1</TableHead>
-                                <TableHead className="text-right">Q2</TableHead>
-                                <TableHead className="text-right">Q3</TableHead>
-                                <TableHead className="text-right">Q4</TableHead>
-                                <TableHead className="text-right">Final</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {[
-                                ...row.matched.map((m) => ({
-                                  kind: "matched" as const,
-                                  order: m.order ?? Number.MAX_SAFE_INTEGER,
-                                  item: m,
-                                })),
-                                ...row.extras.map((x) => ({
-                                  kind: "extra" as const,
-                                  order: x.order ?? Number.MAX_SAFE_INTEGER,
-                                  item: x,
-                                })),
-                              ]
-                                .sort((a, b) => a.order - b.order)
-                                .map((r, ri) =>
-                                  r.kind === "matched" ? (
-                                    <TableRow key={r.item.code}>
-                                      <TableCell className="font-medium text-foreground">{displaySubjectName(r.item.name)}</TableCell>
-                                      <QuarterCells quarters={r.item.quarters} />
-                                      <TableCell className="text-right font-mono tabular-nums">
-                                        {finalOf(r.item)}
-                                      </TableCell>
-                                    </TableRow>
-                                  ) : (
-                                    <TableRow key={`extra-${r.item.norm}-${r.item.rawName}-${ri}`}>
-                                      <TableCell className="font-medium text-foreground">
-                                        {r.item.rawName}
-                                      </TableCell>
-                                      <QuarterCells quarters={r.item.quarters} />
-                                      <TableCell className="text-right font-mono tabular-nums">
-                                        {r.item.rating ?? "—"}
-                                      </TableCell>
-                                    </TableRow>
-                                  ),
-                                )}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
-              {map.needsReview ? (
-                <p className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                  Some years or names could not be read confidently — compare with the file before validating.
-                </p>
-              ) : null}
-
-              {visibleAddons.length > 0 ? (
-                <section className={assign.card} aria-labelledby="addon-subjects">
-                  <span className={assign.glowClip} aria-hidden="true">
-                    <span className={assign.cardGlow} />
-                  </span>
-                  <div className="relative">
-                    <h2 id="addon-subjects" className="text-base font-semibold">
-                      Add-on subjects
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Read from the file with no grade level indicated — kept on record as-is, outside the grade tables.
-                    </p>
-                  </div>
-                  <div className="relative mt-3 overflow-x-auto rounded-lg border border-border">
-                    <Table className={styles.reportTable}>
-                      <colgroup>
-                        <col />
-                        <col style={{ width: "3.25rem" }} />
-                        <col style={{ width: "3.25rem" }} />
-                        <col style={{ width: "3.25rem" }} />
-                        <col style={{ width: "3.25rem" }} />
-                        <col style={{ width: "4rem" }} />
-                        <col style={{ width: "8.5rem" }} />
-                      </colgroup>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Learning area</TableHead>
-                          <TableHead className="text-right">Q1</TableHead>
-                          <TableHead className="text-right">Q2</TableHead>
-                          <TableHead className="text-right">Q3</TableHead>
-                          <TableHead className="text-right">Q4</TableHead>
-                          <TableHead className="text-right">Final</TableHead>
-                          <TableHead>Remarks</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {visibleAddons.map((a, ai) => (
-                          <TableRow key={`addon-${a.norm}-${a.rawName}-${ai}`}>
-                            <TableCell>
-                              <span className="font-medium text-foreground">{a.rawName}</span>
-                              <Badge variant="outline" className="ml-2 font-normal">
-                                Add-on
-                              </Badge>
-                            </TableCell>
-                            <QuarterCells quarters={a.quarters} />
-                            <TableCell className="text-right font-mono tabular-nums">
-                              {a.rating ?? "—"}
-                            </TableCell>
-                            <TableCell>
-                              {a.remarks ? (
-                                <Badge variant="outline" className="font-normal">
-                                  {a.remarks}
-                                </Badge>
-                              ) : (
-                                "—"
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </section>
-              ) : null}
-
-              {map.sf10Only.length > 0 && perGrade.length === 0 ? (
-                <section className={assign.card} aria-labelledby="sf10-only">
-                  <span className={assign.glowClip} aria-hidden="true">
-                    <span className={assign.cardGlow} />
-                  </span>
-                  <div className="relative">
-                    <h2 id="sf10-only" className="text-base font-semibold">
-                      In the file only
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Subjects found in the file that aren&apos;t in the school catalog.
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {map.sf10Only.map((s, i) => (
-                        <Badge key={`${s.norm}-${i}`} variant="outline" className="font-normal">
-                          {s.rawName}
+              <div className="grid grid-cols-[auto_1fr] items-start gap-x-2 gap-y-1.5 px-0.5 pb-0.5">
+                {deficiencyGroups.map(([grade, items]) => (
+                  <React.Fragment key={grade}>
+                    <Badge variant="amber" className="rounded-md font-medium">
+                      {GRADE_LABEL[grade] ?? grade}
+                    </Badge>
+                    <div className="flex flex-wrap gap-1.5">
+                      {items.map((d) => (
+                        <Badge
+                          key={d.code}
+                          variant="red"
+                          className="rounded-md font-normal"
+                          title={`${d.category} · blank or 0 rating in the file`}
+                        >
+                          {displaySubjectName(d.name)}
                         </Badge>
                       ))}
                     </div>
-                  </div>
-                </section>
-              ) : null}
-            </div>
+                  </React.Fragment>
+                ))}
+              </div>
+            </KanbanBoard>
+          ) : (
+            <KanbanBoard
+              title="All subjects taken"
+              icon={<CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" aria-hidden />}
+              ariaLabel="All subjects taken"
+              description="Every cataloged subject for the covered years appears in this record."
+              className="bg-emerald-500/[0.05]"
+              style={{ borderColor: "color-mix(in oklch, var(--color-emerald-500), transparent 70%)" }}
+            >
+              {null}
+            </KanbanBoard>
+          )}
 
-            <div className="space-y-4 lg:space-y-6">
-              {/* Actions */}
-              <section className={assign.card} aria-label="Record actions">
-                <span className={assign.glowClip} aria-hidden="true">
-                  <span className={assign.cardGlow} />
-                </span>
-                <div className="relative flex flex-col gap-2">
-                  <h2 className="text-base font-semibold">Record actions</h2>
-                  {record.uploadedFileUrl ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={handleViewInNewTab}
-                      >
-                        <ExternalLink aria-hidden />
-                        View in new tab
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        disabled={downloading}
-                        onClick={handleDownload}
-                      >
-                        {downloading ? (
-                          <Loader2 className="size-4 animate-spin" aria-hidden />
-                        ) : (
-                          <Download aria-hidden />
-                        )}
-                        {downloading ? "Downloading…" : "Download"}
-                      </Button>
-                    </>
-                  ) : null}
+          {/* Actions */}
+          <KanbanBoard
+            title="Record actions"
+            icon={<SlidersHorizontal size={14} className="text-amber-500" aria-hidden />}
+            ariaLabel="Record actions"
+          >
+            {/* Buttons sit side by side and wrap on a narrow column; the note
+                can't share a row and drops to its own line below. */}
+            <div className="flex flex-wrap items-center gap-2 px-0.5 pb-0.5">
+              {record.uploadedFileUrl ? (
+                <>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full gap-1.5"
-                    disabled={record.status !== "attach" || acting !== null}
-                    onClick={handleRelease}
+                    onClick={handleViewInNewTab}
                   >
-                    {acting === "release" ? (
+                    <ExternalLink aria-hidden />
+                    View in new tab
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={downloading}
+                    onClick={handleDownload}
+                  >
+                    {downloading ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden />
                     ) : (
-                      <Archive aria-hidden />
+                      <Download aria-hidden />
                     )}
-                    {acting === "release" ? "Releasing…" : "Release & archive"}
+                    {downloading ? "Downloading…" : "Download"}
                   </Button>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    Uploads are stored as-is — no approval needed. Releasing archives the record.
-                  </p>
-                </div>
-              </section>
-
-              {/* Record trail */}
-              <section className={assign.card} aria-label="Record trail">
-                <span className={assign.glowClip} aria-hidden="true">
-                  <span className={assign.cardGlow} />
-                </span>
-                <div className="relative flex flex-col gap-2">
-                  <h2 className="text-base font-semibold">Record trail</h2>
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Uploaded</dt>
-                      <dd>{formatRelativeTime(record.uploadedAt)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Version</dt>
-                      <dd>v{record.currentVersion}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Verified by</dt>
-                      <dd>{record.verifiedBy ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Validated by</dt>
-                      <dd>{record.validatedBy ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Released</dt>
-                      <dd>{formatRelativeTime(record.releasedAt)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Updated</dt>
-                      <dd>{formatRelativeTime(record.updatedAt)}</dd>
-                    </div>
-                  </dl>
-                </div>
-              </section>
-
-              {/* Version history */}
-              <section className={assign.card} aria-label="Version history">
-                <span className={assign.glowClip} aria-hidden="true">
-                  <span className={assign.cardGlow} />
-                </span>
-                <div className="relative flex flex-col gap-2">
-                  <h2 className="text-base font-semibold">Version history</h2>
-                  {versions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No versions yet.</p>
-                  ) : (
-                    <div className={styles.timeline}>
-                      {versions.map((v) => (
-                        <div key={v.versionNumber} className={styles.timelineRow}>
-                          <span>
-                            <span className={styles.name}>v{v.versionNumber}</span>{" "}
-                            <span className={styles.timelineReason}>— {v.changeReason}</span>
-                          </span>
-                          <span className={styles.muted}>{formatRelativeTime(v.changedAt)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
+                </>
+              ) : null}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={record.status !== "attach" || acting !== null}
+                onClick={handleRelease}
+              >
+                {acting === "release" ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <Archive aria-hidden />
+                )}
+                {acting === "release" ? "Releasing…" : "Release & archive"}
+              </Button>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Uploads are stored as-is — no approval needed. Releasing archives the record.
+              </p>
             </div>
-          </div>
-        </>
-      )}
+          </KanbanBoard>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Dedicated-route wrapper (`/{desk}/sf10/{id}`) — kept as the deep-link
+ * fallback; in-app clicks open the overlay instead.
+ */
+export function Sf10DetailView({ desk }: { desk: "registrar" | "record-keeper" }) {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const id = React.useMemo(() => decodeURIComponent(params.id), [params.id]);
+
+  return (
+    <section className="space-y-4 lg:space-y-6">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          SF10 Record Report
+        </span>
+        <div className="flex items-center gap-2">
+          <Sf10MetaToggles desk={desk} id={id} />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8"
+            onClick={() => router.push(`/${desk}/sf10`)}
+          >
+            <ChevronLeft className="mr-1" aria-hidden />
+            Back to records
+          </Button>
+        </div>
+      </div>
+      <Sf10DetailContent desk={desk} id={id} />
     </section>
   );
 }
@@ -782,11 +1141,13 @@ function FilingProgress({
     ...(grades.length > 0 ? [`Grades detected: ${grades.join(", ")}`] : []),
   ];
   return (
-    <section className={assign.card} aria-label="Filing progress" aria-busy="true">
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className="relative flex flex-col items-start gap-2">
+    <KanbanBoard
+      title="Filing the record"
+      icon={<Loader2 size={14} className="animate-spin text-amber-500" aria-hidden />}
+      ariaLabel="Filing progress"
+      description="Reading the file — subjects and grades are detected, then filed automatically."
+    >
+      <div className="flex flex-col items-start gap-2 px-0.5 pb-0.5" aria-busy="true">
         <ThoughtLine
           working
           steps={steps}
@@ -800,14 +1161,14 @@ function FilingProgress({
           This refreshes on its own — no need to reload.
         </p>
       </div>
-    </section>
+    </KanbanBoard>
   );
 }
 
 function DetailSkeleton() {
   return (
-    <div className="grid gap-4 lg:gap-6 lg:grid-cols-3">
-      <div className="space-y-4 lg:space-y-6 lg:col-span-2">
+    <div className="grid gap-4 lg:grid-cols-3 lg:gap-6">
+      <div className="space-y-4 lg:col-span-2 lg:space-y-6">
         <Skeleton className="h-40 rounded-xl" />
         <Skeleton className="h-32 rounded-xl" />
         <Skeleton className="h-48 rounded-xl" />

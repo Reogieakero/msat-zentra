@@ -1,75 +1,126 @@
-/* Sticky top-center booking reminder stack — slides down from the page
-   top on arrival and stays until dismissed or acted on. Above page content
-   and sileo toasts, below modal dialogs. */
+/* Booking reminders anchored to the lower-left of the page as an overlapping
+   "notebook" pile of compact kanban notes. The pile's left edge lines up with
+   the desk rail's icon/label column; it grows upward so the front note is the
+   most recent. Above page content and sileo toasts, below modal dialogs. */
 
 .stack {
   position: fixed;
-  top: 4.25rem;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 1rem;
+  bottom: 1rem;
   z-index: 60;
   display: flex;
   flex-direction: column;
-  width: min(30rem, calc(100vw - 2rem));
+  width: min(22rem, calc(100vw - 2rem));
   pointer-events: none;
 }
 
-/* Drop-in animation for the section card (the card visuals themselves
-   come from the shared section-card treatment). */
-.drop {
+.tile {
+  /* Caution ink matches the app's amber overdue accents (monochrome tokens
+     cannot distinguish states on their own). */
+  --booking-overdue: oklch(0.769 0.188 70.08);
+  position: relative;
   pointer-events: auto;
-  animation: booking-drop 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  color: var(--card-foreground);
+  overflow: hidden;
+  box-shadow: 0 8px 24px -18px color-mix(in oklch, var(--foreground), transparent 65%);
+  animation: booking-rise 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes booking-drop {
+/* Kanban status edge — the thin colored bar that marks a board card's column. */
+.tile::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 3px;
+  background-color: var(--primary);
+}
+
+.tileOverdue::before {
+  background-color: var(--booking-overdue);
+}
+
+@keyframes booking-rise {
   from {
     opacity: 0;
-    transform: translateY(-1.5rem) scale(0.98);
+    transform: translateY(0.75rem);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
-/* Inner row above the glow (the glow spans sit behind everything). */
-.cardRow {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.icon {
+.tileHead {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 999px;
-  background-color: color-mix(in oklch, var(--primary), transparent 88%);
-  color: var(--primary);
-}
-
-.body {
+  gap: 0.5rem;
   min-width: 0;
-  flex: 1 1 auto;
 }
 
-.title {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--foreground);
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  min-width: 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.tileOverdue .status {
+  color: var(--booking-overdue);
+}
+
+.statusIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.statusDot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background-color: var(--primary);
+}
+
+.tileOverdue .statusDot {
+  background-color: var(--booking-overdue);
 }
 
 .message {
-  margin: 0.125rem 0 0;
+  margin: 0;
   font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--foreground);
+}
+
+/* Amber pill for the learner name and the session's date/time. */
+.pill {
+  display: inline-block;
+  padding: 0 0.375rem;
+  border: 1px solid color-mix(in oklch, #f59e0b 45%, transparent);
+  border-radius: 6px;
+  background-color: color-mix(in oklch, #f59e0b 12%, transparent);
+  color: #b45309;
+  font-size: 0.75rem;
+  font-weight: 600;
   line-height: 1.5;
-  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+:global(.dark) .pill {
+  color: #fbbf24;
 }
 
 .actions {
@@ -77,14 +128,37 @@
   align-items: center;
   gap: 0.375rem;
   flex-shrink: 0;
+  margin-left: auto;
+}
+
+.cta {
+  height: 1.75rem;
+  padding-inline: 0.625rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 140ms ease-out;
+}
+
+.cta:hover {
+  opacity: 0.9;
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .dismiss {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
   padding: 0;
   margin: 0;
   background: none;
@@ -102,4 +176,10 @@
 .dismiss:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    animation: none;
+  }
 }

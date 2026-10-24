@@ -30,6 +30,8 @@ export interface ProfileSettings {
   mascot: string | null;
   primaryColor: string | null;
   secondaryColor: string | null;
+  shareStudentData?: boolean;
+  shareUpdatedAt?: string | null;
 }
 
 export function profileSettingsKey(

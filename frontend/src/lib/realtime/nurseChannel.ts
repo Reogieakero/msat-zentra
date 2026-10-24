@@ -80,12 +80,16 @@ export function useNurseRealtime(enabled = true) {
         !!row.sourceId &&
         /^you\b/i.test(row.message ?? "") &&
         Date.now() - (selfSaved.get(row.sourceId) ?? 0) < SELF_SUPPRESS_MS;
-      if (!selfConfirmed) {
-        toast.info({
-          title: nurseNotificationTitle({ type: row.type, message: row.message }),
-          description: row.message,
-        });
+      if (selfConfirmed) {
+        // Our own action: the flow that performed it already applied the
+        // change to the cache (optimistic patch or its own invalidation).
+        // Toasting or refetching here is the redundant refresh noise.
+        return;
       }
+      toast.info({
+        title: nurseNotificationTitle({ type: row.type, message: row.message }),
+        description: row.message,
+      });
       void invalidate(scopesFor(row));
     }
 

@@ -23,8 +23,12 @@ export type Sf10Record = {
   uploadedFileUrl: string | null;
   uploadedAt: string | null;
   verifiedBy: string | null;
+  /** Verifier display name — resolved by the detail endpoint only. */
+  verifiedByName?: string | null;
   verifiedAt: string | null;
   validatedBy: string | null;
+  /** Validator display name — resolved by the detail endpoint only. */
+  validatedByName?: string | null;
   validatedAt: string | null;
   releasedAt: string | null;
   archivedAt: string | null;
@@ -52,8 +56,12 @@ export type Sf10SubjectMapEntry = {
   code: string;
   name: string;
   norm: string;
+  /** Subject name exactly as written on the file (SHS semester tables show it). */
+  rawName?: string | null;
   rating?: number | null;
   quarters?: Array<number | null> | null;
+  /** SHS only: per-semester finals [1st sem, 2nd sem], if read. */
+  semFinals?: Array<number | null> | null;
   remarks?: string | null;
   /** File position: grade tables list subjects as on record. */
   order?: number | null;
@@ -79,6 +87,8 @@ export type Sf10PerGradeExtra = {
   norm: string;
   rating: number | null;
   quarters: Array<number | null> | null;
+  /** SHS only: per-semester finals [1st sem, 2nd sem], if read. */
+  semFinals?: Array<number | null> | null;
   remarks: string | null;
   /** File position: grade tables list subjects as on record. */
   order?: number | null;

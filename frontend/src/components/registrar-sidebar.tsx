@@ -17,6 +17,7 @@ import {
 
 import styles from "./registrar-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
 type NavItem = {
@@ -144,23 +145,42 @@ function RegistrarRail({ groups }: { groups: NavGroup[] }) {
   );
 }
 
-export function RegistrarSidebar() {
+export function RegistrarSidebar({
+  collapsed = true,
+}: {
+  collapsed?: boolean;
+} = {}) {
+  const pathname = usePathname();
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const activeHref = findActiveHref(TABS, pathname);
 
   return (
     <>
-      <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Registrar sections">
-        <div ref={railScrollRef} className={styles.railScroll}>
-          <RegistrarRail groups={NAV} />
-        </div>
-        <div className={styles.railHintWrap}>
-          <ScrollDownHint
-            scrollRef={railScrollRef}
-            watchKey="registrar-nav"
-            label="Scroll for more"
-            className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+      <aside
+        className={`${styles.rail} ${styles.railDesktop} ${collapsed ? styles.railCollapsed : ""}`}
+        aria-label="Registrar sections"
+      >
+        {collapsed ? (
+          <SidebarIconRail
+            groups={NAV}
+            ariaLabel="Registrar sections, icon only"
+            activeHref={activeHref}
           />
-        </div>
+        ) : (
+          <>
+            <div ref={railScrollRef} className={styles.railScroll}>
+              <RegistrarRail groups={NAV} />
+            </div>
+            <div className={styles.railHintWrap}>
+              <ScrollDownHint
+                scrollRef={railScrollRef}
+                watchKey="registrar-nav"
+                label="Scroll for more"
+                className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+              />
+            </div>
+          </>
+        )}
       </aside>
       <div className={styles.tabsMobile}>
         <RegistrarNavbar tabs={TABS} />

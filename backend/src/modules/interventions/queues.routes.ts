@@ -4,7 +4,7 @@ import { validate } from "../../middleware/validate.js";
 import { cache } from "../../lib/cache.js";
 import { etag } from "../../lib/etag.js";
 import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
-import { interventionsQueueQuerySchema } from "./interventions.schemas.js";
+import { interventionsQueueQuerySchema, INTERVENTIONS_QUEUE_MAX_PAGE_SIZE } from "./interventions.schemas.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import {
   getEngineBreakdown,
@@ -37,7 +37,10 @@ router.get(
           : "";
       const q = typeof query.q === "string" ? query.q.trim().toLowerCase() : "";
       const page = Math.max(1, Number(query.page) || 1);
-      const pageSize = Math.max(1, Math.min(Number(query.pageSize) || 15, 15));
+      const pageSize = Math.max(
+        1,
+        Math.min(Number(query.pageSize) || INTERVENTIONS_QUEUE_MAX_PAGE_SIZE, INTERVENTIONS_QUEUE_MAX_PAGE_SIZE),
+      );
       res.json(
         await listQueue(
           { userId: req.user!.id, role: req.user!.role, termId: req.termScope?.termId ?? null },

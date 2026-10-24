@@ -7,7 +7,8 @@ import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { toast } from "@/components/ui/sonner";
 import { AttendanceRosterTable } from "./components/AttendanceRosterTable";
-import { ZentraPageHeaderSkeleton, ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { KanbanBoardSkeleton, RowListSkeleton, IconRailSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AttendanceTermGate, AttendanceLinkGate } from "./components/AttendanceTermGate";
 import { SheetDatePicker } from "./components/sheet-date-picker";
 import { VerifyCodeCard } from "./components/verify-code-card";
@@ -309,9 +310,20 @@ export default function TeacherAdvisoryAttendancePage() {
   if (meQuery.isPending || (linked && mySlotsQuery.isPending)) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading attendance">
-        <ZentraPageHeaderSkeleton />
-        <ZentraFilterBarSkeleton selects={2} />
-        <ZentraTableSkeleton rows={8} columns={4} />
+        <div className={styles.layout}>
+          <div className={styles.main}>
+            <div className="flex flex-wrap items-center justify-start gap-2 lg:hidden" aria-hidden="true">
+              <Skeleton className="h-8 w-40 rounded-md" />
+              <Skeleton className="h-8 w-32 rounded-md" />
+            </div>
+            <div className={styles.body}>
+              <KanbanBoardSkeleton rows={0}>
+                <RowListSkeleton rows={8} gutter="0.625rem" withIdPill withDatePill={false} />
+              </KanbanBoardSkeleton>
+            </div>
+          </div>
+          <IconRailSkeleton count={4} />
+        </div>
       </section>
     );
   }

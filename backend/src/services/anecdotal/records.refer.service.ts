@@ -84,11 +84,6 @@ export async function referRecord(
   const filedWho = filedSection?.name
     ? `${filedName} (${filedSection.name})`
     : filedName;
-  const reasonSnippet =
-    input.reason.length > 100
-      ? `${input.reason.slice(0, 97)}...`
-      : input.reason;
-
   {
     const actorId = ctx.userId;
     const referralId = (referral as { id: string }).id;
@@ -98,11 +93,14 @@ export async function referRecord(
       | "adm_coordinator"
       | "principal";
     const actor = await actorName(ctx.userId);
+    // Notification text deliberately omits the referral reason: the bell is a
+    // low-scrutiny surface and the reason can carry health/behavioral detail.
+    // The full reason stays on the referral record the recipient opens.
     const roleMessage: Record<typeof role, string> = {
-      adm_coordinator: `${actor} referred ${filedWho} to ADM${input.consultReviewer ? ` (consult: ${input.consultReviewer})` : ""}: ${reasonSnippet}.`,
-      nurse: `${actor} referred ${filedWho} to the clinic: ${reasonSnippet}.`,
-      guidance_counselor: `${actor} referred ${filedWho} to guidance: ${reasonSnippet}.`,
-      principal: `${actor} referred ${filedWho} to the principal: ${reasonSnippet}.`,
+      adm_coordinator: `${actor} referred ${filedWho} to ADM${input.consultReviewer ? ` (consult: ${input.consultReviewer})` : ""}.`,
+      nurse: `${actor} referred ${filedWho} to the clinic.`,
+      guidance_counselor: `${actor} referred ${filedWho} to guidance.`,
+      principal: `${actor} referred ${filedWho} to the principal.`,
     };
 
     const reviewerOwned =
@@ -117,7 +115,7 @@ export async function referRecord(
         sourceId: referralId,
         excludeUserId: actorId,
         messageFor: (r) =>
-          `${actor} referred ${filedWho} to you, ${r.fullName}${input.consultReviewer ? ` (consult: ${input.consultReviewer})` : ""}: ${reasonSnippet}.`,
+          `${actor} referred ${filedWho} to you, ${r.fullName}${input.consultReviewer ? ` (consult: ${input.consultReviewer})` : ""}.`,
       });
     }
 

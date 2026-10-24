@@ -50,6 +50,7 @@ export interface RawRoster {
   lrn?: string | null;
   fullName?: string | null;
   gradeLevel?: string | null;
+  mascot?: string | null;
   section?: { name?: string | null } | null;
 }
 
@@ -122,6 +123,9 @@ export interface NurseQueueRow {
   lrn: string;
   section: string;
   grade: string;
+  /** Stored sprite mascot from the learner's roster record; null when the
+      case has no roster row (derived sprite is used instead). */
+  mascot: string | null;
 
   type: string;
 
@@ -182,6 +186,8 @@ export interface NurseTrendPoint {
 export interface NurseOverviewData {
   kpis: NurseKpis;
   needsReview: NurseQueueRow[];
+  /** Main board feed — every nurse-scoped case, newest referral first. */
+  latestReferrals: NurseQueueRow[];
   statusBreakdown: NurseBreakdownRow[];
   clinicStatusBreakdown: NurseBreakdownRow[];
   admStatusBreakdown: NurseBreakdownRow[];

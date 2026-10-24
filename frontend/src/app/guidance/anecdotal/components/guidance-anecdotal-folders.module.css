@@ -176,8 +176,61 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.875rem;
+}
+
+@media (max-width: 1400px) {
+  .studentGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .studentGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .studentGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.studentGrid > * {
+  animation: board-card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.studentGrid > *:nth-child(1) { animation-delay: 0.03s; }
+.studentGrid > *:nth-child(2) { animation-delay: 0.12s; }
+.studentGrid > *:nth-child(3) { animation-delay: 0.21s; }
+.studentGrid > *:nth-child(4) { animation-delay: 0.3s; }
+.studentGrid > *:nth-child(5) { animation-delay: 0.39s; }
+.studentGrid > *:nth-child(6) { animation-delay: 0.48s; }
+.studentGrid > *:nth-child(7) { animation-delay: 0.57s; }
+.studentGrid > *:nth-child(8) { animation-delay: 0.66s; }
+.studentGrid > *:nth-child(9) { animation-delay: 0.75s; }
+.studentGrid > *:nth-child(10) { animation-delay: 0.84s; }
+.studentGrid > *:nth-child(11) { animation-delay: 0.93s; }
+.studentGrid > *:nth-child(12) { animation-delay: 1.02s; }
+.studentGrid > *:nth-child(n + 13) { animation-delay: 1.05s; }
+
+@keyframes board-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studentGrid > * {
+    animation: none;
+  }
 }
 
 .studentBlock {

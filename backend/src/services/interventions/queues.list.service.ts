@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { INTERNAL_AGGREGATE_ROW_CAP } from "../../lib/pagination.js";
 import { sessionCancelledByRole } from "../../lib/sessionActors.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 import { getInterventionStudents } from "../../modules/risk/interventions.service.js";
@@ -13,6 +14,9 @@ export interface QueueQuery {
   q: string;
   page: number;
   pageSize: number;
+  /** Internal-only: lets an aggregate desk load the whole queue in one pass.
+      Never wired to a client query param — the route keeps its 16/page ceiling. */
+  unbounded?: boolean;
 }
 
 export async function listQueue(ctx: InterventionContext, query: QueueQuery, termScope?: TermScopeInput) {
@@ -79,10 +83,12 @@ export async function listQueue(ctx: InterventionContext, query: QueueQuery, ter
     );
 
   const total = listed.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const effPageSize = query.unbounded
+    ? Math.min(Math.max(1, Math.floor(pageSize) || 15), INTERNAL_AGGREGATE_ROW_CAP)
+    : pageSize;
+  const totalPages = Math.max(1, Math.ceil(total / effPageSize));
   const safePage = Math.min(page, totalPages);
-  const slice = listed.slice((safePage - 1) * pageSize, safePage * pageSize);
-
+  const slice = listed.slice((safePage - 1) * effPageSize, safePage * effPageSize);
   const OPEN_REFERRAL = new Set([
     "pending",
     "in_progress",
@@ -200,7 +206,7 @@ export async function listQueue(ctx: InterventionContext, query: QueueQuery, ter
     },
     students,
     page: safePage,
-    pageSize,
+    pageSize: effPageSize,
     total,
     totalPages,
     unfilteredTotal,

@@ -35,13 +35,22 @@ export const SHORT_STAGE: Record<string, string> = {
   completion: "Done",
 };
 
-export const STAGE_COLORS = [
-  "#171717",
-  "#404040",
-  "#525252",
-  "#737373",
-  "#a3a3a3",
-  "#c9c9c9",
-  "#d6d6d6",
-  "#e7e7e7",
+/**
+ * Amber ramp shared by the stage donut and the right-rail boards — the same
+ * amber-500 base the nurse / record-keeper overviews use, stepped by
+ * transparency so it reads on light and dark surfaces.
+ */
+export const AMBER = "oklch(0.769 0.188 70.08)";
+
+export const AMBER_RAMP = [
+  AMBER,
+  `color-mix(in oklch, ${AMBER}, transparent 18%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 34%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 50%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 64%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 76%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 85%)`,
+  `color-mix(in oklch, ${AMBER}, transparent 92%)`,
 ];
+
+export const STAGE_COLORS = AMBER_RAMP;

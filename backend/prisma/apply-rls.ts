@@ -16,6 +16,7 @@ drop policy if exists home_visitation_visible on "HomeVisitationRecord";
 drop policy if exists home_visitation_write on "HomeVisitationRecord";
 drop policy if exists adm_visible on "AdmLearnerProfile";
 drop policy if exists adm_write on "AdmLearnerProfile";
+drop policy if exists notification_own on "Notification";
 drop function if exists zentra_role();
 drop function if exists zentra_uid();
 `;

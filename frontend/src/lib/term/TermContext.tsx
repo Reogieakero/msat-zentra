@@ -3,6 +3,15 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient, getAccessToken } from "@/lib/api/client";
+import { decodeTokenIdentity, isTeacherRole } from "@/lib/auth/roles";
+import {
+  purgeLegacyTermStorage,
+  readStoredTerm,
+  readTermPrompt,
+  writeStoredTerm,
+  writeTermPrompt,
+  type StoredTerm,
+} from "@/lib/term/termStorage";
 
 export interface TermOption {
   id: string;
@@ -21,48 +30,13 @@ export interface SchoolYearOption {
   terms: TermOption[];
 }
 
-export interface ActiveTerm {
-  schoolYearId: string;
-  schoolYearName: string;
-  termId: string;
-  termNumber: number;
-}
+/** The term a teacher selected. Only teacher roles ever hold one. */
+export type ActiveTerm = StoredTerm;
 
-const STORAGE_KEY = "zentra.activeTerm";
-export const TERM_PROMPT_KEY = "zentra.termPrompt";
-
-export function readStoredTerm(): ActiveTerm | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as ActiveTerm;
-    if (!parsed.schoolYearId || !parsed.termId) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export function writeStoredTerm(term: ActiveTerm) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(term));
-  } catch {
-  }
-}
-
-export function requestTermPrompt() {
-  try {
-    window.localStorage.setItem(TERM_PROMPT_KEY, "1");
-  } catch {
-  }
-}
-
-export function clearTermPrompt() {
-  try {
-    window.localStorage.removeItem(TERM_PROMPT_KEY);
-  } catch {
-  }
+/** Server-marked active school year (from `/api/academics/school-years`). */
+export interface ActiveSchoolYear {
+  id: string;
+  name: string;
 }
 
 async function fetchSchoolYears(): Promise<SchoolYearOption[]> {
@@ -96,6 +70,7 @@ interface TermContextValue {
   isLoading: boolean;
   isError: boolean;
   activeTerm: ActiveTerm | null;
+  activeSchoolYear: ActiveSchoolYear | null;
   termReady: boolean;
   setActiveTerm: (term: ActiveTerm) => void;
   promptRequired: boolean;
@@ -110,29 +85,11 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
   const [promptRequired, setPromptRequiredState] = React.useState(false);
   const [ready, setReady] = React.useState(false);
 
-  React.useEffect(() => {
-    setActiveTermState(readStoredTerm());
-    try {
-      setPromptRequiredState(window.localStorage.getItem(TERM_PROMPT_KEY) === "1");
-    } catch {
-    }
-    setReady(true);
-  }, []);
-
-  React.useEffect(() => {
-    const sync = () => {
-      try {
-        setPromptRequiredState(window.localStorage.getItem(TERM_PROMPT_KEY) === "1");
-      } catch {
-      }
-    };
-    window.addEventListener("storage", sync);
-    window.addEventListener("focus", sync);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("focus", sync);
-    };
-  }, []);
+  // Decoded fresh each render so login/logout/account switches are picked up
+  // as soon as the provider re-renders (e.g. when LoginForm sets the prompt).
+  const identity = decodeTokenIdentity(getAccessToken());
+  const userSub = identity?.sub ?? null;
+  const isTeacher = identity ? isTeacherRole(identity.role) : false;
 
   const hasToken = ready && getAccessToken() != null;
 
@@ -144,40 +101,99 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
     retry: 1,
   });
 
+  React.useEffect(() => {
+    purgeLegacyTermStorage();
+  }, []);
+
+  // Load the CURRENT user's stored term whenever the signed-in account
+  // changes (mount, login, account switch) — never another account's value.
+  React.useEffect(() => {
+    setActiveTermState(readStoredTerm(userSub));
+    setPromptRequiredState(readTermPrompt());
+    setReady(true);
+  }, [userSub]);
+
+  // Cross-tab/focus sync: another tab can change the term or the prompt flag.
+  React.useEffect(() => {
+    const sync = () => {
+      const nextSub = decodeTokenIdentity(getAccessToken())?.sub ?? null;
+      const next = readStoredTerm(nextSub);
+      setActiveTermState((prev) => {
+        const unchanged =
+          prev === next ||
+          (prev !== null &&
+            next !== null &&
+            prev.termId === next.termId &&
+            prev.schoolYearId === next.schoolYearId);
+        if (unchanged) return prev;
+        void queryClient.invalidateQueries({
+          predicate: (q) =>
+            q.queryKey[0] !== "term-picker" && q.queryKey[0] !== "school-years",
+        });
+        return next;
+      });
+      setPromptRequiredState(readTermPrompt());
+    };
+    window.addEventListener("storage", sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, [queryClient]);
+
   const setActiveTerm = React.useCallback(
     (term: ActiveTerm) => {
       setActiveTermState((prev) => {
         if (prev?.termId !== term.termId || prev?.schoolYearId !== term.schoolYearId) {
           void queryClient.invalidateQueries({
-            predicate: (query) =>
-              query.queryKey[0] !== "term-picker" && query.queryKey[0] !== "school-years",
+            predicate: (q) =>
+              q.queryKey[0] !== "term-picker" && q.queryKey[0] !== "school-years",
           });
         }
         return term;
       });
-      writeStoredTerm(term);
+      const sub = decodeTokenIdentity(getAccessToken())?.sub ?? null;
+      writeStoredTerm(sub, term);
     },
     [queryClient],
   );
 
   const setPromptRequired = React.useCallback((required: boolean) => {
     setPromptRequiredState(required);
-    if (required) requestTermPrompt();
-    else clearTermPrompt();
+    writeTermPrompt(required);
   }, []);
+
+  const activeSchoolYear = React.useMemo<ActiveSchoolYear | null>(() => {
+    const active = (query.data ?? []).find((y) => y.isActive);
+    return active ? { id: active.id, name: active.name } : null;
+  }, [query.data]);
 
   const value = React.useMemo<TermContextValue>(
     () => ({
       schoolYears: query.data ?? [],
       isLoading: query.isLoading,
       isError: query.isError,
-      activeTerm,
+      // Non-teacher roles never see term state, even if a stale value exists.
+      activeTerm: isTeacher ? activeTerm : null,
+      activeSchoolYear,
       termReady: ready,
       setActiveTerm,
       promptRequired,
       setPromptRequired,
     }),
-    [query.data, query.isLoading, query.isError, activeTerm, ready, setActiveTerm, promptRequired, setPromptRequired],
+    [
+      query.data,
+      query.isLoading,
+      query.isError,
+      isTeacher,
+      activeTerm,
+      activeSchoolYear,
+      ready,
+      setActiveTerm,
+      promptRequired,
+      setPromptRequired,
+    ],
   );
 
   return <TermContext.Provider value={value}>{children}</TermContext.Provider>;

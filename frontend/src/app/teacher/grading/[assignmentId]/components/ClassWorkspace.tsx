@@ -184,7 +184,6 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
             unlockCount={unlockCount}
             subjectLabel={subjectLabel}
             termLabel={`Term ${assignment.termNumber}, ${assignment.schoolYear}`}
-            termId={assignment.termId}
             onWeightsSaved={() => {
               onMutated();
               refreshAcademic();

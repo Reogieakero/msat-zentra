@@ -13,8 +13,6 @@ import {
 import {
   Search,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -23,7 +21,8 @@ import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
+import { riskTone } from "@/lib/labels/status-tone";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -42,15 +41,9 @@ import {
 } from "@/components/ui/table";
 import { FACTOR_LABELS, type BackendStudent, type RiskFactor, type RiskLevelKey } from "@/services/principal/riskStudents.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./StudentsListTable.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
-
-const RISK_VARIANT: Record<RiskLevelKey, "red" | "amber" | "green"> = {
-  High: "red",
-  Moderate: "amber",
-  Low: "green",
-};
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 const RISK_RANK: Record<RiskLevelKey, number> = { High: 3, Moderate: 2, Low: 1 };
 
@@ -130,8 +123,6 @@ export function StudentsListTable({
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
 
   // If filters shrink the result set under the current page, step back to
   // the last valid page so footer label, requested page, and rows agree.
@@ -187,9 +178,9 @@ export function StudentsListTable({
         minSize: 130,
         maxSize: 130,
         cell: ({ row }) => (
-          <Badge variant={RISK_VARIANT[row.original.riskLevel]}>
+          <Pill tone={riskTone(row.original.riskLevel)} label="Risk level">
             {row.original.riskLevel}
-          </Badge>
+          </Pill>
         ),
       },
       {
@@ -243,102 +234,90 @@ export function StudentsListTable({
 
   const rows = table.getRowModel().rows;
 
-  const isEmpty = !isPending && total === 0 && !hasActiveFilters;
-  if (isEmpty) {
-    return (
-      <section aria-label="At-risk students">
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <PrincipalEmptyState
-            icon={ShieldCheck}
-            title="No at-risk students"
-            hint="No at-risk students — nothing needs attention right now."
-          />
-        </div>
-      </section>
-    );
-  }
   const showSkeleton = isPending || isSectionLoading;
   return (
-    <section aria-label="At-risk students" aria-busy={showSkeleton || undefined}>
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className={`${styles.header} relative`}>
-          <div className={styles.headerText}>
-            <h2 className={styles.sectionTitle}>At-Risk Students</h2>
-            <p className={styles.sectionDesc} aria-live="polite">
-              {selectedSection === "all"
-                ? showSkeleton
-                  ? "All at-risk learners across every section — …"
-                  : `All at-risk learners across every section — ${total} student${total === 1 ? "" : "s"}.`
-                : showSkeleton
-                  ? `At-risk learners in ${selectedSection} — …`
-                  : `At-risk learners in ${selectedSection} — ${total} student${total === 1 ? "" : "s"}.`}
-            </p>
+    <KanbanBoard
+      title="At-Risk Students"
+      icon={<ShieldCheck size={14} aria-hidden="true" />}
+      count={showSkeleton ? undefined : total}
+      description={
+        selectedSection === "all"
+          ? showSkeleton
+            ? "All at-risk learners across every section — …"
+            : `All at-risk learners across every section — ${total} student${total === 1 ? "" : "s"}.`
+          : showSkeleton
+            ? `At-risk learners in ${selectedSection} — …`
+            : `At-risk learners in ${selectedSection} — ${total} student${total === 1 ? "" : "s"}.`
+      }
+      actions={
+        <>
+          <div className={styles.searchWrap}>
+            <Search className={styles.searchIcon} aria-hidden />
+            <Input
+              className={styles.search}
+              style={{ height: "2rem" }}
+              placeholder="Search name or LRN…"
+              value={query}
+              onChange={(e) => applySearch(e.target.value)}
+              aria-label="Search at-risk students"
+            />
           </div>
-          <div className={styles.headerActions}>
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} aria-hidden />
-              <Input
-                className={styles.search}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
                 style={{ height: "2rem" }}
-                placeholder="Search name or LRN…"
-                value={query}
-                onChange={(e) => applySearch(e.target.value)}
-                aria-label="Search at-risk students"
-              />
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  style={{ height: "2rem" }}
-                  aria-label={`Filter students by risk level, currently showing: ${riskFilter === "all" ? "All levels" : riskFilter}`}
-                  className={`${styles.filterBtn} ${
-                    riskFilter !== "all" ? styles.filterActive : ""
-                  }`}
-                >
-                  {riskFilter === "all" ? "Risk" : riskFilter}
-                  {riskFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
-                  <ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.filterMenu}>
-                <DropdownMenuCheckboxItem
-                  checked={riskFilter === "all"}
-                  onCheckedChange={() => applyRisk("all")}
-                >
-                  All levels
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                {(["High", "Moderate", "Low"] as RiskLevelKey[]).map((lvl) => (
-                  <DropdownMenuCheckboxItem
-                    key={lvl}
-                    checked={riskFilter === lvl}
-                    onCheckedChange={() => applyRisk(lvl)}
-                  >
-                    {lvl}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" className={styles.clearBtn} onClick={clearFilters}>
-                <X aria-hidden />
-                Show all
+                aria-label={`Filter students by risk level, currently showing: ${riskFilter === "all" ? "All levels" : riskFilter}`}
+                className={`${styles.filterBtn} ${
+                  riskFilter !== "all" ? styles.filterActive : ""
+                }`}
+              >
+                {riskFilter === "all" ? "Risk" : riskFilter}
+                {riskFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
+                <ChevronDown aria-hidden />
               </Button>
-            )}
-          </div>
-        </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className={styles.filterMenu}>
+              <DropdownMenuCheckboxItem
+                checked={riskFilter === "all"}
+                onCheckedChange={() => applyRisk("all")}
+              >
+                All levels
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator />
+              {(["High", "Moderate", "Low"] as RiskLevelKey[]).map((lvl) => (
+                <DropdownMenuCheckboxItem
+                  key={lvl}
+                  checked={riskFilter === lvl}
+                  onCheckedChange={() => applyRisk(lvl)}
+                >
+                  {lvl}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        <div className={`${styles.tableBody} relative`}>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" className={styles.clearBtn} onClick={clearFilters}>
+              <X aria-hidden />
+              Show all
+            </Button>
+          )}
+        </>
+      }
+      footer={
+        <Pagination
+          currentPage={safePage}
+          totalItems={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      }
+      ariaLabel="At-risk students"
+    >
+        <div className={`${styles.tableBody} relative`} aria-busy={showSkeleton || undefined}>
           {showSkeleton ? (
             <div className={styles.tableWrap} aria-label="Loading students for selected section" aria-busy="true">
               <Table aria-label="At-risk students">
@@ -419,36 +398,8 @@ export function StudentsListTable({
             </div>
           )}
 
-          {!showSkeleton && total > PAGE_SIZE && (
-            <div className={styles.pager}>
-              <p className={styles.range} aria-live="polite">
-                {total > 0 ? `${start}–${end} of ${total} · Page ${safePage} of ${totalPages}` : "0 of 0"}
-              </p>
-              <div className={styles.pagerButtons}>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={safePage <= 1 || total === 0 || isFetching}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  <ChevronLeft aria-hidden />
-                  Previous
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={safePage >= totalPages || total === 0 || isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                  <ChevronRight aria-hidden />
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
-      </div>
-    </section>
+    </KanbanBoard>
   );
 }
 

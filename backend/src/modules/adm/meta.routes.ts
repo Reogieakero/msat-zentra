@@ -65,6 +65,7 @@ router.patch(
     try {
       const body = req.body as {
         fullName?: string;
+        mascot?: string | null;
         primaryColor?: string | null;
         secondaryColor?: string | null;
       };
@@ -72,6 +73,7 @@ router.patch(
         { userId: req.user!.id, role: req.user!.role, termId: req.termScope?.termId ?? null },
         {
           fullName: body.fullName,
+          mascot: body.mascot,
           primaryColor: body.primaryColor,
           secondaryColor: body.secondaryColor,
         },

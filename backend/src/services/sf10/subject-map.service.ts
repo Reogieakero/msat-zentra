@@ -24,6 +24,8 @@ export interface OcrSubjectRef {
   gradeLevel?: string | null;
   /** Quarterly ratings Q1–Q4 in column order, if read. */
   quarters?: Array<number | null> | null;
+  /** SHS only: per-semester finals [1st sem, 2nd sem], if read. */
+  semFinals?: Array<number | null> | null;
   /** PASSED / FAILED … as printed, if read. */
   remarks?: string | null;
 }
@@ -32,8 +34,13 @@ export interface SubjectMapEntry {
   code: string;
   name: string;
   norm: string;
+  /** Subject name exactly as written on the file. Kept so desks can show the
+   * record's own wording when the catalog absorbed a differently named row. */
+  rawName?: string | null;
   rating?: number | null;
   quarters?: Array<number | null> | null;
+  /** SHS only: per-semester finals [1st sem, 2nd sem], if read. */
+  semFinals?: Array<number | null> | null;
   remarks?: string | null;
   /** Position of the file row (per-grade tables list subjects as on record). */
   order?: number;
@@ -66,6 +73,8 @@ export interface PerGradeExtra {
   norm: string;
   rating: number | null;
   quarters: Array<number | null> | null;
+  /** SHS only: per-semester finals [1st sem, 2nd sem], if read. */
+  semFinals?: Array<number | null> | null;
   remarks: string | null;
   /** Position of the file row (per-grade tables list subjects as on record). */
   order: number;
@@ -213,6 +222,7 @@ export function buildDeficiencyMap(
     rating: typeof o.rating === "number" ? o.rating : (typeof o.grade === "number" ? o.grade : null),
     gradeLevel: o.gradeLevel ?? null,
     quarters: o.quarters ?? null,
+    semFinals: o.semFinals ?? null,
     remarks: o.remarks ?? null,
   }));
   const gradesDetected = [...new Set(ocr.map((o) => o.gradeLevel).filter((g): g is string => !!g))];
@@ -244,7 +254,15 @@ export function buildDeficiencyMap(
   }
 
   const currentIdx = GRADE_ORDER.indexOf(currentGrade as (typeof GRADE_ORDER)[number]);
-  const grades = (currentIdx >= 0 ? GRADE_ORDER.slice(0, currentIdx + 1) : [currentGrade]) as string[];
+  // SHS records (no JHS-grade subjects on file) only span G11–G12: do not
+  // surface G7–G10 as all-missing for an SHS learner.
+  const currentIsShsGrade = currentIdx >= GRADE_ORDER.indexOf("G11");
+  const hasJhsGrades = ocr.some(
+    (o) => typeof o.gradeLevel === "string" && GRADE_ORDER.indexOf(o.gradeLevel as (typeof GRADE_ORDER)[number]) < GRADE_ORDER.indexOf("G11"),
+  );
+  const isShs = currentIsShsGrade && !hasJhsGrades;
+  const startIdx = isShs ? GRADE_ORDER.indexOf("G11") : 0;
+  const grades = (currentIdx >= 0 ? GRADE_ORDER.slice(startIdx, currentIdx + 1) : [currentGrade]) as string[];
 
   const perGrade: PerGradeMap[] = [];
   const deficiencies: DeficiencyEntry[] = [];
@@ -282,8 +300,10 @@ export function buildDeficiencyMap(
           code: s.code,
           name: s.name,
           norm: s.norm,
+          rawName: src.rawName,
           rating: src.rating,
           quarters: src.quarters,
+          semFinals: src.semFinals,
           remarks: src.remarks,
           order: ocr.indexOf(src),
         });
@@ -313,6 +333,7 @@ export function buildDeficiencyMap(
         norm: o.norm,
         rating: o.rating,
         quarters: o.quarters,
+        semFinals: o.semFinals,
         remarks: o.remarks,
         order: ocr.indexOf(o),
       });

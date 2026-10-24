@@ -4,7 +4,6 @@ export const createSchema = z.object({
   studentId: z.string().min(1),
   sectionId: z.string().min(1),
 
-  termId: z.string().min(1).optional(),
   observationDatetime: z.string().datetime(),
   descriptionOfIncident: z.string().min(1),
   descriptionOfLocation: z.string().optional(),

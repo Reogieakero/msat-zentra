@@ -11,7 +11,7 @@ import {
   ACTION_STATUS_VARIANT,
   actionIconFor,
   statusVariant,
-} from "../../alerts/components/NurseReferralsTable";
+} from "../../alerts/components/NurseAlertsBoard";
 import {
   AdmQueueTable,
   type AdmQueueRowVM,

@@ -4,6 +4,7 @@ import {
   GraduationCap,
   KeyRound,
   Palette,
+  RefreshCw,
   UserRound,
   Users,
   type LucideIcon,
@@ -21,6 +22,7 @@ export function settingsSections(masterTeacherEligible: boolean): SettingsSectio
   const links: SettingsSectionLink[] = [
     { id: "section-profile", label: "Profile", Icon: UserRound },
     { id: "section-adviser", label: "Adviser", Icon: Users },
+    { id: "section-sync", label: "Sync", Icon: RefreshCw },
   ];
   if (masterTeacherEligible) {
     links.push({ id: "section-master-teacher", label: "Master Teacher", Icon: GraduationCap });

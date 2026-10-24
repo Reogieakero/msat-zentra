@@ -22,6 +22,9 @@ export interface CasesQuery {
   page: number;
   pageSize: number;
   highlight: string;
+  /** Internal-only: lets an aggregate desk load a whole source in one pass.
+      Never wired to a client query param — routes keep the 15/page ceiling. */
+  internalPageCap?: number;
 }
 
 export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
@@ -103,7 +106,10 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     AND: [...scopeClauses, ...sessionClauses, ...(searchClause ? [searchClause] : [])],
   };
 
-  const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
+  const effPageSize = Math.min(
+    Math.max(1, Math.floor(pageSize) || 15),
+    Math.max(15, Math.floor(query.internalPageCap ?? 15)),
+  );
   const orderBy = [
     { anecdotalRecord: { observationDatetime: "desc" as const } },
     { id: "desc" as const },

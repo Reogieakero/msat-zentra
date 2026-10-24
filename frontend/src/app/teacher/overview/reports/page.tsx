@@ -52,7 +52,7 @@ export default function TeacherReportsPage() {
   if (meQuery.isPending) {
     return (
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-5" aria-busy="true" aria-label="Loading report">
-        <ZentraPageHeaderSkeleton />
+        <ZentraPageHeaderSkeleton variant="plain" />
         <div className="grid gap-4 sm:grid-cols-3">
           <ZentraDashboardCardSkeleton />
           <ZentraDashboardCardSkeleton />

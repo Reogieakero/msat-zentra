@@ -1,6 +1,6 @@
 "use client";
 import { FolderCard } from "@/components/ui/FolderCard";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import type {
   AdmReferralForm,
   AdmReferralRow,
@@ -23,7 +23,7 @@ export function AdmFormsModal({
   onOpenForm: (f: AdmReferralForm, r: AdmReferralRow) => void;
 }) {
   return (
-    <CardModal
+    <KanbanOverlay
       open={formsFor !== null}
       onClose={onClose}
       title={formsFor ? `Linked forms — ${formsFor.student}` : "Linked forms"}
@@ -32,8 +32,7 @@ export function AdmFormsModal({
           ? `${formsFor.lrn}${formsFor.section ? ` · ${formsFor.section}` : ""} · ${formsFor.forms?.length ?? 0} form${(formsFor.forms?.length ?? 0) === 1 ? "" : "s"} linked to this endorsement`
           : undefined
       }
-      size="lg"
-      watchKey={formsFor?.id}
+      width="lg"
     >
       {formsFor && formsFor.forms && formsFor.forms.length > 0 ? (
         <div className={styles.folderGrid}>
@@ -70,6 +69,6 @@ export function AdmFormsModal({
           No forms linked to this endorsement.
         </p>
       )}
-    </CardModal>
+    </KanbanOverlay>
   );
 }

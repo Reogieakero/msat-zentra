@@ -4,13 +4,16 @@ import { invalidateTags } from "../../lib/cache.js";
 import { validate } from "../../middleware/validate.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import {
+  dataSharingSchema,
   masterTeacherSchema,
   teacherPhotoSchema,
   teacherProfileSchema,
 } from "./teacher.schemas.js";
 import {
   listAdviserSections,
+  readDataSharing,
   readProfileSettings,
+  setDataSharing,
   setMasterTeacher,
   updateProfilePhoto,
   updateProfileSettings,
@@ -117,6 +120,47 @@ router.post(
       const { photoUrl } = req.body as { photoUrl: string };
       const result = await updateProfilePhoto(ctxOf(req), photoUrl);
       await invalidateTags(["teacher", "overview"]);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
+  "/settings/data-sharing",
+  requireAuth,
+  requireRole("subject_teacher", "adviser"),
+  async (req, res, next) => {
+    try {
+      const termId = await resolveActiveTermId(req);
+      res.json(await readDataSharing(req.user!.id, termId));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.patch(
+  "/settings/data-sharing",
+  requireAuth,
+  requireRole("subject_teacher", "adviser"),
+  validate("body", dataSharingSchema),
+  async (req, res, next) => {
+    try {
+      const { shareStudentData } = req.body as { shareStudentData: boolean };
+      const result = await setDataSharing(ctxOf(req), shareStudentData);
+      await invalidateTags([
+        "teacher",
+        "overview",
+        "guidance",
+        "adviser",
+        "principal",
+        "risk",
+        "reports",
+        "attendance",
+        "academics",
+      ]);
       res.json(result);
     } catch (e) {
       next(e);

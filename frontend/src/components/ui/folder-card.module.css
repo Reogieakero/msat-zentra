@@ -164,6 +164,15 @@
   text-shadow: 0 0 10px rgb(255 255 255 / 0.5);
 }
 
+/* Folder body as a button (opt-in via onCardClick) — the folder already
+   shows a pointer cursor and opens on hover, so the body click opens the
+   record too; keep a visible focus ring for keyboard use. */
+.folderClickable:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
 /* Clickable slip variant (opt-in via onFileClick) — resets native button
    chrome; tone/session classes keep painting the background. */
 .fileBtn {

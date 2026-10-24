@@ -1,32 +1,14 @@
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.title {
-  margin: 0;
-  font-size: 1.0625rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.subtitle {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
+/* Kanban display — one column per grade level / section, mirroring the
+   overview stats board: kanban header + stat card readout. */
+.board {
+  min-width: 0;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
+  min-width: 0;
 }
 
 @media (max-width: 1280px) {
@@ -41,41 +23,38 @@
   }
 }
 
-.card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
-  box-shadow: none;
-  padding: 1rem 1.125rem 1.125rem;
-}
-
-.cardHead {
+.column {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 0.5rem;
-  margin-bottom: 0.875rem;
+  min-width: 0;
+  padding: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background-color: color-mix(in oklch, var(--muted) 60%, transparent);
 }
 
-.cardTitle {
-  margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--foreground);
+:global(.dark) .column {
+  background-color: color-mix(in oklch, var(--muted) 20%, transparent);
 }
 
-.total {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--foreground);
-  flex-shrink: 0;
+/* Stat card — the column's readout surface (donut + legend). */
+.stat {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
 }
 
-.body {
+/* Donut + legend row (shared by the columns and the rail flyouts). */
+.readout {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .legend {
@@ -114,22 +93,32 @@
   font-variant-numeric: tabular-nums;
 }
 
-.skelHead {
+/* Column skeleton — header row + stat block, matching the kanban column. */
+.headSkeleton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-inline: -0.625rem;
+  padding: 0 0.875rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.skelTitle {
   height: 1rem;
-  width: 60%;
+  width: 8rem;
+  min-width: 0;
   border-radius: var(--radius-md);
-  margin-bottom: 0.875rem;
 }
 
-.skelDonut {
-  width: 96px;
-  height: 96px;
-  border-radius: 9999px;
+.skelCount {
+  height: 1rem;
+  width: 1.25rem;
   flex-shrink: 0;
+  border-radius: var(--radius-sm);
 }
 
-.skelLegend {
-  height: 4rem;
-  width: 100%;
-  border-radius: var(--radius-md);
+.skelStat {
+  height: 7.5rem;
+  border-radius: var(--radius-lg);
 }

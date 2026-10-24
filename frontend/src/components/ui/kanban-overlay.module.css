@@ -1,0 +1,33 @@
+/* Overlay body scroll — thin amber bar that only appears while the body is
+   hovered, so the board edge stays clean at rest (same recipe as the SF10
+   record overlay / settings mascot-grid scrollbar). */
+.scrollBody {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scrollBody:hover {
+  scrollbar-color: color-mix(in oklch, #f59e0b 65%, transparent) transparent;
+}
+
+.scrollBody::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.scrollBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollBody::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.scrollBody:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, #f59e0b 65%, transparent);
+}
+
+.scrollBody:hover::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, #f59e0b 85%, transparent);
+}

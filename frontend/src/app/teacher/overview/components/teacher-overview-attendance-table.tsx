@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { RowList, type RowListItem, type RowTone } from "@/components/ui/row-list";
 import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
+import { KanbanBoardSkeleton, RowListSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { useTerm } from "@/lib/term/TermContext";
 
@@ -119,13 +120,9 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
 
   if (matrixQuery.isPending) {
     return (
-      <section aria-label="Advisory attendance" className="flex min-w-0 flex-col gap-3">
-        <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading attendance">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-10 rounded-md bg-muted" />
-          ))}
-        </div>
-      </section>
+      <KanbanBoardSkeleton rows={0} titleWidth="9rem">
+        <RowListSkeleton rows={5} gutter="0.625rem" />
+      </KanbanBoardSkeleton>
     );
   }
 

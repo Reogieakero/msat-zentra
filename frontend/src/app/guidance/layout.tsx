@@ -5,27 +5,25 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/api/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "@/components/providers";
 import { GuidanceSidebar } from "@/components/guidance-sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import {
   Command,
   CommandInput,
 } from "@/components/ui/command";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
+import { UserRound } from "lucide-react";
+import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
+import { SidebarToggleButton } from "@/components/nav/SidebarToggleButton";
+import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { useGuidanceRealtime } from "@/lib/realtime/guidanceChannel";
 import { GuidanceNotificationsBell } from "./components/GuidanceNotificationsBell";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
-import { GuidancePaletteGate } from "@/services/settings/profile-settings";
+import {
+  GuidancePaletteGate,
+  useGuidanceProfileSettings,
+} from "@/services/settings/profile-settings";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import styles from "./guidance.module.css";
 
@@ -35,10 +33,10 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
   const { allowed } = useRoleGuard(["guidance_counselor"]);
 
   useGuidanceRealtime(allowed);
-  const { resolvedTheme, setTheme } = useTheme();
+  const profile = useGuidanceProfileSettings();
   const [query, setQuery] = React.useState("");
-
-  const isDark = resolvedTheme === "dark";
+  const { collapsed: sidebarCollapsed, toggle: toggleSidebar } =
+    useCollapsibleSidebar("zentra.guidance.sidebar.collapsed");
 
   const handleLogout = () => {
 
@@ -64,6 +62,11 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
+        <SidebarToggleButton
+          collapsed={sidebarCollapsed}
+          onToggle={toggleSidebar}
+        />
+
         <Link href="/guidance/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
@@ -84,84 +87,43 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
 
         <GuidanceNotificationsBell />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={styles.avatarButton}
-              aria-label="Account menu"
-            >
+        <KanbanAccountMenu
+          settingsHref="/guidance/settings"
+          onLogout={handleLogout}
+        >
+          <button
+            type="button"
+            className={styles.avatarButton}
+            aria-label="Account menu"
+          >
+            {profile.data?.mascot ? (
+              <span className="flex size-8 items-center justify-center overflow-hidden rounded-full border border-border bg-muted/40">
+                <StudentMascot
+                  name={profile.data.fullName || "You"}
+                  character={profile.data.mascot}
+                  size={32}
+                />
+              </span>
+            ) : (
               <Avatar size="sm">
+                {profile.data?.photoUrl ? (
+                  <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
+                ) : null}
                 <AvatarFallback>
                   <UserRound className={styles.avatarIcon} />
                 </AvatarFallback>
               </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className={styles.accountMenu}
-          >
-            <DropdownMenuLabel>Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className={styles.accountItem}
-              onSelect={(event) => {
-                event.preventDefault();
-                router.push("/guidance/settings");
-              }}
-            >
-              <Settings className={styles.accountIcon} />
-              <span>Settings</span>
-            </DropdownMenuItem>
-            <div className={styles.accountGroup}>
-              <div className={styles.accountGroupLabel}>
-                <span>System Preference</span>
-              </div>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setTheme("light");
-                }}
-              >
-                <Sun className={styles.accountIcon} />
-                <span>Light</span>
-                {!isDark ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setTheme("dark");
-                }}
-              >
-                <Moon className={styles.accountIcon} />
-                <span>Dark</span>
-                {isDark ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className={styles.accountItem}
-              onSelect={(event) => {
-                event.preventDefault();
-                handleLogout();
-              }}
-            >
-              <LogOut className={styles.accountIcon} />
-              <span>Logout</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            )}
+          </button>
+        </KanbanAccountMenu>
       </header>
       <GuidancePaletteGate />
-      <GuidanceSidebar />
-      <div className={`${styles.shell} ${styles.shellWithRail}`}>
+      <GuidanceSidebar collapsed={sidebarCollapsed} />
+      <div
+        className={`${styles.shell} ${styles.shellWithRail} ${
+          sidebarCollapsed ? styles.shellWithRailCollapsed : ""
+        }`}
+      >
         <main className={styles.main}>{children}</main>
       </div>
       <BookingReminderStack desk="guidance" />

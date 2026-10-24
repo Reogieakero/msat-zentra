@@ -1,14 +1,12 @@
 "use client";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Textarea } from "@/components/ui/textarea";
-import formStyles from "@/app/principal/academics/assign/components/form.module.css";
 export function ReviewDialog({
   open,
   onClose,
   sectionName,
-  sectionId,
   note,
   onNoteChange,
   formError,
@@ -30,14 +28,39 @@ export function ReviewDialog({
   reviewPending: boolean;
 }) {
   return (
-    <CardModal
+    <KanbanOverlay
       open={open}
       onClose={onClose}
-      size="sm"
+      width="sm"
       title={`Review schedule for ${sectionName}`}
       description="Approve the timetable or send it back to the master teacher with a revision note."
       dismissable={!reviewPending}
-      watchKey={sectionId}
+      busy={reviewPending}
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+          <Button
+            variant="destructive"
+            onClick={() => onReview("reject")}
+            disabled={reviewPending}
+            aria-busy={rejecting || undefined}
+          >
+            {rejecting ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden />
+            ) : null}
+            <span aria-live="polite">Reject</span>
+          </Button>
+          <Button
+            onClick={() => onReview("approve")}
+            disabled={reviewPending}
+            aria-busy={approving || undefined}
+          >
+            {approving ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden />
+            ) : null}
+            <span aria-live="polite">Approve</span>
+          </Button>
+        </div>
+      }
     >
       <Textarea
         autoFocus
@@ -54,29 +77,6 @@ export function ReviewDialog({
           {formError}
         </p>
       ) : null}
-      <div className={formStyles.dialogFooter}>
-        <Button
-          variant="destructive"
-          onClick={() => onReview("reject")}
-          disabled={reviewPending}
-          aria-busy={rejecting || undefined}
-        >
-          {rejecting ? (
-            <Loader2 size={16} className="animate-spin" aria-hidden />
-          ) : null}
-          <span aria-live="polite">Reject</span>
-        </Button>
-        <Button
-          onClick={() => onReview("approve")}
-          disabled={reviewPending}
-          aria-busy={approving || undefined}
-        >
-          {approving ? (
-            <Loader2 size={16} className="animate-spin" aria-hidden />
-          ) : null}
-          <span aria-live="polite">Approve</span>
-        </Button>
-      </div>
-    </CardModal>
+    </KanbanOverlay>
   );
 }

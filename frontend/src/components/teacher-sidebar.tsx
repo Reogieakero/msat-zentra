@@ -22,13 +22,8 @@ import {
 
 import styles from "./teacher-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   useCachedAdviser,
   useCachedMasterTeacher,
@@ -135,44 +130,20 @@ export function TeacherSidebar({
 
 function TeacherRailCollapsed({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
-  const isActive = React.useCallback(
-    (href: string) =>
-      href === "/teacher/overview"
-        ? pathname === href
-        : pathname === href || pathname.startsWith(`${href}/`),
-    [pathname],
-  );
+  const activeHref =
+    groups
+      .flatMap((group) => group.items)
+      .find((t) =>
+        t.href === "/teacher/overview"
+          ? pathname === t.href
+          : pathname === t.href || pathname.startsWith(`${t.href}/`),
+      )?.href ?? "/teacher/overview";
   return (
-    <TooltipProvider delayDuration={100}>
-      <ul className={styles.collapsedList} aria-label="Teacher sections, icon only">
-        {groups.map((group, gi) => (
-          <li key={group.label} className={styles.collapsedGroup}>
-            {gi > 0 ? <span className={styles.collapsedDivider} aria-hidden="true" /> : null}
-            {group.items.map((t) => {
-              const active = isActive(t.href);
-              return (
-                <Tooltip key={t.href}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={t.href}
-                      className={`${styles.iconBtn} ${active ? styles.iconBtnActive : ""}`}
-                      aria-current={active ? "page" : undefined}
-                      aria-label={`${t.title} (${group.label})`}
-                    >
-                      <t.icon size={17} strokeWidth={1.8} aria-hidden="true" />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={10}>
-                    <span className="font-medium">{t.title}</span>
-                    <span className="opacity-60">{group.label}</span>
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-          </li>
-        ))}
-      </ul>
-    </TooltipProvider>
+    <SidebarIconRail
+      groups={groups}
+      ariaLabel="Teacher sections, icon only"
+      activeHref={activeHref}
+    />
   );
 }
 

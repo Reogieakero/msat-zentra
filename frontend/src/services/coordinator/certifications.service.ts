@@ -15,6 +15,7 @@ import type {
   CertStatus,
   CertSummary,
 } from "./certifications.types";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export const CERT_STATUS_META: Record<
   CertStatus,
@@ -123,31 +124,72 @@ export function summarizeCertRecords(rows: CertRecord[]): CertSummary {
   };
 }
 
-const CERT_SUMMARY_LIMIT = 200;
+// The list endpoints are hard-capped at 15 rows per page (backend
+// MAX_PAGE_SIZE), so the certifications summary walks the pages it needs
+// instead of asking for a 200-row page (which the API rejects with 400).
+// Bounded preview: max 10 pages (150 rows) per source, matching the
+// guidance referral fan-out policy.
+const CERT_SUMMARY_MAX_PAGES = 10;
 
 export async function fetchCertStageRows(
   stage: "certification" | "principal_approval",
   q: string,
   signal?: AbortSignal,
 ): Promise<AdmCaseRow[]> {
-  const page = await fetchCoordinatorReferrals(1, {
+  const first = await fetchCoordinatorReferrals(1, {
     q: q || undefined,
     stage,
-    limit: CERT_SUMMARY_LIMIT,
+    limit: PAGE_SIZE,
     signal,
   });
+  const rows = Array.isArray(first?.rows) ? [...first.rows] : [];
+  const pages = Math.min(first?.totalPages ?? 1, CERT_SUMMARY_MAX_PAGES);
 
-  return Array.isArray(page?.rows) ? page.rows : [];
+  if (pages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: pages - 1 }, (_, i) =>
+        fetchCoordinatorReferrals(i + 2, {
+          q: q || undefined,
+          stage,
+          limit: PAGE_SIZE,
+          signal,
+        }),
+      ),
+    );
+    for (const page of rest) {
+      if (Array.isArray(page?.rows)) rows.push(...page.rows);
+    }
+  }
+
+  return rows;
 }
 
 export async function fetchCertApprovalRows(
   q: string,
   signal?: AbortSignal,
 ): Promise<AdmApprovalRow[]> {
-  const page = await fetchCoordinatorApprovals(1, {
+  const first = await fetchCoordinatorApprovals(1, {
     q: q || undefined,
-    limit: CERT_SUMMARY_LIMIT,
+    limit: PAGE_SIZE,
     signal,
   });
-  return Array.isArray(page?.rows) ? page.rows : [];
+  const rows = Array.isArray(first?.rows) ? [...first.rows] : [];
+  const pages = Math.min(first?.totalPages ?? 1, CERT_SUMMARY_MAX_PAGES);
+
+  if (pages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: pages - 1 }, (_, i) =>
+        fetchCoordinatorApprovals(i + 2, {
+          q: q || undefined,
+          limit: PAGE_SIZE,
+          signal,
+        }),
+      ),
+    );
+    for (const page of rest) {
+      if (Array.isArray(page?.rows)) rows.push(...page.rows);
+    }
+  }
+
+  return rows;
 }

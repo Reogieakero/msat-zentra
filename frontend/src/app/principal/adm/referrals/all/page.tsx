@@ -16,8 +16,8 @@ import { ShieldCheck } from "lucide-react";
 import { PrincipalPageHeader } from "../../../components/PrincipalPageHeader";
 import { PageHeaderSkeleton } from "../../../components/skeletons/PageHeaderSkeleton";
 import { PrincipalEmptyCard } from "../../../components/PrincipalEmptyCard";
-import styles from "./all.module.css";
-import assign from "../../../academics/assign/components/section-assignments.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pagination } from "@/components/shared/pagination";
 import { useAdmReferralsList } from "./components/use-adm-referrals-list";
 import { useGcForm03Opener } from "./components/use-gc-form-03-opener";
 import { AdmReferralsTable } from "./components/adm-referrals-table";
@@ -43,7 +43,7 @@ function PrincipalAdmReferralsAllPageInner() {
   const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
   const page = pager.page;
   const setPage = pager.setPage;
-  const { rows, setRows, totalCount, totalPages, safePage, start, end, loading, isFetching, error, refetch } =
+  const { rows, setRows, totalCount, loading, isFetching, error, refetch } =
     useAdmReferralsList(search, page);
 
   // Keep search in the URL and reset to page 1 when it changes.
@@ -157,19 +157,16 @@ function PrincipalAdmReferralsAllPageInner() {
           centered
         />
       ) : (
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className="relative flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className={styles.sectionTitle}>Endorsed ADM Cases</h2>
-            <p className={styles.sectionDesc} aria-live="polite">
-              {totalCount === 0
-                ? "No ADM referrals on record."
-                : `${totalCount} case${totalCount === 1 ? "" : "s"} endorsed by the ADM Coordinator — signed cases stay on this list and are final.`}
-            </p>
-          </div>
+      <KanbanBoard
+        title="Endorsed ADM Cases"
+        icon={<ShieldCheck size={14} aria-hidden="true" />}
+        count={totalCount}
+        description={
+          totalCount === 0
+            ? "No ADM referrals on record."
+            : `${totalCount} case${totalCount === 1 ? "" : "s"} endorsed by the ADM Coordinator — signed cases stay on this list and are final.`
+        }
+        actions={
           <InputGroup className="max-w-40 shrink-0">
             <InputGroupInput
               placeholder="Search name, LRN, or ID…"
@@ -183,7 +180,15 @@ function PrincipalAdmReferralsAllPageInner() {
               <SearchIcon />
             </InputGroupAddon>
           </InputGroup>
-        </div>
+        }
+        footer={
+          <Pagination
+            currentPage={page}
+            totalItems={totalCount}
+            onPageChange={setPage}
+          />
+        }
+      >
         <AdmReferralsTable
           rows={rows}
           totalCount={totalCount}
@@ -192,16 +197,11 @@ function PrincipalAdmReferralsAllPageInner() {
           error={error}
           search={search}
           actionId={actionId}
-          safePage={safePage}
-          totalPages={totalPages}
-          start={start}
-          end={end}
           onRequestSign={(id) => setPendingAction({ id, type: "sign" })}
           onRequestReturn={(id) => setPendingAction({ id, type: "return" })}
           onViewForms={(r) => setFormsFor(r)}
-          onPageChange={(p) => setPage(p)}
         />
-      </div>
+      </KanbanBoard>
       )}
       <AdmPreviewModal
         preview={preview}

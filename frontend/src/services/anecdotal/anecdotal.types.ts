@@ -46,7 +46,6 @@ export interface AnecdotalOptions {
 export interface AnecdotalPayload {
   studentId: string;
   sectionId: string;
-  termId: string;
   observationDatetime: string;
   descriptionOfIncident: string;
   descriptionOfLocation?: string;

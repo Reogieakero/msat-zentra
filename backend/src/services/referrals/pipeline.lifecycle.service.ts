@@ -2,7 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
-import { assertActiveTerm, referralCard, truncate } from "../../modules/referrals/referrals.repository.js";
+import { assertActiveTerm, referralCard } from "../../modules/referrals/referrals.repository.js";
 import type { ReferralContext } from "./referral.types.js";
 
 export async function addNote(ctx: ReferralContext, referralId: string, notes: string) {
@@ -78,13 +78,12 @@ export async function dismissReferral(ctx: ReferralContext, referralId: string, 
   });
   await writeAudit({ userId: ctx.userId, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
   const card = await referralCard(referral);
-  const why = truncate(reason, 120);
   if (referral.referredBy && referral.referredBy !== ctx.userId) {
     void fanoutNotification({
       userId: referral.referredBy,
       sourceTable: "referrals",
       action: "status",
-      message: `Your referral for ${card.who} was dismissed${why ? ` — ${why}` : ""}.`,
+      message: `Your referral for ${card.who} was dismissed.`,
       sourceId: referral.id,
     });
   }

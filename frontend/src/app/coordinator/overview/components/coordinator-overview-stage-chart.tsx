@@ -9,8 +9,8 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
 import type { StageDonutEntry } from "./coordinator-overview-helpers";
+import { AMBER_RAMP } from "./coordinator-overview-helpers";
 import { CoordinatorEmptyState } from "../../components/CoordinatorEmptyCard";
 import styles from "./coordinator-overview-stage-chart.module.css";
 
@@ -24,15 +24,12 @@ function buildInterpretation(slices: StageDonutEntry[], total: number): string {
 
 export function CoordinatorOverviewStageChart({
   stageDonut,
-  primary,
 }: {
   stageDonut: StageDonutEntry[];
-  primary?: string | null;
 }) {
-  const scale = usePrimaryScale(Math.max(stageDonut.length, 1), primary);
   const slices = stageDonut.map((d, i) => ({
     ...d,
-    fill: scale[i % scale.length] ?? d.fill,
+    fill: AMBER_RAMP[i % AMBER_RAMP.length] ?? d.fill,
   }));
   const total = slices.reduce((n, d) => n + d.value, 0);
   const isEmpty = total === 0;

@@ -2,19 +2,22 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShieldQuestion } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CheckCircle2, Clock, Megaphone, ShieldQuestion, Users } from "lucide-react";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { AdviserAccessKanban } from "./components/AdviserAccessTables";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { markSelfNotified } from "@/lib/realtime/recordKeeperChannel";
 import type { AdviserAccessRequest } from "./components/types";
 import { getStudentListStats, mergeConfirmedMarks } from "@/components/shared/adviser-access/adviser-access-types";
 import { useAdviserAccessCheck } from "@/components/shared/adviser-access/adviser-access-check-context";
 import { RecordKeeperEmptyCard } from "../components/RecordKeeperEmptyCard";
-import { RecordKeeperPageHeader } from "../components/RecordKeeperPageHeader";
-import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { Sf10RequestsRail } from "./components/Sf10RequestsRail";
+import {
+  AdviserAccessSummarySkeleton,
+  AdviserAccessBoardSkeleton,
+} from "@/components/shared/adviser-access/adviser-access-skeleton";
 import styles from "./adviser-access.module.css";
 
 type RequestsResponse = { requests: AdviserAccessRequest[] };
@@ -29,6 +32,7 @@ async function fetchRequests() {
 
 export default function AdviserAccessPage() {
   const qc = useQueryClient();
+  const dock = useDock();
   const { data, isPending, isError } = useQuery({
     queryKey: QUERY_KEY,
     queryFn: fetchRequests,
@@ -79,13 +83,22 @@ export default function AdviserAccessPage() {
   const handleDeny = React.useCallback(
     async (id: string, reason: string) => {
       setDenyingId(id);
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({ kind: "generic", title: "Denying adviser access", description: "Adviser access request" });
+      } catch {
+        taskId = null;
+      }
       try {
         await deny.mutateAsync({ id, reason });
+        if (taskId) dock.completeTask(taskId, "Access request denied.");
+      } catch {
+        if (taskId) dock.failTask(taskId, "Could not deny this request.");
       } finally {
         setDenyingId(null);
       }
     },
-    [deny],
+    [deny, dock],
   );
 
   const pendingRequests = React.useMemo(() => requests.filter((r) => r.status === "pending"), [requests]);
@@ -93,11 +106,58 @@ export default function AdviserAccessPage() {
   // KPI is pure student-list counts over pending requests.
   const stats = React.useMemo(() => getStudentListStats(pendingRequests), [pendingRequests]);
 
+  // Kanban stat columns — same column chrome as the Request Board below
+  // (tinted column, bordered head, white stat card). Column mascots are
+  // deliberately distinct from the overview board's cast (owl / scout /
+  // knight / postbot) and the final-grades strip (scientist / rocket /
+  // cap), and sit on the left of the number (final-grades puts them right).
+  const summaryColumns = [
+    {
+      key: "pendingChecking",
+      label: "Pending checking",
+      value: stats.pendingChecking,
+      hint: "Students awaiting Check",
+      title: "Students in requests not yet checked",
+      icon: <Clock size={14} className="text-amber-500" aria-hidden />,
+      mascot: "glasses",
+    },
+    {
+      key: "approved",
+      label: "Approved",
+      value: stats.approved,
+      hint: "Decided in the check card",
+      title: "Students granted from the check card (bottom-right) after verification",
+      icon: <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" aria-hidden />,
+      mascot: "panda",
+    },
+    {
+      key: "reportedMissing",
+      label: "Reported missing",
+      value: stats.reportedMissing,
+      hint: "Decided in the check card",
+      title: "Students with no record, reported from the check card",
+      icon: <Megaphone size={14} className="text-red-600 dark:text-red-400" aria-hidden />,
+      mascot: "raccoon",
+    },
+    {
+      key: "totalRequested",
+      label: "Total requested",
+      value: stats.totalRequested,
+      hint: "Grades 7–10 this school year",
+      title: "All students across pending requests",
+      icon: <Users size={14} className="text-blue-500" aria-hidden />,
+      mascot: "robot",
+    },
+  ];
+
   if (isError) {
     return (
       <section className={styles.page}>
-        <div className={styles.stack}>
-          <p className={styles.error}>Failed to load access requests.</p>
+        <div className={styles.layout}>
+          <div className={styles.stack}>
+            <p className={styles.error}>Failed to load access requests.</p>
+          </div>
+          <Sf10RequestsRail />
         </div>
       </section>
     );
@@ -106,34 +166,12 @@ export default function AdviserAccessPage() {
   if (isPending) {
     return (
       <section className={styles.page}>
-        <div className={styles.stack}>
-          <PageHeaderSkeleton />
-          <section className={assign.card} aria-label="Access requests loading">
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
-            <ul className={`${styles.tiles} relative`}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <li key={i}>
-                  <Skeleton className={styles.tileSkel} />
-                </li>
-              ))}
-            </ul>
-          </section>
-          <section className={assign.card} aria-label="Pending requests loading">
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
-            <div className="relative grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex flex-col gap-2">
-                  <Skeleton className="h-5 w-2/3" />
-                  <Skeleton className="h-16 w-full" />
-                  <Skeleton className="h-16 w-full" />
-                </div>
-              ))}
-            </div>
-          </section>
+        <div className={styles.layout}>
+          <div className={styles.stack}>
+            <AdviserAccessSummarySkeleton className={styles.summaryGrid} />
+            <AdviserAccessBoardSkeleton />
+          </div>
+          <Sf10RequestsRail />
         </div>
       </section>
     );
@@ -142,62 +180,74 @@ export default function AdviserAccessPage() {
   if (requests.length === 0) {
     return (
       <section className={styles.page}>
-        <RecordKeeperEmptyCard
-          icon={ShieldQuestion}
-          title="No adviser access requests"
-          hint="No adviser access requests for grades 7–10."
-          label="No access requests"
-          centered
-        />
+        <div className={styles.layout}>
+          <div className={styles.stack}>
+            <RecordKeeperEmptyCard
+              icon={ShieldQuestion}
+              title="No adviser access requests"
+              hint="No adviser access requests for grades 7–10."
+              label="No access requests"
+              centered
+            />
+          </div>
+          <Sf10RequestsRail />
+        </div>
       </section>
     );
   }
 
   return (
     <section className={styles.page}>
-      <div className={styles.stack}>
-        <RecordKeeperPageHeader
-          title="Adviser Access Requests"
-          description="Check requests, then approve or report per student in the check card."
-        />
-        <section className={assign.card} aria-label="Access requests summary">
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <ul className={`${styles.tiles} relative`}>
-            <li className={styles.tile} title="Students in requests not yet checked">
-              <span className={styles.tileValue}>{stats.pendingChecking}</span>
-              <span className={styles.tileLabel}>Pending checking</span>
-              <span className={styles.tileHint}>Students awaiting Check</span>
-            </li>
-            <li
-              className={styles.tile}
-              title="Students granted from the check card (bottom-right) after verification"
-            >
-              <span className={styles.tileValue}>{stats.approved}</span>
-              <span className={styles.tileLabel}>Approved</span>
-              <span className={styles.tileHint}>Decided in the check card</span>
-            </li>
-            <li className={styles.tile} title="Students with no record, reported from the check card">
-              <span className={styles.tileValue}>{stats.reportedMissing}</span>
-              <span className={styles.tileLabel}>Reported missing</span>
-              <span className={styles.tileHint}>Decided in the check card</span>
-            </li>
-            <li className={styles.tile} title="All students across pending requests">
-              <span className={styles.tileValue}>{stats.totalRequested}</span>
-              <span className={styles.tileLabel}>Total requested</span>
-              <span className={styles.tileHint}>Grades 7–10 this school year</span>
-            </li>
-          </ul>
-        </section>
+      <div className={styles.layout}>
+        <div className={styles.stack}>
+          <section
+            aria-label="Access requests summary"
+            className={`${styles.summaryGrid} grid min-w-0 gap-2.5 sm:grid-cols-2 lg:grid-cols-4`}
+          >
+            {summaryColumns.map((col) => (
+              <div
+                key={col.key}
+                title={col.title}
+                aria-label={`${col.label}, ${col.value} students`}
+                className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 dark:bg-muted/20"
+              >
+                <div className="-mx-2.5 flex items-center justify-between gap-2 border-b border-border px-3.5 pb-2">
+                  <span className="inline-flex min-w-0 items-center gap-1.5 text-[13px] font-semibold">
+                    {col.icon}
+                    <span className="truncate">{col.label}</span>
+                  </span>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 rounded-lg border bg-white p-4 shadow-sm dark:bg-card">
+                  <span className="flex min-w-0 items-center justify-between gap-2">
+                    <span
+                      className="inline-flex shrink-0 overflow-hidden rounded-full border border-border bg-muted/40"
+                      aria-hidden="true"
+                    >
+                      <StudentMascot name={col.label} character={col.mascot} size={36} />
+                    </span>
+                    <span
+                      className={`text-3xl font-bold tracking-tight tabular-nums ${
+                        col.value === 0 ? "text-muted-foreground" : "text-foreground"
+                      }`}
+                    >
+                      {col.value}
+                    </span>
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">{col.hint}</span>
+                </div>
+              </div>
+            ))}
+          </section>
 
-        <AdviserAccessKanban
-          requests={pendingRequests}
-          onCheck={handleCheck}
-          checkingId={checkingId}
-          onDeny={handleDeny}
-          denyingId={denyingId}
-        />
+          <AdviserAccessKanban
+            requests={pendingRequests}
+            onCheck={handleCheck}
+            checkingId={checkingId}
+            onDeny={handleDeny}
+            denyingId={denyingId}
+          />
+        </div>
+        <Sf10RequestsRail />
       </div>
     </section>
   );

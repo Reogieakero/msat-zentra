@@ -20,17 +20,8 @@ import {
 } from "lucide-react";
 import { SearchIcon, Users } from "lucide-react";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { apiClient } from "@/lib/api/client";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,6 +37,7 @@ import type { SectionAttendanceStat } from "../../components/types";
 import { SortTh } from "./heatmap-table";
 import common from "./heatmap-table.module.css";
 import styles from "./SectionAverages.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 
@@ -147,12 +139,13 @@ export function SectionAverages({
         minSize: 150,
         maxSize: 150,
         cell: ({ row }) => (
-          <Badge
-            variant={row.original.rate < 80 ? "destructive" : "outline"}
+          <Pill
+            tone={row.original.rate < 80 ? "red" : "green"}
+            label="Attendance rate"
             className={common.rateBadge}
           >
             {row.original.rate}%
-          </Badge>
+          </Pill>
         ),
       },
       {
@@ -214,55 +207,37 @@ export function SectionAverages({
 
   const rows = table.getRowModel().rows;
 
-  const isEmpty = !isPending && sections.length === 0;
-  if (isEmpty) {
-    return (
-      <Card className="relative">
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <CardContent className="relative flex flex-col gap-4">
-          <PrincipalEmptyState
-            icon={Users}
-            title="No section data available"
-            hint="No attendance data for sections in the active term. Records will appear here once school days elapse."
-          />
-        </CardContent>
-      </Card>
-    );
-  }
   return (
-    <Card className="relative">
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <CardHeader className="relative">
-        <div>
-          <CardTitle>Section Averages</CardTitle>
-          <CardDescription>
-            Average present-per-day and how many days each section dipped below
-            80%.
-          </CardDescription>
-        </div>
-        <CardAction className="flex items-center gap-2">
-          <InputGroup className="max-w-40 shrink-0">
-            <InputGroupInput
-              placeholder="Filter sections..."
-              value={(table.getColumn("section")?.getFilterValue() as string) ?? ""}
-              onChange={(event) => {
-                table.getColumn("section")?.setFilterValue(event.target.value);
-                setPageIndex(0);
-              }}
-              aria-label="Filter sections"
-            />
-            <InputGroupAddon>
-              <SearchIcon />
-            </InputGroupAddon>
-          </InputGroup>
-        </CardAction>
-      </CardHeader>
-
-      <CardContent className="relative flex flex-col gap-4">
+    <KanbanBoard
+      title="Section Averages"
+      icon={<Users size={14} aria-hidden="true" />}
+      count={isPending ? undefined : sections.length}
+      description="Average present-per-day and how many days each section dipped below 80%."
+      actions={
+        <InputGroup className="max-w-40 shrink-0">
+          <InputGroupInput
+            placeholder="Filter sections..."
+            value={(table.getColumn("section")?.getFilterValue() as string) ?? ""}
+            onChange={(event) => {
+              table.getColumn("section")?.setFilterValue(event.target.value);
+              setPageIndex(0);
+            }}
+            aria-label="Filter sections"
+          />
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+        </InputGroup>
+      }
+      footer={
+        <Pagination
+          currentPage={table.getState().pagination.pageIndex + 1}
+          totalItems={table.getFilteredRowModel().rows.length}
+          onPageChange={(p) => table.setPageIndex(p - 1)}
+        />
+      }
+    >
+      <div className="relative flex flex-col gap-4">
       {isPending ? (
         <div className={styles.kpis}>
           {Array.from({ length: 4 }).map((_, i) => (
@@ -299,9 +274,8 @@ export function SectionAverages({
           hint="No attendance data for sections in the active term. Records will appear here once school days elapse."
         />
       ) : (
-        <>
-          <div className="relative overflow-x-auto rounded-md border">
-            <Table aria-label="Section attendance averages" className="w-full table-fixed">
+        <div className="relative overflow-x-auto rounded-md border">
+          <Table aria-label="Section attendance averages" className="w-full table-fixed">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
@@ -373,16 +347,8 @@ export function SectionAverages({
               </TableBody>
             </Table>
           </div>
-          <div className="relative flex items-center justify-between gap-2">
-            <Pagination
-              currentPage={table.getState().pagination.pageIndex + 1}
-              totalItems={table.getFilteredRowModel().rows.length}
-              onPageChange={(p) => table.setPageIndex(p - 1)}
-            />
-          </div>
-        </>
       )}
-      </CardContent>
-    </Card>
+      </div>
+    </KanbanBoard>
   );
 }

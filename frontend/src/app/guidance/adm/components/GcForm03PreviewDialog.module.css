@@ -1,5 +1,5 @@
-/* GCForm-03 preview overlay (rendered inside CardModal, which hides the
-   scrollbar and shows the scroll-down hint on overflow). */
+/* GCForm-03 preview overlay (rendered inside KanbanModal — kanban card shell
+   with the thin amber scrollbar, matching the GCForm-01 overlay). */
 
 /* Excel-sheet preview surface (rendered straight from the workbook). */
 .sheetWrap {
@@ -8,6 +8,28 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 1rem;
+}
+
+/* Image/PDF export box (referral-form overlay): visible preview of the
+   printable sheet with exactly 16px white gutters on all sides — same
+   treatment as the anecdotal record. html-to-image captures this node for
+   PNG/JPG/PDF, so the download matches what is shown with nothing cut. */
+.exportWrap {
+  background: #ffffff;
+  color: #000000;
+  padding: 16px;
+  max-width: 852px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media print {
+  .exportWrap {
+    padding: 0;
+    max-width: none;
+    margin: 0;
+    background: transparent;
+  }
 }
 
 /* ---- Print: A4 portrait with the template's own margins; sheet only ---- */

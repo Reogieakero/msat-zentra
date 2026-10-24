@@ -25,6 +25,7 @@ export const TEACHER_QUERY_KEYS = [
   ["teacher-grading-class"],
   ["teacher-settings-adviser-sections"],
   ["teacher-profile-settings"],
+  ["teacher-data-sharing"],
   ["grade-flags"],
   ["attendance-sheet-marks"],
   ["attendance-subject-days"],
@@ -79,7 +80,7 @@ export const TEACHER_SCOPE_KEYS = {
   anecdotal: [["anecdotal-mine"], ["teacher-anecdotes"], ["referableAnecdotal"]],
   flags: [["grade-flags"]],
   notifications: [["teacher-notifications"]],
-  settings: [["teacher-settings-adviser-sections"], ["teacher-profile-settings"]],
+  settings: [["teacher-settings-adviser-sections"], ["teacher-profile-settings"], ["teacher-data-sharing"]],
 } as const;
 
 export type TeacherInvalidateScope = keyof typeof TEACHER_SCOPE_KEYS;

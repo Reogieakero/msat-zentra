@@ -22,6 +22,8 @@ const badgeVariants = cva(
           "bg-red-500/15 text-red-700 focus-visible:ring-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:focus-visible:ring-red-500/40 [a]:hover:bg-red-500/20",
         blue:
           "bg-blue-500/15 text-blue-700 focus-visible:ring-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400 dark:focus-visible:ring-blue-500/40 [a]:hover:bg-blue-500/20",
+        violet:
+          "bg-violet-500/15 text-violet-700 focus-visible:ring-violet-500/20 dark:bg-violet-500/20 dark:text-violet-400 dark:focus-visible:ring-violet-500/40 [a]:hover:bg-violet-500/20",
         warning:
           "border-border bg-muted text-foreground [a]:hover:bg-muted/70",
         success:

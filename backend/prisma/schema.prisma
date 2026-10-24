@@ -366,6 +366,12 @@ model StaffProfile {
   // buttons, and accents for this teacher. Null = theme default.
   primaryColor String?
   secondaryColor String?
+  // Student-data sharing consent (teacher Settings → Connect/Sync).
+  // OFF (false, default) = only the login teacher sees grades/attendance
+  // they encode. ON (true) = student's adviser, guidance, and allowed
+  // roles see in real-time. Principal/registrar/record_keeper bypass.
+  shareStudentData Boolean @default(false)
+  shareUpdatedAt DateTime?
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -1324,6 +1330,9 @@ model AdviserSf10AccessRequest {
   // Desk-reported missing LRNs ("report as missing" per requested student):
   // adviser notification + stored mark, independent of the approve/deny verdict.
   reportedMissingLrns String[] @default([])
+  // Per-LRN report timestamps, keyed by LRN (ISO strings). Stamped when a
+  // per-student "report missing" confirms; mirrors approvedLrnAt.
+  reportedLrnAt  Json?
   // Per-student approvals ("approve" per matched student / "approve all"
   // matched): adviser notification + stored mark. Whole-request approval
   // via decideAccess still grants everything, including reported rows.

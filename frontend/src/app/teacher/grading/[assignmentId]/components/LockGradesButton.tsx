@@ -19,7 +19,6 @@ type Props = {
   subjectLabel: string;
   termLabel: string;
   unlockCount: number;
-  termId?: string;
   variant?: "default" | "outline";
   size?: "sm" | "xs" | "default";
   className?: string;
@@ -33,7 +32,7 @@ function cleanAssignmentId(raw: string): string {
   }
 }
 
-export function LockGradesButton({ assignmentId, subjectLabel, termLabel, unlockCount, termId, variant = "default", size = "sm", className }: Props) {
+export function LockGradesButton({ assignmentId, subjectLabel, termLabel, unlockCount, variant = "default", size = "sm", className }: Props) {
   const cleanId = React.useMemo(() => cleanAssignmentId(assignmentId), [assignmentId]);
   const queryClient = useQueryClient();
   const refreshAcademic = useRefreshAcademic();
@@ -76,7 +75,7 @@ export function LockGradesButton({ assignmentId, subjectLabel, termLabel, unlock
           };
         },
       );
-      const res = await lockBatchGrades(cleanId, code, termId);
+      const res = await lockBatchGrades(cleanId, code);
       markSelfNotified(cleanId);
       setOpen(false);
       refreshAll();

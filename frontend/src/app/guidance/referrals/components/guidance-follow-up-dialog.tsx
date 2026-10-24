@@ -1,14 +1,7 @@
 "use client";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { SessionDatePicker } from "./session-datetime-picker";
 import type { GuidanceDialogProps } from "./guidance-dialog-props";
 import styles from "./GuidanceReferralDialogs.module.css";
@@ -21,29 +14,15 @@ export function FollowUpDialog({
   handleAction,
 }: GuidanceDialogProps) {
   return (
-    <Dialog
+    <KanbanOverlay
       open={dialogs.followUp}
-      onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("followUp") }}
-    >
-      <DialogContent
-        className={styles.dialogScrollHidden}
-        aria-busy={isActionPending || undefined}
-      >
-        <DialogHeader>
-          <DialogTitle>Set a check-back reminder</DialogTitle>
-          <DialogDescription>
-            Pick a date to come back to this case.
-          </DialogDescription>
-        </DialogHeader>
-        <div>
-          <SessionDatePicker
-            id="followUpDate"
-            label="Check back on"
-            value={form.followUpDate}
-            onChange={(v) => setForm((f) => ({ ...f, followUpDate: v }))}
-          />
-        </div>
-        <DialogFooter>
+      onClose={() => closeDialog("followUp")}
+      dismissable={!isActionPending}
+      busy={isActionPending}
+      title="Set a check-back reminder"
+      description="Pick a date to come back to this case."
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
           <Button
             variant="destructive"
             className={styles.btnRed}
@@ -61,8 +40,17 @@ export function FollowUpDialog({
             {isActionPending ? <Loader2 className={styles.spin} aria-hidden="true" /> : null}
             {isActionPending ? "Setting…" : "Set reminder"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <div>
+        <SessionDatePicker
+          id="followUpDate"
+          label="Check back on"
+          value={form.followUpDate}
+          onChange={(v) => setForm((f) => ({ ...f, followUpDate: v }))}
+        />
+      </div>
+    </KanbanOverlay>
   );
 }

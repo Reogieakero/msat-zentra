@@ -11,7 +11,7 @@ import {
   Hourglass,
   Send,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import type { RiskSnapshotStudent } from "../types";
 export const gradeNum = (name: string) => {
   const m = String(name).match(/(\d+)/);
@@ -19,10 +19,10 @@ export const gradeNum = (name: string) => {
   const n = parseInt(m[1], 10);
   return Number.isNaN(n) ? 0 : n;
 };
-export const FACTOR_BADGE: Record<string, { variant: "amber" | "green" | "blue"; label: string }> = {
-  academic: { variant: "amber", label: "Academic" },
-  attendance: { variant: "green", label: "Attendance" },
-  behavioral: { variant: "blue", label: "Behavioral" },
+export const FACTOR_BADGE: Record<string, { tone: PillTone; label: string }> = {
+  academic: { tone: "amber", label: "Academic" },
+  attendance: { tone: "green", label: "Attendance" },
+  behavioral: { tone: "blue", label: "Behavioral" },
 };
 export function FactorBadges({ student }: { student: RiskSnapshotStudent }) {
   const active = (Object.keys(FACTOR_BADGE) as (keyof typeof FACTOR_BADGE)[]).filter(
@@ -32,9 +32,9 @@ export function FactorBadges({ student }: { student: RiskSnapshotStudent }) {
   return (
     <span className="flex flex-wrap items-center gap-1.5">
       {active.map((f) => (
-        <Badge key={f} variant={FACTOR_BADGE[f].variant}>
+        <Pill key={f} tone={FACTOR_BADGE[f].tone} label="Risk factor">
           {FACTOR_BADGE[f].label}
-        </Badge>
+        </Pill>
       ))}
     </span>
   );

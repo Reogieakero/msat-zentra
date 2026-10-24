@@ -19,9 +19,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { markSelfNotified } from "@/lib/realtime/recordKeeperChannel";
 import { formatGrade, formatSection } from "@/lib/utils";
-import { LrnVerifyButton } from "../../accounts/components/LrnVerifyButton";
+import { LrnVerifyDialog } from "../../accounts/components/LrnVerifyDialog";
 import { RecordKeeperEmptyState } from "../../components/RecordKeeperEmptyCard";
 import type { PendingStudentsResponse } from "../../accounts/components/types";
 import { formatRelativeTime } from "../../accounts/components/types";
@@ -41,6 +42,7 @@ async function fetchPendingStudents(signal?: AbortSignal) {
 export function OverviewApprovals() {
   const router = useRouter();
   const qc = useQueryClient();
+  const dock = useDock();
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["record-keeper-pending-students", "preview"],
@@ -61,12 +63,12 @@ export function OverviewApprovals() {
   const isEmpty = !isPending && !isError && !hasRecords;
 
   const act = useMutation({
-    mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
+    mutationFn: ({ id, approve, reason }: { id: string; approve: boolean; reason?: string }) =>
       apiClient.post(
         approve ? `/api/auth/approve/${id}` : `/api/auth/reject/${id}`,
-        approve ? {} : { reason: "Rejected by record keeper" }
+        approve ? {} : { reason: reason ?? "" }
       ),
-    onMutate: async ({ id }) => {
+    onMutate: async ({ id, approve }) => {
       // Optimistic removal with rollback on error.
       await qc.cancelQueries({ queryKey: ["record-keeper-pending-students"] });
       const previous = qc.getQueriesData({ queryKey: ["record-keeper-pending-students"] });
@@ -77,11 +79,24 @@ export function OverviewApprovals() {
             ? { ...old, students: old.students.filter((s) => s.id !== id) }
             : old,
       );
-      return { previous };
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "generic",
+          title: approve ? "Approving account" : "Rejecting account",
+          description: "Pending student",
+        });
+      } catch {
+        taskId = null;
+      }
+      return { previous, taskId };
     },
-    onSuccess: (_data, { id, approve }) => {
+    onSuccess: (_data, { id, approve }, context) => {
 
       markSelfNotified(id);
+      if (context?.taskId) {
+        dock.completeTask(context.taskId, approve ? "Account approved." : "Account rejected.");
+      }
       toast.success({
         title: approve ? "Approved" : "Rejected",
         description: approve ? "The student account is now active." : "The account request was rejected.",
@@ -91,6 +106,9 @@ export function OverviewApprovals() {
       void err;
       for (const [key, data] of context?.previous ?? []) {
         qc.setQueryData(key, data);
+      }
+      if (context?.taskId) {
+        dock.failTask(context.taskId, "Could not process this account. Changes were rolled back.");
       }
       toast.error({ title: "Action failed", description: "Could not process this account. Changes were rolled back." });
     },
@@ -173,9 +191,12 @@ export function OverviewApprovals() {
                         </Badge>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <LrnVerifyButton
+                        <LrnVerifyDialog
                           student={s}
                           onApprove={() => act.mutateAsync({ id: s.id, approve: true }).then(() => undefined)}
+                          onReject={(reason) =>
+                            act.mutateAsync({ id: s.id, approve: false, reason }).then(() => undefined)
+                          }
                           approving={act.isPending}
                         />
                       </TableCell>

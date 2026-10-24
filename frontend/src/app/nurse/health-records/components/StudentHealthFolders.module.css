@@ -54,6 +54,7 @@
   width: 16rem;
   max-width: 100%;
   padding-left: 1.75rem;
+  border-radius: 16px;
 }
 
 .folderCell {

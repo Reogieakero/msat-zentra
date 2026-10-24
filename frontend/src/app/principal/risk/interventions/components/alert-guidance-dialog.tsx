@@ -1,9 +1,8 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Spinner } from "@/components/ui/spinner";
-import formStyles from "@/app/principal/academics/assign/components/form.module.css";
 import type { RiskSnapshotStudent } from "../types";
 export function AlertGuidanceDialog({
   target,
@@ -21,10 +20,10 @@ export function AlertGuidanceDialog({
   onSubmit: () => void;
 }) {
   return (
-    <CardModal
+    <KanbanOverlay
       open={target !== null}
       onClose={onClose}
-      size="sm"
+      width="sm"
       title="Alert guidance"
       description={
         target
@@ -32,7 +31,28 @@ export function AlertGuidanceDialog({
           : "Notify every active guidance counselor."
       }
       dismissable={!pending}
-      watchKey={target?.studentId}
+      busy={pending}
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+          <Button variant="outline" onClick={onClose} disabled={pending}>
+            Cancel
+          </Button>
+          <Button
+            disabled={pending || !target}
+            aria-busy={pending || undefined}
+            onClick={onSubmit}
+          >
+            {pending ? (
+              <>
+                <Spinner className="size-4" aria-hidden />
+                Alerting…
+              </>
+            ) : (
+              "Alert guidance"
+            )}
+          </Button>
+        </div>
+      }
     >
       <Textarea
         value={note}
@@ -42,25 +62,6 @@ export function AlertGuidanceDialog({
         maxLength={500}
         aria-label="Optional note for guidance"
       />
-      <div className={formStyles.dialogFooter}>
-        <Button variant="outline" onClick={onClose} disabled={pending}>
-          Cancel
-        </Button>
-        <Button
-          disabled={pending || !target}
-          aria-busy={pending || undefined}
-          onClick={onSubmit}
-        >
-          {pending ? (
-            <>
-              <Spinner className="size-4" aria-hidden />
-              Alerting…
-            </>
-          ) : (
-            "Alert guidance"
-          )}
-        </Button>
-      </div>
-    </CardModal>
+    </KanbanOverlay>
   );
 }

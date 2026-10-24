@@ -1,58 +1,5 @@
-/* Referred-cases panel — same pattern as the nurse referred-cases table:
-   header row (title + search/type filter), plain bordered table, pager.
-   Glow accent card treatment (top highlight + blurred accent). */
-
-.panel {
-  position: relative;
-  overflow: visible;
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  background-color: var(--card);
-  padding: 1.125rem;
-  transition:
-    transform 180ms ease-out,
-    box-shadow 180ms ease-out,
-    border-color 180ms ease-out;
-}
-
-.panel:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in oklch, var(--primary), transparent 55%);
-  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
-}
-
-.glowClip {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: 1rem;
-  pointer-events: none;
-}
-
-.cardGlow {
-  position: absolute;
-  inset: auto -25% -50% -25%;
-  height: 75%;
-  background: radial-gradient(
-    ellipse at center,
-    color-mix(in oklch, var(--primary), transparent 80%),
-    transparent 70%
-  );
-  filter: blur(24px);
-  pointer-events: none;
-}
-
-.header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.headerText {
-  min-width: 0;
-}
+/* Referred-cases kanban — title/description/search filters live in the
+   shared KanbanBoard shell; rows are flat case lines with mascots + pills. */
 
 .headerActions {
   display: flex;
@@ -61,23 +8,11 @@
   flex-wrap: wrap;
 }
 
-.sectionTitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.sectionDesc {
-  margin: 0.125rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-}
-
 .searchWrap {
   position: relative;
   width: 16rem;
   max-width: 100%;
+  flex-shrink: 0;
 }
 
 .searchIcon {
@@ -92,15 +27,42 @@
 }
 
 .search {
+  height: 2rem;
   padding-left: 2rem;
 }
 
+/* Menu-style filter triggers: no button chrome, value stays on one line. */
 .filterBtn {
+  height: 2rem;
   gap: 0.375rem;
+  padding-inline: 0.625rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.filterBtn:hover {
+  background-color: color-mix(in oklch, var(--foreground), transparent 92%);
+  color: var(--foreground);
+}
+
+.filterValue {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .filterActive {
-  border-color: var(--ring);
+  background-color: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+}
+
+.filterActive:hover {
+  background-color: color-mix(in oklch, var(--primary), transparent 84%);
+  color: var(--primary);
 }
 
 .filterDot {
@@ -114,95 +76,352 @@
   min-width: 12rem;
 }
 
-.clearBtn {
-  gap: 0.375rem;
+/* Search + filters live in the board header, right of the title. */
+.headerControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
 }
 
-/* Queue table — plain list with a solid border, no card chrome. */
-.tableBody {
-  margin-top: 0.75rem;
+@media (max-width: 900px) {
+  .headerControls {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 }
 
-.tableWrap {
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+/* Queue rows — flat kanban list with no per-row card chrome. */
+.caseList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
 }
 
-/* Roomier rows — more breathing space between cases. */
-.tableWrap th,
-.tableWrap td {
-  padding: 0.875rem 1rem;
+.caseRow {
+  display: grid;
+  /* Left identity · fixed status/risk column · fixed timestamp column · right
+     controls. Equal outer tracks keep the two pill columns together and left
+     of the row's midpoint; the wider column gap separates status from time. */
+  grid-template-columns: minmax(12rem, 1.5fr) 10rem 8rem minmax(10rem, 1fr);
+  align-items: center;
+  column-gap: 6rem;
+  row-gap: 0.75rem;
+  padding: 0.625rem 0.375rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  min-width: 0;
 }
 
-.tableWrap thead th {
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--muted-foreground);
-  border-bottom: 1px solid var(--border);
-  background-color: transparent;
-  white-space: nowrap;
-}
-
-.tableWrap tbody td {
-  font-size: 0.8125rem;
-  border-bottom: 1px solid color-mix(in oklch, var(--border), transparent 35%);
-}
-
-.tableWrap tbody tr:last-child td {
+.caseRow:last-child {
   border-bottom: none;
 }
 
-.actionLabel {
+/* Rows open the case overlay on click / Enter / Space. */
+.caseRowInteractive {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background-color 140ms ease-out;
+}
+
+.caseRowInteractive:hover {
+  background-color: color-mix(in oklch, var(--foreground), transparent 96%);
+}
+
+.caseRowInteractive:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+/* Rows cascade in on mount — same entrance as the other guidance boards. */
+@keyframes case-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.caseList > .caseRow {
+  animation: case-row-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.caseList > .caseRow:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.caseList > .caseRow:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caseList > .caseRow {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .caseRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.75rem;
+  }
+
+  .caseStatusCell {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .caseTimeCell {
+    grid-column: 1;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
+
+  .caseActions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: start;
+    justify-content: flex-start;
+  }
+}
+
+.caseStudent {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  margin: 0;
-  font-size: 0.8125rem;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Track lead (Intervention | Counseling | ADM) sits left of the mascot as a
+   rectangle pill; the separator stretches to the row height so the glyph is
+   optically centered next to the mascot. */
+.caseTypePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  /* Fixed track width: short labels (ADM) keep the separator in the same
+     column across every row, so the pipes line up vertically. */
+  min-width: 5.25rem;
+  height: 1.375rem;
+  padding: 0 0.4375rem;
+  border-radius: var(--radius-md);
+  font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--foreground);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.caseSeparator {
+  /* Fixed square box with grid centering: the glyph lands on the row's
+     vertical center instead of inheriting the mascot's stretched height. */
+  display: inline-grid;
+  place-items: center;
+  align-self: center;
+  flex-shrink: 0;
+  width: 0.625rem;
+  height: 1.5rem;
+  margin: 0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1;
+  color: color-mix(in oklch, var(--foreground), transparent 65%);
+  user-select: none;
+}
+
+.caseIdentity {
+  min-width: 0;
+}
+
+/* Timestamp column — detection / referral time, left-aligned in its track. */
+.caseTimeCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+}
+
+/* Status | risk column — left-aligned in its track. */
+.caseStatusCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+}
+
+.splitPill {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  overflow: hidden;
+}
+
+.splitPart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Fixed segments keep the divider in the same spot across rows. */
+.splitPart:first-child {
+  min-width: 5.25rem;
+}
+
+.splitPart:last-child {
+  min-width: 4.25rem;
+}
+
+.splitDivider {
+  flex-shrink: 0;
+  width: 1px;
+  background-color: var(--border);
+}
+
+.caseActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  justify-self: end;
+  gap: 0.375rem;
+  min-width: 0;
   white-space: nowrap;
 }
 
 .actionIcon {
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 0.75rem;
+  height: 0.75rem;
   flex-shrink: 0;
+  opacity: 1;
+}
+
+/* Icon-only latest action — the label lives in a hover/focus tooltip. */
+.actionIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
   color: var(--muted-foreground);
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 140ms ease-out,
+    color 140ms ease-out;
 }
 
-.cellMain {
-  margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
+.actionIconButton:hover {
   color: var(--foreground);
-  white-space: nowrap;
+  background-color: color-mix(in oklch, var(--primary), transparent 88%);
 }
 
-/* Student name — 13px in the theme primary color, LRN sits below it. */
+.actionIconButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Tinted "Book session" action shown when a case has no session yet. Flat
+   (no solid border) to match the pill system on the board. */
+.bookSessionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  height: 1.5rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--radius-md);
+  background-color: rgb(59 130 246 / 0.15);
+  color: #1d4ed8;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 140ms ease-out,
+    color 140ms ease-out;
+}
+
+.bookSessionBtn:hover {
+  background-color: rgb(59 130 246 / 0.24);
+}
+
+:global(.dark) .bookSessionBtn {
+  color: #60a5fa;
+}
+
+.bookSessionBtn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Student name — 13px, theme primary, truncates before the pills. */
 .studentName {
   margin: 0;
+  max-width: 100%;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--primary);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cellSub {
-  margin: 0.125rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0.1875rem 0 0;
+  max-width: 100%;
+  min-width: 0;
   font-size: 0.75rem;
   color: var(--muted-foreground);
   white-space: nowrap;
+  overflow: hidden;
 }
 
-.cellTime {
-  margin: 0.125rem 0 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--foreground);
+/* LRN + section chips on the student's meta line. */
+.lrnPill,
+.sectionPill {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 1.125rem;
+  padding: 0 0.375rem;
+  border-radius: var(--radius-md);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1;
   white-space: nowrap;
+}
+
+.lrnPill {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* Tone (amber) comes from the utility classes in the row markup. */
+.sectionPill {
+  font-weight: 600;
 }
 
 .noRisk {
@@ -223,14 +442,6 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-/* LRN — 12px Inter (the app sans), tabular figures so digits align. */
-.lrn {
-  font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
 }
 
 .empty {

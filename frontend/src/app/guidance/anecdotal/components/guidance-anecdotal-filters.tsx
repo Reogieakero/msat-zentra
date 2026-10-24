@@ -17,8 +17,8 @@ export type TypeFilter = "" | "ADM" | "Counseling";
 
 const TYPES: { value: TypeFilter; label: string }[] = [
   { value: "", label: "All types" },
-  { value: "ADM", label: "ADM cases" },
-  { value: "Counseling", label: "Counseling cases" },
+  { value: "ADM", label: "ADM consultation" },
+  { value: "Counseling", label: "Counseling" },
 ];
 
 interface GuidanceAnecdotalFiltersProps {

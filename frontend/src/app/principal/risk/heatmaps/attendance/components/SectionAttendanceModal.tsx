@@ -14,8 +14,8 @@ import {
 import { ArrowLeft, Search, Users } from "lucide-react";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import { apiClient } from "@/lib/api/client";
-import { CardModal } from "@/components/ui/CardModal";
-import { Badge } from "@/components/ui/badge";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
+import { Pill } from "@/components/ui/pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -196,12 +196,12 @@ export function SectionAttendanceModal({
         accessorFn: (row) => row.rate,
         header: "Rate",
         cell: ({ row }) => (
-          <Badge
-            variant={row.original.rate < 80 ? "destructive" : "outline"}
-            className={common.rateBadge}
+          <Pill
+            tone={row.original.rate < 80 ? "red" : "green"}
+            label="Attendance rate"
           >
             {row.original.rate}%
-          </Badge>
+          </Pill>
         ),
       },
     ],
@@ -235,10 +235,10 @@ export function SectionAttendanceModal({
   const safePage = Math.min(safePageIndex + 1, totalPages);
 
   return (
-    <CardModal
+    <KanbanOverlay
       open={open}
       onClose={onClose}
-      size="lg"
+      width="lg"
       title={
         selection
           ? `Section attendance · ${selection.sectionName}`
@@ -249,7 +249,6 @@ export function SectionAttendanceModal({
           ? `Per-student daily breakdown — present means present in every subject offered that day. ${schoolDays} school days. Read-only.`
           : `Pick a section to see its full per-student daily table. Read-only.`
       }
-      watchKey={selection?.sectionId ?? "picker"}
     >
       {!selection ? (
         <>
@@ -300,12 +299,9 @@ export function SectionAttendanceModal({
                         Grade {s.gradeLevel} · {s.enrolled} students
                       </span>
                     </span>
-                    <Badge
-                      variant={s.rate < 80 ? "destructive" : "outline"}
-                      className={common.rateBadge}
-                    >
+                    <Pill tone={s.rate < 80 ? "red" : "green"} label="Attendance rate">
                       {s.rate}%
-                    </Badge>
+                    </Pill>
                   </button>
                 </li>
               ))}
@@ -440,6 +436,6 @@ export function SectionAttendanceModal({
           )}
         </>
       )}
-    </CardModal>
+    </KanbanOverlay>
   );
 }

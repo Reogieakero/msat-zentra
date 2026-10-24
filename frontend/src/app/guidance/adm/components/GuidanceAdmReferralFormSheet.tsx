@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useDock } from "@/components/dock/dock-store";
 import {
   AdmReferralFormSheet,
   type AdmReferralFormDraft,
@@ -31,6 +32,7 @@ export function GuidanceAdmReferralFormSheet({
   onChanged: () => void;
 }) {
   const invalidateGuidance = useGuidanceInvalidate();
+  const dock = useDock();
   const referralId = adapter.referralId;
 
   const sessionsQuery = useQuery({
@@ -41,10 +43,26 @@ export function GuidanceAdmReferralFormSheet({
   const hasActiveSession = (sessionsQuery.data ?? []).some((s) => s.status === "scheduled");
 
   async function onConfirm({ form }: { form: GcForm03Data; scheduledAt?: string }) {
-    await reviewAdmConsultation(referralId, {
-      recommendation: form.guidanceRecommendations.trim() || "Referred for ADM.",
-      outcome: "endorse",
-    });
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "adm-endorse",
+        title: "Endorsing to ADM",
+        description: "Saving the referral form and endorsement.",
+      });
+    } catch {
+      taskId = null;
+    }
+    try {
+      await reviewAdmConsultation(referralId, {
+        recommendation: form.guidanceRecommendations.trim() || "Referred for ADM.",
+        outcome: "endorse",
+      });
+    } catch (error) {
+      if (taskId) dock.failTask(taskId, "Could not endorse this case.");
+      throw error;
+    }
+    if (taskId) dock.completeTask(taskId, "Case endorsed.");
   }
 
   function onConfirmed() {

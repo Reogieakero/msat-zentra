@@ -56,8 +56,13 @@ export const outcomeSchema = z.object({
   outcomeNotes: z.string().trim().max(2000).optional(),
 });
 
-/** Queue list-query validation: page/pageSize capped at 15, trimmed filters. */
-export const interventionsQueueQuerySchema = paginationQuerySchema().extend({
+/** Intervention queue cards page a 4×4 board grid — allow 16 per page. */
+export const INTERVENTIONS_QUEUE_MAX_PAGE_SIZE = 16;
+
+/** Queue list-query validation: page/pageSize capped at 16, trimmed filters. */
+export const interventionsQueueQuerySchema = paginationQuerySchema(
+  INTERVENTIONS_QUEUE_MAX_PAGE_SIZE,
+).extend({
   level: z.enum(["High", "Moderate", "All"]).optional(),
   factor: z.enum(["Academic", "Attendance", "Behavioral"]).optional(),
   mine: z.enum(["true", "false"]).optional(),

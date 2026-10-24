@@ -14,6 +14,7 @@ import {
 import { useInterventionDialogState } from "./use-intervention-dialog-state";
 import { useInterventionActions } from "./use-intervention-actions";
 import { InterventionTableView } from "./intervention-table-view";
+
 export function GuidanceInterventionsTable({
   summary,
   students,
@@ -35,8 +36,6 @@ export function GuidanceInterventionsTable({
   const dialogState = useInterventionDialogState(students);
   const {
     dialogs,
-    collapsedPlans,
-    setCollapsedPlans,
     expandedKey,
     setExpandedKey,
     activeKey,
@@ -111,13 +110,6 @@ export function GuidanceInterventionsTable({
         isNavigating={isNavigating}
         highlightId={highlightId}
         actionIsError={actionMutation.isError}
-        collapsedPlans={collapsedPlans}
-        onTogglePlan={(key) =>
-          setCollapsedPlans((p) => ({
-            ...p,
-            [key]: !(p[key] === true),
-          }))
-        }
         expandedKey={expandedKey}
         onToggleDetails={(key) =>
           setExpandedKey((prev) => (prev === key ? null : key))
@@ -171,7 +163,7 @@ export function GuidanceInterventionsTable({
         isActionPending={isActionPending}
         now={now}
         onSubmitStart={() => {
-          if (!activeKey) return;
+          if (!activeKey || isActionPending) return;
           runAction(activeKey, "start", {
             recommendedAction: actionText.trim(),
             priority: priority as "low" | "normal" | "high",
@@ -206,7 +198,7 @@ export function GuidanceInterventionsTable({
           });
         }}
         onSubmitSchedule={(fields) => {
-          if (!activeKey || !activeFollowUpId) return;
+          if (!activeKey || !activeFollowUpId || isActionPending) return;
           runAction(activeKey, "schedule", {
             followUpId: activeFollowUpId,
             scheduledAt: fields.scheduledAt,

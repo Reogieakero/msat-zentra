@@ -15,6 +15,7 @@ import {
 import { SearchIcon, Users } from "lucide-react";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import {
   Table,
   TableBody,
@@ -25,7 +26,6 @@ import {
 } from "@/components/ui/table";
 import { RiskBadge } from "./RiskBadge";
 import type { SectionSummary, StudentRow } from "@/services/principal/academics";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./SectionStudentsTable.module.css";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
@@ -175,35 +175,35 @@ export function SectionStudentsTable({ section }: SectionStudentsTableProps) {
     );
   }
   return (
-    <section aria-label={`Students of ${section.section}`} className="flex min-w-0 flex-col gap-3">
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className="relative flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className={styles.sectionTitle}>
-              {section.section} · {section.grade}
-            </h2>
-            <p className={styles.sectionDesc}>
-              Averages compute live across all subjects — {students.length} student
-              {students.length === 1 ? "" : "s"}.
-            </p>
-          </div>
-          <InputGroup className="max-w-40 shrink-0">
-            <InputGroupInput
-              placeholder="Filter students..."
-              value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-              onChange={(event) =>
-                table.getColumn("name")?.setFilterValue(event.target.value)
-              }
-              aria-label="Filter students"
-            />
-            <InputGroupAddon>
-              <SearchIcon />
-            </InputGroupAddon>
-          </InputGroup>
-        </div>
+    <KanbanBoard
+      title={`${section.section} · ${section.grade}`}
+      icon={<Users size={14} aria-hidden="true" />}
+      count={students.length}
+      description={`Averages compute live across all subjects — ${students.length} student${students.length === 1 ? "" : "s"}.`}
+      actions={
+        <InputGroup className="max-w-40 shrink-0">
+          <InputGroupInput
+            placeholder="Filter students..."
+            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+            onChange={(event) =>
+              table.getColumn("name")?.setFilterValue(event.target.value)
+            }
+            aria-label="Filter students"
+          />
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+        </InputGroup>
+      }
+      footer={
+        <Pagination
+          currentPage={table.getState().pagination.pageIndex + 1}
+          totalItems={table.getFilteredRowModel().rows.length}
+          onPageChange={(p) => table.setPageIndex(p - 1)}
+        />
+      }
+      ariaLabel={`Students of ${section.section}`}
+    >
         <div className="relative overflow-x-auto rounded-md border">
           <Table className="w-full table-fixed">
             <TableHeader>
@@ -251,12 +251,6 @@ export function SectionStudentsTable({ section }: SectionStudentsTableProps) {
             </TableBody>
           </Table>
         </div>
-        <Pagination
-          currentPage={table.getState().pagination.pageIndex + 1}
-          totalItems={table.getFilteredRowModel().rows.length}
-          onPageChange={(p) => table.setPageIndex(p - 1)}
-        />
-      </div>
-    </section>
+    </KanbanBoard>
   );
 }

@@ -2,7 +2,6 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNowTick } from "@/lib/clock";
-import { useTerm } from "@/lib/term/TermContext";
 import type { AdmEligibility } from "@/services/coordinator/coordinator.types";
 import type {
   AdmCaseRow,
@@ -81,7 +80,6 @@ interface CoordinatorReferralsDialogs {
   setAdvanceTarget: (r: AdmCaseRow | null) => void;
   createTarget: AdmCaseRow | null;
   setCreateTarget: (r: AdmCaseRow | null) => void;
-  termId: string;
   scopeLabel: string;
 }
 interface CoordinatorReferralsActions {
@@ -126,11 +124,7 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
   const [selected, setSelected] = React.useState<AdmCaseRow | null>(null);
   const [historyTarget, setHistoryTarget] =
     React.useState<HistoryTarget | null>(null);
-  const { activeTerm } = useTerm();
-  const termId = activeTerm?.termId ?? "";
-  const scopeLabel = activeTerm
-    ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
-    : "No active term";
+  const scopeLabel = "the current term";
   const invalidateReferrals = React.useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["coordinator-referrals"] });
     void queryClient.invalidateQueries({ queryKey: ["coordinator-notifications"] });
@@ -218,7 +212,6 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     setAdvanceTarget: caseMutations.setAdvanceTarget,
     createTarget: caseMutations.createTarget,
     setCreateTarget: caseMutations.setCreateTarget,
-    termId,
     scopeLabel,
     openBook: booking.openBook,
     bookForRow: booking.bookForRow,

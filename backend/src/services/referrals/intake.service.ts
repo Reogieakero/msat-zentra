@@ -13,7 +13,6 @@ import {
   isSessionType,
   parseScheduledAt,
   referralCard,
-  truncate,
 } from "../../modules/referrals/referrals.repository.js";
 import type { ReferralContext } from "./referral.types.js";
 
@@ -69,7 +68,6 @@ export async function referSpecialist(
   });
   await writeAudit({ userId: ctx.userId, actionType: "referral_referred_specialist", sourceTable: "referrals", sourceId: referral.id, reason, oldValue: { referredToRole: referral.referredToRole, status: referral.status }, newValue: { referredToRole, status: "pending" } });
   const card = await referralCard(referral);
-  const why = truncate(reason, 120);
   const actor = await actorName(ctx.userId);
   if (referral.referredBy && referral.referredBy !== ctx.userId) {
     const dest =
@@ -90,21 +88,21 @@ export async function referSpecialist(
     void fanoutToRole("nurse", {
       sourceTable: "referrals",
       action: "status",
-      message: `A case was referred to the clinic — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
+      message: `A case was referred to the clinic — ${card.who}. Filed by ${card.filerName}.`,
       sourceId: referral.id,
       excludeUserId: ctx.userId,
       messageFor: (r) =>
-        `${actor} referred ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
+        `${actor} referred ${card.who} to you, ${r.fullName}.`,
     });
   } else if (referredToRole === "adm_coordinator") {
     void fanoutToRole("adm_coordinator", {
       sourceTable: "referrals",
       action: "status",
-      message: `A case was referred to ADM — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
+      message: `A case was referred to ADM — ${card.who}. Filed by ${card.filerName}.`,
       sourceId: referral.id,
       excludeUserId: ctx.userId,
       messageFor: (r) =>
-        `${actor} referred ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
+        `${actor} referred ${card.who} to you, ${r.fullName}.`,
     });
   }
 
@@ -137,7 +135,6 @@ export async function initiateAdm(ctx: ReferralContext, referralId: string, reas
   });
   await writeAudit({ userId: ctx.userId, actionType: "referral_adm_initiated", sourceTable: "referrals", sourceId: referral.id, reason, oldValue: { referredToRole: referral.referredToRole, status: referral.status }, newValue: { referredToRole: "adm_coordinator", status: "pending" } });
   const card = await referralCard(referral);
-  const why = truncate(reason, 120);
   const actor = await actorName(ctx.userId);
   if (referral.referredBy && referral.referredBy !== ctx.userId) {
     void fanoutNotification({
@@ -151,11 +148,11 @@ export async function initiateAdm(ctx: ReferralContext, referralId: string, reas
   void fanoutToRole("adm_coordinator", {
     sourceTable: "referrals",
     action: "status",
-    message: `A case was referred to ADM — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
+    message: `A case was referred to ADM — ${card.who}. Filed by ${card.filerName}.`,
     sourceId: referral.id,
     excludeUserId: ctx.userId,
     messageFor: (r) =>
-      `${actor} referred ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
+      `${actor} referred ${card.who} to you, ${r.fullName}.`,
   });
 
   void fanoutNotification({
@@ -431,18 +428,17 @@ export async function nurseAdmReview(ctx: ReferralContext, referralId: string, i
     });
   }
   const card = await referralCard(referral);
-  const recNote = truncate(recommendation.trim(), 120);
   const actor = await actorName(ctx.userId);
 
   if (outcome === "endorse") {
     void fanoutToRole("adm_coordinator", {
       sourceTable: "referrals",
       action: "status",
-      message: `ADM consultation endorsed — ${card.who} ready for the parent meeting${recNote ? `: ${recNote}` : ""}${session ? ` (clinic session ${formatWhen(session.scheduledAt)})` : ""}.`,
+      message: `ADM consultation endorsed — ${card.who} ready for the parent meeting${session ? ` (clinic session ${formatWhen(session.scheduledAt)})` : ""}.`,
       sourceId: referral.id,
       excludeUserId: ctx.userId,
       messageFor: (r) =>
-        `${actor} endorsed the ADM consultation for ${card.who} — sent to you, ${r.fullName}${recNote ? `: ${recNote}` : ""}.`,
+        `${actor} endorsed the ADM consultation for ${card.who} — sent to you, ${r.fullName}.`,
     });
     if (referral.referredBy && referral.referredBy !== ctx.userId) {
       void fanoutNotification({
@@ -466,7 +462,7 @@ export async function nurseAdmReview(ctx: ReferralContext, referralId: string, i
         userId: referral.referredBy,
         sourceTable: "referrals",
         action: "status",
-        message: `Your ADM referral for ${card.who} was not endorsed — case closed${recNote ? `: ${recNote}` : ""}.`,
+        message: `Your ADM referral for ${card.who} was not endorsed — case closed.`,
         sourceId: referral.id,
       });
     }

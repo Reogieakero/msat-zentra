@@ -4,9 +4,10 @@ import { Check, Moon, Palette, Sun } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { ProfileCard } from "./components/ProfileCard";
 import { TeacherPageHeader } from "../components/TeacherPageHeader";
-import { ZentraPageHeaderSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { ZentraPageHeaderSkeleton, KanbanBoardSkeleton, IconRailSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { PasswordCard } from "./components/PasswordCard";
 import { AdviserCard } from "./components/AdviserCard";
+import { DataSyncCard } from "./components/DataSyncCard";
 import { MasterTeacherCard } from "./components/MasterTeacherCard";
 import { settingsSections } from "./components/SettingsNav";
 import { SettingsRail } from "./components/SettingsRail";
@@ -51,9 +52,21 @@ export default function TeacherSettingsPage() {
   // master teacher) skeleton in place instead of blocking the whole page.
   if (profile.isPending) {
     return (
-      <section className={`mx-auto flex w-full max-w-2xl flex-col gap-5 ${sectionStyles.page}`} aria-busy="true" aria-label="Loading settings">
+      <section className={`mx-auto flex w-full max-w-3xl flex-col gap-3 ${sectionStyles.page}`} aria-busy="true" aria-label="Loading settings">
         <ZentraPageHeaderSkeleton />
-        <ZentraTableSkeleton rows={4} columns={2} withPager={false} />
+        <div className={sectionStyles.layout}>
+          <div className={`flex w-full min-w-0 flex-col gap-3 ${sectionStyles.stack}`}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <KanbanBoardSkeleton
+                key={i}
+                rows={i === 0 ? 3 : i === 4 ? 2 : 3}
+                titleWidth={i === 0 ? "7rem" : "6rem"}
+                showDescription={i === 4}
+              />
+            ))}
+          </div>
+          <IconRailSkeleton count={5} />
+        </div>
       </section>
     );
   }
@@ -61,12 +74,13 @@ export default function TeacherSettingsPage() {
     <section className={`mx-auto flex w-full max-w-3xl flex-col gap-3 ${sectionStyles.page}`}>
       <TeacherPageHeader
         title="Settings"
-        description="Your profile, appearance, and account security."
+        description="Your profile, data sharing, appearance, and account security."
       />
       <div className={sectionStyles.layout}>
         <div className={`flex w-full min-w-0 flex-col gap-3 ${sectionStyles.stack}`}>
           <ProfileCard />
           <AdviserCard />
+          <DataSyncCard />
           <MasterTeacherCard />
           <div id="section-appearance" className={sectionStyles.boardWrap}>
             <KanbanBoard

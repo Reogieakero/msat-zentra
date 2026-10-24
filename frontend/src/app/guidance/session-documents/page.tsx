@@ -6,24 +6,17 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
-import { GuidancePageHeader } from "../components/GuidancePageHeader";
+import { ZentraPaginationSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
-import { FolderLegendCard } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
-import {
-  SessionFilesLegendCard,
-  TopReferredCard,
-} from "@/app/guidance/anecdotal/components/guidance-anecdotal-siderail";
-import {
-  GuidanceSessionDocumentsFolders,
-  docSlipsFor,
-} from "./components/guidance-session-documents-folders";
+import { GuidanceSessionDocumentsFolders } from "./components/guidance-session-documents-folders";
+import { SessionDocumentCardSkeleton } from "./components/SessionDocumentCardSkeleton";
 import type { TypeFilter } from "@/app/guidance/anecdotal/components/guidance-anecdotal-filters";
 import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
 import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "@/app/guidance/anecdotal/components/guidance-anecdotal.module.css";
+import listStyles from "./components/guidance-session-documents-folders.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 import { useSearchParams } from "next/navigation";
@@ -108,11 +101,6 @@ function GuidanceSessionDocumentsPageInner() {
     [data]
   );
 
-  const totalFiles = React.useMemo(
-    () => docsRecords.reduce((n, r) => n + docSlipsFor(r, 50).length, 0),
-    [docsRecords]
-  );
-
   const total = data?.total ?? docsRecords.length;
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);
@@ -121,69 +109,16 @@ function GuidanceSessionDocumentsPageInner() {
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading session documents">
-        <ZentraPageHeaderSkeleton />
-        <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
-          <div className={`${styles.main} flex min-w-0 flex-col`}>
-            <div className={styles.skelPanel}>
-              <div className={styles.skelPanelHead}>
-                <div className={styles.skelPanelHeadText}>
-                  <div className={styles.skelPanelTitleRow}>
-                    <Skeleton className={styles.skelPanelTitle} />
-                    <Skeleton className={styles.skelHelpBtn} />
-                  </div>
-                  <Skeleton className={styles.skelPanelDesc} />
-                </div>
-                <div className={styles.skelPanelActions}>
-                  <Skeleton className={styles.skelSearch} />
-                  <Skeleton className={styles.skelDrop} />
-                </div>
-              </div>
-              <div className={styles.skelFolderGrid}>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className={styles.skelFolderCard}>
-                    <Skeleton className={styles.skelFolderBadge} />
-                    <Skeleton className={styles.skelFolder} />
-                    <Skeleton className={styles.skelFolderLabel} />
-                    <Skeleton className={styles.skelFolderSub} />
-                  </div>
-                ))}
-              </div>
-              <div className={styles.skelPager}>
-                <Skeleton className={styles.skelRange} />
-                <div className={styles.skelPagerBtns}>
-                  <Skeleton className={styles.skelBtn} />
-                  <Skeleton className={styles.skelPageLabel} />
-                  <Skeleton className={styles.skelBtn} />
-                </div>
-              </div>
-            </div>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Skeleton className="h-8 w-56 max-w-full shrink-0 rounded-[16px]" />
           </div>
-          <div className="hidden min-w-0 flex-col gap-4 lg:flex" aria-hidden="true">
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendLabel} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendLabel} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className={listStyles.studentGrid}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SessionDocumentCardSkeleton key={i} />
+            ))}
           </div>
+          <ZentraPaginationSkeleton />
         </div>
       </section>
     );
@@ -231,42 +166,24 @@ function GuidanceSessionDocumentsPageInner() {
   }
 
   return (
-    <section className={styles.page} aria-label="Session documents">
-      <GuidancePageHeader
-        title="Session Documents"
-        description="Filed counseling session images and attachments, one folder per student."
+    <section
+      className={styles.page}
+      aria-label="Session documents"
+      aria-busy={isFetching && !isPending}
+    >
+      <GuidanceSessionDocumentsFolders
+        records={visible}
+        page={safePage}
+        total={total}
+        onPageChange={setPage}
+        query={queryInput}
+        onQueryChange={handleQueryInputChange}
+        type={type}
+        onTypeChange={(value) => {
+          setType(value);
+          setPage(1);
+        }}
       />
-      <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
-        <div className={`${styles.main} flex min-w-0 flex-col`}>
-          <GuidanceSessionDocumentsFolders
-            records={visible}
-            page={safePage}
-            pageSize={data.pageSize}
-            total={total}
-            totalPages={totalPages}
-            totalFiles={totalFiles}
-            isNavigating={isFetching && !isPending}
-            onPageChange={setPage}
-            query={queryInput}
-            onQueryChange={handleQueryInputChange}
-            type={type}
-            onTypeChange={(value) => {
-              setType(value);
-              setPage(1);
-            }}
-          />
-        </div>
-        <div className="hidden min-w-0 flex-col gap-4 lg:flex">
-          <TopReferredCard items={data.summary.topStudents ?? []} />
-          <SessionFilesLegendCard />
-          <FolderLegendCard variant="docs" />
-        </div>
-      </div>
-      <div className="flex min-w-0 flex-col gap-4 lg:hidden">
-        <TopReferredCard items={data.summary.topStudents ?? []} />
-        <SessionFilesLegendCard />
-        <FolderLegendCard variant="docs" />
-      </div>
     </section>
   );
 }

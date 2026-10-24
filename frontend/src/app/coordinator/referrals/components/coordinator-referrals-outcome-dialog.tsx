@@ -1,12 +1,12 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { ClipboardCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import {
   meetingInviteeLabel,
   venueLabel,
@@ -52,23 +52,53 @@ export function CoordinatorReferralsOutcomeDialog({
     );
   }
   return (
-    <CardModal
+    <KanbanOverlay
       open={target !== null}
-      onClose={() => {
-
-        if (!pending) onClose();
-      }}
+      onClose={onClose}
       dismissable={!pending}
-      size="md"
+      width="md"
       title="Record meeting outcome"
+      icon={
+        <span className="text-primary" aria-hidden>
+          <ClipboardCheck size={14} />
+        </span>
+      }
       description={
-        target ? (
-          <>
-            {venueLabel(target.venue)} on {target.meetingDatetime.slice(0, 10)}.
-            Attended meetings log minutes; missed ones route the case to home
-            visitation.
-          </>
-        ) : undefined
+        target
+          ? `${venueLabel(target.venue)} on ${target.meetingDatetime.slice(0, 10)}. Attended meetings log minutes; missed ones route the case to home visitation.`
+          : undefined
+      }
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-6 px-3 text-xs"
+            onClick={onClose}
+            disabled={pending}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            className="h-6 px-3 text-xs"
+            disabled={pending}
+            aria-busy={pending || undefined}
+            onClick={onConfirm}
+            autoFocus
+          >
+            {pending ? (
+              <Loader2
+                className="animate-spin"
+                style={{ width: "0.875rem", height: "0.875rem" }}
+                aria-hidden="true"
+              />
+            ) : null}
+            {pending ? "Saving…" : "Save outcome"}
+          </Button>
+        </div>
       }
     >
         <div className={styles.formGrid}>
@@ -132,21 +162,6 @@ export function CoordinatorReferralsOutcomeDialog({
             />
           </div>
         </div>
-        <div className={styles.actions}>
-          <Button variant="outline" onClick={onClose} disabled={pending}>
-            Cancel
-          </Button>
-          <Button
-            disabled={pending}
-            aria-busy={pending || undefined}
-            onClick={onConfirm}
-          >
-            {pending ? (
-              <Loader2 className={styles.spin} aria-hidden="true" />
-            ) : null}
-            {pending ? "Saving…" : "Save outcome"}
-          </Button>
-        </div>
-    </CardModal>
+    </KanbanOverlay>
   );
 }

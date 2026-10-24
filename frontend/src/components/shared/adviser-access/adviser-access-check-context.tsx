@@ -49,6 +49,8 @@ interface CachedAccessRequest {
   affectedAdvisees: {
     lrn: string;
     name: string;
+    /** Persisted profile mascot (StudentMascot pool) carried from the list. */
+    mascot?: string | null;
     sf10Status?: string;
     hasRecord?: boolean;
   }[];
@@ -127,6 +129,14 @@ interface AdviserAccessCheckValue {
   reportMissing: (requestId: string, desk: AdviserAccessDesk, lrn: string) => void;
   /** Bulk grant for every matched student (never reported/missing ones). */
   approveAll: (requestId: string, desk: AdviserAccessDesk) => void;
+  /** "Check all" — the SF10 check for several requests, run one after another. */
+  checkAll: (desk: AdviserAccessDesk, ids: string[]) => void;
+  /** Board "Approve all" — bulk grant every matched student per request. */
+  approveAllAwaiting: (desk: AdviserAccessDesk, requestIds: string[]) => void;
+  /** Board "Report all" — report students without filed records (sequential). */
+  reportAllAwaiting: (desk: AdviserAccessDesk, targets: { requestId: string; lrn: string }[]) => void;
+  /** True while a board "Report all" sweep runs (blocks other decide surfaces). */
+  bulkReporting: boolean;
   approvingLrn: string | null;
   reportingLrn: string | null;
   /** Full sets for per-row busy checks (parallel actions allowed). */
@@ -220,14 +230,19 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
   const [reportingLrns, setReportingLrns] = React.useState<string[]>([]);
   const [approvingLrns, setApprovingLrns] = React.useState<string[]>([]);
   const [bulkApproving, setBulkApproving] = React.useState(false);
+  const [bulkReporting, setBulkReporting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [minimized, setMinimized] = React.useState(false);
   const abortRef = React.useRef<AbortController | null>(null);
   const runToken = React.useRef(0);
+  // "Check all" queue — request ids run one after another (the stream + dock
+  // are single-run by design). beginCheckRef breaks the self-reference.
+  const checkQueueRef = React.useRef<string[]>([]);
+  const beginCheckRef = React.useRef<(desk: AdviserAccessDesk, id: string) => void>(() => {});
 
   const busy = phase === "checking";
   // Per-row busy only — different LRNs can act in parallel.
-  const acting = approvingLrns.length > 0 || reportingLrns.length > 0 || bulkApproving;
+  const acting = approvingLrns.length > 0 || reportingLrns.length > 0 || bulkApproving || bulkReporting;
   const approvingLrn = approvingLrns[0] ?? null;
   const reportingLrn = reportingLrns[0] ?? null;
 
@@ -249,6 +264,7 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
 
   const resetIdle = React.useCallback(() => {
     runToken.current += 1;
+    checkQueueRef.current = [];
     abortRef.current?.abort();
     abortRef.current = null;
     setRun(null);
@@ -258,6 +274,7 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
     setReportingLrns([]);
     setApprovingLrns([]);
     setBulkApproving(false);
+    setBulkReporting(false);
     setError(null);
     setMinimized(false);
   }, []);
@@ -269,9 +286,11 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
     resetIdle();
   }, [pathname, resetIdle]);
 
-  const startCheck = React.useCallback(
+  // Core runner: starts one SSE check run. The queue-driven "Check all"
+  // calls this directly for the next id; the public entries below guard on
+  // `busy` and own the queue.
+  const beginCheck = React.useCallback(
     (desk: AdviserAccessDesk, id: string) => {
-      if (busy) return;
       // Display label + advisee list from either desk's cached list (pages may unmount).
       // Pages cache a bare array — read both shapes via the shared helper.
       let adviserName = "Adviser";
@@ -465,6 +484,10 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
                 for (const key of deskFullKeys(desk)) {
                   void qc.invalidateQueries({ queryKey: key });
                 }
+                // "Check all" — chain the next queued request once this run
+                // lands (same tick, so the dock never flashes "complete").
+                const nextId = checkQueueRef.current.shift();
+                if (nextId) beginCheckRef.current(desk, nextId);
                 streamDone = true;
                 break;
               } else if (ev === "error") {
@@ -475,6 +498,9 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
           }
         } catch (e) {
           if (token !== runToken.current || isCancelError(e)) return;
+          // A failed run stops the whole sweep — the remaining requests stay
+          // pending for a fresh "Check all" (the toast carries the reason).
+          checkQueueRef.current = [];
           if (abortRef.current === controller) abortRef.current = null;
           const message = getErrorMessage(e, "Could not run the SF10 check.");
           setError(message);
@@ -483,7 +509,30 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
         }
       })();
     },
-    [busy, qc],
+    [qc],
+  );
+  React.useEffect(() => {
+    beginCheckRef.current = beginCheck;
+  }, [beginCheck]);
+
+  const startCheck = React.useCallback(
+    (desk: AdviserAccessDesk, id: string) => {
+      if (busy) return;
+      checkQueueRef.current = [];
+      beginCheck(desk, id);
+    },
+    [busy, beginCheck],
+  );
+
+  // "Check all" — every unchecked request, one SSE run after another.
+  const checkAll = React.useCallback(
+    (desk: AdviserAccessDesk, ids: string[]) => {
+      if (busy || ids.length === 0) return;
+      const [first, ...rest] = ids;
+      checkQueueRef.current = rest;
+      beginCheck(desk, first);
+    },
+    [busy, beginCheck],
   );
 
   // Per-student approval for one matched student (whole request untouched).
@@ -633,6 +682,102 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
     [bulkApproving, phase, run, rows, qc],
   );
 
+  // Board "Approve all" — one bulk grant per request, sequential so the
+  // server's read-modify-write on approvedLrns never overlaps. Reuses the
+  // dock's bulkApproving flag so every Approve-all surface disables together.
+  const approveAllAwaiting = React.useCallback(
+    (desk: AdviserAccessDesk, requestIds: string[]) => {
+      if (acting) return;
+      const unique = [...new Set(requestIds)];
+      if (unique.length === 0) return;
+      setBulkApproving(true);
+      setError(null);
+      void (async () => {
+        let grantedTotal = 0;
+        try {
+          for (const requestId of unique) {
+            const res = await apiClient.post(`/api/${desk}/adviser-access-requests/${requestId}/approve-all`);
+            const data = res.data as {
+              approvedLrns?: string[];
+              granted?: string[];
+              approvedLrnAt?: Record<string, string>;
+            };
+            const serverLrns = Array.isArray(data?.approvedLrns) ? data.approvedLrns : [];
+            const serverAt = data?.approvedLrnAt;
+            recordConfirmedMarks(requestId, serverLrns, undefined, serverAt);
+            patchRequestMarks(qc, requestId, (r) => ({
+              ...r,
+              approvedLrns: serverLrns,
+              approvedLrnAt: { ...(r.approvedLrnAt ?? {}), ...(serverAt ?? {}) },
+            }));
+            grantedTotal += Array.isArray(data?.granted) ? data.granted.length : 0;
+          }
+          for (const key of deskFullKeys(desk)) {
+            void qc.invalidateQueries({ queryKey: key });
+          }
+          toast.success({
+            title: "Access granted",
+            description:
+              grantedTotal > 0
+                ? `${grantedTotal} matched student${grantedTotal === 1 ? "" : "s"} approved.`
+                : "Every matched student was already approved.",
+          });
+        } catch (e) {
+          const message = getErrorMessage(e, "Could not approve matched students.");
+          setError(message);
+          toast.error({ title: "Action failed", description: message });
+        } finally {
+          setBulkApproving(false);
+        }
+      })();
+    },
+    [acting, qc],
+  );
+
+  // Board "Report all" — sequential per-LRN reports: the server appends to
+  // reportedMissingLrns with a read-modify-write, so parallel posts for the
+  // same request could drop marks.
+  const reportAllAwaiting = React.useCallback(
+    (desk: AdviserAccessDesk, targets: { requestId: string; lrn: string }[]) => {
+      if (acting || targets.length === 0) return;
+      setBulkReporting(true);
+      setError(null);
+      void (async () => {
+        let reportedCount = 0;
+        try {
+          for (const t of targets) {
+            const res = await apiClient.post(`/api/${desk}/adviser-access-requests/${t.requestId}/report-missing`, {
+              lrn: t.lrn,
+            });
+            const serverLrns = (res.data as { reportedMissingLrns?: string[] })?.reportedMissingLrns;
+            recordConfirmedMarks(t.requestId, undefined, Array.isArray(serverLrns) ? serverLrns : [t.lrn]);
+            patchRequestMarks(qc, t.requestId, (r) => ({
+              ...r,
+              reportedMissingLrns: Array.isArray(serverLrns)
+                ? serverLrns
+                : [...new Set([...(r.reportedMissingLrns ?? []), t.lrn])],
+            }));
+            reportedCount += 1;
+          }
+          for (const key of deskFullKeys(desk)) {
+            void qc.invalidateQueries({ queryKey: key });
+          }
+          toast.success({
+            title: "Reported missing",
+            description: `${reportedCount} student${reportedCount === 1 ? "" : "s"} reported — the adviser has been notified.`,
+          });
+        } catch (e) {
+          const message = getErrorMessage(e, "Could not report missing students.");
+          setError(message);
+          toast.error({ title: "Report failed", description: message });
+        } finally {
+          setBulkReporting(false);
+        }
+      })();
+    },
+    [acting, qc],
+  );
+
   const dismiss = React.useCallback(() => {
     if (busy) return;
     resetIdle();
@@ -642,14 +787,18 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
     () => ({
       checkingId: busy && run ? run.id : null,
       startCheck,
+      checkAll,
       approveLrn,
       reportMissing,
       approveAll,
+      approveAllAwaiting,
+      reportAllAwaiting,
       approvingLrn,
       reportingLrn,
       approvingLrns,
       reportingLrns,
       bulkApproving,
+      bulkReporting,
       acting,
       isRowBusy,
     }),
@@ -657,14 +806,18 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
       busy,
       run,
       startCheck,
+      checkAll,
       approveLrn,
       reportMissing,
       approveAll,
+      approveAllAwaiting,
+      reportAllAwaiting,
       approvingLrn,
       reportingLrn,
       approvingLrns,
       reportingLrns,
       bulkApproving,
+      bulkReporting,
       acting,
       isRowBusy,
     ],

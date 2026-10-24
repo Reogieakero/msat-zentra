@@ -4,6 +4,7 @@ import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Inbox, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { GuidancePageHeader } from "../../components/GuidancePageHeader";
 import { GuidanceEmptyCard } from "../../components/GuidanceEmptyCard";
@@ -25,6 +26,9 @@ import pageStyles from "../../pages.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 
 const GUIDANCE_REFERRALS_PAGE_SIZE = PAGE_SIZE;
+/* The locked desk boards page in whole 4×4 kanban grids (four rows of
+   four), same as the nurse ADM / clinic boards. */
+const GUIDANCE_BOARD_PAGE_SIZE = 16;
 
 export function GuidanceReferralsView({
   lockedType = "",
@@ -38,6 +42,9 @@ export function GuidanceReferralsView({
   highlightId?: string | null;
 }) {
   const locked = lockedType !== "";
+  const isKanban =
+    lockedType === "ADM" || lockedType === "Counseling";
+  const pageSize = isKanban ? GUIDANCE_BOARD_PAGE_SIZE : GUIDANCE_REFERRALS_PAGE_SIZE;
   const searchParams = useSearchParams();
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
@@ -138,7 +145,7 @@ export function GuidanceReferralsView({
           completed: completedParam,
           open: openParam,
           page: takeover || !locked ? page : 1,
-          pageSize: GUIDANCE_REFERRALS_PAGE_SIZE,
+          pageSize,
           ...(landing && highlightId ? { highlight: highlightId } : {}),
         },
         { signal }
@@ -180,11 +187,32 @@ export function GuidanceReferralsView({
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading your cases">
-        <ZentraPageHeaderSkeleton />
-        <GuidanceReferralsSkeleton
-          lockType={lockedType !== ""}
-          menuRows={lockedType === "ADM" ? 6 : lockedType === "Counseling" ? 5 : undefined}
-        />
+        {isKanban ? (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[72, 96, 84, 92, 74, 78, 84].map((width, index) => (
+                  <Skeleton
+                    key={index}
+                    className="h-7 rounded-full"
+                    style={{ width }}
+                  />
+                ))}
+              </div>
+              <Skeleton className="h-8 w-56 rounded-[16px]" />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <Skeleton key={index} className="h-64 rounded-xl" />
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <ZentraPageHeaderSkeleton />
+            <GuidanceReferralsSkeleton lockType={false} />
+          </>
+        )}
       </section>
     );
   }
@@ -229,7 +257,7 @@ export function GuidanceReferralsView({
       aria-busy={refreshing}
       aria-label={headerCopy.title}
     >
-      {isTrueEmpty ? null : (
+      {isTrueEmpty || isKanban ? null : (
         <GuidancePageHeader
           title={headerCopy.title}
           description={headerCopy.description}
@@ -265,6 +293,7 @@ export function GuidanceReferralsView({
         isNavigating={isRefetching && !isPending}
         lockType={locked}
         title={title}
+        layout={isKanban ? "kanban" : "list"}
         highlightId={highlightId}
       />
       )}

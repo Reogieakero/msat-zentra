@@ -1,5 +1,6 @@
 "use client";
 
+import { AnecdotalRecordKanbanCard } from "@/components/anecdotal/anecdotal-record-kanban-card";
 import { FolderCard } from "@/components/ui/FolderCard";
 import {
   GRADE_LABEL,
@@ -7,6 +8,7 @@ import {
   type Sf10Record,
   type Sf10Status,
 } from "@/services/registry/sf10.types";
+import { StatusBadge } from "./shared";
 import styles from "./sf10.module.css";
 
 const STATUS_TONES: Record<Sf10Status, 1 | 2 | 3 | 4 | 5> = {
@@ -63,6 +65,46 @@ export function Sf10FolderGrid({
             ]}
           />
         </button>
+      ))}
+    </div>
+  );
+}
+
+// Amber — the SF10 folder accent, shared with the overview attach feed.
+const SF10_FOLDER_COLOR = "#f59e0b";
+
+/**
+ * Records kanban grid (record-keeper) — one shareable folder kanban card
+ * per filed record (same card as the overview attach feed and teacher
+ * anecdotal boards): amber folder, 16px gaps. The card shell is the
+ * button; opening it routes to the record detail.
+ */
+export function Sf10RecordKanbanGrid({
+  records,
+  onOpen,
+}: {
+  records: Sf10Record[];
+  onOpen: (r: Sf10Record) => void;
+}) {
+  return (
+    <div className={styles.folderKanbanGrid}>
+      {records.map((r) => (
+        <AnecdotalRecordKanbanCard
+          key={r.id}
+          category="sf10"
+          headerTitle="SF10 Record"
+          studentName={r.fullName}
+          metaText={r.lrn}
+          metaTitle={`${r.lrn} · ${GRADE_LABEL[r.gradeLevel] ?? r.gradeLevel} · ${r.section}`}
+          fileName={fileNameFor(r.uploadedFileUrl)}
+          fileTag={`${GRADE_LABEL[r.gradeLevel] ?? r.gradeLevel} · ${r.section} · v${r.currentVersion}`}
+          headerRight={<StatusBadge status={r.status} />}
+          categoryColor={SF10_FOLDER_COLOR}
+          folderColor={SF10_FOLDER_COLOR}
+          tone={3}
+          openLabel={`Open ${r.fullName}'s SF10 record`}
+          onOpen={() => onOpen(r)}
+        />
       ))}
     </div>
   );

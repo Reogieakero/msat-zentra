@@ -9,13 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import type {
   AtRiskStudentItem,
   CounselingSessionItem,
@@ -50,8 +44,6 @@ export interface InterventionTableViewProps {
   isRetrying: boolean;
   isNavigating: boolean;
   actionIsError: boolean;
-  collapsedPlans: Record<string, boolean>;
-  onTogglePlan: (key: string) => void;
   expandedKey: string | null;
   onToggleDetails: (key: string) => void;
   now: number;
@@ -87,8 +79,6 @@ export function InterventionTableView({
   isRetrying,
   isNavigating,
   actionIsError,
-  collapsedPlans,
-  onTogglePlan,
   expandedKey,
   onToggleDetails,
   now,
@@ -115,37 +105,38 @@ export function InterventionTableView({
         ? "moderate-risk student"
         : "at-risk student";
   return (
-    <section aria-label="Intervention cases" className={`${styles.feed} ${styles.panel}`}>
-      <span className={styles.glowClip} aria-hidden="true">
-        <span className={styles.cardGlow} />
-      </span>
-      <div className={styles.header}>
-        <div className={styles.headerText}>
-          <h2 className={styles.sectionTitle}>Intervention cases</h2>
-          <p className={styles.sectionDesc} aria-live="polite">
-            {total === 0
-              ? `No ${levelNoun}s right now`
-              : `${total} ${levelNoun}${total === 1 ? "" : "s"}${
-                  summary.waitingReview > 0
-                    ? ` · ${summary.waitingReview} follow-up${summary.waitingReview === 1 ? "" : "s"} waiting for review`
-                    : ""
-                }`}
-          </p>
-        </div>
+    <KanbanBoard
+      title="Intervention cases"
+      icon={
+        <span className="text-amber-600 dark:text-amber-400" aria-hidden>
+          <HeartHandshake size={14} />
+        </span>
+      }
+      count={total}
+      description={
+        total === 0
+          ? `No ${levelNoun}s right now`
+          : `${total} ${levelNoun}${total === 1 ? "" : "s"}${
+              summary.waitingReview > 0
+                ? ` · ${summary.waitingReview} follow-up${summary.waitingReview === 1 ? "" : "s"} waiting for review`
+                : ""
+            }`
+      }
+      actions={
         <div className={styles.headerActions}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                style={{ height: "2rem" }}
+                className={`${styles.filterBtn} ${level !== "High" ? styles.filterActive : ""}`}
                 aria-label={`Filter by risk level, currently showing: ${levelLabel}`}
               >
-                {levelLabel}
+                <span className={styles.filterValue}>{levelLabel}</span>
                 <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className={styles.filterMenu}>
               {LEVEL_OPTIONS.map((option) => (
                 <DropdownMenuCheckboxItem
                   key={option.value}
@@ -161,7 +152,7 @@ export function InterventionTableView({
             <Search className={styles.searchIcon} aria-hidden />
             <Input
               className={styles.search}
-              style={{ height: "2rem" }}
+              style={{ height: "2rem", borderRadius: "16px" }}
               placeholder="Search student…"
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
@@ -169,7 +160,18 @@ export function InterventionTableView({
             />
           </div>
         </div>
-      </div>
+      }
+      footer={
+        total > 0 ? (
+          <Pagination
+            currentPage={page}
+            totalItems={total}
+            pageSize={pageSize}
+            onPageChange={onPageChange}
+          />
+        ) : null
+      }
+    >
       {actionIsError && (
         <div className={styles.errorBlock} role="alert">
           <p className={styles.errorText}>
@@ -186,44 +188,21 @@ export function InterventionTableView({
           </Button>
         </div>
       )}
-      <div className={styles.tableBody} aria-busy={isNavigating || undefined}>
+      <div aria-busy={isNavigating || undefined}>
         {isNavigating ? (
-          <>
-            <div className={styles.skelTableWrap}>
-              <div className={styles.skelTable}>
-                <div className={styles.skelHeadRow}>
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                    <div key={i} className={styles.skelCell}>
-                      <Skeleton
-                        className={styles.skelBar}
-                        style={{ width: i % 3 === 0 ? "70%" : "45%" }}
-                      />
-                    </div>
-                  ))}
+          <div className={styles.caseList}>
+            {[0, 1, 2, 3, 4].map((row) => (
+              <div key={row} className={styles.skelCaseRow}>
+                <Skeleton className={styles.skelAvatar} />
+                <div className={styles.skelCaseLines}>
+                  <Skeleton className={styles.skelBar} style={{ width: "38%" }} />
+                  <Skeleton className={styles.skelBar} style={{ width: "24%" }} />
                 </div>
-                {[0, 1, 2, 3, 4].map((row) => (
-                  <div key={row} className={styles.skelRow}>
-                    {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((cell) => (
-                      <div key={cell} className={styles.skelCell}>
-                        <Skeleton
-                          className={styles.skelBar}
-                          style={{ width: cell % 3 === 0 ? "70%" : "45%" }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ))}
+                <Skeleton className={styles.skelCasePill} />
+                <Skeleton className={styles.skelCaseBtn} />
               </div>
-            </div>
-            <div className={styles.skelPager}>
-              <Skeleton className={styles.skelRange} />
-              <div className={styles.skelPagerBtns}>
-                <Skeleton className={styles.skelPageBtn} />
-                <Skeleton className={styles.skelPageLabel} />
-                <Skeleton className={styles.skelPageBtn} />
-              </div>
-            </div>
-          </>
+            ))}
+          </div>
         ) : students.length === 0 ? (
           <GuidanceEmptyState
             icon={hasActiveSearch ? SearchX : HeartHandshake}
@@ -239,60 +218,36 @@ export function InterventionTableView({
             }
           />
         ) : (
-          <div className={styles.tableWrap}>
-            <Table aria-label="Intervention cases on the guidance desk">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Grade</TableHead>
-                  <TableHead>Section</TableHead>
-                  <TableHead>Risk level</TableHead>
-                  <TableHead>Detected</TableHead>
-                  <TableHead>Latest action</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Done</TableHead>
-                  <TableHead>
-                    <span className={styles.srOnly}>Row actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.map((row) => (
-                  <InterventionTableRow
-                    key={row.studentKey}
-                    row={row}
-                    highlighted={highlightId !== null && highlightId === row.studentKey}
-                    locked={locked(row.studentKey)}
-                    isActionPending={isActionPending}
-                    isBusy={(action) => isBusy(row.studentKey, action)}
-                    planCollapsed={collapsedPlans[row.studentKey] === true}
-                    onTogglePlan={() => onTogglePlan(row.studentKey)}
-                    expanded={expandedKey === row.studentKey}
-                    onToggleDetails={() => onToggleDetails(row.studentKey)}
-                    now={now}
-                    onStart={() => onStart(row)}
-                    onChange={() => onChange(row)}
-                    onOutcome={() => onOutcome(row)}
-                    onMarkDone={() => onMarkDone(row)}
-                    onSchedule={() => onSchedule(row)}
-                    onSession={(session, dialog) =>
-                      onSession(row, session, dialog)
-                    }
-                    onReview={(decision) => onReview(row, decision)}
-                    onDocsChanged={onDocsChanged}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <ul
+            className={styles.caseList}
+            aria-label="Intervention cases on the guidance desk"
+          >
+            {students.map((row) => (
+              <InterventionTableRow
+                key={row.studentKey}
+                row={row}
+                highlighted={highlightId !== null && highlightId === row.studentKey}
+                locked={locked(row.studentKey)}
+                isActionPending={isActionPending}
+                isBusy={(action) => isBusy(row.studentKey, action)}
+                expanded={expandedKey === row.studentKey}
+                onToggleDetails={() => onToggleDetails(row.studentKey)}
+                now={now}
+                onStart={() => onStart(row)}
+                onChange={() => onChange(row)}
+                onOutcome={() => onOutcome(row)}
+                onMarkDone={() => onMarkDone(row)}
+                onSchedule={() => onSchedule(row)}
+                onSession={(session, dialog) =>
+                  onSession(row, session, dialog)
+                }
+                onReview={(decision) => onReview(row, decision)}
+                onDocsChanged={onDocsChanged}
+              />
+            ))}
+          </ul>
         )}
-        <Pagination
-          currentPage={page}
-          totalItems={total}
-          pageSize={pageSize}
-          onPageChange={onPageChange}
-        />
       </div>
-    </section>
+    </KanbanBoard>
   );
 }

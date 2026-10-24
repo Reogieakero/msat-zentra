@@ -230,7 +230,7 @@ export function buildNurseAdmInsights(
       hint:
         pending.length === 0
           ? "Every case has a decision."
-          : `${admPending} ADM · ${clinicPending} clinic.`,
+          : `${admPending} ADM | ${clinicPending} clinic`,
     },
     {
       key: "waiting",

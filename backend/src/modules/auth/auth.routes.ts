@@ -4,6 +4,7 @@ import { gradeBandGuard } from "../../middleware/gradeBand.js";
 import { validate } from "../../middleware/validate.js";
 import { matchLrn } from "../../lib/lrnMatch.js";
 import { AppError } from "../../lib/errors.js";
+import { REALTIME_TOKEN_TTL_SECONDS, signRealtimeToken } from "../../lib/jwt.js";
 import {
   clearRefreshCookie,
   getRefreshCookie,
@@ -118,6 +119,20 @@ router.post("/logout", async (_req, res, next) => {
   }
 });
 
+// Short-lived Supabase-format token for authenticated realtime subscriptions.
+// The app's own access token can't be reused for Supabase Realtime because its
+// `role` claim carries the app role, not "authenticated".
+router.get("/realtime-token", requireAuth, (req, res, next) => {
+  try {
+    res.json({
+      token: signRealtimeToken(req.user!.id),
+      expiresIn: REALTIME_TOKEN_TTL_SECONDS,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.post(
   "/approve/:userId",
   requireAuth,
@@ -168,7 +183,9 @@ router.post(
   "/reject/:userId",
   requireAuth,
   requireRole("record_keeper", "registrar"),
-  gradeBandGuard(async (req) => String(req.params.userId)),
+  // Bogus sign-ups (LRN not in any roster) can't be approved but must still
+  // be rejectable with a reason — skip the band check for unresolvable grades.
+  gradeBandGuard(async (req) => String(req.params.userId), { allowUnresolved: true }),
   validate("params", approveSchema),
   validate("body", rejectSchema),
   async (req, res, next) => {

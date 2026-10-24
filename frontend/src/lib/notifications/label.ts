@@ -90,6 +90,11 @@ export function nurseNotificationTitle(n: {
   if (/documentation was added/i.test(msg)) return "Documentation added";
   if (/you removed a session photo/i.test(msg)) return "Photo removed";
   if (/documentation was removed/i.test(msg)) return "Documentation removed";
+  if (/completed the ADM case/i.test(msg)) return "ADM case completed";
+  if (/certified the ADM case/i.test(msg)) return "ADM case certified";
+  if (/signed the ADM case/i.test(msg)) return "ADM case signed";
+  if (/returned the ADM case/i.test(msg)) return "ADM case returned";
+  if (/booked a parent meeting for/i.test(msg)) return "ADM meeting booked";
   if (/invited you to a parent meeting/i.test(msg)) return "Parent meeting invitation";
   if (/guidance booked a session/i.test(msg)) return "Guidance session booked";
   return sharedPrettify(n.type);

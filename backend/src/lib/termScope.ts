@@ -1,5 +1,6 @@
 import type { Request } from "express";
 import { prisma } from "./prisma.js";
+import { TEACHER_ROLES } from "./roles.js";
 
 export interface TermScope {
   schoolYearId: string;
@@ -32,11 +33,25 @@ function header(req: Request, name: string): string | undefined {
   return single(req.headers[name]);
 }
 
-export async function resolveTermScope(req: Request): Promise<TermScope | null> {
-  const qYear = single((req.query as Record<string, unknown>).schoolYearId);
-  const qTerm = single((req.query as Record<string, unknown>).termId);
-  const hYear = header(req, "x-school-year-id");
-  const hTerm = header(req, "x-term-id");
+export async function resolveTermScope(
+  req: Request,
+  role?: string | null,
+): Promise<TermScope | null> {
+  // Only teacher roles follow a client-selected term. Every other role —
+  // and unauthenticated callers — always resolves server-side (active
+  // school year → current term), so non-teacher desks can never be steered
+  // by (or leak) the teacher's term selection.
+  const teaches =
+    role != null && (TEACHER_ROLES as readonly string[]).includes(role);
+
+  const qYear = teaches
+    ? single((req.query as Record<string, unknown>).schoolYearId)
+    : undefined;
+  const qTerm = teaches
+    ? single((req.query as Record<string, unknown>).termId)
+    : undefined;
+  const hYear = teaches ? header(req, "x-school-year-id") : undefined;
+  const hTerm = teaches ? header(req, "x-term-id") : undefined;
 
   const termId = qTerm ?? hTerm;
   const yearId = qYear ?? hYear;

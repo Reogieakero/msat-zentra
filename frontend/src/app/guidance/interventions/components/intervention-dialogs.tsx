@@ -155,11 +155,9 @@ export function InterventionDialogs({
             ? {
                 name: activeRow.student,
                 sub: [activeRow.grade, activeRow.section].filter(Boolean).join(" · "),
-                ...(activeRow.riskLevel === "High"
-                  ? { badgeText: "High risk", badgeVariant: "red" as const }
-                  : activeRow.riskLevel === "Moderate"
-                    ? { badgeText: "Moderate risk", badgeVariant: "amber" as const }
-                    : { badgeText: `${activeRow.riskLevel} risk`, badgeVariant: "outline" as const }),
+                lrn: activeRow.lrn,
+                section: activeRow.section,
+                grade: activeRow.grade,
               }
             : null
         }

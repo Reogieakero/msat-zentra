@@ -176,7 +176,7 @@ export async function readProfileSettings(teacherId: string) {
     }),
     prisma.staffProfile.findUnique({
       where: { userId: teacherId },
-      select: { photoUrl: true, mascot: true, primaryColor: true, secondaryColor: true },
+      select: { photoUrl: true, mascot: true, primaryColor: true, secondaryColor: true, shareStudentData: true, shareUpdatedAt: true },
     }),
   ]);
   return {
@@ -185,6 +185,8 @@ export async function readProfileSettings(teacherId: string) {
     mascot: profile?.mascot ?? null,
     primaryColor: profile?.primaryColor ?? null,
     secondaryColor: profile?.secondaryColor ?? null,
+    shareStudentData: profile?.shareStudentData ?? false,
+    shareUpdatedAt: profile?.shareUpdatedAt ?? null,
   };
 }
 
@@ -253,4 +255,123 @@ export async function updateProfilePhoto(ctx: TeacherContext, photoUrl: string) 
     reason: "Teacher updated profile photo",
   });
   return { photoUrl };
+}
+
+export async function readDataSharing(teacherId: string, termId: string | null) {
+  const [profile, assignments, linked, advised] = await Promise.all([
+    prisma.staffProfile.findUnique({
+      where: { userId: teacherId },
+      select: { shareStudentData: true, shareUpdatedAt: true },
+    }),
+    termId
+      ? prisma.teacherSubjectAssignment.findMany({
+          where: { teacherId, termId },
+          select: {
+            subject: { select: { name: true } },
+            section: { select: { id: true, name: true, adviserId: true } },
+          },
+        })
+      : Promise.resolve([] as { subject: { name: string }; section: { id: string; name: string; adviserId: string | null } }[]),
+    termId
+      ? prisma.sectionTimetableEntry.findMany({
+          where: {
+            termId,
+            status: { in: ["APPROVED", "SUBMITTED"] },
+            teacherName: { userId: teacherId },
+          },
+          select: {
+            subject: { select: { name: true } },
+            section: { select: { id: true, name: true, adviserId: true } },
+          },
+        })
+      : Promise.resolve([] as { subject: { name: string }; section: { id: string; name: string; adviserId: string | null } }[]),
+    prisma.section.findMany({
+      where: { adviserId: teacherId },
+      select: { id: true },
+    }),
+  ]);
+  // Handled classes only — never the teacher's own advisory-section classes.
+  const advisedIds = new Set(advised.map((s) => s.id));
+  const seen = new Map<string, { subject: string; section: string }>();
+  for (const a of [...assignments, ...linked]) {
+    if (advisedIds.has(a.section.id) || a.section.adviserId === teacherId) continue;
+    const key = `${a.subject.name}|${a.section.name}`;
+    if (!seen.has(key)) seen.set(key, { subject: a.subject.name, section: a.section.name });
+  }
+  return {
+    shareStudentData: profile?.shareStudentData ?? false,
+    shareUpdatedAt: profile?.shareUpdatedAt ?? null,
+    handledClasses: [...seen.values()],
+  };
+}
+
+export async function setDataSharing(ctx: TeacherContext, share: boolean) {
+  const teacherId = ctx.userId;
+  const now = new Date();
+  await prisma.staffProfile.upsert({
+    where: { userId: teacherId },
+    update: { shareStudentData: share, shareUpdatedAt: now },
+    create: {
+      userId: teacherId,
+      employeeId: `T-${teacherId.slice(0, 8)}`,
+      shareStudentData: share,
+      shareUpdatedAt: now,
+    },
+  });
+  await writeAudit({
+    userId: teacherId,
+    actionType: "update",
+    sourceTable: "staff_profiles",
+    sourceId: teacherId,
+    reason: share
+      ? "Teacher enabled student-data sharing (Connect/Sync ON)"
+      : "Teacher disabled student-data sharing (Connect/Sync OFF)",
+  });
+  void fanoutNotification({
+    userId: teacherId,
+    sourceTable: "staff_profiles",
+    action: "data_share",
+    sourceId: teacherId,
+    message: share
+      ? "Student-data sharing is ON — your adviser, guidance, and allowed roles now see your grades/attendance in real-time."
+      : "Student-data sharing is OFF — only you see the grades/attendance you encode.",
+  });
+  if (share) {
+    void fanoutToRole("principal", {
+      sourceTable: "staff_profiles",
+      action: "data_share_on",
+      sourceId: teacherId,
+      excludeUserId: teacherId,
+      message: "A teacher enabled student-data sharing.",
+    });
+    // Connect/Sync flipped ON — re-run the engine now so the adviser's
+    // advisees can be auto-detected without waiting for the hourly sweep.
+    if (ctx.termId) void recomputeAdvisedRisk(teacherId, ctx.termId);
+  }
+  return readDataSharing(teacherId, ctx.termId);
+}
+
+async function recomputeAdvisedRisk(teacherId: string, termId: string) {
+  const { recomputeRisk, recomputeRosterRisk } = await import("../risk.js");
+  const sections = await prisma.section.findMany({
+    where: { adviserId: teacherId },
+    select: { id: true },
+  });
+  const sectionIds = sections.map((s) => s.id);
+  if (sectionIds.length === 0) return;
+
+  const [profiles, rosters] = await Promise.all([
+    prisma.studentProfile.findMany({
+      where: { sectionId: { in: sectionIds } },
+      select: { userId: true },
+    }),
+    prisma.studentRoster.findMany({
+      where: { sectionId: { in: sectionIds } },
+      select: { id: true },
+    }),
+  ]);
+  await Promise.allSettled([
+    ...profiles.map((p) => recomputeRisk(p.userId, termId)),
+    ...rosters.map((r) => recomputeRosterRisk(r.id, termId)),
+  ]);
 }

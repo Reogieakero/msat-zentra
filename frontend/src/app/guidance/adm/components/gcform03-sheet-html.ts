@@ -233,13 +233,23 @@ function renderImages(
   if (typeof getImages !== "function") return "";
   const media = (
     toRecord((wb as unknown as StyleRecord).model).media as unknown
-  ) as { buffer?: Uint8Array; extension?: string }[] | undefined;
+  ) as { buffer?: Uint8Array; base64?: string; extension?: string }[] | undefined;
   if (!media) return "";
   const out: string[] = [];
   for (const img of getImages.call(ws)) {
     const imageId = num(img.imageId, -1);
     const entry = imageId >= 0 ? media[imageId] : undefined;
-    if (!entry?.buffer) continue;
+    if (!entry) continue;
+    // Template media carries a buffer; images added in-memory (school crest
+    // stamped by the workbook builder) only carry base64.
+    let base64: string | null = null;
+    if (entry.buffer) {
+      base64 = u8ToBase64(entry.buffer);
+    } else if (typeof entry.base64 === "string" && entry.base64) {
+      const comma = entry.base64.indexOf(",");
+      base64 = comma >= 0 ? entry.base64.slice(comma + 1) : entry.base64;
+    }
+    if (!base64) continue;
     const range = toRecord(img.range);
     const tl = toRecord(range.tl);
     const ext = toRecord(range.ext);
@@ -257,9 +267,19 @@ function renderImages(
     let h = num(ext.height, 115);
     if (w > 5000) w /= 9525;
     if (h > 5000) h /= 9525;
-    const src = `data:${mimeForExtension(String(entry.extension ?? "png"))};base64,${u8ToBase64(entry.buffer)}`;
+    // X position and width are percentages of the sheet's natural width so
+    // the images track the column grid at any display size (preview, image
+    // export box, print). Right-half images anchor to the right edge so their
+    // inset stays proportional; height follows the aspect ratio.
+    const totalPx = colPx.reduce((sum, value) => sum + value, 0) || 1;
+    const anchor =
+      left + w / 2 <= totalPx / 2
+        ? `left:${((left / totalPx) * 100).toFixed(4)}%`
+        : `right:${((Math.max(0, totalPx - left - w) / totalPx) * 100).toFixed(4)}%`;
+    const widthPct = ((w / totalPx) * 100).toFixed(4);
+    const src = `data:${mimeForExtension(String(entry.extension ?? "png"))};base64,${base64}`;
     out.push(
-      `<img src="${src}" alt="" style="position:absolute;left:${Math.round(left)}px;top:${Math.round(top)}px;width:${Math.round(w)}px;height:${Math.round(h)}px;" />`
+      `<img src="${src}" alt="" style="position:absolute;${anchor};top:${Math.round(top)}px;width:${widthPct}%;aspect-ratio:${Math.round(w)} / ${Math.round(h)};" />`
     );
   }
   return out.join("");

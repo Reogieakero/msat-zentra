@@ -4,6 +4,12 @@ import { Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { fetchInterventionEngine } from "@/services/guidance/interventions.service";
 import type { EngineBreakdown as EngineBreakdownData } from "@/services/guidance/interventions.types";
@@ -26,29 +32,43 @@ function normalizeLevel(level: string): Level {
 const LEVEL = {
   high: {
     label: "High",
-    pill: "bg-red-50 text-red-700 dark:bg-red-500/20 dark:text-red-200",
+    pill: "bg-red-500/15 text-red-700 dark:text-red-400",
     dot: "bg-red-600 dark:bg-red-400",
-    value: "text-red-700 dark:text-red-300",
+    value: "text-red-700 dark:text-red-400",
   },
   medium: {
     label: "Medium",
-    pill: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200",
+    pill: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
     dot: "bg-amber-500 dark:bg-amber-400",
-    value: "text-amber-700 dark:text-amber-300",
+    value: "text-amber-700 dark:text-amber-400",
   },
   low: {
     label: "Low",
-    pill: "bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-200",
+    pill: "bg-green-500/15 text-green-700 dark:text-green-400",
     dot: "bg-green-600 dark:bg-green-400",
-    value: "text-slate-900 dark:text-slate-100",
+    value: "text-green-700 dark:text-green-400",
   },
 } as const;
 
 function LevelPill({ level }: { level: Level }) {
+  const label = LEVEL[level].label;
   return (
-    <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", LEVEL[level].pill)}>
-      {LEVEL[level].label}
-    </span>
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={cn("rounded-md px-2 py-0.5 text-xs font-medium", LEVEL[level].pill)}
+            tabIndex={0}
+            aria-label="Risk level"
+          >
+            {label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" sideOffset={6}>
+          <span className="font-medium">Risk level</span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -76,7 +96,7 @@ interface EngineBreakdownProps {
 function EngineSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading risk breakdown" className="space-y-3">
-      <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+      <div className="flex items-center rounded-xl border border-slate-200 px-4 py-3 dark:border-white/10">
         {[0, 1, 2].map((i) => (
           <div key={i} className="flex flex-1 flex-col items-start gap-1.5">
             <Skeleton style={{ width: "3.5rem", height: "0.7rem" }} />
@@ -84,7 +104,7 @@ function EngineSkeleton() {
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-3 @min-[540px]:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[0, 1, 2].map((i) => (
           <div key={i} className="rounded-xl border border-slate-200 p-3.5 dark:border-white/10">
             <Skeleton style={{ width: "60%", height: "0.875rem" }} />
@@ -160,7 +180,7 @@ function EngineStrip({ data }: { data: EngineBreakdownData }) {
     { label: "Live engine", level: normalizeLevel(data.live.level) },
   ];
   return (
-    <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-white/5" aria-label="Risk level trail">
+    <div className="flex items-center rounded-xl border border-slate-200 px-4 py-3 dark:border-white/10" aria-label="Risk level trail">
       {steps.map((s, i) => (
         <Fragment key={s.label}>
           {i > 0 && (
@@ -221,26 +241,35 @@ export function EngineBreakdown({
   const attendanceOn = data.live.attendance;
   const behavioralOn = data.live.behavioral;
 
-  const cards = [
+  const cards: {
+    id: string;
+    title: string;
+    level: Level;
+    on: boolean;
+    value: string;
+    valueLabel: string;
+    /** Highlighted card message rendered in place of the detail lines. */
+    message?: string;
+    details: string[];
+  }[] = [
     {
       id: "academic",
       title: "Academic",
       level: normalizeLevel(academicOn ? data.live.level : "Low"),
       on: academicOn,
       value:
-        data.academic.average === null ? "—" : `${data.academic.average.toFixed(1)}%`,
-      valueLabel:
-        data.academic.average === null
-          ? "No academic average"
-          : `Academic average ${data.academic.average.toFixed(1)} percent`,
-      details: [
-        data.academic.average === null
-          ? "No final grades on record this term."
-          : `Average ${data.academic.average.toFixed(1)}% (raw percentage).`,
         data.academic.transmutedAverage === null
-          ? "No transmuted grades yet — flag follows transmuted grades."
+          ? "—"
+          : `${data.academic.transmutedAverage.toFixed(0)}`,
+      valueLabel:
+        data.academic.transmutedAverage === null
+          ? "No transmuted academic average"
+          : `Transmuted academic average ${data.academic.transmutedAverage.toFixed(0)}, threshold ${data.academic.threshold}`,
+      message:
+        data.academic.transmutedAverage === null
+          ? "No transmuted grades yet — the flag follows transmuted grades."
           : `Transmuted avg ${data.academic.transmutedAverage.toFixed(0)} — ${data.academic.transmutedAverage < data.academic.threshold ? `below the ${data.academic.threshold} line` : `above the ${data.academic.threshold} line`}.`,
-      ],
+      details: [],
     },
     {
       id: "attendance",
@@ -278,7 +307,7 @@ export function EngineBreakdown({
     <div className="space-y-3">
       <EngineStrip data={data} />
       <DivergenceNote data={data} />
-      <div className="grid grid-cols-1 gap-3 @min-[540px]:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {cards.map((c) => (
           <div key={c.id} className="flex min-w-0 flex-col gap-2.5 rounded-xl border border-slate-200 p-3.5 dark:border-white/10">
             <div className="flex min-w-0 items-center justify-between gap-2">
@@ -296,6 +325,11 @@ export function EngineBreakdown({
             >
               {c.value}
             </div>
+            {c.message ? (
+              <p className="text-[12px] italic leading-[18px] text-red-600 dark:text-red-400">
+                {c.message}
+              </p>
+            ) : null}
             {c.details.map((d) => (
               <p key={d} className="text-[13px] leading-[18px] text-slate-500 dark:text-slate-400">
                 {d}

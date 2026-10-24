@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";import { validate } from "../../middleware/validate.js";
+import { AppError } from "../../lib/errors.js";
 import type { AdmStage } from "../../services/adm.js";
 import {
   advanceSchema,
@@ -25,7 +26,15 @@ router.post(
   validate("body", profileSchema),
   async (req, res, next) => {
     try {
-      const profileTermId = req.termScope?.termId ?? (req.body.termId as string);
+      // The coordinator is scoped server-side, so the active term comes from
+      // req.termScope. A body termId is only honored when no server scope
+      // exists (backward compatibility for older clients).
+      const profileTermId =
+        req.termScope?.termId ??
+        (typeof req.body.termId === "string" && req.body.termId ? req.body.termId : null);
+      if (!profileTermId) {
+        throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
+      }
       const { profile, provisioned } = await createProfile(
         { userId: req.user!.id, role: req.user!.role, termId: profileTermId },
         {
@@ -88,6 +97,7 @@ router.post(
 router.patch(
   "/:id/stage",
   requireAuth,
+  requireRole("adviser", "guidance_counselor", "nurse", "adm_coordinator", "principal"),
   validate("body", advanceSchema),
   async (req, res, next) => {
     try {
@@ -96,9 +106,11 @@ router.patch(
         String(req.params.id),
         req.body.stage as AdmStage,
       );
+      // Invalidate before responding: the client refetches the board the
+      // moment the PATCH resolves, and a fire-and-forget invalidation let
+      // that refetch read the pre-write list (the moved case came back).
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       res.json(updated);
-
-      void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
     } catch (e) {
       next(e);
     }

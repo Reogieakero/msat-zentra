@@ -4,19 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/api/client";
-import { useTheme } from "@/components/providers";
 import { PrincipalSidebar } from "@/components/principal-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
+import { UserRound } from "lucide-react";
+import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
+import { SidebarToggleButton } from "@/components/nav/SidebarToggleButton";
+import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { PrincipalBell } from "./components/PrincipalBell";
 import { usePrincipalRealtime } from "@/lib/realtime/principalChannel";
@@ -28,18 +22,13 @@ import styles from "./principal.module.css";
 
 function PrincipalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
   const [query, setQuery] = React.useState("");
+
+  const { collapsed: sidebarCollapsed, toggle: toggleSidebar } =
+    useCollapsibleSidebar("zentra.principal.sidebar.collapsed");
 
   usePrincipalRealtime();
   const profile = usePrincipalProfileSettings();
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted && resolvedTheme === "dark";
 
   const handleLogout = () => {
 
@@ -54,6 +43,11 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
     <div className={styles.wrapper}>
       <PrincipalPaletteGate />
       <header className={styles.topbar}>
+        <SidebarToggleButton
+          collapsed={sidebarCollapsed}
+          onToggle={toggleSidebar}
+        />
+
         <Link href="/principal/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
@@ -75,83 +69,32 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
 
         <PrincipalBell />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={styles.avatarButton}
-              aria-label="Account menu"
-            >
-              <Avatar size="sm">
-                {profile.data?.photoUrl ? (
-                  <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
-                ) : null}
-                <AvatarFallback>
-                  <UserRound className={styles.avatarIcon} />
-                </AvatarFallback>
-              </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className={styles.accountMenu}>
-            <DropdownMenuLabel>Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className={styles.accountItem}
-              onSelect={(event) => {
-                event.preventDefault();
-                router.push("/principal/settings");
-              }}
-            >
-              <Settings className={styles.accountIcon} />
-              <span>Settings</span>
-            </DropdownMenuItem>
-            <div className={styles.accountGroup}>
-              <div className={styles.accountGroupLabel}>
-                <span>System Preference</span>
-              </div>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setTheme("light");
-                }}
-              >
-                <Sun className={styles.accountIcon} />
-                <span>Light</span>
-                {!isDark ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setTheme("dark");
-                }}
-              >
-                <Moon className={styles.accountIcon} />
-                <span>Dark</span>
-                {isDark ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className={styles.accountItem}
-              onSelect={(event) => {
-                event.preventDefault();
-                handleLogout();
-              }}
-            >
-              <LogOut className={styles.accountIcon} />
-              <span>Logout</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <KanbanAccountMenu
+          settingsHref="/principal/settings"
+          onLogout={handleLogout}
+        >
+          <button
+            type="button"
+            className={styles.avatarButton}
+            aria-label="Account menu"
+          >
+            <Avatar size="sm">
+              {profile.data?.photoUrl ? (
+                <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
+              ) : null}
+              <AvatarFallback>
+                <UserRound className={styles.avatarIcon} />
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        </KanbanAccountMenu>
       </header>
-      <PrincipalSidebar />
-      <div className={`${styles.shell} ${styles.shellWithRail}`}>
+      <PrincipalSidebar collapsed={sidebarCollapsed} />
+      <div
+        className={`${styles.shell} ${styles.shellWithRail} ${
+          sidebarCollapsed ? styles.shellWithRailCollapsed : ""
+        }`}
+      >
         <main className={styles.main}>{children}</main>
       </div>
     </div>

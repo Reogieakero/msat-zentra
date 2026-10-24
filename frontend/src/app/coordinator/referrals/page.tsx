@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CaseHistoryDialog } from "../components/CaseHistoryDialog";
 import { useCoordinatorReferrals } from "./components/use-coordinator-referrals";
 import { CoordinatorReferralsSkeleton } from "./components/coordinator-referrals-skeleton";
-import { CoordinatorReferralsTable } from "./components/coordinator-referrals-table";
+import { CoordinatorReferralsBoard } from "./components/coordinator-referrals-board";
 import { CoordinatorReferralsRail } from "./components/coordinator-referrals-rail";
 import { CoordinatorReferralsPager } from "./components/coordinator-referrals-pager";
 import { CoordinatorReferralsCaseSheet } from "./components/coordinator-referrals-case-sheet";
@@ -16,8 +16,6 @@ import {
 import { CoordinatorReferralsCreateDialog } from "./components/coordinator-referrals-create-dialog";
 import { CoordinatorReferralsBookDialog } from "./components/coordinator-referrals-book-dialog";
 import { CoordinatorReferralsOutcomeDialog } from "./components/coordinator-referrals-outcome-dialog";
-import { CoordinatorPageHeader } from "../components/CoordinatorPageHeader";
-import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import styles from "./components/coordinator-referrals.module.css";
 
 function CoordinatorReferralsPageInner() {
@@ -51,33 +49,13 @@ function CoordinatorReferralsPageInner() {
 
   return (
     <section
-      className={
-        !r.isInitialLoading && !r.referralsError && r.rows.length === 0 && !r.hasActiveFilters
-          ? `${styles.page} ${styles.pageEmpty}`
-          : styles.page
-      }
+      className={styles.page}
       aria-label="Referrals"
       aria-busy={r.isInitialLoading || undefined}
     >
-      {r.isInitialLoading ? (
-        <PageHeaderSkeleton />
-      ) : r.referralsError || r.rows.length > 0 || r.hasActiveFilters ? (
-        <CoordinatorPageHeader
-          title="Referrals"
-          description="ADM intake queue — review referred students and manage their case files."
-        />
-      ) : null}
-      <div className={styles.contentSingle}>
-        {!r.referralsError &&
-        !(r.rows.length === 0 && !r.hasActiveFilters && !r.isInitialLoading) ? (
-          <CoordinatorReferralsRail
-            stageCounts={r.stageCounts}
-            totalReferred={r.totalReferred}
-            isLoading={r.isInitialLoading}
-          />
-        ) : null}
-        <div className={styles.main}>
-          <CoordinatorReferralsTable
+      <div className={styles.body}>
+        <div className={styles.mainCol}>
+          <CoordinatorReferralsBoard
             rows={r.rows}
             isInitialLoading={r.isInitialLoading}
             isSyncing={r.isSyncing}
@@ -86,9 +64,6 @@ function CoordinatorReferralsPageInner() {
             total={r.total}
             query={r.query}
             onQueryChange={r.setQuery}
-            elig={r.elig}
-            onEligChange={r.setElig}
-            eligMenuLabel={r.eligMenuLabel}
             hasActiveFilters={r.hasActiveFilters}
             onClear={r.clearFilters}
             bookPendingId={r.bookPendingId}
@@ -109,6 +84,12 @@ function CoordinatorReferralsPageInner() {
             />
           ) : null}
         </div>
+
+        <CoordinatorReferralsRail
+          stageCounts={r.stageCounts}
+          totalReferred={r.totalReferred}
+          isLoading={r.isInitialLoading}
+        />
       </div>
 
       <CaseHistoryDialog
@@ -142,7 +123,6 @@ function CoordinatorReferralsPageInner() {
 
       <CoordinatorReferralsForwardDialog
         target={r.forwardTarget}
-        pending={r.forwardPending}
         onClose={() => r.setForwardTarget(null)}
         onConfirm={r.confirmForward}
       />
@@ -152,8 +132,6 @@ function CoordinatorReferralsPageInner() {
         scopeLabel={r.scopeLabel}
         onClose={() => r.setCreateTarget(null)}
         onConfirm={r.confirmCreate}
-        pending={r.createPending}
-        canConfirm={r.canCreate}
       />
 
       <CoordinatorReferralsBookDialog
@@ -190,7 +168,7 @@ export default function CoordinatorReferralsPage() {
     <React.Suspense
       fallback={
         <section className={styles.page} aria-label="Referrals">
-          <CoordinatorReferralsSkeleton rows={10} />
+          <CoordinatorReferralsSkeleton rows={9} />
         </section>
       }
     >

@@ -8,16 +8,14 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Loader2, TabletSmartphone } from "lucide-react";
+import { TabletSmartphone } from "lucide-react";
 import { CoordinatorEmptyCard } from "../components/CoordinatorEmptyCard";
-import { CoordinatorPageHeader } from "../components/CoordinatorPageHeader";
-import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import { Button } from "@/components/ui/button";
-import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
+import { useDock } from "@/components/dock/dock-store";
 import {
   fetchCoordinatorApprovals,
   fetchCoordinatorDevices,
@@ -25,10 +23,11 @@ import {
 import { apiErrorMessage } from "@/lib/api/errors";
 import type { AdmDeviceRow } from "@/services/coordinator/coordinator.types";
 import {
-  CoordinatorDevicesTable,
+  CoordinatorDevicesBoard,
   type DeviceFilter,
-} from "./components/coordinator-devices-table";
+} from "./components/coordinator-devices-board";
 import { CoordinatorDevicesIssueDialog } from "./components/coordinator-devices-issue-dialog";
+import { CoordinatorDeviceReturnOverlay } from "./components/coordinator-device-return-overlay";
 import pageStyles from "../pages.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
@@ -40,6 +39,8 @@ function CoordinatorDevicesPageInner() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
+  const { startTask, completeTask, failTask } = useDock();
+  const dockTaskRef = React.useRef<string | null>(null);
   const [queryInput, setQueryInput] = React.useState(
     () => searchParams.get("q") ?? "",
   );
@@ -135,10 +136,20 @@ function CoordinatorDevicesPageInner() {
       void data;
       markSelfNotified(id);
       invalidate();
+      if (dockTaskRef.current) {
+        completeTask(dockTaskRef.current, "Marked returned today.");
+        dockTaskRef.current = null;
+      }
       setReturnTarget(null);
       toast.success({ title: "Device returned", description: "Return recorded." });
     },
-    onError: (err) => toast.error({ title: "Could not record return", description: apiErrorMessage(err) }),
+    onError: (err) => {
+      if (dockTaskRef.current) {
+        failTask(dockTaskRef.current, apiErrorMessage(err));
+        dockTaskRef.current = null;
+      }
+      toast.error({ title: "Could not record return", description: apiErrorMessage(err) });
+    },
     onSettled: () => setReturningId(null),
   });
 
@@ -151,9 +162,6 @@ function CoordinatorDevicesPageInner() {
   const deviceTotalPages = devicesQuery.data?.totalPages ?? 1;
 
   const deviceSafePage = Math.min(page, deviceTotalPages);
-  const deviceLimit = devicesQuery.data?.limit ?? DEVICE_PAGE_SIZE;
-  const deviceStart = deviceTotal === 0 ? 0 : (deviceSafePage - 1) * deviceLimit + 1;
-  const deviceEnd = Math.min(deviceSafePage * deviceLimit, deviceTotal);
   const deviceBackground = devicesQuery.isFetching && !devicesQuery.isPending;
 
   // Prefetch the next page while the user views the current one.
@@ -174,13 +182,23 @@ function CoordinatorDevicesPageInner() {
   }, [queryClient, page, debounced, filter, deviceTotalPages]);
 
   const hasActiveFilters = filter !== "all" || debounced !== "";
-  const statusLabel =
-    filter === "issued" ? "Issued" : filter === "returned" ? "Returned" : "Status";
 
   const clearFilters = () => {
     setFilter("all");
     setQuery("");
     setPage(1);
+  };
+
+  const confirmReturn = () => {
+    if (!returnTarget || returnMutation.isPending) return;
+    dockTaskRef.current = startTask({
+      kind: "generic",
+      title: "Recording device return",
+      description: `${returnTarget.deviceType} (${returnTarget.deviceSerial}) · ${returnTarget.student}`,
+    });
+    setReturningId(returnTarget.id);
+    setReturnTarget(null);
+    returnMutation.mutate(returnTarget.id);
   };
 
   const showNeeds = !needsQuery.isPending && needsDevice.length > 0;
@@ -201,19 +219,6 @@ function CoordinatorDevicesPageInner() {
       aria-label="Learning devices"
       aria-busy={devicesQuery.isPending || undefined}
     >
-      {devicesQuery.isPending ? (
-        <PageHeaderSkeleton withActions />
-      ) : ledgerTrulyEmpty ? null : (
-        <CoordinatorPageHeader
-          title="Learning Devices"
-          description="Tablets issued to ADM learners — issue new devices and record returns."
-          actions={
-            showNeeds ? (
-              <Button onClick={() => setIssueOpen(true)}>Issue device</Button>
-            ) : undefined
-          }
-        />
-      )}
       {ledgerTrulyEmpty ? (
         <CoordinatorEmptyCard
           icon={TabletSmartphone}
@@ -245,7 +250,7 @@ function CoordinatorDevicesPageInner() {
             </div>
           ) : null}
 
-          <CoordinatorDevicesTable
+          <CoordinatorDevicesBoard
             rows={rows}
             isPending={devicesQuery.isPending}
             isError={devicesQuery.isError || !devicesQuery.data}
@@ -253,7 +258,6 @@ function CoordinatorDevicesPageInner() {
             query={queryInput}
             onQueryChange={setQuery}
             filter={filter}
-            statusLabel={statusLabel}
             onFilterChange={(v) => {
               setFilter(v);
               setPage(1);
@@ -262,14 +266,12 @@ function CoordinatorDevicesPageInner() {
             onClear={clearFilters}
             returningId={returningId}
             total={deviceTotal}
-            start={deviceStart}
-            end={deviceEnd}
             page={deviceSafePage}
-            totalPages={deviceTotalPages}
             isBackground={deviceBackground}
             onRetry={() => devicesQuery.refetch()}
             onPageChange={(next) => setPage(next)}
             onRecordReturn={setReturnTarget}
+            onIssueDevice={() => setIssueOpen(true)}
           />
         </>
       )}
@@ -282,44 +284,12 @@ function CoordinatorDevicesPageInner() {
         onIssued={invalidate}
       />
 
-      <CardModal
-        open={returnTarget !== null}
+      <CoordinatorDeviceReturnOverlay
+        row={returnTarget}
+        pending={returnMutation.isPending}
         onClose={() => setReturnTarget(null)}
-        dismissable={!returnMutation.isPending}
-        title="Record device return?"
-        description={
-          returnTarget ? (
-            <>
-              {returnTarget.deviceType} ({returnTarget.deviceSerial}) issued to{" "}
-              {returnTarget.student} will be marked returned today.
-            </>
-          ) : undefined
-        }
-        size="sm"
-      >
-        <div className={pageStyles.modalActions}>
-          <Button
-            variant="outline"
-            onClick={() => setReturnTarget(null)}
-            disabled={returnMutation.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            disabled={returnMutation.isPending}
-            aria-busy={returnMutation.isPending || undefined}
-            onClick={() => {
-              if (returnTarget && !returnMutation.isPending) {
-                setReturningId(returnTarget.id);
-                returnMutation.mutate(returnTarget.id);
-              }
-            }}
-          >
-            {returnMutation.isPending ? <Loader2 className={pageStyles.spin} aria-hidden="true" /> : null}
-            {returnMutation.isPending ? "Recording…" : "Record return"}
-          </Button>
-        </div>
-      </CardModal>
+        onConfirm={confirmReturn}
+      />
     </section>
   );
 }

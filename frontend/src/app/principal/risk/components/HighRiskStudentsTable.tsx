@@ -12,8 +12,6 @@ import {
 } from "@tanstack/react-table";
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   ShieldCheck,
   X,
@@ -23,7 +21,8 @@ import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
+import { riskTone } from "@/lib/labels/status-tone";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -42,9 +41,9 @@ import {
 } from "@/components/ui/table";
 import type { BackendStudent, RiskFactor } from "@/services/principal/riskStudents.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./HighRiskStudentsTable.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 const FACTOR_LABEL: Record<RiskFactor, string> = {
   Academic: "Academic",
@@ -85,7 +84,7 @@ export function HighRiskStudentsTable() {
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
   const schoolYearId = activeTerm?.schoolYearId ?? null;
-  const { data, isPending, isFetching, isError, refetch } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["risk-students", "high", termId, schoolYearId, page, debouncedQuery, factorFilter],
     queryFn: async ({ signal }) => {
       const params: Record<string, string | number> = {
@@ -175,7 +174,9 @@ export function HighRiskStudentsTable() {
         minSize: 130,
         maxSize: 130,
         cell: ({ row }) => (
-          <Badge variant="red">{row.original.riskLevel}</Badge>
+          <Pill tone={riskTone(row.original.riskLevel)} label="Risk level">
+            {row.original.riskLevel}
+          </Pill>
         ),
       },
       {
@@ -228,38 +229,20 @@ export function HighRiskStudentsTable() {
   });
 
   const tableRows = table.getRowModel().rows;
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
 
-  const isEmpty = !isPending && total === 0 && !debouncedQuery.trim() && !hasActiveFilters;
-  if (isEmpty) {
-    return (
-      <div className={`${assign.card} ${styles.card}`}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <PrincipalEmptyState
-          icon={ShieldCheck}
-          title="No high-risk students"
-          hint="No high-risk students in the active term. Flagged students will appear here once detected."
-        />
-      </div>
-    );
-  }
   return (
-    <div className={`${assign.card} ${styles.card}`}>
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h3 className="text-sm font-semibold">High Risk Students</h3>
-          <p className="text-sm text-muted-foreground">
-            Students flagged as high risk that need priority review —{" "}
-            {total} student{total === 1 ? "" : "s"}.
-          </p>
-        </div>
-        <div className={styles.headerActions}>
+    <KanbanBoard
+      title="High Risk Students"
+      icon={<ShieldCheck size={14} aria-hidden="true" />}
+      count={isPending ? undefined : total}
+      description={
+        <>
+          Students flagged as high risk that need priority review —{" "}
+          {total} student{total === 1 ? "" : "s"}.
+        </>
+      }
+      actions={
+        <>
           <div className={styles.searchWrap}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
@@ -315,9 +298,18 @@ export function HighRiskStudentsTable() {
               Clear
             </Button>
           )}
-        </div>
-      </div>
-
+        </>
+      }
+      footer={
+        <Pagination
+          currentPage={safePage}
+          totalItems={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      }
+      className={styles.card}
+    >
       <div className={`${styles.content} relative`}>
         {isError && !isPending && rows.length === 0 ? (
           <div className={styles.empty} role="alert">
@@ -386,35 +378,7 @@ export function HighRiskStudentsTable() {
         </div>
         )}
       </div>
-
-      {total > PAGE_SIZE && (
-        <div className={`${styles.footer} relative`}>
-          <span className={styles.footerInfo} aria-live="polite">
-            {total > 0 ? `${start}–${end} of ${total} · Page ${safePage} of ${totalPages}` : "0 of 0"}
-          </span>
-          <div className={styles.footerActions}>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage <= 1 || total === 0 || isFetching}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeft aria-hidden />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage >= totalPages || total === 0 || isFetching}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+    </KanbanBoard>
   );
 }
 

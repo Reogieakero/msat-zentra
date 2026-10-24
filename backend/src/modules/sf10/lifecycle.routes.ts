@@ -10,6 +10,7 @@ import {
   listVersions,
   releaseRecord,
   updateOcrSubjects,
+  validateRecord,
   verifyRecord,
 } from "../../services/sf10/records.service.js";
 
@@ -131,11 +132,42 @@ router.patch(
 router.post(
   "/:id/verify",
   requireAuth,
-  requireRole("subject_teacher", "adviser"),
+  requireRole("subject_teacher", "adviser", "record_keeper", "registrar"),
   async (req, res, next) => {
     try {
       const updated = await verifyRecord(ctxOf(req), String(req.params.id));
-      await invalidateTags(["registrar-sf10", "registrar-overview"]);
+      await invalidateTags([
+        "registrar",
+        "registrar-sf10",
+        "registrar-overview",
+        "record-keeper",
+        "record-keeper-overview",
+        "overview",
+        "principal",
+      ]);
+      res.json(updated);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.post(
+  "/:id/validate",
+  requireAuth,
+  requireRole("record_keeper", "registrar"),
+  async (req, res, next) => {
+    try {
+      const updated = await validateRecord(ctxOf(req), String(req.params.id));
+      await invalidateTags([
+        "registrar",
+        "registrar-sf10",
+        "registrar-overview",
+        "record-keeper",
+        "record-keeper-overview",
+        "overview",
+        "principal",
+      ]);
       res.json(updated);
     } catch (e) {
       next(e);

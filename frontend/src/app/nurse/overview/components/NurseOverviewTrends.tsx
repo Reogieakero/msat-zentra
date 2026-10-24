@@ -12,10 +12,15 @@ import {
   YAxis,
 } from "recharts";
 import type { NurseQueueRow, NurseTrendPoint } from "@/services/nurse/nurse.types";
+import type { LucideIcon } from "lucide-react";
 import { CalendarClock, Hourglass } from "lucide-react";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
+
+// Amber — the rail's accent (tailwind amber-500), same palette as the
+// breakdown charts.
+const AMBER = "oklch(0.769 0.188 70.08)";
 
 function useNowMs(intervalMs = 30_000): number {
   const [nowMs, setNowMs] = React.useState(() => Date.now());
@@ -24,6 +29,15 @@ function useNowMs(intervalMs = 30_000): number {
     return () => window.clearInterval(id);
   }, [intervalMs]);
   return nowMs;
+}
+
+/** Board header icon — same slot as the case board / breakdown boards. */
+function BoardIcon({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <span className="text-primary" aria-hidden>
+      <Icon size={14} />
+    </span>
+  );
 }
 
 function CaseLoadLine({ trend }: { trend: NurseTrendPoint[] }) {
@@ -69,7 +83,7 @@ function CaseLoadLine({ trend }: { trend: NurseTrendPoint[] }) {
             type="monotone"
             dataKey="adm"
             name="ADM cases"
-            stroke="var(--primary)"
+            stroke={AMBER}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
@@ -78,7 +92,7 @@ function CaseLoadLine({ trend }: { trend: NurseTrendPoint[] }) {
             type="monotone"
             dataKey="clinic"
             name="Clinic matters"
-            stroke="color-mix(in oklch, var(--primary), transparent 45%)"
+            stroke={`color-mix(in oklch, ${AMBER}, transparent 45%)`}
             strokeWidth={2}
             strokeDasharray="6 3"
             dot={false}
@@ -166,9 +180,9 @@ function WaitingTimeLine({ rows }: { rows: NurseQueueRow[] }) {
               type="monotone"
               dataKey="hours"
               name="Waiting time"
-              stroke="var(--primary)"
+              stroke={AMBER}
               strokeWidth={2}
-              dot={{ fill: "var(--primary)", r: 3 }}
+              dot={{ fill: AMBER, r: 3 }}
               activeDot={{ r: 5 }}
             />
           </LineChart>
@@ -185,60 +199,51 @@ export function NurseOverviewTrends({
   dailyTrend: NurseTrendPoint[];
   needsReview: NurseQueueRow[];
 }) {
-  const caseEmpty = dailyTrend.reduce((n, d) => n + d.adm + d.clinic, 0) === 0;
-  const waitEmpty =
-    needsReview.filter((r) =>
-      Number.isFinite(Math.max(0, Date.now() - new Date(r.referredAt).getTime())),
-    ).length === 0;
+  const caseTotal = dailyTrend.reduce((n, d) => n + d.adm + d.clinic, 0);
+  const caseEmpty = caseTotal === 0;
+  // Cases with a parseable referred time — matches WaitingTimeLine's filter.
+  const waited = needsReview.filter((r) =>
+    Number.isFinite(new Date(r.referredAt).getTime()),
+  ).length;
+  const waitEmpty = waited === 0;
+
   return (
     <div className={styles.twoCol}>
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        {caseEmpty ? null : (
-        <div className="relative">
-          <h2 className={styles.sectionTitle}>Case load</h2>
-          <p className={styles.sectionDesc}>
-            Referred cases per day over the last 14 days — referred time to
-            now.
-          </p>
-        </div>
+      <KanbanBoard
+        title="Case load"
+        icon={<BoardIcon icon={CalendarClock} />}
+        count={caseTotal}
+        description="Referred cases per day over the last 14 days — referred time to now."
+        className="flex-1"
+      >
+        {caseEmpty ? (
+          <NurseEmptyState
+            icon={CalendarClock}
+            title="No referred cases"
+            hint="No referred cases in the last 14 days."
+          />
+        ) : (
+          <CaseLoadLine trend={dailyTrend} />
         )}
-        <div className="relative">
-          {caseEmpty ? (
-            <NurseEmptyState
-              icon={CalendarClock}
-              title="No referred cases"
-              hint="No referred cases in the last 14 days."
-            />
-          ) : (
-            <CaseLoadLine trend={dailyTrend} />
-          )}
-        </div>
-      </div>
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        {waitEmpty ? null : (
-        <div className="relative">
-          <h2 className={styles.sectionTitle}>Waiting time</h2>
-          <p className={styles.sectionDesc}>Time elapsed from referred to now.</p>
-        </div>
+      </KanbanBoard>
+
+      <KanbanBoard
+        title="Waiting time"
+        icon={<BoardIcon icon={Hourglass} />}
+        count={waited}
+        description="Time elapsed from referred to now."
+        className="flex-1"
+      >
+        {waitEmpty ? (
+          <NurseEmptyState
+            icon={Hourglass}
+            title="No cases waiting"
+            hint="Cases awaiting action will appear here."
+          />
+        ) : (
+          <WaitingTimeLine rows={needsReview} />
         )}
-        <div className="relative">
-          {waitEmpty ? (
-            <NurseEmptyState
-              icon={Hourglass}
-              title="No cases waiting"
-              hint="Cases awaiting action will appear here."
-            />
-          ) : (
-            <WaitingTimeLine rows={needsReview} />
-          )}
-        </div>
-      </div>
+      </KanbanBoard>
     </div>
   );
 }

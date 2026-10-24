@@ -37,14 +37,13 @@ function ctxOf(req: { user?: { id: string; role: string }; termScope?: { termId:
 router.post(
   "/",
   requireAuth,
-  requireRole("adviser", "subject_teacher"),
+  requireRole("adviser"),
   validate("body", createSchema),
   async (req, res, next) => {
     try {
       const body = req.body as {
         studentId: string;
         sectionId: string;
-        termId?: string;
         observationDatetime: string;
         descriptionOfIncident: string;
         descriptionOfLocation?: string;
@@ -58,7 +57,6 @@ router.post(
       const result = await createRecord(ctxOf(req), {
         studentId: body.studentId,
         sectionId: body.sectionId,
-        termId: body.termId,
         observationDatetime: body.observationDatetime,
         descriptionOfIncident: body.descriptionOfIncident,
         descriptionOfLocation: body.descriptionOfLocation,

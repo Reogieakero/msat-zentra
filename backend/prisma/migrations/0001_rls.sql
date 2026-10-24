@@ -78,3 +78,15 @@ create policy adm_write on "AdmLearnerProfile"
   for all to authenticated
   using ("preparedBy" = zentra_uid())
   with check ("preparedBy" = zentra_uid());
+
+-- "Notification" — realtime privacy: each user may only receive their own rows.
+-- The browser must present a Supabase-compatible token (role=authenticated,
+-- sub=<userId>) minted by GET /api/auth/realtime-token, which requires the
+-- Supabase project JWT secret to match the backend JWT_ACCESS_SECRET and the
+-- frontend flag NEXT_PUBLIC_SUPABASE_REALTIME_AUTH=true. Applied manually via
+-- apply-rls.ts (NOT via prisma migrate) so activation is deliberate.
+alter table "Notification" enable row level security;
+
+create policy notification_own on "Notification"
+  for select to authenticated
+  using ("userId" = zentra_uid());

@@ -6,6 +6,10 @@ export const DEFAULT_PAGE = 1;
 // Bulk export/report endpoints must use their own explicitly-authorized
 // handler instead of raising this limit.
 export const MAX_PAGE_SIZE = 15;
+// Internal ceiling for desk aggregates that merge several queues into one
+// server-paginated response (the guidance alerts desk). Never client-controlled:
+// the service loads each source up to this bound and pages the merged list.
+export const INTERNAL_AGGREGATE_ROW_CAP = 400;
 
 export interface PaginationMeta {
   page: number;

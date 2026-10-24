@@ -3,7 +3,7 @@ import * as React from "react";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { DropdownSelect } from "./DropdownSelect";
 import { AdvisoryEntryRow, type AdvisoryRowEntry } from "./advisory-entry-row";
 import type {
@@ -112,10 +112,11 @@ export function AssignAdviserDialog({
   const canSubmit =
     grade != null && entries.some((e) => e.sectionName.trim() !== "" && e.adviserName.trim() !== "");
   return (
-    <CardModal
+    <KanbanOverlay
       open
       onClose={onClose}
-      size="md"
+      width="md"
+      busy={isAssigning}
       title="Assign Advisory"
       description={
         <>
@@ -125,7 +126,31 @@ export function AssignAdviserDialog({
           advisory code — share it with the teacher, they enter it to claim the seat.
         </>
       }
-      watchKey={entries.length}
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+          <Button variant="outline" onClick={onClose} disabled={isAssigning}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAssign}
+            disabled={isAssigning || !canSubmit}
+            aria-busy={isAssigning || undefined}
+          >
+            {isAssigning ? (
+              <>
+                <Loader2 className={styles.btnSpin} aria-hidden />
+                <span aria-live="polite">
+                  {entries.length > 1 ? `Assigning ${entries.length} advisers…` : "Assigning adviser…"}
+                </span>
+              </>
+            ) : entries.length > 1 ? (
+              `Assign ${entries.length} Advisers`
+            ) : (
+              "Assign Adviser"
+            )}
+          </Button>
+        </div>
+      }
     >
       <div className={styles.form}>
         <div className={styles.field}>
@@ -180,29 +205,6 @@ export function AssignAdviserDialog({
           </p>
         ) : null}
       </div>
-      <div className={styles.stickyFooter}>
-        <Button variant="outline" onClick={onClose} disabled={isAssigning}>
-          Cancel
-        </Button>
-        <Button
-          onClick={handleAssign}
-          disabled={isAssigning || !canSubmit}
-          aria-busy={isAssigning || undefined}
-        >
-          {isAssigning ? (
-            <>
-              <Loader2 className={styles.btnSpin} aria-hidden />
-              <span aria-live="polite">
-                {entries.length > 1 ? `Assigning ${entries.length} advisers…` : "Assigning adviser…"}
-              </span>
-            </>
-          ) : entries.length > 1 ? (
-            `Assign ${entries.length} Advisers`
-          ) : (
-            "Assign Adviser"
-          )}
-        </Button>
-      </div>
-    </CardModal>
+    </KanbanOverlay>
   );
 }

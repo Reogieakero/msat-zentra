@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { assertAdvisee } from "./students.auth.js";
+import { resolveGradeOwnerIds, sharingMap, canBypassSharing } from "../teacher/dataShare.service.js";
 import type { AdvisoryContext } from "./advisory.types.js";
 
 export async function getStudentAnecdotal(ctx: AdvisoryContext, studentId: string) {
@@ -123,19 +124,52 @@ export async function getStudentAcademic(ctx: AdvisoryContext, rawId: string) {
     ...sectionSubjects.map((a) => [a.subject.id, a.subject.name] as const),
   ]);
 
+  // Student-data sharing (Connect/Sync): hide subjects owned by teachers
+  // with shareStudentData=false unless requester is owner or bypass role.
+  const sectionId = student.section!.id;
+  const ownerLists = await Promise.all(
+    [...subjectIds].map(async (sid) => ({
+      sid,
+      owners: await resolveGradeOwnerIds(sid, sectionId, termId),
+    })),
+  );
+  const allOwners = [...new Set(ownerLists.flatMap((o) => o.owners))];
+  const shareByTeacher = await sharingMap(allOwners);
+  const hiddenSubjectIds = new Set<string>();
+  for (const { sid, owners } of ownerLists) {
+    if (owners.length === 0) continue;
+    if (canBypassSharing(ctx.role, teacherId, owners)) continue;
+    const anyShared = owners.some((id) => shareByTeacher.get(id) === true);
+    if (!anyShared) hiddenSubjectIds.add(sid);
+  }
+
   interface GradeRow {
     subject: string;
+    subjectId?: string;
     computedAverage: number | null;
     transmutedGrade: number | null;
     remarks: string | null;
     lockStatus: string | null;
+    hiddenByTeacher?: boolean;
   }
   const rows: GradeRow[] = Array.from(subjectIds)
     .map((subjectId) => {
       const g = bySubjectId.get(subjectId);
+      if (hiddenSubjectIds.has(subjectId)) {
+        return {
+          subject: subjectNames.get(subjectId) ?? "",
+          subjectId,
+          computedAverage: null,
+          transmutedGrade: null,
+          remarks: null,
+          lockStatus: null,
+          hiddenByTeacher: true,
+        };
+      }
       if (!g) {
         return {
           subject: subjectNames.get(subjectId) ?? "",
+          subjectId,
           computedAverage: null,
           transmutedGrade: null,
           remarks: null,
@@ -144,6 +178,7 @@ export async function getStudentAcademic(ctx: AdvisoryContext, rawId: string) {
       }
       return {
         subject: g.subject.name,
+        subjectId,
         computedAverage: g.computedAverage,
         transmutedGrade: g.transmutedGrade,
         remarks: g.remarks,
@@ -152,7 +187,7 @@ export async function getStudentAcademic(ctx: AdvisoryContext, rawId: string) {
     })
     .sort((a, b) => a.subject.localeCompare(b.subject));
 
-  const gradedRows = rows.filter((g) => g.computedAverage !== null);
+  const gradedRows = rows.filter((g) => g.computedAverage !== null && !g.hiddenByTeacher);
   const passed = rows.filter((g) => g.remarks === "Passed").length;
   const failed = rows.filter((g) => g.remarks === "Failed").length;
 
@@ -164,6 +199,7 @@ export async function getStudentAcademic(ctx: AdvisoryContext, rawId: string) {
       section: student.section?.name ?? "",
     },
     grades: rows,
+    hiddenCount: hiddenSubjectIds.size,
     summary: {
       subjects: rows.length,
       graded: gradedRows.length,
@@ -194,7 +230,16 @@ export async function getStudentDetail(ctx: AdvisoryContext, studentId: string) 
         where: { termId },
         include: { subject: { select: { id: true, name: true } } },
       },
-      attendanceRecords: { where: { termId }, select: { status: true } },
+      attendanceRecords: {
+        where: { termId },
+        select: {
+          status: true,
+          subjectId: true,
+          assignmentId: true,
+          recordedBy: true,
+          assignment: { select: { teacherId: true } },
+        },
+      },
       anecdotalRecords: {
         where: { termId },
         select: { confidentialityLevel: true, category: true },
@@ -221,11 +266,43 @@ export async function getStudentDetail(ctx: AdvisoryContext, studentId: string) 
     throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
   }
 
-  const present = student.attendanceRecords.filter((r) => r.status === "present").length;
-  const absent = student.attendanceRecords.filter((r) => r.status === "absent").length;
-  const late = student.attendanceRecords.filter((r) => r.status === "late").length;
-  const excused = student.attendanceRecords.filter((r) => r.status === "excused").length;
-  const total = student.attendanceRecords.length;
+  // Sharing filter for grades: hide subjects whose owners are all private.
+  const gradeOwnerLists = await Promise.all(
+    student.finalGrades.map(async (g) => ({
+      subjectId: g.subject.id,
+      owners: await resolveGradeOwnerIds(g.subject.id, student.section!.id, termId),
+    })),
+  );
+  const gradeAllOwners = [...new Set(gradeOwnerLists.flatMap((o) => o.owners))];
+  const gradeShare = await sharingMap(gradeAllOwners);
+  const hiddenGradeSubjects = new Set<string>();
+  for (const { subjectId, owners } of gradeOwnerLists) {
+    if (owners.length === 0) continue;
+    if (canBypassSharing(ctx.role, teacherId, owners)) continue;
+    if (!owners.some((id) => gradeShare.get(id) === true)) hiddenGradeSubjects.add(subjectId);
+  }
+  const visibleGrades = student.finalGrades.filter((g) => !hiddenGradeSubjects.has(g.subject.id));
+
+  // Sharing filter for attendance: hide marks recorded by private teachers.
+  const attOwnerIds = [
+    ...new Set(
+      student.attendanceRecords.map((r) => r.assignment?.teacherId ?? r.recordedBy).filter((v): v is string => !!v),
+    ),
+  ];
+  const attShare = await sharingMap(attOwnerIds);
+  const visibleAttendance = student.attendanceRecords.filter((r) => {
+    const owner = r.assignment?.teacherId ?? r.recordedBy;
+    if (!owner) return true;
+    if (canBypassSharing(ctx.role, teacherId, [owner])) return true;
+    return attShare.get(owner) === true;
+  });
+  const attendanceHidden = visibleAttendance.length !== student.attendanceRecords.length;
+
+  const present = visibleAttendance.filter((r) => r.status === "present").length;
+  const absent = visibleAttendance.filter((r) => r.status === "absent").length;
+  const late = visibleAttendance.filter((r) => r.status === "late").length;
+  const excused = visibleAttendance.filter((r) => r.status === "excused").length;
+  const total = visibleAttendance.length;
 
   return {
     studentId: student.userId,
@@ -235,13 +312,15 @@ export async function getStudentDetail(ctx: AdvisoryContext, studentId: string) 
     gender: student.gender,
     section: student.section.name,
     gradeLevel: student.section.gradeLevel,
-    grades: student.finalGrades.map((g) => ({
+    grades: visibleGrades.map((g) => ({
       subject: g.subject.name,
+      subjectId: g.subject.id,
       computedAverage: g.computedAverage,
       transmutedGrade: g.transmutedGrade,
       remarks: g.remarks,
       lockStatus: g.lockStatus,
     })),
+    hiddenGradesCount: hiddenGradeSubjects.size,
     attendance: {
       rate: total === 0 ? 1 : present / total,
       present,
@@ -249,6 +328,7 @@ export async function getStudentDetail(ctx: AdvisoryContext, studentId: string) 
       late,
       excused,
       total,
+      restricted: attendanceHidden,
     },
     anecdotal: {
       count: student.anecdotalRecords.length,

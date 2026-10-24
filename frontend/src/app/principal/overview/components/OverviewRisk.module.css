@@ -1,4 +1,6 @@
-/* Three chart cards in one row — first section of the left panel. */
+/* Three kanban chart columns in one row — first section of the overview
+   stack. Amber is the desk accent; charts are deliberately compact so the
+   board reads as a kanban lane, not a full dashboard card. */
 .riskGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -7,45 +9,14 @@
   min-width: 0;
 }
 
-.card {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+.accent {
+  display: inline-flex;
+  color: #f59e0b;
 }
 
-.header {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
+/* ---- Friendly chart tooltip style lives in overview-chart-tip.module.css -- */
 
-.headerText {
-  min-width: 0;
-}
-
-.content {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  flex: 1;
-  overflow: hidden;
-}
-
-.headerBadgeSkel {
-  height: 1.25rem;
-  width: 5rem;
-  border-radius: 999px;
-}
-
-.riskBadge {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* ---- Factor chart ---- */
+/* ---- Factor / grade charts ---------------------------------------------- */
 .chartWrap {
   display: flex;
   justify-content: center;
@@ -53,33 +24,27 @@
 
 .chart {
   width: 100%;
-  height: 220px;
+  height: 150px;
 }
 
 .chartSkel {
-  height: 220px;
+  height: 150px;
   border-radius: var(--radius-md);
 }
 
-/* ---- Chart-level interpretation ---- */
-/* Pinned to the card bottom so all three messages align horizontally. */
+/* ---- Chart-level interpretation ----------------------------------------- */
+/* Pinned to the board bottom so all three messages align horizontally. */
 .chartInterpretation {
   margin: auto auto 0;
   max-width: 62ch;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.55;
   color: var(--muted-foreground);
   padding: 0.25rem 0 0.25rem 0.625rem;
-  border-left: 2px solid color-mix(in oklch, var(--primary), transparent 65%);
+  border-left: 2px solid color-mix(in oklch, #f59e0b, transparent 40%);
 }
 
-/* ---- Donut ---- */
-.tooltipSolid {
-  background-color: var(--popover);
-  border: 1px solid var(--border);
-  opacity: 1;
-}
-
+/* ---- Donut -------------------------------------------------------------- */
 .donutWrap {
   position: relative;
   display: flex;
@@ -89,12 +54,12 @@
 }
 
 .donut {
-  width: 160px;
-  height: 160px;
+  width: 128px;
+  height: 128px;
 }
 
 .donutSkel {
-  height: 160px;
+  height: 128px;
   border-radius: var(--radius-md);
 }
 
@@ -108,7 +73,7 @@
 }
 
 .donutTotal {
-  font-size: 1.375rem;
+  font-size: 1.25rem;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -116,7 +81,7 @@
 }
 
 .donutLabel {
-  font-size: 0.625rem;
+  font-size: 0.5625rem;
   color: var(--muted-foreground);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -161,27 +126,11 @@
   color: var(--foreground);
 }
 
-/* ---- Grade distribution ---- */
-.gradeChart {
-  width: 100%;
-  height: 220px;
-}
-
-.barSkel {
-  height: 220px;
-  border-radius: var(--radius-md);
-}
-
-.chartEmpty {
-  margin: 0;
-  padding: 3rem 1rem;
-  text-align: center;
-  color: var(--muted-foreground);
-}
-
 .empty {
-  padding: 2rem;
+  margin: 0;
+  padding: 1.5rem 1rem;
   text-align: center;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
 }
 
@@ -194,9 +143,5 @@
 @media (max-width: 900px) {
   .riskGrid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .chart {
-    height: 220px;
   }
 }

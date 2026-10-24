@@ -93,11 +93,16 @@ export function ReminderStack({
 
   if (entries.length === 0) return null;
   const topId = entries[entries.length - 1].id;
+  const lastIndex = entries.length - 1;
 
   return (
     <div className="rb-stack-container">
       {entries.map((card, index) => {
         const isTop = card.id === topId;
+        // depth 0 = front note; higher depth fans straight up behind it, like
+        // a squared pile of paper. No horizontal drift so the pile's left edge
+        // stays exactly 16px from the desk rail.
+        const depth = lastIndex - index;
         return (
           <div
             key={card.id}
@@ -112,10 +117,11 @@ export function ReminderStack({
               className="rb-card"
               onClick={() => sendToBack(card.id)}
               animate={{
-                rotateZ: 0,
-                y: (entries.length - index - 1) * 14,
-                scale: 1 - (entries.length - index - 1) * 0.03,
-                transformOrigin: "50% 0%",
+                rotateZ: depth * 0.6,
+                x: 0,
+                y: depth * -11,
+                scale: 1 - depth * 0.022,
+                transformOrigin: "50% 100%",
               }}
               initial={false}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}

@@ -1,9 +1,11 @@
 export interface AcademicGrade {
   subject: string;
+  subjectId?: string;
   computedAverage: number | null;
   transmutedGrade: number | null;
   remarks: string | null;
   lockStatus: string | null;
+  hiddenByTeacher?: boolean;
 }
 
 export interface AcademicSummary {
@@ -22,6 +24,7 @@ export interface StudentAcademic {
     section: string;
   };
   grades: AcademicGrade[];
+  hiddenCount?: number;
   summary: AcademicSummary;
 }
 

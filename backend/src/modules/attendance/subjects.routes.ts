@@ -16,10 +16,7 @@ router.get(
       const sectionId = typeof req.query.sectionId === "string" ? req.query.sectionId : undefined;
       if (!sectionId) throw new AppError(400, "MISSING_SECTION", "sectionId query required");
 
-      let termId = typeof req.query.termId === "string" ? req.query.termId : undefined;
-      if (!termId) {
-        termId = req.termScope?.termId ?? (await scopedTermRow(req))?.id;
-      }
+      const termId = req.termScope?.termId ?? (await scopedTermRow(req))?.id;
       res.json(
         await getOfferedSubjects({
           teacherId: req.user!.id,

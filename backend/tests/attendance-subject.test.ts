@@ -96,6 +96,10 @@ describe("per-subject attendance engine", () => {
       const flags = computeRiskFactors({ ...base, attendance });
       expect(flags.attendanceFlag).toBe(false);
     });
+    it("no attendance rows means no attendance flag", () => {
+      const flags = computeRiskFactors({ ...base, attendance: [] });
+      expect(flags.attendanceFlag).toBe(false);
+    });
     it("subject rows below 80% flag", () => {
       const attendance = Array.from({ length: 10 }, (_, i) => ({
         status: i < 5 ? "present" : "absent",

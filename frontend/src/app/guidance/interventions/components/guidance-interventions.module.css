@@ -744,3 +744,360 @@
     align-items: stretch;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Kanban board rows (alerts-style)                                    */
+/* ------------------------------------------------------------------ */
+
+/* Menu-style filter trigger in the board header. */
+.filterBtn {
+  height: 2rem;
+  gap: 0.375rem;
+  padding-inline: 0.625rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.filterBtn:hover {
+  background-color: color-mix(in oklch, var(--foreground), transparent 92%);
+  color: var(--foreground);
+}
+
+.filterValue {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.filterActive {
+  background-color: color-mix(in oklch, var(--amber, oklch(0.769 0.188 70.08)), transparent 88%);
+  color: oklch(0.55 0.16 65);
+}
+
+.filterActive:hover {
+  background-color: color-mix(in oklch, var(--amber, oklch(0.769 0.188 70.08)), transparent 82%);
+  color: oklch(0.55 0.16 65);
+}
+
+:global(.dark) .filterActive {
+  color: oklch(0.82 0.16 70);
+}
+
+.filterMenu {
+  min-width: 12rem;
+}
+
+.caseList {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+@media (max-width: 1280px) {
+  .caseList {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .caseList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .caseList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* One kanban card: identity + risk, pills, then time + actions. */
+.caseRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
+  cursor: pointer;
+  outline: none;
+  scroll-margin-top: 7rem;
+  transition:
+    transform 160ms ease-out,
+    border-color 160ms ease-out,
+    box-shadow 160ms ease-out;
+}
+
+.caseRow:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 45%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 45%);
+}
+
+.caseRow:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.caseRowActive {
+  border-color: color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 30%);
+}
+
+.caseRowHighlight {
+  border-color: color-mix(in oklch, var(--primary), transparent 40%);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 60%);
+}
+
+/* Rows cascade in on mount — same entrance as the nurse case board. */
+@keyframes case-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.caseList > .caseRow {
+  animation: case-card-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caseList > .caseRow {
+    animation: none;
+  }
+  .caseRow,
+  .caseRow:hover {
+    transform: none;
+    transition: none;
+  }
+}
+
+.caseCardHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.caseCardId {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.caseCardName {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.caseCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Pill row under the mascot head. The card's 8px column gap plus this 24px
+   margin gives the 32px separation from the LRN/section pills above. */
+.caseCardPills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 1.5rem;
+}
+
+/* Card footer: detected timestamp left, actions right. */
+.caseCardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+
+.caseActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* 24px icon controls (latest action / menu). */
+.actionIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  outline: none;
+  transition:
+    background-color 140ms ease-out,
+    color 140ms ease-out;
+}
+
+.actionIconButton:hover {
+  color: var(--foreground);
+  background-color: color-mix(in oklch, var(--primary), transparent 88%);
+}
+
+.actionIconButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Amber "Mark done" action — flat tinted pill, no solid border. */
+.markDoneBtn {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 1.5rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--radius-md);
+  background-color: rgb(245 158 11 / 0.15);
+  color: #b45309;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 140ms ease-out,
+    color 140ms ease-out;
+}
+
+.markDoneBtn:hover:not(:disabled) {
+  background-color: rgb(245 158 11 / 0.24);
+}
+
+.markDoneBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.markDoneBtn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+:global(.dark) .markDoneBtn {
+  color: #fbbf24;
+}
+
+/* Flat blue "Book session" control — same pill language as Mark done. */
+.bookSessionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  height: 1.5rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--radius-md);
+  background-color: rgb(59 130 246 / 0.15);
+  color: #1d4ed8;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 140ms ease-out,
+    color 140ms ease-out;
+}
+
+.bookSessionBtn:hover:not(:disabled) {
+  background-color: rgb(59 130 246 / 0.24);
+}
+
+.bookSessionBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.bookSessionBtn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+:global(.dark) .bookSessionBtn {
+  color: #60a5fa;
+}
+
+/* Kanban skeleton rows. */
+.skelCaseRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem;
+  border-radius: var(--radius-md);
+}
+
+/* Kanban skeleton cards (same 3/2/1 grid shell as the real cards). */
+.skelCaseRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+}
+
+.skelAvatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+
+.skelCaseLines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.skelCasePill {
+  width: 6rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+}
+
+.skelCaseBtn {
+  width: 4.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+}

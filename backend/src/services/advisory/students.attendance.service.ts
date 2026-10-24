@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { buildDayAxis, isWeekendKey, schoolDaysToDate } from "../attendance.js";
 import { assertAdvisee } from "./students.auth.js";
+import { sharingMap, canBypassSharing } from "../teacher/dataShare.service.js";
 import type { AdvisoryContext } from "./advisory.types.js";
 
 export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) {
@@ -46,7 +47,7 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
   const recordWhere = isRoster
     ? { rosterId: student.rosterId as string, termId }
     : { studentId: student.studentId as string, termId };
-  const [records, term] = await Promise.all([
+  const [allRecords, term] = await Promise.all([
     prisma.attendanceRecord.findMany({
       where: recordWhere,
       select: {
@@ -55,12 +56,30 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
         status: true,
         subjectId: true,
         slot: true,
+        recordedBy: true,
+        assignmentId: true,
+        assignment: { select: { teacherId: true } },
         subject: { select: { name: true, code: true } },
       },
       orderBy: [{ date: "desc" }, { session: "asc" }],
     }),
     prisma.term.findUnique({ where: { id: termId }, select: { startDate: true } }),
   ]);
+
+  // Sharing: hide marks owned by private teachers (unless requester bypasses).
+  const ownerIds = [
+    ...new Set(
+      allRecords.map((r) => r.assignment?.teacherId ?? r.recordedBy).filter((v): v is string => !!v),
+    ),
+  ];
+  const shareByTeacher = await sharingMap(ownerIds);
+  const records = allRecords.filter((r) => {
+    const owner = r.assignment?.teacherId ?? r.recordedBy;
+    if (!owner) return true;
+    if (canBypassSharing(ctx.role, teacherId, [owner])) return true;
+    return shareByTeacher.get(owner) === true;
+  });
+  const restricted = records.length !== allRecords.length;
 
   const schoolDays = schoolDaysToDate(term?.startDate ?? null);
   const possible = schoolDays * 2;
@@ -174,6 +193,7 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
     },
     summary,
     subjectSummary,
+    restricted,
     termStart: term?.startDate ?? null,
     days,
   };

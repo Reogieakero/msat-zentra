@@ -7,8 +7,6 @@ import { FileBarChart2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
-import { NursePageHeader } from "../components/NursePageHeader";
 import { NurseEmptyCard } from "../components/NurseEmptyCard";
 import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
 import { fetchNurseRiskLevels } from "@/services/nurse/risk.service";
@@ -20,9 +18,13 @@ import {
   buildNurseAdmInsights,
   buildNurseAdmReferrals,
 } from "@/services/nurse/adm.reports";
-import { NurseAdmInsights } from "./components/NurseAdmInsights";
+import {
+  NurseAdmInsights,
+  NurseAdmStats,
+} from "./components/NurseAdmInsights";
 import { NurseAdmReports } from "./components/NurseAdmReports";
-import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
+import { NurseAdmRisk } from "./components/NurseAdmRisk";
+import { NurseAdmHotspotStat } from "./components/NurseAdmHotspotStat";
 import styles from "./components/nurse-adm.module.css";
 import pageStyles from "../pages.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
@@ -79,9 +81,8 @@ export default function NurseAdmPage() {
 
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading referrals report">
-        <ZentraPageHeaderSkeleton />
         <div className={styles.skelFindings} aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className={styles.skelFinding} />
           ))}
         </div>
@@ -147,13 +148,6 @@ export default function NurseAdmPage() {
       aria-busy={refreshing}
       aria-label="Referrals report"
     >
-      {isTrueEmpty ? null : (
-        <NursePageHeader
-          title="Referrals Report"
-          description="ADM and clinic referral trends, outcomes, and desk load."
-        />
-      )}
-      {refreshing ? <NurseRefreshBadge label="Refreshing referrals report…" /> : null}
       {riskError && studentIds.length > 0 ? (
         <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
           Risk levels couldn&apos;t load.{" "}
@@ -178,8 +172,17 @@ export default function NurseAdmPage() {
         />
       ) : (
         <>
-          {insights ? <NurseAdmInsights data={insights} /> : null}
-          <NurseAdmReports data={data} />
+          {insights ? (
+            <>
+              <NurseAdmStats
+                data={insights}
+                extra={<NurseAdmHotspotStat />}
+              />
+              <NurseAdmReports data={data} insights={insights} />
+              <NurseAdmInsights data={insights} />
+              <NurseAdmRisk />
+            </>
+          ) : null}
         </>
       )}
     </section>

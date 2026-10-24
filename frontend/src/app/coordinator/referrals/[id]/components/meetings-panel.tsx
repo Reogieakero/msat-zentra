@@ -12,6 +12,7 @@ export function MeetingsPanel({
   onMeetingIdx,
   onChanged,
   onAttendedConfirmed,
+  onBook,
 }: {
   orderedMeetings: CoordinatorCaseDetail["meetings"];
   latestMeetingId: string | null;
@@ -20,6 +21,7 @@ export function MeetingsPanel({
   onMeetingIdx: (idx: number) => void;
   onChanged: () => void;
   onAttendedConfirmed: () => void;
+  onBook: () => void;
 }) {
   const total = orderedMeetings.length;
   const activeIdx =
@@ -27,10 +29,7 @@ export function MeetingsPanel({
       ? 0
       : Math.min(Math.max(0, meetingIdx), total - 1);
   return (
-    <div className={styles.card}>
-      <span className={styles.glowClip} aria-hidden="true">
-        <span className={styles.cardGlow} />
-      </span>
+    <div className={styles.panel}>
       <div className={styles.cardTitleRow}>
         <h2 className={styles.cardTitle}>Parent meetings</h2>
         {total > 1 ? (
@@ -62,12 +61,22 @@ export function MeetingsPanel({
         ) : null}
       </div>
       {total === 0 ? (
-        <p className={styles.muted}>
-          No meeting booked yet — schedule one in school or as a home
-          visitation.
-        </p>
+        <div className={styles.emptyMeeting}>
+          <p className={styles.muted}>
+            No meeting booked yet — schedule one in school or as a home
+            visitation.
+          </p>
+          <Button
+            size="sm"
+            className="h-6 px-3 text-xs"
+            onClick={onBook}
+            aria-label="Book a parent meeting"
+          >
+            Book schedule
+          </Button>
+        </div>
       ) : (
-        <ul className={styles.evidenceList}>
+        <ul className={`${styles.evidenceList} ${styles.meetingsList}`}>
           {orderedMeetings.map((m, i) => (
             <ParentMeetingCard
               key={m.id}

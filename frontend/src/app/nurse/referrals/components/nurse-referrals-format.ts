@@ -5,12 +5,14 @@ import type {
 } from "@/services/nurse/nurse.types";
 import { formatDate as sharedFormatDate, timeAgo as sharedTimeAgo, formatTime as sharedFormatTime, formatActionTime as sharedFormatActionTime, formatCountdown as sharedFormatCountdown, isSessionStarted as sharedIsSessionStarted } from "@/lib/labels/datetime";
 import { initials as sharedInitials } from "@/lib/labels/text";
-import { ANECDOTAL_CATEGORY_COLORS as sharedAnecdotalColors, anecdotalCategoryColor as sharedAnecdotalCategoryColor } from "@/lib/labels/anecdotal";
-import { isEndorsed as sharedIsEndorsed, isWithdrawn as sharedIsWithdrawn, hasScheduledSession as sharedHasScheduledSession, activeSessionOf as sharedActiveSessionOf, statusLabel as sharedStatusLabel, statusHelp as sharedStatusHelp, rowStatusLabel as sharedRowStatusLabel, rowStatusHelp as sharedRowStatusHelp, statusVariant as sharedStatusVariant, watermarkLabel as sharedWatermarkLabel, watermarkColor as sharedWatermarkColor } from "@/lib/labels/referral-status";
+import { ANECDOTAL_CATEGORY_COLORS as sharedAnecdotalColors, anecdotalCategoryColor as sharedAnecdotalCategoryColor, anecdotalCategoryPillClass as sharedAnecdotalCategoryPillClass, anecdotalCategoryBadgeVariant as sharedAnecdotalCategoryBadgeVariant } from "@/lib/labels/anecdotal";
+import { isEndorsed as sharedIsEndorsed, isWithdrawn as sharedIsWithdrawn, hasScheduledSession as sharedHasScheduledSession, activeSessionOf as sharedActiveSessionOf, latestSessionOf as sharedLatestSessionOf, statusLabel as sharedStatusLabel, statusHelp as sharedStatusHelp, rowStatusLabel as sharedRowStatusLabel, rowStatusHelp as sharedRowStatusHelp, statusVariant as sharedStatusVariant, watermarkLabel as sharedWatermarkLabel, watermarkColor as sharedWatermarkColor } from "@/lib/labels/referral-status";
 import { labelForActionType as sharedLabelForActionType, latestActionOf as sharedLatestActionOf } from "@/lib/labels/referral-activity";
 import { sessionKindLabel as sharedSessionKindLabel } from "@/lib/labels/sessions";
 export const ANECDOTAL_CATEGORY_COLORS = sharedAnecdotalColors;
 export const anecdotalCategoryColor = sharedAnecdotalCategoryColor;
+export const anecdotalCategoryPillClass = sharedAnecdotalCategoryPillClass;
+export const anecdotalCategoryBadgeVariant = sharedAnecdotalCategoryBadgeVariant;
 export type TypeFilter = "" | "Clinic" | "ADM";
 export const TYPES: { value: TypeFilter; label: string }[] = [
   { value: "", label: "All types" },
@@ -74,6 +76,53 @@ export function matchesActionFilter(row: NurseQueueRow, filter: ActionValue): bo
       return false;
   }
 }
+export type CaseStageVariant = "amber" | "blue" | "green" | "violet" | "red" | "outline";
+
+export type CaseStage = { key: string; label: string; variant: CaseStageVariant };
+
+/** The card's pipeline stage — the same buckets the action tabs filter by
+    (Needs review / Booked session / Done / Follow-up / Cancelled), so the
+    kanban header badge reports where the case stands, not the raw status.
+    Each stage carries its own coloured pill tone. */
+export function caseStage(row: NurseQueueRow): CaseStage {
+  const hasCompleted = row.sessions.some((s) => s.status === "completed");
+  const hasScheduled = row.sessions.some((s) => s.status === "scheduled");
+
+  if (sharedIsWithdrawn(row)) {
+    return { key: "cancelled", label: "Cancelled", variant: "red" };
+  }
+  if (row.status === "dismissed") {
+    return row.type === "ADM"
+      ? { key: "reject", label: "Reject", variant: "red" }
+      : { key: "cancelled", label: "Cancelled", variant: "red" };
+  }
+  if (row.status === "resolved") {
+    return { key: "done", label: "Done", variant: "green" };
+  }
+  if (row.status === "follow_up") {
+    return { key: "followup", label: "Follow-up", variant: "violet" };
+  }
+  if (hasCompleted) {
+    return { key: "done", label: "Done", variant: "green" };
+  }
+  if (hasScheduled) {
+    return { key: "booked", label: "Booked session", variant: "blue" };
+  }
+  if (row.status === "pending") {
+    return { key: "needs_review", label: "Needs review", variant: "amber" };
+  }
+  if (sharedIsEndorsed(row.type, row.status)) {
+    return { key: "endorsed", label: "Endorsed", variant: "green" };
+  }
+  if (row.status === "escalated") {
+    return { key: "escalated", label: "Sent to clinic", variant: "amber" };
+  }
+  return {
+    key: row.status,
+    label: rowStatusLabel(row.type, row.status, row),
+    variant: "outline",
+  };
+}
 export const formatDate = sharedFormatDate;
 export const timeAgo = sharedTimeAgo;
 export const formatTime = sharedFormatTime;
@@ -117,6 +166,9 @@ export function activeSessionOf(sessions: NurseSessionItem[]): NurseSessionItem 
   return sharedActiveSessionOf(sessions);
 }
 export const hasScheduledSession = sharedHasScheduledSession;
+export function latestSessionOf(sessions: NurseSessionItem[]): NurseSessionItem | null {
+  return sharedLatestSessionOf(sessions);
+}
 export const isWithdrawn = sharedIsWithdrawn;
 export function watermarkLabel(row: NurseQueueRow): string {
   return sharedWatermarkLabel(row, { escalatedText: "Sent to clinic", rawFallback: true });

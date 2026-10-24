@@ -38,6 +38,18 @@ export function GuidanceSessionDialogs({
   closeDialog: (dialog: GuidanceDialogKey) => void;
   handleAction: (action: string, payload: unknown) => void;
 }) {
+  // Same case strip as the interventions desk's book-session overlay: LRN +
+  // section pills come from the referral row so both desks share one look.
+  const studentCard = activeRow
+    ? {
+        name: activeRow.student,
+        lrn: activeRow.lrn,
+        section: activeRow.section,
+        grade: activeRow.grade,
+        sub: [activeRow.grade, activeRow.section].filter(Boolean).join(" · "),
+      }
+    : null;
+
   return (
     <>
 
@@ -53,14 +65,7 @@ export function GuidanceSessionDialogs({
             })
           }
           description="Schedule a counseling session"
-          studentCard={
-            activeRow
-              ? {
-                  name: activeRow.student,
-                  sub: [activeRow.grade, activeRow.section].filter(Boolean).join(" · "),
-                }
-              : null
-          }
+          studentCard={studentCard}
           fetchTakenTimes={(dateKey, signal) => fetchDaySchedule(dateKey, { signal })}
           venueHint="Held at the guidance office unless another venue is given."
           venuePlaceholder="Guidance office"
@@ -71,6 +76,7 @@ export function GuidanceSessionDialogs({
           }
           busy={isActionPending}
           idPrefix="ref-sess"
+          variant="board"
         />
       )}
 
@@ -131,6 +137,7 @@ export function GuidanceSessionDialogs({
               ? `Currently ${formatActionTime(activeSession.scheduledAt)}. Pick the new date and time.`
               : "Pick the new date and time."
           }
+          studentCard={studentCard}
           fetchTakenTimes={(dateKey, signal) => fetchDaySchedule(dateKey, { signal })}
           venueHint="Held at the guidance office unless another venue is given."
           venuePlaceholder="Guidance office"
@@ -146,6 +153,7 @@ export function GuidanceSessionDialogs({
           initialTime={activeSession ? toTimeInputValue(activeSession.scheduledAt) : ""}
           initialVenue={activeSession?.venue ?? ""}
           initialSessionType={activeSession?.sessionType}
+          variant="board"
         />
       )}
 

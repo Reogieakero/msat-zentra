@@ -25,7 +25,7 @@ import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
 import { TermAccessCard } from "@/components/schedule/TermAccessCard";
 import { NoTermRecordsPanel } from "@/components/schedule/NoTermRecordsPanel";
 import { MyWeekGrid } from "./MyWeekGrid";
-import { ZentraPageHeaderSkeleton, ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TermGrant {
   via: string;
@@ -224,9 +224,24 @@ export function MyTimetable() {
   if (meQuery.isPending) {
     return (
       <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading classes">
-        <ZentraPageHeaderSkeleton />
-        <ZentraFilterBarSkeleton selects={1} />
-        <ZentraTableSkeleton rows={8} columns={4} />
+        <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="min-w-0">
+              <Skeleton className="h-8 w-40" />
+              <Skeleton className="mt-1 h-5 w-64" />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex flex-col gap-2 rounded-xl border border-border p-2.5">
+                  <Skeleton className="h-5 w-24 rounded-md" />
+                  {[0, 1, 2].map((j) => (
+                    <Skeleton key={j} className="h-24 rounded-lg" />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

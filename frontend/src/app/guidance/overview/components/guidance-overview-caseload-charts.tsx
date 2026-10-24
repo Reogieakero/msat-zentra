@@ -1,228 +1,87 @@
 "use client";
 
-import * as React from "react";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Inbox, School } from "lucide-react";
-import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
-import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
+import {
+  GuidanceDonutPanel,
+  GuidanceSectionsLinePanel,
+} from "./guidance-overview-panels";
 import type {
   GuidanceReferralTypeRow,
   GuidanceSectionHeatRow,
 } from "@/services/guidance/overview.types";
-import styles from "./guidance-overview-caseload-charts.module.css";
-
-const TOOLTIP_STYLE: React.CSSProperties = {
-  borderRadius: 8,
-  border: "1px solid var(--border)",
-  background: "var(--card)",
-  color: "var(--foreground)",
-  fontSize: 12,
-};
-
-const BAR_END_RADIUS = 4;
-
-type BarShapeProps = {
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  fill?: string;
-  payload?: { moderate?: number };
-};
-
-function HighBarShape(props: BarShapeProps) {
-  const { x = 0, y = 0, width = 0, height = 0, fill, payload } = props;
-  if (width <= 0 || height <= 0) return null;
-  const roundRight = (payload?.moderate ?? 0) === 0;
-  const r = roundRight ? Math.min(BAR_END_RADIUS, width / 2, height / 2) : 0;
-  if (r <= 0) {
-    return <rect x={x} y={y} width={width} height={height} fill={fill} />;
-  }
-  return (
-    <path
-      d={
-        `M ${x} ${y} ` +
-        `H ${x + width - r} ` +
-        `Q ${x + width} ${y} ${x + width} ${y + r} ` +
-        `V ${y + height - r} ` +
-        `Q ${x + width} ${y + height} ${x + width - r} ${y + height} ` +
-        `H ${x} Z`
-      }
-      fill={fill}
-    />
-  );
-}
+import styles from "./guidance-overview.module.css";
 
 interface GuidanceOverviewCaseloadChartsProps {
   referralsByType: GuidanceReferralTypeRow[];
   sectionHeat: GuidanceSectionHeatRow[];
-
-  primary?: string | null;
 }
 
-function interpretReferralTypes(rows: GuidanceReferralTypeRow[]): string {
-  const total = rows.reduce((s, r) => s + r.count, 0);
-  if (total === 0) return "No cases referred to you for the active term yet.";
-  const adm = rows.find((r) => r.type === "ADM")?.count ?? 0;
-  const counseling = rows.find((r) => r.type === "Counseling")?.count ?? 0;
-  return `${total} referred cases this term — ${adm} ADM and ${counseling} counseling.`;
-}
-
+/**
+ * Caseload section — a wide stacked-bar board for sections needing attention
+ * plus the referred-cases donut, in the same 2-up grid as the nurse trends
+ * boards. Top 6 sections by risk, amber palette.
+ */
 export function GuidanceOverviewCaseloadCharts({
   referralsByType,
   sectionHeat,
-  primary,
 }: GuidanceOverviewCaseloadChartsProps) {
+  const typeRows = referralsByType.map((r) => ({
+    key: r.type,
+    label: r.type,
+    count: r.count,
+  }));
 
-  const scale = usePrimaryScale(2, primary);
-  const TYPE_COLORS: Record<string, string> = {
-    ADM: scale[0],
-    Counseling: scale[1],
-  };
-  const SECTION_HIGH_COLOR = scale[0];
-  const SECTION_MODERATE_COLOR = scale[1];
-  const referralsTotal = referralsByType.reduce((s, r) => s + r.count, 0);
-  const topSections = [...sectionHeat]
-    .sort((a, b) => b.high - a.high || b.moderate - a.moderate)
-    .slice(0, 6);
-  const referralsEmpty = referralsTotal === 0;
-  const sectionsEmpty = topSections.length === 0 || topSections.every((s) => s.high === 0 && s.moderate === 0);
+  const sectionRows = [...sectionHeat]
+    .sort((a, b) => b.high + b.moderate - (a.high + a.moderate))
+    .slice(0, 6)
+    .map((r) => ({
+      key: `${r.grade}-${r.section}`,
+      label: r.section,
+      high: r.high,
+      moderate: r.moderate,
+    }));
+
+  const referralsTotal = typeRows.reduce((n, r) => n + r.count, 0);
+  const admCount = typeRows.find((r) => r.key === "ADM")?.count ?? 0;
+  const counselingCount =
+    typeRows.find((r) => r.key === "Counseling")?.count ?? 0;
+  const referralsText =
+    referralsTotal === 0
+      ? "No cases referred to you for the active term yet."
+      : `${referralsTotal} referred cases this term — ${admCount} ADM and ${counselingCount} counseling.`;
+
+  const topSection = sectionRows[0];
+  const sectionsTotal = sectionRows.reduce(
+    (n, r) => n + r.high + r.moderate,
+    0,
+  );
+  const sectionsText =
+    !topSection || sectionsTotal === 0
+      ? "No section has at-risk students right now."
+      : `${topSection.label} leads with ${topSection.high} high-risk and ${topSection.moderate} moderate-risk students.`;
 
   return (
-    <div className={styles.chartGrid}>
-      <Card className={styles.card}>
-        <span className={styles.glowClip} aria-hidden="true">
-          <span className={styles.cardGlow} />
-        </span>
-        {referralsEmpty ? null : (
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>Referred cases by type</CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            ADM vs counseling split of the cases on your desk this term.
-          </CardDescription>
-        </CardHeader>
-        )}
-        <CardContent className={styles.cardBody}>
-          {referralsEmpty ? (
-            <GuidanceEmptyState
-              icon={Inbox}
-              title="No referred cases"
-              hint="No cases referred to you for the active term yet."
-            />
-          ) : (
-            <>
-              <div className={styles.donutWrap}>
-                <ResponsiveContainer width="100%" height={148}>
-                  <PieChart>
-                    <Pie
-                      data={referralsByType}
-                      dataKey="count"
-                      nameKey="type"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={42}
-                      outerRadius={62}
-                      paddingAngle={2}
-                      strokeWidth={0}
-                    >
-                      {referralsByType.map((r) => (
-                        <Cell key={r.type} fill={TYPE_COLORS[r.type] ?? "#737373"} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className={styles.donutCenter}>
-                  <span className={styles.donutValue}>{referralsTotal}</span>
-                  <span className={styles.donutCaption}>records</span>
-                </div>
-              </div>
-              <ul className={styles.legend}>
-                {referralsByType.map((r) => (
-                  <li key={r.type} className={styles.legendItem}>
-                    <span className={styles.legendLabel}>
-                      <span
-                        className={styles.legendDot}
-                        style={{ backgroundColor: TYPE_COLORS[r.type] ?? "#737373" }}
-                        aria-hidden
-                      />
-                      {r.type}
-                    </span>
-                    <span className={styles.legendCount}>{r.count}</span>
-                  </li>
-                ))}
-              </ul>
-          <p className={styles.interpretation}>
-            <span className={styles.interpretationLabel}>What it means · </span>
-            {interpretReferralTypes(referralsByType)}
-          </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className={styles.cardWide}>
-        <span className={styles.glowClip} aria-hidden="true">
-          <span className={styles.cardGlow} />
-        </span>
-        {sectionsEmpty ? null : (
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>Sections needing attention</CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            High-risk students per section · top 6 sections.
-          </CardDescription>
-        </CardHeader>
-        )}
-        <CardContent className={styles.cardBody}>
-          {sectionsEmpty ? (
-            <GuidanceEmptyState
-              icon={School}
-              title="No sections need attention"
-              hint={
-                topSections.length === 0
-                  ? "No sections found for the active school year."
-                  : "No section has at-risk students right now."
-              }
-            />
-          ) : (
-            <>
-            <div className={styles.barWrap}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topSections} layout="vertical" margin={{ top: 4, right: 12, bottom: 0, left: 8 }}>
-                  <XAxis type="number" hide domain={[0, (dataMax: number) => Math.max(1, dataMax)]} />
-                  <YAxis
-                    type="category"
-                    dataKey="section"
-                    tickLine={false}
-                    axisLine={false}
-                    width={64}
-                    tick={{ fontSize: 12, fill: "var(--foreground)" }}
-                  />
-                  <Tooltip cursor={{ fill: "color-mix(in oklch, var(--foreground), transparent 95%)" }} contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="high" name="High" stackId="risk" fill={SECTION_HIGH_COLOR} maxBarSize={18} shape={<HighBarShape />} />
-                  <Bar dataKey="moderate" name="Moderate" stackId="risk" fill={SECTION_MODERATE_COLOR} radius={[0, 4, 4, 0]} maxBarSize={18} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          <p className={styles.interpretation}>
-            <span className={styles.interpretationLabel}>What it means · </span>
-            {`${topSections[0]?.section} leads with ${topSections[0]?.high} high-risk and ${topSections[0]?.moderate} moderate-risk students.`}
-          </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
+    <div className={styles.twoCol}>
+      <GuidanceSectionsLinePanel
+        title="Sections needing attention"
+        description="High-risk students per section · top 6 sections."
+        rows={sectionRows}
+        emptyTitle="No sections need attention"
+        emptyText="No section has at-risk students right now."
+        icon={School}
+        interpretation={sectionsText}
+      />
+      <GuidanceDonutPanel
+        title="Referred cases by type"
+        description="ADM vs counseling split of the cases on your desk this term."
+        rows={typeRows}
+        unit="records"
+        emptyTitle="No referred cases"
+        emptyText="No cases referred to you for the active term yet."
+        icon={Inbox}
+        sortDescending={false}
+        interpretation={referralsText}
+      />
     </div>
   );
 }

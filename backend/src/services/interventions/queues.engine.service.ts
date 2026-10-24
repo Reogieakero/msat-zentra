@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
-import { evaluateRisk, evaluateRosterRisk } from "../risk.js";
+import { evaluateRisk, evaluateRosterRisk, recomputeRisk, recomputeRosterRisk } from "../risk.js";
 
 export interface EngineQuery {
   studentId: string | null;
@@ -103,6 +103,17 @@ export async function getEngineBreakdown(query: EngineQuery) {
       rate: s.total > 0 ? s.present / s.total : null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Self-heal stale snapshots: when the live engine disagrees with the stored
+  // snapshot (e.g. after a rule fix), persist the fresh result in the
+  // background so "Stored now" converges without waiting for the sweep.
+  if (!snapshot || snapshot.riskLevel !== live.result.riskLevel) {
+    void (studentId
+      ? recomputeRisk(studentId, termId)
+      : recomputeRosterRisk(rosterId!, termId)
+    ).catch(() => undefined);
+  }
+
   return {
     live: {
       level: live.result.riskLevel,

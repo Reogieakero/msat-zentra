@@ -4,38 +4,30 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pie, PieChart, Cell } from "recharts";
 import { Users } from "lucide-react";
-import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
-import {
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import { useTerm } from "@/lib/term/TermContext";
 import { fetchOverview } from "@/services/principal/overview.service";
 import type { OverviewSectionRow } from "@/services/principal/overview.types";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { FriendlyTooltip } from "./overview-chart-tip";
 import styles from "./OverviewPopulation.module.css";
 
 const chartConfig = {
-  value: { label: "Students", color: "var(--primary)" },
+  count: { label: "Students", color: "#f59e0b" },
+  value: { label: "Students", color: "#f59e0b" },
 } satisfies ChartConfig;
 
 const GRADE_ORDER = ["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
 
+// Amber desk accent, stepped through the same mixes as the registry charts.
+const AMBER = "#f59e0b";
 const POPULATION_MIX = [100, 70, 45, 25];
 
 function colorFor(index: number): string {
   const mix = POPULATION_MIX[index % POPULATION_MIX.length] ?? 100;
-  return mix === 100
-    ? "var(--primary)"
-    : `color-mix(in oklch, var(--primary) ${mix}%, var(--card))`;
+  return mix === 100 ? AMBER : `color-mix(in oklch, ${AMBER} ${mix}%, var(--card))`;
 }
 
 interface GradeGroup {
@@ -86,11 +78,7 @@ export function OverviewPopulation() {
     }
     return GRADE_ORDER.filter((g) => rowsByGrade.has(g)).map((g) => {
       const list = (rowsByGrade.get(g) ?? []).map((r) => ({ ...r, count: toCount(r.count) }));
-      return {
-        grade: g,
-        total: list.reduce((sum, r) => sum + r.count, 0),
-        rows: list,
-      };
+      return { grade: g, total: list.reduce((sum, r) => sum + r.count, 0), rows: list };
     });
   }, [data]);
 
@@ -105,125 +93,104 @@ export function OverviewPopulation() {
 
   const populationEmpty = !data || groups.length === 0 || totalEnrolled === 0;
 
-  return (
-    <section aria-label="Section populations" className={styles.section}>
-      {!isPending && !isError && populationEmpty ? null : (
-      <div className={styles.header}>
-        <div className={styles.headerText}>
-          <CardTitle>Section populations</CardTitle>
-          <CardDescription>
-            Enrolled students per section for the active school year.
-          </CardDescription>
-        </div>
-        <div>
-          {isPending ? (
-            <Skeleton className={styles.headerBadgeSkel} />
-          ) : !populationEmpty ? (
-            <Badge variant="secondary" className={styles.popBadge}>
-              <Users className={styles.popIcon} aria-hidden />
-              {totalEnrolled} enrolled
-            </Badge>
-          ) : null}
-        </div>
-      </div>
-      )}
-      <div className={styles.content}>
-        {isPending ? (
-          <>
-            <div className={styles.groupSkelWrap}>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className={styles.groupSkel}>
-                  <Skeleton className={styles.groupSkelTitle} />
-                  <div className={styles.groupSkelBody}>
-                    <Skeleton className={styles.groupSkelDonut} />
-                    <div className={styles.groupSkelRows}>
-                      {Array.from({ length: 3 }).map((_, j) => (
-                        <Skeleton key={j} className={styles.groupSkelBar} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
+  const body = isPending ? (
+    <div className={styles.groupSkelWrap}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className={styles.groupSkel}>
+          <Skeleton className={styles.groupSkelTitle} />
+          <div className={styles.groupSkelBody}>
+            <Skeleton className={styles.groupSkelDonut} />
+            <div className={styles.groupSkelRows}>
+              {Array.from({ length: 3 }).map((_, j) => (
+                <Skeleton key={j} className={styles.groupSkelBar} />
               ))}
             </div>
-          </>
-        ) : isError ? (
-          <p className={styles.empty}>Could not load section populations.</p>
-        ) : populationEmpty ? (
-          <PrincipalEmptyCard
-            icon={Users}
-            title="No sections on file"
-            hint="No sections on file for the active school year. Sections will appear here once created."
-          />
-        ) : (
-          <>
-            <div className={styles.groups}>
-              {groups.map((g) => (
-                <div key={g.grade} className={styles.group}>
-                  <span className={assign.glowClip} aria-hidden="true">
-                    <span className={assign.cardGlow} />
-                  </span>
-                  <div className={styles.groupHead}>
-                    <h4 className={styles.groupTitle}>{g.grade}</h4>
-                    <span className={styles.groupTotal}>{g.total} students</span>
-                  </div>
-                  <div className={styles.groupBody}>
-                    <div className={styles.donutWrap}>
-                      <ChartContainer config={chartConfig} className={styles.donut}>
-                        <PieChart>
-                          <ChartTooltip
-                            wrapperStyle={{ zIndex: 50 }}
-                            content={
-                              <ChartTooltipContent
-                                className={styles.tooltipSolid}
-                                formatter={(value, name) => `${name}: ${value} student(s)`}
-                              />
-                            }
-                          />
-                          <Pie
-                            data={g.rows}
-                            dataKey="count"
-                            nameKey="section"
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={34}
-                            outerRadius={50}
-                            paddingAngle={2}
-                            strokeWidth={0}
-                          >
-                            {g.rows.map((r, i) => (
-                              <Cell key={r.section} style={{ fill: colorFor(i) }} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ChartContainer>
-                      <div className={styles.donutCenter}>
-                        <span className={styles.donutTotal}>{g.total}</span>
-                        <span className={styles.donutLabel}>students</span>
-                      </div>
-                    </div>
-                    <ul className={styles.sectionList}>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : isError ? (
+    <p className={styles.empty}>Could not load section populations.</p>
+  ) : populationEmpty ? (
+    <PrincipalEmptyState
+      icon={Users}
+      title="No sections on file"
+      hint="No sections on file for the active school year. Sections will appear here once created."
+    />
+  ) : (
+    <>
+      <div className={styles.groups}>
+        {groups.map((g) => (
+          <div key={g.grade} className={styles.group}>
+            <div className={styles.groupHead}>
+              <h4 className={styles.groupTitle}>{g.grade}</h4>
+              <span className={styles.groupTotal}>{g.total} students</span>
+            </div>
+            <div className={styles.groupBody}>
+              <div className={styles.donutWrap}>
+                <ChartContainer config={chartConfig} className={styles.donut}>
+                  <PieChart>
+                    <ChartTooltip
+                      wrapperStyle={{ zIndex: 50 }}
+                      content={<FriendlyTooltip unit="students" fallbackName="Section" />}
+                    />
+                    <Pie
+                      data={g.rows}
+                      dataKey="count"
+                      nameKey="section"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={28}
+                      outerRadius={42}
+                      paddingAngle={2}
+                      strokeWidth={0}
+                    >
                       {g.rows.map((r, i) => (
-                        <li key={r.section} className={styles.sectionRow}>
-                          <span
-                            className={styles.sectionDot}
-                            style={{ backgroundColor: colorFor(i) }}
-                            aria-hidden
-                          />
-                          <span className={styles.sectionName}>{r.section}</span>
-                          <span className={styles.sectionCount}>{toCount(r.count)}</span>
-                        </li>
+                        <Cell key={r.section} style={{ fill: colorFor(i) }} />
                       ))}
-                    </ul>
-                  </div>
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+                <div className={styles.donutCenter}>
+                  <span className={styles.donutTotal}>{g.total}</span>
+                  <span className={styles.donutLabel}>students</span>
                 </div>
-              ))}
+              </div>
+              <ul className={styles.sectionList}>
+                {g.rows.map((r, i) => (
+                  <li key={r.section} className={styles.sectionRow}>
+                    <span
+                      className={styles.sectionDot}
+                      style={{ backgroundColor: colorFor(i) }}
+                      aria-hidden
+                    />
+                    <span className={styles.sectionName}>{r.section}</span>
+                    <span className={styles.sectionCount}>{toCount(r.count)}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            {interpretation ? (
-              <p className={styles.chartInterpretation}>{interpretation}</p>
-            ) : null}
-          </>
-        )}
+          </div>
+        ))}
       </div>
-    </section>
+      {interpretation ? (
+        <p className={styles.chartInterpretation}>{interpretation}</p>
+      ) : null}
+    </>
+  );
+
+  return (
+    <KanbanBoard
+      title="Section populations"
+      icon={
+        <span className={styles.accent} aria-hidden>
+          <Users size={14} />
+        </span>
+      }
+      count={isPending || populationEmpty ? undefined : totalEnrolled}
+      description="Enrolled students per section for the active school year."
+    >
+      <div className={styles.boardBody}>{body}</div>
+    </KanbanBoard>
   );
 }

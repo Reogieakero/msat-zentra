@@ -26,6 +26,7 @@ export function NurseAlertsDialogsHost({
   onChanged,
   sessionDialog,
   onSessionClose,
+  onSessionConfirmed,
   docsFor,
   onDocsClose,
   formSheet,
@@ -44,6 +45,9 @@ export function NurseAlertsDialogsHost({
   onChanged: () => void;
   sessionDialog: { row: NurseQueueRow; session: NurseSessionItem; kind: SessionDialogKind } | null;
   onSessionClose: () => void;
+  /** Fired the moment a move/cancel is confirmed — the page closes the
+      Clinic sessions board too and the Dock reports the outcome. */
+  onSessionConfirmed: () => void;
   docsFor: { row: NurseQueueRow; session: NurseSessionItem } | null;
   onDocsClose: () => void;
   formSheet: { row: NurseQueueRow; draft: AdmReviewDraft } | null;
@@ -79,6 +83,7 @@ export function NurseAlertsDialogsHost({
           session={sessionDialog.session}
           open
           onClose={onSessionClose}
+          onConfirmed={onSessionConfirmed}
           onChanged={onChanged}
         />
       )}
@@ -86,8 +91,10 @@ export function NurseAlertsDialogsHost({
         <MoveSessionDialog
           referralId={sessionDialog.row.id}
           session={sessionDialog.session}
+          student={sessionDialog.row.student}
           open
           onClose={onSessionClose}
+          onConfirmed={onSessionConfirmed}
           onChanged={onChanged}
         />
       )}
@@ -95,8 +102,10 @@ export function NurseAlertsDialogsHost({
         <CancelSessionDialog
           referralId={sessionDialog.row.id}
           session={sessionDialog.session}
+          student={sessionDialog.row.student}
           open
           onClose={onSessionClose}
+          onConfirmed={onSessionConfirmed}
           onChanged={onChanged}
         />
       )}
@@ -115,6 +124,7 @@ export function NurseAlertsDialogsHost({
           session={docsFor.session}
           open
           onClose={onDocsClose}
+          onConfirmed={onSessionConfirmed}
           onChanged={onChanged}
         />
       )}

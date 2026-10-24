@@ -1,16 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { Ban, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import styles from "./BookSessionDialog.module.css";
@@ -58,47 +51,32 @@ export function CancelSessionDialog({
   if (!open) return null;
 
   return (
-    <Dialog
+    <KanbanOverlay
       open
-      onOpenChange={(next) => {
-        if (!next && !busy) {
-          onClose();
-          setError(null);
-        }
+      onClose={() => {
+        if (busy) return;
+        onClose();
+        setError(null);
       }}
-    >
-      <DialogContent
-        className={styles.dialogScrollHidden}
-        aria-busy={busy || undefined}
-      >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <div className={styles.formGrid}>
-          <div className={styles.formFull}>
-            <Label htmlFor={`${idPrefix}-reason`}>{reasonLabel}</Label>
-            <Textarea
-              id={`${idPrefix}-reason`}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={reasonPlaceholder}
-              maxLength={500}
-            />
-          </div>
-        </div>
-        {error || serverError ? (
-          <div className={styles.errorBlock} role="alert">
-            <p className={styles.errorText}>{error ?? serverError}</p>
-          </div>
-        ) : null}
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={busy}>
+      dismissable={!busy}
+      busy={busy}
+      width="md"
+      title={title}
+      icon={<Ban className="size-3.5" aria-hidden="true" />}
+      description={description}
+      footer={
+        <div className="flex flex-col-reverse gap-2 px-1 pb-1 sm:flex-row sm:justify-end">
+          <Button
+            variant="outline"
+            className="h-6 px-2.5 text-xs"
+            onClick={onClose}
+            disabled={busy}
+          >
             {keepLabel}
           </Button>
           <Button
             variant="destructive"
-            className={styles.btnRed}
+            className={`${styles.btnRed} h-6 px-2.5 text-xs`}
             onClick={() => {
               setError(null);
               onSubmit(reason.trim() ? reason.trim() : undefined);
@@ -106,11 +84,31 @@ export function CancelSessionDialog({
             disabled={busy}
             aria-busy={busy || undefined}
           >
-            {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
+            {busy ? (
+              <Loader2 className="size-3.5 animate-spin" aria-hidden />
+            ) : null}
             {busy ? "Cancelling…" : submitLabel}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <div className={styles.formGrid}>
+        <div className={styles.formFull}>
+          <Label htmlFor={`${idPrefix}-reason`}>{reasonLabel}</Label>
+          <Textarea
+            id={`${idPrefix}-reason`}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={reasonPlaceholder}
+            maxLength={500}
+          />
+        </div>
+      </div>
+      {error || serverError ? (
+        <div className={styles.errorBlock} role="alert">
+          <p className={styles.errorText}>{error ?? serverError}</p>
+        </div>
+      ) : null}
+    </KanbanOverlay>
   );
 }

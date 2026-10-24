@@ -1,14 +1,7 @@
 "use client";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { GuidanceDialogProps } from "./guidance-dialog-props";
@@ -22,30 +15,15 @@ export function NoteDialog({
   handleAction,
 }: GuidanceDialogProps) {
   return (
-    <Dialog open={dialogs.note} onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("note") }}>
-      <DialogContent
-        className={styles.dialogScrollHidden}
-        aria-busy={isActionPending || undefined}
-      >
-        <DialogHeader>
-          <DialogTitle>Add a private note</DialogTitle>
-          <DialogDescription>
-            Only guidance staff can see this note.
-          </DialogDescription>
-        </DialogHeader>
-        <div>
-          <Label htmlFor="noteText">Note</Label>
-          <Textarea
-            id="noteText"
-            value={form.noteText}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, noteText: e.target.value }))
-            }
-            placeholder="Write your note here…"
-            maxLength={2000}
-          />
-        </div>
-        <DialogFooter>
+    <KanbanOverlay
+      open={dialogs.note}
+      onClose={() => closeDialog("note")}
+      dismissable={!isActionPending}
+      busy={isActionPending}
+      title="Add a private note"
+      description="Only guidance staff can see this note."
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
           <Button
             variant="destructive"
             className={styles.btnRed}
@@ -61,8 +39,21 @@ export function NoteDialog({
             {isActionPending ? <Loader2 className={styles.spin} aria-hidden="true" /> : null}
             {isActionPending ? "Saving…" : "Save note"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <div>
+        <Label htmlFor="noteText">Note</Label>
+        <Textarea
+          id="noteText"
+          value={form.noteText}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, noteText: e.target.value }))
+          }
+          placeholder="Write your note here…"
+          maxLength={2000}
+        />
+      </div>
+    </KanbanOverlay>
   );
 }

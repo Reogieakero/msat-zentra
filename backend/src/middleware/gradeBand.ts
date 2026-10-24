@@ -4,7 +4,18 @@ import { prisma } from "../lib/prisma.js";
 import type { GradeLevel } from "../generated/prisma/client.js";
 import { bandAllowed, bandForGrade, isBandRole } from "../lib/roles.js";
 
-export function gradeBandGuard(resolveStudentId: (req: Request) => string | Promise<string>) {
+export function gradeBandGuard(
+  resolveStudentId: (req: Request) => string | Promise<string>,
+  options?: {
+    /**
+     * Let the request through when the target's grade can't be resolved at
+     * all (a sign-up whose LRN isn't in any roster yet). Account rejection
+     * passes this so either desk can clear bogus sign-ups; approval keeps the
+     * hard 404 because it must provision a grade/section from the roster.
+     */
+    allowUnresolved?: boolean;
+  },
+) {
   return async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) return next(new AppError(401, "UNAUTHORIZED", "Authentication required"));
     if (!isBandRole(req.user.role)) return next();
@@ -44,7 +55,10 @@ export function gradeBandGuard(resolveStudentId: (req: Request) => string | Prom
           grade = roster?.gradeLevel;
         }
       }
-      if (!grade) return next(new AppError(404, "STUDENT_NOT_FOUND", "Student profile not found"));
+      if (!grade) {
+        if (options?.allowUnresolved) return next();
+        return next(new AppError(404, "STUDENT_NOT_FOUND", "Student profile not found"));
+      }
 
       const band = bandForGrade(grade);
       if (!bandAllowed(req.user.role, band)) {

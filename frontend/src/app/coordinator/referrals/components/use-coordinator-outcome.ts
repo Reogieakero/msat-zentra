@@ -3,6 +3,7 @@ import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { apiErrorMessage } from "@/lib/api/errors";
@@ -16,8 +17,13 @@ interface Args {
   invalidateReferrals: () => void;
   onMissed?: (row: AdmCaseRow) => void;
 }
+interface OutcomeVars {
+  target: AdmMeeting;
+  taskId: string | null;
+}
 export function useCoordinatorOutcome({ invalidateReferrals, onMissed }: Args) {
   const queryClient = useQueryClient();
+  const dock = useDock();
   const [outcomeTarget, setOutcomeTarget] = React.useState<AdmMeeting | null>(
     null,
   );
@@ -42,16 +48,15 @@ export function useCoordinatorOutcome({ invalidateReferrals, onMissed }: Args) {
     setOutcomeInviteeIds([]);
   }
   const outcomeMutation = useMutation({
-    mutationFn: async () => {
-      if (!outcomeTarget) throw new Error("No meeting selected.");
-      const byId = new Map((outcomeTarget.invitees ?? []).map((u) => [u.id, u]));
-      const kept = (outcomeTarget.attendees ?? []).filter((a) => !a.userId);
+    mutationFn: async ({ target }: OutcomeVars) => {
+      const byId = new Map((target.invitees ?? []).map((u) => [u.id, u]));
+      const kept = (target.attendees ?? []).filter((a) => !a.userId);
       const checked = outcomeInviteeIds
         .map((id) => byId.get(id))
         .filter((u): u is AdmMeetingInvitee => !!u)
         .map(inviteeToAttendee);
       const { data } = await apiClient.patch(
-        `/api/adm/meetings/${outcomeTarget.id}`,
+        `/api/adm/meetings/${target.id}`,
         {
           attended: outcomeAttended,
           ...(outcomeMinutes.trim()
@@ -67,15 +72,20 @@ export function useCoordinatorOutcome({ invalidateReferrals, onMissed }: Args) {
       );
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, vars) => {
       void data;
-      if (outcomeTarget) markSelfNotified(outcomeTarget.id);
+      markSelfNotified(vars.target.id);
       void queryClient.invalidateQueries({ queryKey: ["coordinator-meetings"] });
       invalidateReferrals();
       refreshBookingReminders();
+      if (vars.taskId) {
+        dock.completeTask(
+          vars.taskId,
+          outcomeAttended ? "Outcome recorded" : "Marked as not attended",
+        );
+      }
       const wasMissed = !outcomeAttended;
       const missedRow = outcomeRow;
-      closeOutcome();
       if (wasMissed && missedRow) {
         onMissed?.(missedRow);
         toast.success({
@@ -91,11 +101,13 @@ export function useCoordinatorOutcome({ invalidateReferrals, onMissed }: Args) {
         });
       }
     },
-    onError: (err) =>
+    onError: (err, vars) => {
+      if (vars?.taskId) dock.failTask(vars.taskId, apiErrorMessage(err));
       toast.error({
         title: "Could not record outcome",
         description: apiErrorMessage(err),
-      }),
+      });
+    },
   });
   return {
     outcomeTarget,
@@ -112,7 +124,23 @@ export function useCoordinatorOutcome({ invalidateReferrals, onMissed }: Args) {
     openOutcome,
     outcomePending: outcomeMutation.isPending,
     confirmOutcome: () => {
-      if (!outcomeMutation.isPending) outcomeMutation.mutate();
+      if (outcomeMutation.isPending || !outcomeTarget) return;
+      const target = outcomeTarget;
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "generic",
+          title: "Recording meeting outcome",
+          description: `${
+            target.venue === "home" ? "Home visitation" : "In-school meeting"
+          } · ${outcomeAttended ? "attended" : "not attended"}`,
+        });
+      } catch {
+        taskId = null;
+      }
+      // Close at once — the shared Dock reports the request until it settles.
+      closeOutcome();
+      outcomeMutation.mutate({ target, taskId });
     },
   };
 }

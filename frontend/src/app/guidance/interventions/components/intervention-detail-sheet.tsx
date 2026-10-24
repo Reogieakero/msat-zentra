@@ -109,11 +109,11 @@ export function InterventionDetailSheet({
     if (!Number.isFinite(d.getTime())) return detectedText;
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   })();
-  // Custom drawer chrome (no shadcn/Radix): enter/exit slide, Esc to
-  // close, body scroll lock, initial focus + a lightweight focus trap.
+  // Custom modal chrome (no shadcn/Radix): enter/exit fade + scale, Esc
+  // to close, body scroll lock, initial focus + a lightweight focus trap.
   const [mounted, setMounted] = React.useState(false);
   const [entered, setEntered] = React.useState(false);
-  const panelRef = React.useRef<HTMLElement | null>(null);
+  const panelRef = React.useRef<HTMLDivElement | null>(null);
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
   const prevFocused = React.useRef<Element | null>(null);
 
@@ -173,27 +173,30 @@ export function InterventionDetailSheet({
   if (!mounted || !expanded) return null;
 
   const drawer = (
-    <div className="fixed inset-0 z-50" role="presentation">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="presentation"
+    >
       {/* backdrop */}
       <div
         aria-hidden
         onMouseDown={(e) => {
           if (e.target === e.currentTarget) onToggleDetails();
         }}
-        className={`absolute inset-0 bg-black/10 supports-backdrop-filter:backdrop-blur-xs transition-opacity duration-200 ${entered ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 bg-black/30 supports-backdrop-filter:backdrop-blur-xs transition-opacity duration-200 ${entered ? "opacity-100" : "opacity-0"}`}
       />
-      {/* panel */}
-      <aside
+      {/* centered panel */}
+      <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="case-drawer-title"
         aria-describedby="case-drawer-description"
         tabIndex={-1}
-        className={`absolute inset-y-0 right-0 flex w-full flex-col gap-0 bg-popover text-sm text-popover-foreground shadow-lg transition-transform duration-200 ease-in-out sm:w-1/2 ${entered ? "translate-x-0" : "translate-x-full"}`}
+        className={`relative flex max-h-[86vh] w-full max-w-3xl flex-col gap-0 overflow-hidden rounded-xl border border-border bg-popover text-sm text-popover-foreground shadow-2xl transition-[opacity,transform] duration-200 ease-out ${entered ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
       >
         {/* ---------- header ---------- */}
-        <div className="space-y-3.5 border-b border-slate-200 px-6 pb-[18px] pt-5 text-left dark:border-white/10">
+        <div className="space-y-3.5 border-b border-border/70 px-6 pb-[18px] pr-14 pt-5 text-left">
           <div className="flex items-start gap-3.5">
             <div
               aria-hidden
@@ -218,7 +221,7 @@ export function InterventionDetailSheet({
               type="button"
               onClick={onToggleDetails}
               aria-label="Close"
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10"
+              className="absolute right-4 top-4 z-10 flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10"
             >
               <X className="size-[18px]" aria-hidden />
             </button>
@@ -452,7 +455,7 @@ export function InterventionDetailSheet({
             </>
           )}
         </div>
-      </aside>
+      </div>
     </div>
   );
 

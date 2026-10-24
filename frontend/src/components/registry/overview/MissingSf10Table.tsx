@@ -30,6 +30,8 @@ import styles from "./OverviewApprovals.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export function MissingSf10Table({ desk }: { desk: RegistryDesk }) {
+  // Band label for this desk's copy (record keeper serves G7–10).
+  const bandLabel = desk === "registrar" ? "G11–12" : "G7–10";
   const router = useRouter();
   const [page, setPage] = React.useState(1);
 
@@ -70,7 +72,7 @@ export function MissingSf10Table({ desk }: { desk: RegistryDesk }) {
               Missing SF10 Records
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              G11–12 students with no SF10 record on file yet.
+              {bandLabel} students with no SF10 record on file yet.
             </p>
           </div>
           <div className={styles.headerActions}>
@@ -94,7 +96,7 @@ export function MissingSf10Table({ desk }: { desk: RegistryDesk }) {
             </span>
             <p className={styles.emptyTitle}>All caught up</p>
             <p className={styles.emptyHint}>
-              Every G11–12 student has an SF10 record on file.
+              Every {bandLabel} student has an SF10 record on file.
             </p>
           </div>
         ) : (

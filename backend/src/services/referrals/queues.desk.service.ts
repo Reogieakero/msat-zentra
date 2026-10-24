@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { sessionCancelledByRole } from "../../lib/sessionActors.js";
+import { NURSE_QUEUE_MAX_PAGE_SIZE } from "../../modules/referrals/referrals.repository.js";
 import type { ReferralContext } from "./referral.types.js";
 
 export interface QueueListQuery {
@@ -10,10 +11,51 @@ export interface QueueListQuery {
   track: string;
   status: string;
   highlight: string;
+  sort: string;
+}
+
+/** Referred-time ranking for `sort=latest`. The referred time the desks
+    display is the earliest audit log for the referral (falling back to the
+    anecdote's observation time) — the whole filtered set must be ranked by
+    it, because Referral.id is a random uuid and an id-ordered page pick is
+    an arbitrary sample, not the newest rows. */
+async function referralIdsByReferredTime(where: any): Promise<string[]> {
+  const rows = await prisma.referral.findMany({
+    where,
+    select: {
+      id: true,
+      anecdotalRecord: { select: { observationDatetime: true } },
+    },
+  });
+  if (rows.length === 0) return [];
+  const firstLogs = await prisma.auditLog.groupBy({
+    by: ["sourceId"],
+    where: {
+      sourceTable: "referrals",
+      sourceId: { in: rows.map((r) => r.id) },
+    },
+    _min: { createdAt: true },
+  });
+  const referredById = new Map<string, number>();
+  for (const log of firstLogs) {
+    if (log._min.createdAt) {
+      referredById.set(log.sourceId, log._min.createdAt.getTime());
+    }
+  }
+  return rows
+    .map((r) => ({
+      id: r.id,
+      at:
+        referredById.get(r.id) ??
+        r.anecdotalRecord?.observationDatetime?.getTime() ??
+        0,
+    }))
+    .sort((a, b) => b.at - a.at)
+    .map((r) => r.id);
 }
 
 export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
-  const { hasPaginationParams, page, pageSize, q, track, status, highlight } = query;
+  const { hasPaginationParams, page, pageSize, q, track, status, highlight, sort } = query;
   const role = ctx.role;
 
   const scopeTermId = ctx.termId;
@@ -62,7 +104,10 @@ export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
 
   // True server-side pagination: DB filters + DB search + LIMIT/OFFSET.
   // Never fetch the full queue into memory to filter/sort client-side.
-  const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
+  const effPageSize = Math.min(
+    Math.max(1, Math.floor(pageSize) || 15),
+    NURSE_QUEUE_MAX_PAGE_SIZE,
+  );
   const searchWhere: any = q
     ? {
         OR: [
@@ -95,34 +140,46 @@ export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
     filteredTotal = filtered;
     const totalPages = Math.max(1, Math.ceil(filteredTotal / effPageSize));
     safePage = Math.min(safePage, totalPages);
+    // `sort=latest` ranks the full filtered set by referred time before
+    // slicing pages; the default keeps the stable id-desc pick.
+    const rankedIds =
+      sort === "latest" ? await referralIdsByReferredTime(pagedWhere) : null;
     if (highlight && q === "") {
-      // Locate a highlighted row without scanning the table: fetch its
-      // position via an id-ordered keyset probe bounded to one lookup.
-      const probe = await prisma.referral.findMany({
-        where: pagedWhere,
-        select: { id: true },
-        orderBy: { id: "desc" },
-      });
-      const idx = probe.findIndex((r) => r.id === highlight);
+      // Locate a highlighted row without scanning the table: reuse the
+      // referred-time ranking when sorting latest, else probe by id order.
+      const probeIds =
+        rankedIds !== null
+          ? rankedIds
+          : (
+              await prisma.referral.findMany({
+                where: pagedWhere,
+                select: { id: true },
+                orderBy: { id: "desc" },
+              })
+            ).map((r) => r.id);
+      const idx = probeIds.findIndex((id) => id === highlight);
       if (idx >= 0) safePage = Math.floor(idx / effPageSize) + 1;
     }
     const skip = (safePage - 1) * effPageSize;
-    const pageIds = (
-      await prisma.referral.findMany({
-        where: pagedWhere,
-        select: { id: true },
-        orderBy: { id: "desc" },
-        skip,
-        take: effPageSize,
-      })
-    ).map((r) => r.id);
+    const pageIds =
+      rankedIds !== null
+        ? rankedIds.slice(skip, skip + effPageSize)
+        : (
+            await prisma.referral.findMany({
+              where: pagedWhere,
+              select: { id: true },
+              orderBy: { id: "desc" },
+              skip,
+              take: effPageSize,
+            })
+          ).map((r) => r.id);
     if (pageIds.length === 0) return [];
     const pageRows = await prisma.referral.findMany({
       where: { id: { in: pageIds } },
       include: {
         anecdotalRecord: { select: { id: true, observationDatetime: true, descriptionOfIncident: true, category: true } },
         student: { select: { userId: true, lrn: true, user: { select: { fullName: true } }, section: { select: { name: true } } } },
-        roster: { select: { id: true, fullName: true, lrn: true, section: { select: { name: true } } } },
+        roster: { select: { id: true, fullName: true, lrn: true, mascot: true, section: { select: { name: true } } } },
 
         counselingSessions: {
           orderBy: { scheduledAt: "asc" },

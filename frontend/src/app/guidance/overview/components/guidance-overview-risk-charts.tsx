@@ -1,261 +1,99 @@
 "use client";
 
-import * as React from "react";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { HeartPulse, Flag, GraduationCap } from "lucide-react";
-import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
-import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
+import { Flag, GraduationCap, HeartPulse } from "lucide-react";
+import { GuidanceBarPanel, GuidanceDonutPanel } from "./guidance-overview-panels";
 import type {
   GuidanceCategoryRow,
   GuidanceRiskByGradeRow,
 } from "@/services/guidance/overview.types";
-import styles from "./guidance-overview-risk-charts.module.css";
-
-const TOOLTIP_STYLE: React.CSSProperties = {
-  borderRadius: 8,
-  border: "1px solid var(--border)",
-  background: "var(--card)",
-  color: "var(--foreground)",
-  fontSize: 12,
-};
+import styles from "./guidance-overview.module.css";
 
 interface GuidanceOverviewRiskChartsProps {
   riskByLevel: { high: number; moderate: number; low: number };
   factorTotals: { attendance: number; grades: number; behavior: number };
   riskByGrade: GuidanceRiskByGradeRow[];
-
-  primary?: string | null;
 }
 
-function interpretLevels(high: number, moderate: number, low: number): string {
-  const total = high + moderate + low;
-  if (total === 0) return "No enrolled students found for the active school year.";
-  return `${high} high and ${moderate} moderate out of ${total} students recomputed live for the active term.`;
-}
-
-function interpretFactors(attendance: number, grades: number, behavior: number): string {
-  const total = attendance + grades + behavior;
-  if (total === 0) return "No risk flags tripped this term — every student clears all three checks.";
-  return `${grades} academic, ${attendance} attendance, and ${behavior} behavioral flags active. One student can trip several flags.`;
-}
-
+/**
+ * Risk section — three kanban boards (donut + two bar charts) in the same
+ * 3-up grid and amber palette as the nurse breakdown boards.
+ */
 export function GuidanceOverviewRiskCharts({
   riskByLevel,
   factorTotals,
   riskByGrade,
-  primary,
 }: GuidanceOverviewRiskChartsProps) {
-
-  const scale = usePrimaryScale(3, primary);
-  const LEVEL_COLORS: Record<string, string> = {
-    High: scale[0],
-    Moderate: scale[1],
-    Low: scale[2],
-  };
-  const FACTOR_COLOR = scale[0];
-  const levelSlices = [
-    { label: "High", value: riskByLevel.high },
-    { label: "Moderate", value: riskByLevel.moderate },
-    { label: "Low", value: riskByLevel.low },
+  const levelRows = [
+    { key: "high", label: "High", count: riskByLevel.high },
+    { key: "moderate", label: "Moderate", count: riskByLevel.moderate },
+    { key: "low", label: "Low", count: riskByLevel.low },
   ];
-  const levelTotal = levelSlices.reduce((s, r) => s + r.value, 0);
 
   const factorRows = [
-    { factor: "Academic", count: factorTotals.grades },
-    { factor: "Attendance", count: factorTotals.attendance },
-    { factor: "Behavioral", count: factorTotals.behavior },
+    { key: "grades", label: "Academic", count: factorTotals.grades },
+    { key: "attendance", label: "Attendance", count: factorTotals.attendance },
+    { key: "behavior", label: "Behavioral", count: factorTotals.behavior },
   ];
 
-  const gradeRows = riskByGrade.map((r) => ({ grade: r.short, count: r.count }));
-  const maxGrade = Math.max(1, ...gradeRows.map((r) => r.count));
-  const levelsEmpty = levelTotal === 0;
-  const factorTotal = factorRows.reduce((s, r) => s + r.count, 0);
-  const factorsEmpty = factorTotal === 0;
-  const gradeEmpty = gradeRows.every((r) => r.count === 0);
+  const gradeRows = riskByGrade.map((r) => ({
+    key: r.short,
+    label: r.short,
+    count: r.count,
+  }));
+
+  const levelTotal = riskByLevel.high + riskByLevel.moderate + riskByLevel.low;
+  const levelsText =
+    levelTotal === 0
+      ? "No enrolled students found for the active school year."
+      : `${riskByLevel.high} high and ${riskByLevel.moderate} moderate out of ${levelTotal} students recomputed live for the active term.`;
+
+  const factorTotal =
+    factorTotals.attendance + factorTotals.grades + factorTotals.behavior;
+  const factorsText =
+    factorTotal === 0
+      ? "No risk flags tripped this term — every student clears all three checks."
+      : `${factorTotals.grades} academic, ${factorTotals.attendance} attendance, and ${factorTotals.behavior} behavioral flags active. One student can trip several flags.`;
+
+  const topGrade = [...riskByGrade].sort((a, b) => b.count - a.count)[0];
+  const gradeText =
+    !topGrade || topGrade.count === 0
+      ? "No grade level has at-risk students right now."
+      : `Highest: ${topGrade.grade} with ${topGrade.count} students needing attention.`;
 
   return (
-    <div className={styles.chartGrid}>
-      <Card className={styles.card}>
-        <span className={styles.glowClip} aria-hidden="true">
-          <span className={styles.cardGlow} />
-        </span>
-        {levelsEmpty ? null : (
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>Risk levels</CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            Live recompute · High ≥ 2 flags, Moderate = 1, Low = 0.
-          </CardDescription>
-        </CardHeader>
-        )}
-        <CardContent className={styles.cardBody}>
-          {levelsEmpty ? (
-            <GuidanceEmptyState
-              icon={HeartPulse}
-              title="No students enrolled"
-              hint="No enrolled students found for the active school year."
-            />
-          ) : (
-            <>
-              <div className={styles.donutWrap}>
-                <ResponsiveContainer width="100%" height={148}>
-                  <PieChart>
-                    <Pie
-                      data={levelSlices}
-                      dataKey="value"
-                      nameKey="label"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={42}
-                      outerRadius={62}
-                      paddingAngle={2}
-                      strokeWidth={0}
-                    >
-                      {levelSlices.map((s) => (
-                        <Cell key={s.label} fill={LEVEL_COLORS[s.label]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className={styles.donutCenter}>
-                  <span className={styles.donutValue}>{levelTotal}</span>
-                  <span className={styles.donutCaption}>students</span>
-                </div>
-              </div>
-              <ul className={styles.legend}>
-                {levelSlices.map((s) => (
-                  <li key={s.label} className={styles.legendItem}>
-                    <span className={styles.legendLabel}>
-                      <span
-                        className={styles.legendDot}
-                        style={{ backgroundColor: LEVEL_COLORS[s.label] }}
-                        aria-hidden
-                      />
-                      {s.label}
-                    </span>
-                    <span className={styles.legendCount}>{s.value}</span>
-                  </li>
-                ))}
-              </ul>
-          <p className={styles.interpretation}>
-            <span className={styles.interpretationLabel}>What it means · </span>
-            {interpretLevels(riskByLevel.high, riskByLevel.moderate, riskByLevel.low)}
-          </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className={styles.card}>
-        <span className={styles.glowClip} aria-hidden="true">
-          <span className={styles.cardGlow} />
-        </span>
-        {factorsEmpty ? null : (
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>Risk factors</CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            Students tripping each flag this term.
-          </CardDescription>
-        </CardHeader>
-        )}
-        <CardContent className={styles.cardBody}>
-          {factorsEmpty ? (
-            <GuidanceEmptyState
-              icon={Flag}
-              title="No risk flags this term"
-              hint="No risk flags tripped this term — every student clears all three checks."
-            />
-          ) : (
-            <>
-          <div className={styles.barWrap}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={factorRows} layout="vertical" margin={{ top: 4, right: 12, bottom: 0, left: 8 }}>
-                <XAxis type="number" hide domain={[0, (dataMax: number) => Math.max(1, dataMax)]} />
-                <YAxis
-                  type="category"
-                  dataKey="factor"
-                  tickLine={false}
-                  axisLine={false}
-                  width={82}
-                  tick={{ fontSize: 12, fill: "var(--foreground)" }}
-                />
-                <Tooltip cursor={{ fill: "color-mix(in oklch, var(--foreground), transparent 95%)" }} contentStyle={TOOLTIP_STYLE} />
-                <Bar dataKey="count" name="Students" radius={[0, 4, 4, 0]} fill={FACTOR_COLOR} maxBarSize={22} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <p className={styles.interpretation}>
-            <span className={styles.interpretationLabel}>What it means · </span>
-            {interpretFactors(factorTotals.attendance, factorTotals.grades, factorTotals.behavior)}
-          </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className={styles.card}>
-        <span className={styles.glowClip} aria-hidden="true">
-          <span className={styles.cardGlow} />
-        </span>
-        {gradeEmpty ? null : (
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>At-risk by grade</CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            Moderate + High students per grade level.
-          </CardDescription>
-        </CardHeader>
-        )}
-        <CardContent className={styles.cardBody}>
-          {gradeEmpty ? (
-            <GuidanceEmptyState
-              icon={GraduationCap}
-              title="No at-risk students"
-              hint="No grade level has at-risk students right now."
-            />
-          ) : (
-            <>
-          <div className={styles.barWrap}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={gradeRows} margin={{ top: 8, right: 4, bottom: 0, left: -12 }}>
-                <XAxis
-                  dataKey="grade"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={6}
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  allowDecimals={false}
-                  domain={[0, maxGrade]}
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                  width={28}
-                />
-                <Tooltip cursor={{ fill: "color-mix(in oklch, var(--foreground), transparent 95%)" }} contentStyle={TOOLTIP_STYLE} />
-                <Bar dataKey="count" name="At-risk" radius={[4, 4, 0, 0]} fill={FACTOR_COLOR} maxBarSize={26} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <p className={styles.interpretation}>
-            <span className={styles.interpretationLabel}>What it means · </span>
-            {`Highest: ${[...gradeRows].sort((a, b) => b.count - a.count)[0]?.grade} with ${[...gradeRows].sort((a, b) => b.count - a.count)[0]?.count} students needing attention.`}
-          </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
+    <div className={styles.threeCol}>
+      <GuidanceDonutPanel
+        title="Risk levels"
+        description="Live recompute · High ≥ 2 flags, Moderate = 1, Low = 0."
+        rows={levelRows}
+        unit="students"
+        emptyTitle="No students enrolled"
+        emptyText="No enrolled students found for the active school year."
+        icon={HeartPulse}
+        sortDescending={false}
+        interpretation={levelsText}
+      />
+      <GuidanceBarPanel
+        title="Risk factors"
+        description="Students tripping each flag this term."
+        rows={factorRows}
+        seriesName="Students"
+        emptyTitle="No risk flags this term"
+        emptyText="No risk flags tripped this term — every student clears all three checks."
+        icon={Flag}
+        interpretation={factorsText}
+      />
+      <GuidanceBarPanel
+        title="At-risk by grade"
+        description="Moderate + High students per grade level."
+        rows={gradeRows}
+        seriesName="At-risk"
+        emptyTitle="No at-risk students"
+        emptyText="No grade level has at-risk students right now."
+        icon={GraduationCap}
+        sortDescending={false}
+        interpretation={gradeText}
+      />
     </div>
   );
 }

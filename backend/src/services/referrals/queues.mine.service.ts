@@ -68,6 +68,10 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
       },
 
       homeVisitations: { select: { id: true } },
+      // Completed clinic sessions mark the case done on the nurse board
+      // (derived), so the adviser's list must agree for older rows whose
+      // referral status was left at in_progress.
+      counselingSessions: { select: { status: true, completedAt: true } },
       admProfiles: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -148,6 +152,24 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
     const timeline = timelines.get(r.id) ?? [];
     const referredAt =
       timeline[0]?.at ?? new Date().toISOString();
+    // The nurse board derives "Done" from a completed clinic session even when
+    // the referral row still says in_progress. Mirror that here so the
+    // adviser sees the same state instead of a stale "In progress".
+    const completedClinicAt = r.counselingSessions
+      .filter((s) => s.status === "completed" && s.completedAt)
+      .map((s) => (s.completedAt as Date).getTime())
+      .sort((a, b) => b - a)[0];
+    const onNurseClinicDesk =
+      r.referredToRole === "nurse" ||
+      (r.status === "escalated" && r.escalatedTo === "nurse");
+    const displayStatus =
+      onNurseClinicDesk &&
+      completedClinicAt !== undefined &&
+      r.status !== "resolved" &&
+      r.status !== "dismissed" &&
+      r.status !== "follow_up"
+        ? "resolved"
+        : r.status;
     if (timeline.length === 0) {
       timeline.push({
         label: `Submitted to the ${TIMELINE_DESK_LABELS[r.referredToRole] ?? "receiving desk"}.`,
@@ -192,10 +214,16 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
       targetRole: r.referredToRole,
       referredBy: r.referredBy,
       reason: r.reason,
-      status: r.status,
+      status: displayStatus,
       dismissedByRole: dismissedByRole.get(r.id) ?? null,
       referredAt,
-      resolvedAt: r.status === "resolved" ? (timeline[timeline.length - 1]?.at ?? new Date().toISOString()) : null,
+      resolvedAt:
+        displayStatus === "resolved"
+          ? (r.resolvedAt?.toISOString() ??
+            (completedClinicAt !== undefined
+              ? new Date(completedClinicAt).toISOString()
+              : (timeline[timeline.length - 1]?.at ?? new Date().toISOString())))
+          : null,
       anecdotalId: r.anecdotalRecordId,
       observationDate: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
       anecdotalExcerpt: r.anecdotalRecord.descriptionOfIncident,

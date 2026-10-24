@@ -32,6 +32,7 @@ export function InterventionScheduleDialog({
       hasActiveSession={hasActiveSession}
       busy={isActionPending}
       idPrefix="iv-sess"
+      variant="board"
     />
   );
 }

@@ -10,6 +10,9 @@ export type DockTaskStatus =
 export type DockTaskKind =
   | "referral-send"
   | "referral-cancel"
+  | "adm-endorse"
+  | "adm-book"
+  | "adm-complete"
   | "lock-grades"
   | "sf10-upload"
   | "sf10-request"

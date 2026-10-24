@@ -1,9 +1,7 @@
 "use client";
-import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { FolderCard } from "@/components/ui/FolderCard";
-import { anecdotalCategoryColor } from "@/lib/labels/anecdotal";
+import { AnecdotalRecordKanbanCard } from "@/components/anecdotal/anecdotal-record-kanban-card";
 import {
   friendlyWords,
 } from "@/services/coordinator/labels";
@@ -12,7 +10,7 @@ import type {
   CoordinatorCaseDetail,
 } from "@/services/coordinator/coordinator.types";
 import type { CaseStepId } from "../case-steps";
-import { FORM_DOT, FORM_LABELS } from "../../components/coordinator-referrals-constants";
+import { FORM_LABELS } from "../../components/coordinator-referrals-constants";
 import styles from "../case-page.module.css";
 export function EvidencePanel({
   d,
@@ -20,7 +18,6 @@ export function EvidencePanel({
   referral,
   anecdotal,
   anecdotalLocked,
-  gcLoading,
   hasAttendedMeeting,
   onOpenGcForm,
   onOpenAnecdotal,
@@ -40,89 +37,60 @@ export function EvidencePanel({
   onSeeDetails: (f: AdmFormRef) => void;
 }) {
   if (activeTab === "anecdotal") {
-    return (
-      <>
-        {anecdotal ? (
-          <div className={styles.folderCenter}>
-            <button
-              type="button"
-              className={styles.folderBtn}
-              onClick={() =>
-                anecdotalLocked
-                  ? onOpenEndorsedNotice()
-                  : onOpenAnecdotal(anecdotal.id)
-              }
-              aria-label={
-                anecdotalLocked
-                  ? `Anecdotal report for ${d.student} is locked awaiting the Principal's signature`
-                  : `Open ${d.student}'s anecdotal report file (GCForm-01)`
-              }
-            >
-              <FolderCard
-                label="GCForm-01"
-                sublabel={`${anecdotal.observationDate}, ${anecdotal.section}`}
-                folderColor={anecdotalCategoryColor(anecdotal.category)}
-                files={[
-                  {
-                    name: `OCForm-01_${anecdotal.observationDate}`,
-                    tag: friendlyWords(anecdotal.category),
-                    icon: "doc" as const,
-                  },
-                ]}
-              />
-            </button>
-          </div>
-        ) : (
-          <p className={styles.muted}>No anecdotal write-up on file.</p>
-        )}
-      </>
+    return anecdotal ? (
+      <AnecdotalRecordKanbanCard
+        category={anecdotal.category}
+        headerTitle="GCForm-01"
+        studentName={d.student}
+        metaText={d.lrn}
+        metaTitle={`${d.lrn} · ${anecdotal.section}`}
+        fileName={`OCForm-01_${anecdotal.observationDate}`}
+        fileTag={friendlyWords(anecdotal.category)}
+        folderAlign="start"
+        headerRight={
+          anecdotalLocked ? (
+            <Badge variant="outline" className="shrink-0 rounded-md">
+              Locked
+            </Badge>
+          ) : undefined
+        }
+        openLabel={
+          anecdotalLocked
+            ? `Anecdotal report for ${d.student} is locked awaiting the Principal's signature`
+            : `Open ${d.student}'s anecdotal report file (GCForm-01)`
+        }
+        onOpen={() =>
+          anecdotalLocked ? onOpenEndorsedNotice() : onOpenAnecdotal(anecdotal.id)
+        }
+      />
+    ) : (
+      <p className={styles.muted}>No anecdotal write-up on file.</p>
     );
   }
   if (activeTab === "referral") {
-    return (
-      <>
-        {referral && anecdotal ? (
-          <div className={styles.folderCenter}>
-            <button
-              type="button"
-              className={styles.folderBtn}
-              onClick={() => onOpenGcForm()}
-              disabled={gcLoading}
-              aria-label={`Open the GCForm-03 referral form file for ${d.student}`}
-            >
-              <FolderCard
-                label="GCForm-03"
-                sublabel={`${d.student}, ${anecdotal.observationDate}`}
-                folderColor={anecdotalCategoryColor(anecdotal.category)}
-                files={[
-                  {
-                    name: `GCForm-03_${anecdotal.observationDate}`,
-                    tag: friendlyWords(anecdotal.category),
-                    icon: "doc" as const,
-                  },
-                ]}
-              />
-            </button>
-            {gcLoading ? (
-              <Loader2
-                className="animate-spin"
-                aria-hidden
-                style={{ width: "0.875rem", height: "0.875rem" }}
-              />
-            ) : null}
-          </div>
-        ) : (
-          <p className={styles.muted}>No referral form on file.</p>
-        )}
-      </>
+    return referral && anecdotal ? (
+      <AnecdotalRecordKanbanCard
+        category={anecdotal.category}
+        headerTitle="GCForm-03"
+        studentName={d.student}
+        metaText={d.lrn}
+        metaTitle={`${d.lrn} · ${anecdotal.section}`}
+        fileName={`GCForm-03_${anecdotal.observationDate}`}
+        fileTag={friendlyWords(anecdotal.category)}
+        folderAlign="start"
+        categoryColor="#f59e0b"
+        folderColor="#f59e0b"
+        tone={1}
+        openLabel={`Open the GCForm-03 referral form file for ${d.student}`}
+        onOpen={() => onOpenGcForm()}
+      />
+    ) : (
+      <p className={styles.muted}>No referral form on file.</p>
     );
   }
   if (activeTab === "evidence") {
     return (
-      <div className={styles.card}>
-        <span className={styles.glowClip} aria-hidden="true">
-          <span className={styles.cardGlow} />
-        </span>
+      <div className={styles.panel}>
         <h2 className={styles.cardTitle}>Evidence chain</h2>
         {d.forms.length === 0 ? (
           d.kind === "referral" && hasAttendedMeeting ? (
@@ -148,32 +116,39 @@ export function EvidencePanel({
             </p>
           )
         ) : (
-          <ul className={styles.evidenceList}>
-            {d.forms.map((f) => (
-              <li key={f.id} className={styles.evidenceItem}>
-                <span
-                  className={styles.evidenceDot}
-                  style={{
-                    backgroundColor: FORM_DOT[f.status] ?? "#d4d4d4",
-                  }}
-                  aria-hidden
-                />
-                <span>{FORM_LABELS[f.formType] ?? friendlyWords(f.formType)}</span>
-                <Badge variant="outline">{friendlyWords(f.status)}</Badge>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  className={styles.logBtn}
-                  style={{ marginLeft: "auto" }}
-                  onClick={() => onSeeDetails(f)}
-                  aria-label={`See details for ${FORM_LABELS[f.formType] ?? friendlyWords(f.formType)}`}
-                >
-                  See details
-                </Button>
-              </li>
-            ))}
-          </ul>
+          <div className={styles.evidenceCard}>
+            <ul className={styles.evidenceRow}>
+              {d.forms.map((f) => {
+                const ok = f.status === "verified";
+                const label =
+                  FORM_LABELS[f.formType] ?? friendlyWords(f.formType);
+                return (
+                  <li key={f.id}>
+                    <button
+                      type="button"
+                      className={styles.evidenceCol}
+                      onClick={() => onSeeDetails(f)}
+                      aria-label={`See details for ${label}`}
+                    >
+                      <span
+                        className={styles.evidenceCheck}
+                        data-ok={ok ? "true" : "false"}
+                        aria-hidden
+                      >
+                        {ok ? <Check size={12} strokeWidth={3} /> : ""}
+                      </span>
+                      <span className={styles.evidenceColLabel}>{label}</span>
+                      <span
+                        className={`${styles.evidencePill} ${ok ? styles.evidencePillGreen : ""}`}
+                      >
+                        {friendlyWords(f.status)}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
       </div>
     );

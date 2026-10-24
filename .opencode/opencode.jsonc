@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // Default new sessions in this project to the fast reasoning variant.
+  // Switch per session with /models (use #high or #max for hard tasks).
+  "agents": {
+    "build": {
+      "model": "opencode/deepseek-v4.1-flash-free#low"
+    }
+  }
+}

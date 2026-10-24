@@ -1,0 +1,184 @@
+/* Top kanban KPI strip for the principal overview — number-first columns in
+   the amber desk accent, same framing as the registry desk stat boards. */
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+
+:global(.dark) .column {
+  background-color: color-mix(in oklch, var(--muted) 20%, transparent);
+}
+
+/* Amber — the principal overview accent for every icon + number. */
+.icon {
+  display: inline-flex;
+  color: #f59e0b;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
+}
+
+.statTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Column mascot — decorative sprite (cursor-aware like every StudentMascot),
+   same rounded chip framing as the registry KPI strip. */
+.statMascot {
+  display: inline-flex;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background-color: color-mix(in oklch, var(--muted) 40%, transparent);
+}
+
+.statNumber {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #b45309;
+  font-variant-numeric: tabular-nums;
+}
+
+:global(.dark) .statNumber {
+  color: #f59e0b;
+}
+
+.statNumberZero {
+  color: var(--muted-foreground);
+}
+
+.statHint {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headSkeleton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline: -0.625rem;
+  padding: 0 0.875rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.skelTitle {
+  height: 1rem;
+  width: 6rem;
+  border-radius: var(--radius-md);
+}
+
+.skelStat {
+  height: 4.25rem;
+  border-radius: var(--radius-lg);
+}
+
+.footnote {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.footnoteIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  color: #f59e0b;
+}
+
+.empty {
+  margin: 0;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xl);
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Columns cascade in so the strip settles instead of popping. */
+@keyframes stat-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.grid > .column {
+  animation: stat-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.grid > .column:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.grid > .column:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.grid > .column:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid > .column {
+    animation: none;
+  }
+}

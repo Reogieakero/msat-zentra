@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import BranchedMenu from "@/components/nav/BranchedMenu";
 import { principalSettingsSections, scrollToSection } from "./components/SettingsNav";
 import { ProfileCard } from "./components/ProfileCard";
-import { PaletteCard } from "./components/PaletteCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api/client";
@@ -213,8 +212,6 @@ export default function PrincipalSettingsPage() {
               </div>
             </div>
           </section>
-
-          <PaletteCard />
 
           <PasswordCard />
         </div>

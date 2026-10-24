@@ -86,16 +86,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.625rem;
-  padding: 0.75rem 0.875rem;
-  border: 1px solid var(--destructive, #dc2626);
-  border-radius: var(--radius-md);
-  background-color: color-mix(in oklch, var(--destructive, #dc2626), transparent 94%);
 }
 
 .errorText {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
+  font-style: italic;
   line-height: 1.5;
+  /* `--destructive` is monochrome in this theme — use the risk red instead. */
+  color: var(--risk-red, oklch(0.637 0.237 25.331));
 }
 
 .hint {
@@ -289,6 +288,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Shared pill row under the student name (LRN · section · risk). */
+.studentPills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.125rem;
 }
 
 /* Date day-cards */

@@ -98,7 +98,7 @@ export async function getOverview(
   const [user, assignments, advisorySections, masterHolder] = await Promise.all([
     prisma.user.findUnique({
       where: { id: teacherId },
-      select: { fullName: true, staffProfile: { select: { isMasterTeacher: true } } },
+      select: { fullName: true, staffProfile: { select: { isMasterTeacher: true, shareStudentData: true, shareUpdatedAt: true } } },
     }),
     prisma.teacherSubjectAssignment.findMany({
       where: { teacherId, termId },
@@ -920,6 +920,8 @@ export async function getOverview(
     isAdviser,
     isMasterTeacher,
     masterTeacherEligible,
+    shareStudentData: user?.staffProfile?.shareStudentData ?? false,
+    shareUpdatedAt: user?.staffProfile?.shareUpdatedAt ?? null,
 
     masterTeacherTaken: !isMasterTeacher && masterHolder !== null,
     masterTeacherHolderName: masterHolder?.fullName ?? null,

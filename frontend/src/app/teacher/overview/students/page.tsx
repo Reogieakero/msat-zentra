@@ -39,7 +39,7 @@ export default function TeacherStudentListPage() {
       <section className={styles.page} aria-busy="true" aria-label="Loading student list">
         <div className={styles.mainCol}>
           <div className={styles.heading} aria-hidden>
-            <Skeleton className="h-7 w-36" />
+            <Skeleton className="h-[1.625rem] w-36" />
             <Skeleton className="mt-1 h-4 w-72" />
           </div>
           <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-hidden>

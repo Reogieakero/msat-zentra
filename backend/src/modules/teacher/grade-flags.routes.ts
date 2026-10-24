@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { AppError } from "../../lib/errors.js";
 import { validate } from "../../middleware/validate.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
 import { etag } from "../../lib/etag.js";
@@ -90,8 +91,12 @@ router.post(
         reason: "wrong_score" | "missing_assessment" | "transmutation_error" | "late_submission" | "other";
         note?: string;
       };
+      const scopeTermId = req.termScope?.termId ?? null;
+      if (!scopeTermId) {
+        throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
+      }
       const flag = await raiseFlag(
-        { ...ctxOf(req), termId: req.termScope?.termId ?? body.termId },
+        { ...ctxOf(req), termId: scopeTermId },
         {
           studentId: body.studentId,
           subjectId: body.subjectId,

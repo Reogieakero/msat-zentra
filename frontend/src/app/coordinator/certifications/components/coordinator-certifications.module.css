@@ -18,9 +18,9 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 25%);
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
   gap: 1rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 .side {
@@ -28,6 +28,48 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Icon-rail flyout menus — same open/close ease and top-right origin as the
+   coordinator overview rail. */
+.railMenu {
+  transform-origin: top right;
+  transition:
+    opacity 180ms ease-out,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 180ms;
+}
+
+.railMenuOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+}
+
+.railMenuClosed {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.railSkel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.railSkelIcon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .railMenu {
+    transition: none;
+  }
 }
 
 .main {
@@ -84,7 +126,7 @@
   max-width: 28rem;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .layout {
     grid-template-columns: 1fr;
   }
@@ -268,7 +310,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 0.875rem;
 }
 

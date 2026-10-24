@@ -2,25 +2,24 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Inbox, Loader2 } from "lucide-react";
-import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
-import { NursePageHeader } from "../../components/NursePageHeader";
 import { NurseEmptyCard } from "../../components/NurseEmptyCard";
 import { NurseAlertsTable } from "../components/NurseAlertsTable";
 import { NurseReferralsSkeleton } from "../components/NurseReferralsSkeleton";
-import { NurseRefreshBadge } from "../../components/nurse-refresh-badge";
 import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
 import type { NurseAlertsPage } from "@/services/nurse/nurse.types";
 import { useNurseInvalidate } from "../../overview/components/use-nurse-mutation";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "../nurse-referrals-page.module.css";
 import pageStyles from "../../pages.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
-const NURSE_CLINIC_PAGE_SIZE = PAGE_SIZE;
+/** The Clinic board pages in whole 4×4 kanban grids (four rows of four) —
+    the same board rhythm as the ADM cases board. */
+const NURSE_CLINIC_PAGE_SIZE = 16;
 
 function NurseClinicReferralsView() {
   const params = useSearchParams();
@@ -28,30 +27,54 @@ function NurseClinicReferralsView() {
   const invalidateNurse = useNurseInvalidate();
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const pager = useUrlPager(0, {});
+  const [queryInput, setQueryInput] = React.useState(params.get("q") ?? "");
+  const pager = useUrlPager(0, {}, { searchParam: "q" });
   const page = pager.page;
   const setPage = pager.setPage;
   const [takeover, setTakeover] = React.useState(false);
   const landing = !takeover && highlightId !== null;
+  const requestedPage = takeover ? page : 1;
+
+  const query = useDebouncedValue(queryInput.trim(), 300);
+
+  // Sync the debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    setTakeover(true);
+    pager.setFilters({ q: query || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   const { data, isPending, isError, refetch, isRefetching } =
     useQuery<NurseAlertsPage>({
       queryKey: [
         "nurse-alerts",
         "clinic",
-        takeover ? page : 1,
+        requestedPage,
         termKey,
         landing ? (highlightId ?? "") : "",
+        query,
       ],
       queryFn: ({ signal }) =>
         fetchNurseAlerts({
+          q: query || undefined,
           track: "clinic",
-          page: takeover ? page : 1,
+          page: requestedPage,
           pageSize: NURSE_CLINIC_PAGE_SIZE,
           ...(landing && highlightId ? { highlight: highlightId } : {}),
           signal,
         }),
-      placeholderData: keepPreviousData,
+      // Page flips drop the retained page so the skeleton shows while the
+      // next payload loads; a same-page search refresh keeps the rows so
+      // typing never blanks the board.
+      placeholderData: (previousData, previousQuery) =>
+        previousData && previousQuery?.queryKey?.[2] === requestedPage
+          ? previousData
+          : undefined,
       staleTime: 60_000,
       enabled: termReady,
     });
@@ -63,11 +86,13 @@ function NurseClinicReferralsView() {
     invalidateNurse();
   }
 
+  /* First load and page flips show the skeleton: page changes drop the
+     retained page (see `placeholderData`), so `isPending` covers navigation.
+     Same-page search refreshes keep the cards and only flag `aria-busy`. */
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading clinic matters">
-        <ZentraPageHeaderSkeleton />
-        <NurseReferralsSkeleton sideRows={5} />
+        <NurseReferralsSkeleton sideRows={6} />
       </section>
     );
   }
@@ -105,13 +130,6 @@ function NurseClinicReferralsView() {
       aria-busy={refreshing}
       aria-label="Clinic matters"
     >
-      {isTrueEmpty ? null : (
-        <NursePageHeader
-          title="Clinic Matters"
-          description="Clinic cases on your desk — accept a case to start care, resolve it when follow-through is done."
-        />
-      )}
-      {refreshing ? <NurseRefreshBadge label="Refreshing clinic matters…" /> : null}
       {isTrueEmpty ? (
         <NurseEmptyCard
           icon={Inbox}
@@ -127,6 +145,8 @@ function NurseClinicReferralsView() {
         onChanged={refresh}
         initialType="Clinic"
         lockType
+        layout="kanban"
+        pageSize={NURSE_CLINIC_PAGE_SIZE}
         title="Clinic Matters"
         highlightId={highlightId}
         serverPage={safePage}
@@ -137,6 +157,9 @@ function NurseClinicReferralsView() {
           setTakeover(true);
           setPage(p);
         }}
+        search={queryInput}
+        onSearchChange={setQueryInput}
+        searchPlaceholder="Search clinic cases…"
       />
       )}
     </section>
@@ -148,7 +171,7 @@ export default function NurseClinicReferralsPage() {
     <React.Suspense
       fallback={
         <section className={styles.page}>
-          <NurseReferralsSkeleton sideRows={5} />
+          <NurseReferralsSkeleton sideRows={6} />
         </section>
       }
     >

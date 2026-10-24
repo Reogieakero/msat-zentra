@@ -32,7 +32,9 @@ const FILE_ICONS: Record<NonNullable<FolderFile["icon"]>, React.ComponentType<{ 
 };
 
 interface FolderCardProps {
-  label: string;
+  /** Caption under the folder. Omit both label and sublabel for a bare
+      folder (e.g. when the surrounding card renders its own caption pills). */
+  label?: string;
   sublabel?: string;
   files: FolderFile[];
 
@@ -43,18 +45,42 @@ interface FolderCardProps {
   folderColor?: string;
 
   onFileClick?: (index: number) => void;
+  /** When set, the whole folder body opens (not just the file slip). File
+      slip clicks still fire onFileClick only — they stop propagation. */
+  onCardClick?: () => void;
+  /** Accessible name for the folder body button (used with onCardClick). */
+  cardAriaLabel?: string;
 }
 
-export function FolderCard({ label, sublabel, files, cornerTag, cornerTagStyle, folderColor, onFileClick }: FolderCardProps) {
+export function FolderCard({ label, sublabel, files, cornerTag, cornerTagStyle, folderColor, onFileClick, onCardClick, cardAriaLabel }: FolderCardProps) {
   const count = files.length;
+  const folderInteractive = Boolean(onCardClick);
 
   return (
     <div className={styles.card}>
       <div
-        className={styles.folder}
+        className={`${styles.folder}${folderInteractive ? ` ${styles.folderClickable}` : ""}`}
         style={
           folderColor
             ? ({ "--folder-color": folderColor } as React.CSSProperties)
+            : undefined
+        }
+        role={folderInteractive ? "button" : undefined}
+        tabIndex={folderInteractive ? 0 : undefined}
+        aria-label={
+          folderInteractive
+            ? cardAriaLabel ?? label ?? "Open folder"
+            : undefined
+        }
+        onClick={onCardClick}
+        onKeyDown={
+          folderInteractive
+            ? (e: React.KeyboardEvent<HTMLDivElement>) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onCardClick?.();
+                }
+              }
             : undefined
         }
       >

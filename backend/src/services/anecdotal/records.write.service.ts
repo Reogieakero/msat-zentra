@@ -9,7 +9,6 @@ import type { AnecdotalContext } from "./anecdotal.types.js";
 export interface CreateRecordInput {
   studentId: string;
   sectionId: string;
-  termId?: string;
   observationDatetime: string;
   descriptionOfIncident: string;
   descriptionOfLocation?: string;
@@ -22,6 +21,10 @@ export interface CreateRecordInput {
 }
 
 export async function createRecord(ctx: AnecdotalContext, input: CreateRecordInput) {
+  /* GCForm-01 is filed by the section adviser only. */
+  if (ctx.role !== "adviser") {
+    throw new AppError(403, "FORBIDDEN", "Only the adviser may file a GCForm-01 record");
+  }
 
   if (input.folderId) {
     const folder = await prisma.anecdotalFolder.findUnique({
@@ -46,7 +49,9 @@ export async function createRecord(ctx: AnecdotalContext, input: CreateRecordInp
     }
   }
 
-  const filingTermId = ctx.termId ?? String(input.termId ?? "");
+  // The filing term is the caller's resolved scope only — a client-supplied
+  // term can never redirect where a record is filed.
+  const filingTermId = ctx.termId;
   if (!filingTermId) {
     throw new AppError(400, "NO_ACTIVE_TERM", "No active term to file under");
   }

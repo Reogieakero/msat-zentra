@@ -3,20 +3,29 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  /* 0 padding: the layout shell already provides the 16px gutters. */
   padding: 0;
   min-height: 100%;
   background-color: var(--background);
 }
 
+/* Kanban board layout — main stack plus the icon-only follow-up rail on the
+   right, same interaction as the registry desk overviews. */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
   gap: 1rem;
   align-items: start;
   min-width: 0;
 }
 
-.main {
+@media (max-width: 1023px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stack {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -27,4 +36,44 @@
   margin: 0;
   border: none;
   border-top: 1px solid var(--border, #e5e5e5);
+}
+
+/* Entrance motion — the kanban stack settles in, each board after the last,
+   and the rail trails. Opacity + transform only, skipped for reduced motion. */
+@keyframes overview-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stack > * {
+  animation: overview-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.stack > *:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.stack > *:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+.stack > *:nth-child(4) {
+  animation-delay: 0.36s;
+}
+
+.layout > aside {
+  animation: overview-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.48s backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stack > *,
+  .layout > aside {
+    animation: none;
+  }
 }

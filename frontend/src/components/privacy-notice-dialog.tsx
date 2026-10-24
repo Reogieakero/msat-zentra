@@ -1,8 +1,9 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
+import * as React from "react";
+import { ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 
 interface PrivacyNoticeDialogProps {
   open: boolean;
@@ -12,6 +13,11 @@ interface PrivacyNoticeDialogProps {
   reason?: "finished" | "endorsed" | "principal";
 }
 
+/**
+ * Overlay kanban notice — same shell as the other overlay kanbans (dark
+ * backdrop, centered board, 24px footer button). Read-only: it explains why
+ * a finished/endorsed report stays hidden and only offers to dismiss.
+ */
 export function PrivacyNoticeDialog({
   open,
   onClose,
@@ -20,6 +26,7 @@ export function PrivacyNoticeDialog({
 }: PrivacyNoticeDialogProps) {
   const endorsed = reason === "endorsed";
   const principal = reason === "principal";
+  const title = endorsed ? "With the ADM coordinator" : "Kept private";
   const notice = endorsed ? (
     <>
       {studentName
@@ -48,24 +55,72 @@ export function PrivacyNoticeDialog({
       shown on this page is all that remains visible.
     </>
   );
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
   return (
-    <CardModal
-      open={open}
-      onClose={onClose}
-      size="sm"
-      title={
-        <span className="flex items-center gap-2">
-          <ShieldCheck aria-hidden="true" />
-          {endorsed ? "With the ADM coordinator" : "Kept private"}
-        </span>
-      }
-      description={notice}
+    /* `whitespace-normal` — callers mount this inside nowrap row cells
+       (e.g. `.cellActions`), and white-space inherits. */
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 whitespace-normal"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
     >
-      <div className="flex justify-end gap-2">
-        <Button type="button" onClick={onClose}>
-          Understood
-        </Button>
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-black/50 backdrop-blur-[2px]"
+      />
+      <div className="relative w-full max-w-md">
+        <KanbanBoard
+          className="bg-card shadow-2xl"
+          title={title}
+          icon={
+            <span className="text-primary" aria-hidden>
+              <ShieldCheck size={14} />
+            </span>
+          }
+          actions={
+            /* 24px close X — same as the other overlay kanbans. */
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close dialog"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          }
+          description={notice}
+          footer={
+            /* 24px action button — same metric as the kanban boards. */
+            <div className="flex justify-end gap-1.5 px-1 pb-1">
+              <Button
+                type="button"
+                size="sm"
+                className="h-6 px-3 text-xs"
+                onClick={onClose}
+                autoFocus
+              >
+                Understood
+              </Button>
+            </div>
+          }
+        >
+          {null}
+        </KanbanBoard>
       </div>
-    </CardModal>
+    </div>
   );
 }

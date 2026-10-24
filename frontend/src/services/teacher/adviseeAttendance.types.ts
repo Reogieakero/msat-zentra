@@ -52,6 +52,7 @@ export interface StudentAttendance {
   summary: AttendanceSummary;
 
   subjectSummary: SubjectAttendanceSummary | null;
+  restricted?: boolean;
   termStart: string | null;
   days: AttendanceDay[];
 }

@@ -1,4 +1,6 @@
 import axios, { type AxiosInstance } from "axios";
+import { decodeTokenIdentity, isTeacherRole } from "@/lib/auth/roles";
+import { clearTermStorage, readStoredTerm, type StoredTerm } from "@/lib/term/termStorage";
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -12,12 +14,17 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  const scope = getActiveTermScope();
-  if (scope?.schoolYearId) {
-    (config.headers as Record<string, string>)["x-school-year-id"] = scope.schoolYearId;
-  }
-  if (scope?.termId) {
-    (config.headers as Record<string, string>)["x-term-id"] = scope.termId;
+  // Only teacher roles carry a term. Every other desk is scoped server-side,
+  // so its requests must never send term/school-year scope headers.
+  const identity = decodeTokenIdentity(token);
+  if (identity && isTeacherRole(identity.role)) {
+    const scope = getActiveTermScope();
+    if (scope?.schoolYearId) {
+      (config.headers as Record<string, string>)["x-school-year-id"] = scope.schoolYearId;
+    }
+    if (scope?.termId) {
+      (config.headers as Record<string, string>)["x-term-id"] = scope.termId;
+    }
   }
   return config;
 });
@@ -49,32 +56,21 @@ apiClient.interceptors.response.use(
 
 function redirectToUnauthorized() {
   if (typeof window === "undefined") return;
+  const identity = decodeTokenIdentity(getAccessToken());
   setAccessToken(null);
+  clearTermStorage(identity?.sub ?? null);
   if (window.location.pathname !== "/errors/403") {
     window.location.href = "/errors/403";
   }
 }
 
-const TERM_SCOPE_KEY = "zentra.activeTerm";
-
-export interface ActiveTermScope {
-  schoolYearId: string;
-  schoolYearName: string;
-  termId: string;
-  termNumber: number;
-}
+export type ActiveTermScope = StoredTerm;
 
 export function getActiveTermScope(): ActiveTermScope | null {
   if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(TERM_SCOPE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as ActiveTermScope;
-    if (!parsed.schoolYearId || !parsed.termId) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
+  const identity = decodeTokenIdentity(getAccessToken());
+  if (!identity || !isTeacherRole(identity.role)) return null;
+  return readStoredTerm(identity.sub);
 }
 
 const ACCESS_KEY = "zentra.access";
@@ -106,6 +102,7 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 export async function logout(): Promise<void> {
+  const identity = decodeTokenIdentity(getAccessToken());
   try {
     await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`,
@@ -120,4 +117,5 @@ export async function logout(): Promise<void> {
 
     window.localStorage.removeItem("zentra.refresh");
   }
+  clearTermStorage(identity?.sub ?? null);
 }

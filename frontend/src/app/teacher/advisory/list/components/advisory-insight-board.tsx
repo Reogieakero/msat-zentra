@@ -111,7 +111,7 @@ export function AdvisoryInsightBoard({
     );
     const base = academicQuery.data
       ? academicQuery.data.grades
-          .filter((g) => g.computedAverage !== null)
+          .filter((g) => g.computedAverage !== null && !g.hiddenByTeacher)
           .map((g) => ({ subject: g.subject, average: g.computedAverage as number }))
       : (student?.liveGrades ?? []).map((g) => ({
           subject: g.subject,
@@ -159,6 +159,8 @@ export function AdvisoryInsightBoard({
 
   const loading =
     attendanceQuery.isPending || academicQuery.isPending || (!isRoster && anecdotalQuery.isPending);
+  const hiddenGrades = academicQuery.data?.hiddenCount ?? 0;
+  const attendanceRestricted = attendanceQuery.data?.restricted ?? false;
   const subjectSummary = attendanceQuery.data?.subjectSummary ?? null;
   const attendancePct = subjectSummary
     ? Math.round(subjectSummary.rate * 100)
@@ -274,6 +276,9 @@ export function AdvisoryInsightBoard({
                     className={styles.kCard}
                     aria-label={`Attendance for ${student.name}`}
                   >
+                    {attendanceRestricted ? (
+                      <p className={styles.cardMeta}>Some marks hidden — subject teacher sharing is OFF.</p>
+                    ) : null}
                     <p className={styles.kLabel}>
                       Present rate
                     </p>
@@ -304,6 +309,11 @@ export function AdvisoryInsightBoard({
                   <h4 className={styles.colTitle}>Live academics</h4>
                   <span className={styles.colCount}>{liveGrades.length}</span>
                 </header>
+                {hiddenGrades > 0 ? (
+                  <p className={styles.cardMeta}>
+                    {hiddenGrades} subject{hiddenGrades === 1 ? "" : "s"} hidden — teacher sharing is OFF.
+                  </p>
+                ) : null}
                 {liveGrades.length === 0 ? (
                   <p className={styles.empty}>No live scores shared by subject teachers yet.</p>
                 ) : (

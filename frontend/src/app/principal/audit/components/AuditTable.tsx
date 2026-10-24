@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import {
   ACTION_LABELS,
   ROLE_LABELS,
@@ -134,9 +134,9 @@ export function AuditTable({ entries }: { entries: AuditEntry[] }) {
         minSize: 120,
         maxSize: 120,
         cell: ({ row }) => (
-          <Badge variant="outline" className={styles.roleBadge}>
+          <Pill tone="neutral" label="Role" className={styles.roleBadge}>
             {ROLE_LABELS[row.original.actorRole]}
-          </Badge>
+          </Pill>
         ),
       },
       {

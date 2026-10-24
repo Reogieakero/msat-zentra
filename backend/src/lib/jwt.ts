@@ -27,6 +27,21 @@ export function signRefresh(payload: Omit<JwtRefreshPayload, "type">): string {
   } as jwt.SignOptions);
 }
 
+// Supabase Realtime/PostgREST read the JWT `role` claim as the Postgres role and
+// require "authenticated"; the app's access token uses `role` for the app role,
+// so realtime gets its own short-lived token. Only takes effect once the
+// Supabase project's JWT secret is set to match JWT_ACCESS_SECRET.
+export const REALTIME_TOKEN_TTL_SECONDS = 15 * 60;
+
+export function signRealtimeToken(userId: string): string {
+  const env = getEnv();
+  return jwt.sign(
+    { sub: userId, role: "authenticated", aud: "authenticated", type: "realtime" },
+    env.JWT_ACCESS_SECRET,
+    { expiresIn: REALTIME_TOKEN_TTL_SECONDS },
+  );
+}
+
 export function verifyAccess(token: string): JwtAccessPayload {
   const env = getEnv();
   const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtAccessPayload;

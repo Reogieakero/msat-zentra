@@ -55,6 +55,8 @@ export function ResolveCaseDialog({
       return;
     }
     setError(null);
+    // Close at once — the shared Dock reports the request until it settles.
+    onClose();
     resolveMutation.mutate(summary.trim() ? summary.trim() : undefined);
   }
   return (

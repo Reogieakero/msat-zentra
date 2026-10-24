@@ -5,114 +5,92 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { BellRing, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
-import { GuidancePageHeader } from "../components/GuidancePageHeader";
 import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
-import { GuidanceAlertsTable } from "./components/guidance-alerts-table";
+import {
+  GuidanceAlertsTable,
+  type RiskFilter,
+} from "./components/guidance-alerts-table";
 import { GuidanceAlertsSideRail } from "./components/GuidanceAlertsSideRail";
-import { fetchAllGuidanceReferrals } from "@/services/guidance/referrals.service";
-import { fetchGuidanceRiskLevels } from "@/services/guidance/risk.service";
+import { fetchGuidanceAlertCases } from "@/services/guidance/alerts.service";
 import type {
-  GuidanceReferralItem,
-  GuidanceRiskLevel,
-} from "@/services/guidance/guidance.types";
-import { fetchAllGuidanceInterventions } from "@/services/guidance/interventions.service";
-import type { AtRiskStudentItem } from "@/services/guidance/interventions.types";
+  AlertCaseType,
+  GuidanceAlertCasesData,
+} from "@/services/guidance/alerts.types";
 import { useTerm } from "@/lib/term/TermContext";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import styles from "./components/guidance-alerts.module.css";
 import pageStyles from "../pages.module.css";
 
 export default function GuidanceAlertsPage() {
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const [riskFilter, setRiskFilter] = React.useState<RiskFilter>("");
+  const [typeFilter, setTypeFilter] = React.useState<AlertCaseType>("");
+  const [queryInput, setQueryInput] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const query = useDebouncedValue(queryInput.trim(), 300);
 
-  const referralsQuery = useQuery<GuidanceReferralItem[]>({
-
-    queryKey: ["guidance-alerts", "referrals", termKey],
-    queryFn: () => fetchAllGuidanceReferrals(),
+  // One server-paged request for the whole merged desk (referrals + live
+  // interventions). The board used to fan out to twenty requests and made the
+  // backend recompute the live cohort ten times per visit.
+  const casesQuery = useQuery<GuidanceAlertCasesData>({
+    queryKey: [
+      "guidance-alerts",
+      "cases",
+      termKey,
+      page,
+      typeFilter,
+      riskFilter,
+      query,
+    ],
+    queryFn: ({ signal }) =>
+      fetchGuidanceAlertCases(
+        { page, type: typeFilter, risk: riskFilter, q: query },
+        { signal }
+      ),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
     enabled: termReady,
   });
-  const interventionsQuery = useQuery<AtRiskStudentItem[]>({
 
-    queryKey: ["guidance-alerts", "interventions", termKey],
-    queryFn: fetchAllGuidanceInterventions,
-    placeholderData: keepPreviousData,
-    staleTime: 60_000,
-    enabled: termReady,
-  });
+  const isFetching = casesQuery.isFetching;
+  const data = casesQuery.data;
+  const summary = data?.summary;
+  const total = data?.total ?? 0;
+  const isTrueEmpty = (summary?.total ?? 0) === 0;
 
-  const isPending = referralsQuery.isPending || interventionsQuery.isPending;
-  const isError = referralsQuery.isError || interventionsQuery.isError;
-  const isFetching = referralsQuery.isFetching || interventionsQuery.isFetching;
-
-  const referrals = React.useMemo(
-    () => (Array.isArray(referralsQuery.data) ? referralsQuery.data : []),
-    [referralsQuery.data]
-  );
-  const interventions = React.useMemo(
-    () => (Array.isArray(interventionsQuery.data) ? interventionsQuery.data : []),
-    [interventionsQuery.data]
-  );
-
-  const studentIds = React.useMemo(
-    () =>
-      [
-        ...new Set(
-          referrals.map((r) => r.studentId).filter((id): id is string => id !== null)
-        ),
-      ].sort(),
-    [referrals]
-  );
-  const { data: riskByStudent } = useQuery<Record<string, GuidanceRiskLevel>>({
-    queryKey: ["guidance-risk-levels", studentIds, termKey],
-    queryFn: () => fetchGuidanceRiskLevels(studentIds),
-    placeholderData: keepPreviousData,
-    staleTime: 300_000,
-    enabled: termReady && studentIds.length > 0,
-  });
-
-  if (isPending) {
+  if (casesQuery.isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading referred cases">
-        <ZentraPageHeaderSkeleton />
-        <div className={styles.repoGrid}>
-          <div className={styles.skelPanel}>
-            <div className={styles.skelPanelHead}>
-              <div>
-                <Skeleton className={styles.skelCardTitle} />
-                <Skeleton className={styles.skelPanelDesc} />
+        <div className={styles.body}>
+          <div className={styles.mainCol}>
+            <div className={styles.skelPanel}>
+              <div className={styles.skelPanelHead}>
+                <div>
+                  <Skeleton className={styles.skelCardTitle} />
+                  <Skeleton className={styles.skelPanelDesc} />
+                </div>
+                <div className={styles.skelPanelActions}>
+                  <Skeleton className={styles.skelSearch} />
+                  <Skeleton className={styles.skelDrop} />
+                </div>
               </div>
-              <div className={styles.skelPanelActions}>
-                <Skeleton className={styles.skelSearch} />
-                <Skeleton className={styles.skelDrop} />
-              </div>
-            </div>
-            <div className={styles.skelThead} aria-hidden="true">
               {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <Skeleton key={i} className={styles.skelTheadCell} />
+                <Skeleton key={i} className={styles.skelRow} />
               ))}
-            </div>
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <Skeleton key={i} className={styles.skelRow} />
-            ))}
-            <div className={styles.skelPager}>
-              <Skeleton className={styles.skelRange} />
-              <div className={styles.skelPagerBtns}>
-                <Skeleton className={styles.skelBtn} />
-                <Skeleton className={styles.skelPageLabel} aria-hidden="true" />
-                <Skeleton className={styles.skelBtn} />
+              <div className={styles.skelPager}>
+                <Skeleton className={styles.skelRange} />
+                <div className={styles.skelPagerBtns}>
+                  <Skeleton className={styles.skelBtn} />
+                  <Skeleton className={styles.skelPageLabel} aria-hidden="true" />
+                  <Skeleton className={styles.skelBtn} />
+                </div>
               </div>
             </div>
           </div>
-          <div className={`${styles.sideRail} ${styles.railDesktop}`} aria-hidden="true">
+          <div className={styles.skelRail} aria-hidden="true">
             {[0, 1, 2].map((i) => (
-              <div key={i} className={styles.skelRailCard}>
-                <Skeleton className={styles.skelRailTitle} />
-                <Skeleton className={styles.skelRailDesc} />
-                <Skeleton className={styles.skelRailLine} />
-              </div>
+              <Skeleton key={i} className={styles.skelRailIcon} />
             ))}
           </div>
         </div>
@@ -120,7 +98,7 @@ export default function GuidanceAlertsPage() {
     );
   }
 
-  if (isError) {
+  if (casesQuery.isError || !data || !summary) {
     return (
       <section className={styles.page}>
         <div className={styles.pageError} role="alert">
@@ -133,8 +111,7 @@ export default function GuidanceAlertsPage() {
             variant="outline"
             disabled={isFetching}
             onClick={() => {
-              void referralsQuery.refetch();
-              void interventionsQuery.refetch();
+              void casesQuery.refetch();
             }}
           >
             {isFetching ? (
@@ -146,8 +123,6 @@ export default function GuidanceAlertsPage() {
       </section>
     );
   }
-
-  const isTrueEmpty = referrals.length === 0 && interventions.length === 0;
 
   return (
     <section
@@ -165,35 +140,41 @@ export default function GuidanceAlertsPage() {
           layout="fit"
         />
       ) : (
-        <>
-      <div className={styles.repoGrid}>
-        <div className="flex min-w-0 flex-col gap-4">
-          <GuidancePageHeader
-            title="Alerts"
-            description="Every ADM, counseling, and intervention case needing your attention."
-          />
-          <GuidanceAlertsTable
-            referrals={referrals}
-            interventions={interventions}
-            riskByStudent={riskByStudent ?? {}}
-          />
-        </div>
-        <div className={`${styles.sideRail} ${styles.railDesktop}`}>
+        <div className={styles.body}>
+          <div className={styles.mainCol}>
+            <GuidanceAlertsTable
+              rows={data.cases}
+              riskByStudent={data.riskByStudent}
+              summary={summary}
+              total={total}
+              page={data.page}
+              query={queryInput}
+              type={typeFilter}
+              risk={riskFilter}
+              onQueryChange={(next) => {
+                setQueryInput(next);
+                setPage(1);
+              }}
+              onTypeChange={(next) => {
+                setTypeFilter(next);
+                setPage(1);
+              }}
+              onRiskChange={(next) => {
+                setRiskFilter(next);
+                setPage(1);
+              }}
+              onPageChange={setPage}
+            />
+          </div>
           <GuidanceAlertsSideRail
-            referrals={referrals}
-            interventions={interventions}
-            riskByStudent={riskByStudent ?? {}}
+            summary={summary}
+            activeRisk={riskFilter}
+            onRiskFilterChange={(next) => {
+              setRiskFilter(next);
+              setPage(1);
+            }}
           />
         </div>
-      </div>
-      <div className={`${styles.sideRail} ${styles.railMobile}`}>
-        <GuidanceAlertsSideRail
-          referrals={referrals}
-          interventions={interventions}
-          riskByStudent={riskByStudent ?? {}}
-        />
-      </div>
-        </>
       )}
     </section>
   );

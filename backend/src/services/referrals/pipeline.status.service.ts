@@ -2,7 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
-import { actorName, assertActiveTerm, referralCard, truncate } from "../../modules/referrals/referrals.repository.js";
+import { actorName, assertActiveTerm, referralCard } from "../../modules/referrals/referrals.repository.js";
 import type { ReferralContext } from "./referral.types.js";
 
 export type ReferralStatus =
@@ -236,38 +236,37 @@ export async function escalate(ctx: ReferralContext, referralId: string, input: 
   });
   await writeAudit({ userId: ctx.userId, actionType: "referral_escalated", sourceTable: "referrals", sourceId: referral.id, reason: input.escalationReason, oldValue: { status: referral.status }, newValue: { status: "escalated", escalatedTo: input.escalatedTo } });
   const card = await referralCard(referral);
-  const why = truncate(input.escalationReason, 120);
   const actor = await actorName(ctx.userId);
 
   if (input.escalatedTo === "nurse") {
     void fanoutToRole("nurse", {
       sourceTable: "referrals",
       action: "status",
-      message: `A case was escalated to the clinic — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
+      message: `A case was escalated to the clinic — ${card.who}. Filed by ${card.filerName}.`,
       sourceId: referral.id,
       excludeUserId: ctx.userId,
       messageFor: (r) =>
-        `${actor} escalated ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
+        `${actor} escalated ${card.who} to you, ${r.fullName}.`,
     });
   } else if (input.escalatedTo === "adm_coordinator") {
     void fanoutToRole("adm_coordinator", {
       sourceTable: "referrals",
       action: "status",
-      message: `A case was escalated to ADM — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
+      message: `A case was escalated to ADM — ${card.who}. Filed by ${card.filerName}.`,
       sourceId: referral.id,
       excludeUserId: ctx.userId,
       messageFor: (r) =>
-        `${actor} escalated ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
+        `${actor} escalated ${card.who} to you, ${r.fullName}.`,
     });
   } else if (input.escalatedTo === "principal") {
     void fanoutToRole("principal", {
       sourceTable: "referrals",
       action: "status",
-      message: `A case was escalated to the principal — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
+      message: `A case was escalated to the principal — ${card.who}. Filed by ${card.filerName}.`,
       sourceId: referral.id,
       excludeUserId: ctx.userId,
       messageFor: (r) =>
-        `${actor} escalated ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
+        `${actor} escalated ${card.who} to you, ${r.fullName}.`,
     });
   }
 

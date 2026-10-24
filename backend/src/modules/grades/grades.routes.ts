@@ -445,12 +445,44 @@ router.get(
   requireOwnershipOrRole(async (req) => String(String(req.params.id)), "principal", "adviser", "subject_teacher", "registrar", "record_keeper"),
   async (req, res, next) => {
     try {
+      const termId = req.termScope?.termId ?? null;
+      if (!termId) throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
       const grades = await prisma.finalGrade.findMany({
-        where: { studentId: String(String(req.params.id)) },
-        include: { subject: true, term: true },
+        where: { studentId: String(String(req.params.id)), termId },
+        include: {
+          subject: true,
+          term: true,
+          student: { select: { sectionId: true } },
+        },
         orderBy: { termId: "asc" },
       });
-      res.json(grades);
+      const { sharingMap, canBypassSharing, resolveGradeOwnerIds } = await import(
+        "../../services/teacher/dataShare.service.js"
+      );
+      const requesterId = req.user!.id;
+      const requesterRole = req.user!.role;
+      if (canBypassSharing(requesterRole, requesterId, [requesterId]) && ["principal", "registrar", "record_keeper"].includes(requesterRole)) {
+        res.json(grades);
+        return;
+      }
+      const ownerLists = await Promise.all(
+        grades.map(async (g) => ({
+          id: g.id,
+          owners: g.student?.sectionId
+            ? await resolveGradeOwnerIds(g.subjectId, g.student.sectionId, g.termId)
+            : [],
+        })),
+      );
+      const allOwners = [...new Set(ownerLists.flatMap((o) => o.owners))];
+      const shareByTeacher = await sharingMap(allOwners);
+      const hiddenIds = new Set<string>();
+      for (const { id, owners } of ownerLists) {
+        if (owners.length === 0) continue;
+        if (owners.includes(requesterId)) continue;
+        if (canBypassSharing(requesterRole, requesterId, owners)) continue;
+        if (!owners.some((oid) => shareByTeacher.get(oid) === true)) hiddenIds.add(id);
+      }
+      res.json(grades.filter((g) => !hiddenIds.has(g.id)));
     } catch (e) { next(e); }
   }
 );
@@ -461,11 +493,27 @@ router.post(
   requireRole("subject_teacher", "adviser"),
   async (req, res, next) => {
     try {
-      const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) } });
+      const fg = await prisma.finalGrade.findUnique({
+        where: { id: String(String(req.params.id)) },
+        select: {
+          id: true,
+          termId: true,
+          subjectId: true,
+          lockStatus: true,
+          student: { select: { sectionId: true } },
+          roster: { select: { sectionId: true } },
+        },
+      });
       if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
-      if (req.termScope?.termId && fg.termId !== req.termScope.termId) {
+      const termId = req.termScope?.termId ?? null;
+      if (!termId) throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
+      if (fg.termId !== termId) {
         throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found in the active term");
       }
+      const sectionId = fg.student?.sectionId ?? fg.roster?.sectionId ?? null;
+      if (!sectionId) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
+      // Ownership: the locker must teach this subject in the grade's section/term.
+      await assertAssignment(req.user!.id, `${fg.subjectId}|${sectionId}`, fg.termId);
       const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
       if (code) await verifyTeacherCode(req.user!.id, code);
       if (fg.lockStatus !== "unlocked") throw new AppError(409, "ALREADY_LOCKED", "Final already locked");
@@ -512,7 +560,6 @@ router.post(
 const lockBatchSchema = z.object({
   assignmentId: z.string().min(1),
   code: z.string().trim().min(1).max(32),
-  termId: z.string().min(1).optional(),
 });
 
 router.post(
@@ -523,11 +570,9 @@ router.post(
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
-      const requestedTermId = typeof req.body.termId === "string" && req.body.termId.trim()
-        ? String(req.body.termId)
-        : null;
-      const scopeTermId = req.termScope?.termId ?? null;
-      const termId = requestedTermId ?? scopeTermId;
+      // The resolved scope (the teacher's selected term, else the server's
+      // active term) is the only source of the term — never the request body.
+      const termId = req.termScope?.termId ?? null;
       if (!termId) throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
       await verifyTeacherCode(teacherId, String(req.body.code));
       const rawAssignmentId = String(req.body.assignmentId);
@@ -538,33 +583,9 @@ router.post(
       try {
         if (rawAssignmentId.includes("%")) assignmentId = decodeURIComponent(rawAssignmentId);
       } catch { assignmentId = rawAssignmentId; }
-      let assignment;
-      try {
-        assignment = await assertAssignment(teacherId, assignmentId, termId);
-      } catch (e) {
-        // Header scope may point at a different term than the class on screen
-        // (e.g. record tab opened from an older workspace state). Fall back to
-        // the term where this teacher actually owns the class.
-        if (!(e instanceof AppError) || e.code !== "CLASS_NOT_FOUND" || assignmentId.indexOf("|") < 0) throw e;
-        const sep = assignmentId.indexOf("|");
-        const subjectId = assignmentId.slice(0, sep);
-        const sectionId = assignmentId.slice(sep + 1);
-        const [altAssignment, altLink] = await Promise.all([
-          prisma.teacherSubjectAssignment.findFirst({
-            where: { teacherId, subjectId, sectionId },
-            orderBy: { termId: "asc" },
-            select: { termId: true },
-          }),
-          prisma.sectionTimetableEntry.findFirst({
-            where: { subjectId, sectionId, status: { in: ["APPROVED", "SUBMITTED"] }, teacherName: { userId: teacherId } },
-            orderBy: { termId: "asc" },
-            select: { termId: true },
-          }),
-        ]);
-        const altTermId = altAssignment?.termId ?? altLink?.termId;
-        if (!altTermId) throw e;
-        assignment = await assertAssignment(teacherId, assignmentId, altTermId);
-      }
+      // The class must belong to the resolved term: a scoped lock never
+      // silently writes to another term's grades.
+      const assignment = await assertAssignment(teacherId, assignmentId, termId);
       const effectiveTermId: string = assignment.termId;
       const targets = await prisma.finalGrade.findMany({
         where: {
@@ -620,10 +641,27 @@ router.post(
   }),
   async (req, res, next) => {
     try {
-      const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) } });
+      const fg = await prisma.finalGrade.findUnique({
+        where: { id: String(String(req.params.id)) },
+        select: {
+          id: true,
+          termId: true,
+          lockStatus: true,
+          student: { select: { section: { select: { adviserId: true } } } },
+          roster: { select: { section: { select: { adviserId: true } } } },
+        },
+      });
       if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
-      if (req.termScope?.termId && fg.termId !== req.termScope.termId) {
+      const termId = req.termScope?.termId ?? null;
+      if (!termId) throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
+      if (fg.termId !== termId) {
         throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found in the active term");
+      }
+      // Ownership: only the adviser of the student's section may approve —
+      // a matching grade band alone must not grant approval rights.
+      const sectionAdviserId = fg.student?.section?.adviserId ?? fg.roster?.section?.adviserId ?? null;
+      if (sectionAdviserId !== req.user!.id) {
+        throw new AppError(403, "FORBIDDEN", "Only the section adviser can approve this final grade");
       }
       if (fg.lockStatus !== "locked") throw new AppError(409, "NOT_LOCKED", "Final must be locked by the subject teacher before adviser approval");
       const updated = await prisma.finalGrade.update({

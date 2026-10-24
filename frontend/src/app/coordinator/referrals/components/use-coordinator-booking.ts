@@ -6,6 +6,7 @@ import { toast } from "@/components/ui/sonner";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { apiErrorMessage } from "@/lib/api/errors";
+import { useDock } from "@/components/dock/dock-store";
 import type {
   AdmCaseRow,
   AdmMeeting,
@@ -20,6 +21,8 @@ interface Args {
 }
 export function useCoordinatorBooking({ selected, meetings, invalidateReferrals }: Args) {
   const queryClient = useQueryClient();
+  const dock = useDock();
+  const taskIdRef = React.useRef<string | null>(null);
   const [bookOpen, setBookOpen] = React.useState(false);
   const [bookTarget, setBookTarget] = React.useState<AdmCaseRow | null>(null);
   const [bookVenuePreset, setBookVenuePreset] = React.useState<"school" | "home" | null>(null);
@@ -104,6 +107,14 @@ export function useCoordinatorBooking({ selected, meetings, invalidateReferrals 
       void queryClient.invalidateQueries({ queryKey: ["coordinator-meetings"] });
       invalidateReferrals();
       refreshBookingReminders();
+      const taskId = taskIdRef.current;
+      taskIdRef.current = null;
+      if (taskId) {
+        dock.completeTask(
+          taskId,
+          rescheduled ? "Meeting rescheduled" : "Meeting booked",
+        );
+      }
       closeBook();
       toast.success({
         title: rescheduled ? "Meeting rescheduled" : "Meeting booked",
@@ -116,11 +127,16 @@ export function useCoordinatorBooking({ selected, meetings, invalidateReferrals 
             : "In-school meeting scheduled.",
       });
     },
-    onError: (err) =>
+    onError: (err) => {
+      const taskId = taskIdRef.current;
+      taskIdRef.current = null;
+      if (taskId) dock.failTask(taskId, apiErrorMessage(err));
+      closeBook();
       toast.error({
         title: rescheduleMeeting ? "Could not reschedule meeting" : "Could not book meeting",
         description: apiErrorMessage(err),
-      }),
+      });
+    },
   });
   function closeBook() {
     setBookOpen(false);
@@ -149,7 +165,28 @@ export function useCoordinatorBooking({ selected, meetings, invalidateReferrals 
       logbook: string;
       inviteeIds: string[];
     }) => {
-      if (!bookMutation.isPending) bookMutation.mutate(fields);
+      if (bookMutation.isPending) return;
+      const target = bookTarget ?? selected;
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "adm-book",
+          title: rescheduleMeeting ? "Rescheduling meeting" : "Booking meeting",
+          description: target
+            ? `${target.student} → ${fields.venue === "home" ? "Home visitation" : "In school"}`
+            : fields.venue === "home"
+              ? "Home visitation"
+              : "In-school meeting",
+        });
+      } catch {
+        taskId = null;
+      }
+      taskIdRef.current = taskId;
+      // Close the overlay right away — the shared Dock reports progress and
+      // the final result at the bottom right. The mutation keeps its own
+      // target/meeting snapshot, so clearing the UI state here is safe.
+      setBookOpen(false);
+      bookMutation.mutate(fields);
     },
   };
 }

@@ -26,10 +26,14 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { Spinner } from "@/components/ui/spinner";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
-import { Pagination } from "@/components/shared/pagination";
+import {
+  admStageTone,
+  eligibilityLabel,
+  eligibilityTone,
+} from "@/lib/labels/status-tone";
 import type { AdmReferralRow } from "@/services/principal/adm.types";
 import {
   stageLabel,
@@ -58,25 +62,12 @@ function asCase(r: AdmReferralRow): AdmCase {
     forms: r.forms,
   };
 }
-const STAGE_BADGE: Record<
-  string,
-  "outline" | "blue" | "amber" | "green" | "default" | "secondary"
-> = {
-  anecdotal: "outline",
-  consultation: "blue",
-  meeting_parents: "amber",
-  home_visitation: "green",
-  certification: "blue",
-  principal_approval: "default",
-  enrollment_monitoring: "green",
-  completion: "secondary",
-};
-function eligibilityBadge(status: AdmReferralRow["eligibilityStatus"]) {
-  if (status === "eligible")
-    return <Badge variant="secondary">Eligible</Badge>;
-  if (status === "ineligible")
-    return <Badge variant="destructive">Ineligible</Badge>;
-  return <Badge variant="outline">Pending</Badge>;
+function eligibilityPill(status: AdmReferralRow["eligibilityStatus"]) {
+  return (
+    <Pill tone={eligibilityTone(status)} label="Eligibility">
+      {eligibilityLabel(status)}
+    </Pill>
+  );
 }
 export function AdmReferralsTable({
   rows,
@@ -86,14 +77,9 @@ export function AdmReferralsTable({
   error,
   search,
   actionId,
-  safePage,
-  totalPages,
-  start,
-  end,
   onRequestSign,
   onRequestReturn,
   onViewForms,
-  onPageChange,
 }: {
   rows: AdmReferralRow[];
   totalCount: number;
@@ -102,14 +88,9 @@ export function AdmReferralsTable({
   error: string | null;
   search: string;
   actionId: string | null;
-  safePage: number;
-  totalPages: number;
-  start: number;
-  end: number;
   onRequestSign: (id: string) => void;
   onRequestReturn: (id: string) => void;
   onViewForms: (row: AdmReferralRow) => void;
-  onPageChange: (page: number) => void;
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] =
@@ -152,12 +133,9 @@ export function AdmReferralsTable({
         minSize: 170,
         maxSize: 170,
         cell: ({ row }) => (
-          <Badge
-            variant={STAGE_BADGE[row.original.stage] ?? "outline"}
-            className={styles.stageBadge}
-          >
+          <Pill tone={admStageTone(row.original.stage)} label="ADM stage">
             {stageLabel(row.original.stage)}
-          </Badge>
+          </Pill>
         ),
       },
       {
@@ -167,7 +145,7 @@ export function AdmReferralsTable({
         size: 130,
         minSize: 130,
         maxSize: 130,
-        cell: ({ row }) => eligibilityBadge(row.original.eligibilityStatus),
+        cell: ({ row }) => eligibilityPill(row.original.eligibilityStatus),
       },
       {
         id: "approval",
@@ -217,9 +195,9 @@ export function AdmReferralsTable({
           }
           if (r.approvedBy) {
             return (
-              <Badge variant="secondary" className={styles.stageBadge}>
+              <Pill tone="green" label="Principal approval">
                 Signed
-              </Badge>
+              </Pill>
             );
           }
           return (
@@ -407,11 +385,6 @@ export function AdmReferralsTable({
           </TableBody>
         </Table>
       </div>
-      <Pagination
-        currentPage={safePage}
-        totalItems={totalCount}
-        onPageChange={onPageChange}
-      />
     </>
   );
 }

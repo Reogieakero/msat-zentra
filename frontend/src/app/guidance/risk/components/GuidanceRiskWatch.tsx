@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { fetchGuidanceAlerts } from "@/services/guidance/alerts.service";
 import type { GuidanceRiskLevel } from "@/services/guidance/guidance.types";
 import type { GuidanceRiskRow } from "./guidance-risk-dashboard";
@@ -157,17 +151,19 @@ export function GuidanceRiskWatchCard({ data }: { data: RiskWatchData }) {
   if (data.okay > 0) parts.push(`${data.okay} doing okay`);
   const hidden = Math.max(0, data.urgent - data.watchlist.length);
   return (
-    <Card className={styles.glow} aria-label="Students needing attention">
+    <KanbanBoard
+      className={styles.glow}
+      title={<span className={styles.title}>Who needs attention first</span>}
+      description={
+        <span className={styles.desc}>
+          High-risk students in plain words — names open their timeline.
+        </span>
+      }
+      ariaLabel="Students needing attention"
+    >
       <span className={styles.glowClip} aria-hidden="true">
         <span className={styles.cardGlow} />
       </span>
-      <CardHeader>
-        <CardTitle className={styles.title}>Who needs attention first</CardTitle>
-        <CardDescription className={styles.desc}>
-          High-risk students in plain words — names open their timeline.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
         {known === 0 ? (
           <p className={styles.message} role="status">
             {data.unknown > 0
@@ -213,7 +209,6 @@ export function GuidanceRiskWatchCard({ data }: { data: RiskWatchData }) {
                 ? "Nobody needs urgent attention right now — keep an eye on the watch group."
                 : "Everyone referred is doing okay — hold the line with routine follow-through."}
         </p>
-      </CardContent>
-    </Card>
+    </KanbanBoard>
   );
 }

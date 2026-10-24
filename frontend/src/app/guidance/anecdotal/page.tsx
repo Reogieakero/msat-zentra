@@ -6,11 +6,12 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
-import { GuidancePageHeader } from "../components/GuidancePageHeader";
 import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { FolderLegendCard } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
-import { TopReferredCard } from "./components/guidance-anecdotal-siderail";
+import {
+  GuidanceAnecdotalSidebar,
+  TopReferredCard,
+} from "./components/guidance-anecdotal-siderail";
 import { GuidanceAnecdotalFolders } from "./components/guidance-anecdotal-folders";
 import type { TypeFilter } from "./components/guidance-anecdotal-filters";
 import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
@@ -90,8 +91,7 @@ function GuidanceAnecdotalPageInner() {
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading referred records">
-        <ZentraPageHeaderSkeleton />
-        <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
           <div className={`${styles.main} flex min-w-0 flex-col`}>
             <div className={styles.skelPanel}>
               <div className={styles.skelPanelHead}>
@@ -127,31 +127,9 @@ function GuidanceAnecdotalPageInner() {
               </div>
             </div>
           </div>
-          <div className="hidden min-w-0 flex-col gap-4 lg:flex" aria-hidden="true">
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendLabel} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendLabel} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="hidden min-w-0 flex-col items-end gap-2 lg:flex" aria-hidden="true">
+            <Skeleton className="h-9 w-9 rounded-xl" />
+            <Skeleton className="h-9 w-9 rounded-xl" />
           </div>
         </div>
       </section>
@@ -201,11 +179,7 @@ function GuidanceAnecdotalPageInner() {
 
   return (
     <section className={styles.page} aria-label="Anecdotal records">
-      <GuidancePageHeader
-        title="Anecdotal Records"
-        description="Every ADM and counseling case referred to you, filed as its own folder."
-      />
-      <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
         <div className={`${styles.main} flex min-w-0 flex-col`}>
           <GuidanceAnecdotalFolders
             records={Array.isArray(data.records) ? data.records : []}
@@ -224,10 +198,7 @@ function GuidanceAnecdotalPageInner() {
             }}
           />
         </div>
-        <div className="hidden min-w-0 flex-col gap-4 lg:flex">
-          <TopReferredCard items={data.summary.topStudents ?? []} />
-          <FolderLegendCard />
-        </div>
+        <GuidanceAnecdotalSidebar items={data.summary.topStudents ?? []} />
       </div>
       <div className="flex min-w-0 flex-col gap-4 lg:hidden">
         <TopReferredCard items={data.summary.topStudents ?? []} />

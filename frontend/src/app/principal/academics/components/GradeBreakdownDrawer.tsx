@@ -1,6 +1,6 @@
 "use client";
 
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { RiskBadge } from "./RiskBadge";
 import type { StudentRow } from "@/services/principal/academics";
 import styles from "./GradeBreakdownDrawer.module.css";
@@ -14,15 +14,14 @@ interface Props {
 
 export function GradeBreakdownDrawer({ student, open, onOpenChange }: Props) {
   return (
-    <CardModal
+    <KanbanOverlay
       open={open}
       onClose={() => onOpenChange(false)}
-      size="lg"
+      width="lg"
       title={student?.name ?? "Grade breakdown"}
       description={
         student ? `LRN ${student.lrn} · Final grade breakdown (view-only, not yet finalized)` : undefined
       }
-      watchKey={student?.studentId}
     >
       {student && (
           <>
@@ -138,6 +137,6 @@ export function GradeBreakdownDrawer({ student, open, onOpenChange }: Props) {
             </div>
           </>
         )}
-    </CardModal>
+    </KanbanOverlay>
   );
 }

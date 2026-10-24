@@ -44,14 +44,14 @@ export function RiskFactorHeatmap() {
   }, [selected, open]);
 
   React.useEffect(() => {
-    if (!selected || !data?.termId) {
+    if (!selected) {
       return;
     }
     let cancelled = false;
     queueMicrotask(() => {
       if (!cancelled) setLoadingStudents(true);
     });
-    fetchSectionFactorStudents(selected.sectionId, selected.factor, data.termId)
+    fetchSectionFactorStudents(selected.sectionId, selected.factor)
       .then((res) => {
         if (!cancelled) setStudents(res);
       })
@@ -65,7 +65,7 @@ export function RiskFactorHeatmap() {
     return () => {
       cancelled = true;
     };
-  }, [selected, data?.termId]);
+  }, [selected]);
 
   const sections = data?.sections ?? [];
   const factorTotals = data?.factorTotals;

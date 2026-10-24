@@ -252,6 +252,9 @@ export async function fetchNurseAlerts(
   query.set("pageSize", String(params?.pageSize ?? PAGE_SIZE));
   if (params?.track) query.set("track", params.track);
   if (params?.highlight) query.set("highlight", params.highlight);
+  // The nurse desk lists are "latest referral first" — server-side ranking by
+  // referred time (ids are random uuids, so the default page pick samples).
+  query.set("sort", "latest");
   const [referralsRes, notificationsRes] = await Promise.all([
     apiClient.get<RawReferral[] | { referrals: RawReferral[] } | PaginatedReferrals>(
       `/api/referrals/?${query.toString()}`,

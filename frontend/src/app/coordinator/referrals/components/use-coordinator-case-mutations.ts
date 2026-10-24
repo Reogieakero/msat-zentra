@@ -3,11 +3,11 @@ import * as React from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { stageLabel } from "@/services/coordinator/labels";
 import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
-import { useTerm } from "@/lib/term/TermContext";
 function isEarlyRow(row: AdmCaseRow): boolean {
   return row.id.startsWith("referral:");
 }
@@ -26,57 +26,67 @@ export function useCoordinatorCaseMutations(
   );
   const [prepareCreatePending, setPrepareCreatePending] =
     React.useState(false);
-  const { activeTerm } = useTerm();
-  const termId = activeTerm?.termId ?? "";
+  const dock = useDock();
   const advanceMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id }: { id: string; taskId: string | null }) => {
       const { data } = await apiClient.patch(`/api/adm/${id}/stage`, {
         stage: "meeting_parents",
       });
       return data;
     },
-    onSuccess: (data, id) => {
+    onSuccess: (data, vars) => {
       void data;
-      markSelfNotified(id);
+      markSelfNotified(vars.id);
       invalidateAll();
       setForwardTarget(null);
       setAdvanceTarget(null);
       opts?.onCaseClosed?.();
+      if (vars.taskId) {
+        dock.completeTask(vars.taskId, `Moved to ${stageLabel("meeting_parents")}`);
+      }
       toast.success({
         title: "Case advanced",
         description: `Case moved to ${stageLabel("meeting_parents")}.`,
       });
     },
-    onError: (err) =>
+    onError: (err, vars) => {
+      if (vars?.taskId) dock.failTask(vars.taskId, apiErrorMessage(err));
       toast.error({
         title: "Could not update case",
         description: apiErrorMessage(err),
-      }),
+      });
+    },
   });
   const forwardMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({
+      id,
+    }: {
+      id: string;
+      student: string;
+      taskId: string | null;
+    }) => {
       const { data } = await apiClient.patch(`/api/adm/${id}/stage`, {
         stage: "principal_approval",
       });
       return data;
     },
-    onSuccess: (data, id) => {
+    onSuccess: (data, vars) => {
       void data;
-      markSelfNotified(id);
+      markSelfNotified(vars.id);
       invalidateAll();
-      setForwardTarget(null);
       setAdvanceTarget(null);
       opts?.onCaseClosed?.();
-      toast.success({
-        title: "Endorsed to Principal",
-        description: "The case is now locked awaiting the Principal's signature.",
-      });
+      if (vars.taskId) {
+        dock.completeTask(vars.taskId, `${vars.student} → Principal`);
+      }
     },
-    onError: (err) =>
+    onError: (err, vars) => {
+      if (vars.taskId) dock.failTask(vars.taskId, apiErrorMessage(err));
       toast.error({
         title: "Could not update case",
         description: apiErrorMessage(err),
-      }),
+      });
+    },
   });
   async function prepareCreate(row: AdmCaseRow) {
     if (prepareCreatePending) return;
@@ -104,19 +114,20 @@ export function useCoordinatorCaseMutations(
     }
   }
   const createMutation = useMutation({
-    mutationFn: async () => {
-      if (!createTarget) throw new Error("No referral selected.");
-      const referralId = createTarget.id.replace(/^referral:/, "");
+    mutationFn: async ({
+      target,
+    }: {
+      target: AdmCaseRow;
+      taskId: string | null;
+    }) => {
+      const referralId = target.id.replace(/^referral:/, "");
       const { data } = await apiClient.post("/api/adm/profiles", {
-        ...(createTarget.studentId
-          ? { studentId: createTarget.studentId }
-          : {}),
+        ...(target.studentId ? { studentId: target.studentId } : {}),
         referralId,
-        termId,
       });
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, vars) => {
       const newId =
         typeof (data as { id?: unknown })?.id === "string"
           ? (data as { id: string }).id
@@ -124,16 +135,17 @@ export function useCoordinatorCaseMutations(
       if (newId) markSelfNotified(newId);
       invalidateAll();
       setCreateTarget(null);
-      toast.success({
-        title: "Learner profile created",
-        description: "The case is now ready for the parent meeting.",
-      });
+      if (vars.taskId) {
+        dock.completeTask(vars.taskId, `${vars.target.student} → profile`);
+      }
     },
-    onError: (err) =>
+    onError: (err, vars) => {
+      if (vars.taskId) dock.failTask(vars.taskId, apiErrorMessage(err));
       toast.error({
         title: "Could not create profile",
         description: apiErrorMessage(err),
-      }),
+      });
+    },
   });
   return {
     forwardTarget,
@@ -144,23 +156,64 @@ export function useCoordinatorCaseMutations(
     setCreateTarget,
     prepareCreate,
     prepareCreatePending,
-    termId,
     advancePending: advanceMutation.isPending,
     forwardPending: forwardMutation.isPending,
     confirmAdvance: () => {
-      if (advanceTarget && !isEarlyRow(advanceTarget) && !advanceMutation.isPending) {
-        advanceMutation.mutate(advanceTarget.id);
+      const target = advanceTarget;
+      if (!target || isEarlyRow(target) || advanceMutation.isPending) return;
+      // Close at once — the shared Dock reports the request until it settles.
+      setAdvanceTarget(null);
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "generic",
+          title: "Advancing case",
+          description: `${target.student} → ${stageLabel("meeting_parents")}`,
+        });
+      } catch {
+        taskId = null;
       }
+      advanceMutation.mutate({ id: target.id, taskId });
     },
     confirmForward: () => {
-      if (forwardTarget && !isEarlyRow(forwardTarget) && !forwardMutation.isPending) {
-        forwardMutation.mutate(forwardTarget.id);
+      const target = forwardTarget;
+      if (!target || isEarlyRow(target) || forwardMutation.isPending) return;
+      // Close at once — the shared Dock reports the request until it settles.
+      setForwardTarget(null);
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "adm-endorse",
+          title: "Endorsing to Principal",
+          description: `${target.student} → Principal`,
+        });
+      } catch {
+        taskId = null;
       }
+      forwardMutation.mutate({
+        id: target.id,
+        student: target.student,
+        taskId,
+      });
     },
     createPending: createMutation.isPending,
-    canCreate: Boolean(termId) && !createMutation.isPending,
+    canCreate: !createMutation.isPending,
     confirmCreate: () => {
-      if (!createMutation.isPending) createMutation.mutate();
+      const target = createTarget;
+      if (!target || createMutation.isPending) return;
+      // Close at once — the shared Dock reports the request until it settles.
+      setCreateTarget(null);
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "generic",
+          title: "Creating learner profile",
+          description: `${target.student} → profile`,
+        });
+      } catch {
+        taskId = null;
+      }
+      createMutation.mutate({ target, taskId });
     },
   };
 }

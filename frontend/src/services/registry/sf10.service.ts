@@ -114,6 +114,14 @@ export async function releaseSf10(id: string): Promise<void> {
   await apiClient.post(`/api/sf10/${id}/release`);
 }
 
+export async function verifySf10(id: string): Promise<void> {
+  await apiClient.post(`/api/sf10/${id}/verify`);
+}
+
+export async function validateSf10(id: string): Promise<void> {
+  await apiClient.post(`/api/sf10/${id}/validate`);
+}
+
 export async function fetchSf10Versions(
   id: string,
   signal?: AbortSignal,

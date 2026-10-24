@@ -24,6 +24,7 @@ export function CaseHeader({
   activeTab,
   stepDone,
   onGoStep,
+  showSteps = true,
 }: {
   d: CoordinatorCaseDetail;
   caseStatus: { key: string; label: string };
@@ -37,6 +38,9 @@ export function CaseHeader({
   activeTab: CaseStepId;
   stepDone: Record<CaseStepId, boolean>;
   onGoStep: (id: CaseStepId) => void;
+  /** Kanban board renders each step as its own column, so the header tab
+   *  list is suppressed there. */
+  showSteps?: boolean;
 }) {
   const showCreate =
     d.kind === "referral" &&
@@ -44,9 +48,6 @@ export function CaseHeader({
   void hasAttendedMeeting;
   return (
     <header className={styles.header}>
-      <span className={styles.glowClip} aria-hidden="true">
-        <span className={styles.cardGlow} />
-      </span>
       <div className={styles.headerSection}>
         <h1 className={styles.studentName}>{d.student}</h1>
         <p className={styles.studentSub}>
@@ -134,36 +135,40 @@ export function CaseHeader({
           ) : null}
         </div>
       </div>
-      <div className={styles.headerDivider} aria-hidden="true" />
-      <div
-        className={styles.headerSteps}
-        role="tablist"
-        aria-label="Case file sections"
-      >
-        {CASE_STEPS.map((s, i) => {
-          const selected = s.id === activeTab;
-          const done = stepDone[s.id];
-          return (
-            <button
-              key={s.id}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              aria-controls={`case-panel-${s.id}`}
-              id={`case-tab-${s.id}`}
-              className={styles.tabBtn}
-              data-selected={selected ? "true" : "false"}
-              data-done={done ? "true" : "false"}
-              onClick={() => onGoStep(s.id)}
-            >
-              <span className={styles.tabDot} aria-hidden="true">
-                {done ? <Check size={12} strokeWidth={3} /> : `${i + 1}`}
-              </span>
-              <span>{s.short}</span>
-            </button>
-          );
-        })}
-      </div>
+      {showSteps ? (
+        <>
+          <div className={styles.headerDivider} aria-hidden="true" />
+          <div
+            className={styles.headerSteps}
+            role="tablist"
+            aria-label="Case file sections"
+          >
+          {CASE_STEPS.map((s, i) => {
+            const selected = s.id === activeTab;
+            const done = stepDone[s.id];
+            return (
+              <button
+                key={s.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls={`case-panel-${s.id}`}
+                id={`case-tab-${s.id}`}
+                className={styles.tabBtn}
+                data-selected={selected ? "true" : "false"}
+                data-done={done ? "true" : "false"}
+                onClick={() => onGoStep(s.id)}
+              >
+                <span className={styles.tabDot} aria-hidden="true">
+                  {done ? <Check size={12} strokeWidth={3} /> : `${i + 1}`}
+                </span>
+                <span>{s.short}</span>
+              </button>
+            );
+          })}
+          </div>
+        </>
+      ) : null}
     </header>
   );
 }

@@ -1,56 +1,54 @@
 "use client";
 
 import * as React from "react";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type SortingState,
-} from "@tanstack/react-table";
-import { Inbox, SearchIcon } from "lucide-react";
+import Link from "next/link";
+import { CalendarClock, ClipboardCheck, Clock, Inbox, Send, Stethoscope } from "lucide-react";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
-import { useNurseInvalidate } from "./use-nurse-mutation";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import { Pagination } from "@/components/shared/pagination";
-import { deriveActionStatus } from "@/services/nurse/labels";
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
 import { NurseActionBadge, waitingElapsed } from "./nurse-action-badge";
 import { useNowMs } from "./use-now-ms";
 import type { NurseQueueRow } from "@/services/nurse/nurse.types";
 import { NurseQueueRowActions } from "./NurseQueueRowActions";
 import { NurseAdmReviewDialog } from "./NurseAdmReviewDialog";
-import { NurseForwardAdmButton } from "./NurseForwardAdmButton";
+import { NurseForwardAdmConfirm } from "./NurseForwardAdmConfirm";
+import { NurseSessionScheduleBoard } from "./NurseSessionScheduleBoard";
 import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
 import { NurseAdmReferralFormSheet } from "../../referrals/components/NurseAdmReferralFormSheet";
+import { activeSessionOf, anecdotalCategoryPillClass } from "../../referrals/components/nurse-referrals-format";
+import { useNurseInvalidate } from "./use-nurse-mutation";
 import styles from "./nurse-overview.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
 
-export function NurseNeedsReviewPanel({
-  needsReview,
-  title = "Needs your review",
-  description = "Pending cases routed to the clinic, longest waiting first.",
-  emptyText = "All caught up — nothing waiting for review.",
+/* Single shared pill metric for the case rows — rectangle pills (rounded-md)
+   matching row-list.tsx, one step larger (12px) for LRN/category/waiting. */
+const PILL_BASE =
+  "inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-xs font-medium whitespace-nowrap";
+const PILL_SECONDARY = "border-border bg-secondary text-secondary-foreground";
+const PILL_MUTED = "border-border bg-muted text-muted-foreground";
+
+/**
+ * Latest referrals board — the KanbanBoard shell (icon + title + count +
+ * description) over one flat row per case: the latest five students referred
+ * to the desk, newest referral first. Each row: roster mascot + name,
+ * LRN/grade/category pills, then the type + status badges, waiting pill, and
+ * a single kebab menu (all row buttons folded in). Filter behaves as before;
+ * pagination auto-hides at five rows.
+ */
+export function NurseLatestReferralsPanel({
+  latestReferrals,
+  title = "Latest referred students",
+  description = "The latest 5 students referred to the desk.",
+  emptyText = "No referrals yet — new referrals will appear here.",
 }: {
-  needsReview: NurseQueueRow[];
+  latestReferrals: NurseQueueRow[];
   title?: string;
   description?: string;
   emptyText?: string;
@@ -59,261 +57,182 @@ export function NurseNeedsReviewPanel({
     row: NurseQueueRow;
     draft: AdmReviewDraft;
   } | null>(null);
+  const [reviewId, setReviewId] = React.useState<string | null>(null);
+  const [forwardRow, setForwardRow] = React.useState<NurseQueueRow | null>(null);
+  const reviewRow = React.useMemo(
+    () => (reviewId ? latestReferrals.find((r) => r.id === reviewId) ?? null : null),
+    [latestReferrals, reviewId],
+  );
   const invalidateNurse = useNurseInvalidate();
   const refresh = React.useCallback(() => {
     invalidateNurse();
   }, [invalidateNurse]);
   const nowMs = useNowMs();
 
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-
-  const columns = React.useMemo<ColumnDef<NurseQueueRow>[]>(
-    () => [
-      {
-        id: "student",
-        accessorFn: (row) => row.student,
-        header: "Student",
-        cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className={styles.cellMain}>{row.original.student}</p>
-            <p className={styles.cellSub}>{row.original.lrn}</p>
-          </div>
-        ),
-      },
-      {
-        id: "grade",
-        accessorFn: (row) => row.grade,
-        header: "Grade",
-        cell: ({ row }) => (
-          <span className="whitespace-nowrap">{row.original.grade}</span>
-        ),
-      },
-      {
-        id: "type",
-        accessorFn: (row) => row.type,
-        header: "Type",
-        cell: ({ row }) =>
-          row.original.type === "ADM" ? (
-            <Badge variant="blue">ADM case</Badge>
-          ) : (
-            <Badge variant="secondary">Clinic</Badge>
-          ),
-      },
-      {
-        id: "category",
-        accessorFn: (row) => row.category,
-        header: "Category",
-        cell: ({ row }) => (
-          <span className="whitespace-nowrap">{row.original.category}</span>
-        ),
-      },
-      {
-        id: "status",
-        accessorFn: (row) =>
-          deriveActionStatus(
-            row.type,
-            row.status,
-            row.sessions,
-          ).label,
-        header: "Case status",
-        cell: ({ row }) => <NurseActionBadge row={row.original} />,
-      },
-      {
-        id: "elapsed",
-        accessorFn: (row) => {
-          const t = new Date(row.referredAt).getTime();
-          return Number.isFinite(t) ? t : 0;
-        },
-        header: "Time elapsed",
-        cell: ({ row }) => (
-          <span className="whitespace-nowrap tabular-nums">
-            {waitingElapsed(row.original.referredAt, nowMs)}
-          </span>
-        ),
-      },
-      {
-        id: "actions",
-        header: () => <span className="sr-only">Actions</span>,
-        enableSorting: false,
-        cell: ({ row }) => {
-          const item = row.original;
-
-          const homeBase =
-            item.type === "ADM"
-              ? "/nurse/referrals/adm"
-              : "/nurse/referrals/clinic";
-          const seeMoreHref = `${homeBase}?highlight=${item.id}`;
-
-          const viewFormHref =
-            item.type === "ADM" ? `${seeMoreHref}&form=1` : seeMoreHref;
-          return (
-            <div className={styles.cellActions}>
-              {item.type === "ADM" &&
-                item.status === "pending" &&
-                item.referralReady && (
-                  <NurseForwardAdmButton
-                    id={item.id}
-                    student={item.student}
-                    onChanged={refresh}
-                  />
-                )}
-              {item.type === "ADM" && item.status === "pending" && (
-                <NurseAdmReviewDialog
-                  row={item}
-                  onChanged={refresh}
-                  onCreateReferral={(draft) =>
-                    setFormSheet({ row: item, draft })
-                  }
-                />
-              )}
-              <NurseQueueRowActions
-                row={item}
-                onChanged={refresh}
-                seeMoreHref={seeMoreHref}
-                viewFormHref={viewFormHref}
-                viewOnly
-              />
-            </div>
-          );
-        },
-      },
-    ],
-    [nowMs, refresh],
-  );
-
-  const table = useReactTable({
-    data: needsReview,
-    columns,
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: PAGE_SIZE } },
-    state: { sorting, columnFilters },
-  });
-
-  if (needsReview.length === 0) {
-    return (
-      <>
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <NurseEmptyState
-            icon={Inbox}
-            title="You're all caught up"
-            hint={emptyText}
-          />
-        </div>
-        {formSheet && (
-          <NurseAdmReferralFormSheet
-            open
-            onClose={() => setFormSheet(null)}
-            row={formSheet.row}
-            initialDraft={formSheet.draft}
-            onChanged={refresh}
-          />
-        )}
-      </>
-    );
-  }
-
   return (
     <>
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className="relative flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className={styles.sectionTitle}>
-              {title} — {needsReview.length}
-            </h2>
-            <p className={styles.sectionDesc}>{description}</p>
-          </div>
-          <InputGroup className="max-w-40 shrink-0">
-            <InputGroupInput
-              placeholder="Filter students..."
-              value={
-                (table.getColumn("student")?.getFilterValue() as string) ?? ""
-              }
-              onChange={(event) =>
-                table.getColumn("student")?.setFilterValue(event.target.value)
-              }
-              aria-label="Filter students"
-            />
-            <InputGroupAddon>
-              <SearchIcon />
-            </InputGroupAddon>
-          </InputGroup>
-        </div>
-        <div className="relative overflow-x-auto rounded-md border">
-          <Table className="w-full">
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow
-                  key={headerGroup.id}
-                  className="bg-muted/50 [&>th]:border-t-0"
-                >
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      onClick={header.column.getToggleSortingHandler()}
-                      className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="whitespace-nowrap">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No cases match your search.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="relative mt-auto flex items-center justify-end space-x-2 pt-2">
-          <Pagination
-            currentPage={table.getState().pagination.pageIndex + 1}
-            totalItems={table.getFilteredRowModel().rows.length}
-            onPageChange={(p) => table.setPageIndex(p - 1)}
+      <KanbanBoard
+        title={title}
+        icon={
+          <span className="text-primary" aria-hidden>
+            <Stethoscope size={14} />
+          </span>
+        }
+        description={description}
+        actions={
+          /* Amber link on the title row — the desk's amber accent pair. */
+          <Link
+            href="/nurse/alerts"
+            className="text-xs font-medium text-amber-700 hover:underline dark:text-amber-400"
+          >
+            View all
+          </Link>
+        }
+      >
+        {latestReferrals.length === 0 ? (
+          <NurseEmptyState
+            icon={Inbox}
+            title="No referrals yet"
+            hint={emptyText}
           />
-          <Button variant="ghost" size="sm" asChild>
-            <a href="/nurse/alerts">View all</a>
-          </Button>
-        </div>
-      </div>
+        ) : (
+          <ul className={styles.caseList}>
+            {latestReferrals.map((item) => {
+              const homeBase =
+                item.type === "ADM"
+                  ? "/nurse/referrals/adm"
+                  : "/nurse/referrals/clinic";
+              const seeMoreHref = `${homeBase}?highlight=${item.id}`;
+              const viewFormHref =
+                item.type === "ADM" ? `${seeMoreHref}&form=1` : seeMoreHref;
+              const wait = waitingElapsed(item.referredAt, nowMs);
+              const isReviewableAdm =
+                item.type === "ADM" && item.status === "pending";
+              const bookedSession = activeSessionOf(item.sessions);
+              return (
+                <li key={item.id} className={styles.caseRow}>
+                  <div className={styles.caseInfo}>
+                    <StudentMascot
+                      name={item.student}
+                      seed={item.lrn}
+                      character={item.mascot ?? undefined}
+                      size={32}
+                    />
+                    <p className={styles.cellMain}>{item.student}</p>
+                    <span
+                      className={`${PILL_BASE} ${PILL_SECONDARY} tabular-nums`}
+                      title={item.lrn}
+                    >
+                      {item.lrn}
+                    </span>
+                    {item.grade !== "—" && (
+                      <span className={`${PILL_BASE} ${PILL_MUTED}`}>
+                        {item.grade}
+                      </span>
+                    )}
+                    {item.category !== "—" && (
+                      <span
+                        className={`${PILL_BASE} ${
+                          anecdotalCategoryPillClass(item.category) ??
+                          PILL_SECONDARY
+                        }`}
+                      >
+                        {item.category}
+                      </span>
+                    )}
+                  </div>
+                  <div className={styles.cellActions}>
+                    {item.type === "ADM" ? (
+                      <Badge variant="blue" className="rounded-md">
+                        ADM case
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="rounded-md">
+                        Clinic
+                      </Badge>
+                    )}
+                    <NurseActionBadge row={item} className="rounded-md" />
+                    {wait !== "—" && (
+                      <span
+                        className={`${PILL_BASE} ${PILL_MUTED} gap-1 tabular-nums`}
+                        title={`Waiting since ${item.date}`}
+                      >
+                        <Clock size={11} aria-hidden />
+                        {wait}
+                      </span>
+                    )}
+                    <NurseQueueRowActions
+                      row={item}
+                      onChanged={refresh}
+                      seeMoreHref={seeMoreHref}
+                      viewFormHref={viewFormHref}
+                      viewOnly
+                      menuLeadingItems={
+                        isReviewableAdm ? (
+                          <>
+                            {item.referralReady && (
+                              <DropdownMenuItem
+                                className={styles.menuItem}
+                                onSelect={() => setForwardRow(item)}
+                              >
+                                <Send aria-hidden />
+                                Endorse & forward…
+                              </DropdownMenuItem>
+                            )}
+                            {bookedSession ? (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className={styles.menuItem}>
+                                  <CalendarClock aria-hidden />
+                                  Session schedule…
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent
+                                  sideOffset={8}
+                                  className="min-w-0 overflow-visible border-0 bg-transparent p-0 shadow-none ring-0"
+                                >
+                                  <NurseSessionScheduleBoard
+                                    row={item}
+                                    session={bookedSession}
+                                  />
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                            ) : (
+                              <DropdownMenuItem
+                                className={styles.menuItem}
+                                onSelect={() => setReviewId(item.id)}
+                              >
+                                <ClipboardCheck aria-hidden />
+                                Review ADM case…
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                          </>
+                        ) : null
+                      }
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </KanbanBoard>
+
+      {reviewRow && (
+        <NurseAdmReviewDialog
+          row={reviewRow}
+          open
+          onClose={() => setReviewId(null)}
+          onChanged={refresh}
+          onCreateReferral={(draft) => setFormSheet({ row: reviewRow, draft })}
+        />
+      )}
+
+      {forwardRow && (
+        <NurseForwardAdmConfirm
+          row={forwardRow}
+          onClose={() => setForwardRow(null)}
+        />
+      )}
 
       {formSheet && (
         <NurseAdmReferralFormSheet

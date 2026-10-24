@@ -7,19 +7,15 @@
   padding: 0 0 0.25rem;
 }
 
-.divider {
-  margin: 0;
-  border: none;
-  border-top: 1px solid var(--border);
-}
-
-/* Teacher overview layout: main data-table column + sticky right rail.
-   Applied one-to-one so the nurse desk matches the teacher desk. */
+/* Left stack (queue board + charts) + icon-only KPI rail on the right —
+   same layout as the registrar / record-keeper overviews: the rail spans
+   the full stack height, so it stays pinned (sticky) through the whole
+   page scroll, and no section may cross into its 2.75rem strip. */
 .body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
   gap: 1.25rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 .mainCol {
@@ -27,245 +23,170 @@
   flex-direction: column;
   gap: 1.25rem;
   min-width: 0;
-}
-
-/* Same-height cards: the table card fills the main column and the
-   snapshot card fills the rail, so both outer boxes match the row's
-   taller height. */
-.mainCol > div {
-  flex: 1;
-  height: 100%;
-}
-
-.sideCol {
-  position: sticky;
-  top: 4rem;
-  align-self: stretch;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
 }
 
 @media (max-width: 1024px) {
   .body {
     grid-template-columns: 1fr;
   }
-
-  .sideCol {
-    position: static;
-    align-self: auto;
-  }
-
-  .mainCol > div {
-    height: auto;
-  }
-}
-
-/* Right-rail stack + KPI rows (teacher card style). */
-.railStack {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  min-width: 0;
-  flex: 1;
-  height: 100%;
-}
-
-.railStack > div {
-  flex: 1;
-  height: 100%;
-}
-
-.kpiRow {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 0.625rem 0;
-  border-bottom: 1px solid
-    color-mix(in oklch, var(--foreground), transparent 94%);
-  min-width: 0;
-}
-
-.kpiRow:last-child {
-  border-bottom: none;
-}
-
-.kpiRowIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--primary), transparent 90%);
-  color: var(--primary);
-}
-
-.kpiRowBody {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  flex: 1;
-  min-width: 0;
-}
-
-.kpiRowLabel {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--foreground);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kpiRowHint {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kpiRowValue {
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--foreground);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-
-/* Data-table card header (same as teacher risk table). */
-.sectionTitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.sectionDesc {
-  margin: 0.125rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
 }
 
 .cellMain {
   margin: 0;
-  font-size: 0.8125rem;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--primary);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.cellSub {
-  margin: 0.125rem 0 0;
+/* Latest-referrals flat board rows — one line per case inside the kanban
+   shell (no per-row card chrome), newest referral first. */
+.caseList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.caseRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.375rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  min-width: 0;
+}
+
+.caseRow:last-child {
+  border-bottom: none;
+}
+
+/* One horizontal line per case: mascot, name, then LRN/grade/category pills.
+   The name truncates first; pills and actions keep their width. */
+.caseInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Rows cascade in on mount — same entrance as the registry kanban boards. */
+@keyframes case-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.caseList > .caseRow {
+  animation: case-row-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.caseList > .caseRow:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.caseList > .caseRow:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caseList > .caseRow {
+    animation: none;
+  }
+}
+
+/* Icon-rail flyout menus — smooth open/close in both themes, same ease and
+   top-right origin as the registry KPI rails. */
+.railMenu {
+  transform-origin: top right;
+  transition:
+    opacity 180ms ease-out,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 180ms;
+}
+
+.railMenuOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+}
+
+.railMenuClosed {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Needs-review flyout preview — longest-waiting cases before the CTA. */
+.railCaseList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.railCaseItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.railCaseItem:last-child {
+  border-bottom: none;
+}
+
+.railCaseName {
+  min-width: 0;
   font-size: 0.75rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 140ms ease-out;
+}
+
+.railCaseItem:hover .railCaseName {
+  color: var(--primary);
+}
+
+.railCaseWait {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
   color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* Top layout: queues (left, ~85%) + KPI rail (right, ~15%).
-   The Needs-review card stretches to the rail height so both columns
-   always match — the row takes the taller natural height and the
-   shorter side fills it. */
-.topRow {
-  display: flex;
-  gap: 0.75rem;
-  align-items: stretch;
-}
-
-.mainCol {
-  flex: 1 1 85%;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.mainCol > .needsPanel {
-  flex: 1;
-}
-
-.needsPanel {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.kpiRail {
-  flex: 0 0 15%;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-/* KPI cards */
-.kpiGrid {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.kpiGrid .card {
-  flex: 1;
-}
-
-@media (max-width: 1023px) {
-  .topRow {
-    flex-direction: column;
-    align-items: stretch;
+@media (prefers-reduced-motion: reduce) {
+  .railMenu {
+    transition: none;
   }
 
-  .mainCol {
-    flex: none;
-    width: 100%;
+  .railCaseName {
+    transition: none;
   }
-
-  .needsPanel {
-    height: auto;
-  }
-
-  .kpiRail {
-    flex: none;
-    width: 100%;
-  }
-
-  .kpiGrid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .kpiGrid .card {
-    flex: none;
-  }
-}
-
-.card {
-  min-width: 0;
-}
-
-.kpiLabel {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--muted-foreground);
-}
-
-.kpiValue {
-  margin: 0.125rem 0 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.kpiHint {
-  margin: 0.125rem 0 0;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
 }
 
 /* Panels */
@@ -325,7 +246,6 @@
 }
 
 .lineChart {
-  margin-top: 0.75rem;
   width: 100%;
 }
 
@@ -515,6 +435,7 @@
 .cellActions {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 0.375rem;
   white-space: nowrap;
 }
@@ -558,26 +479,17 @@
   color: var(--muted-foreground);
 }
 
-.empty {
-  margin: 0;
-  padding: 1.5rem 0;
-  font-size: 0.875rem;
-  text-align: center;
-  color: var(--muted-foreground);
-}
-
 /* Breakdown donut charts */
 .chartRow {
-  margin-top: 0.75rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.875rem;
 }
 
 .chartWrap {
   position: relative;
-  width: 11rem;
-  min-width: 11rem;
+  width: 8.5rem;
+  min-width: 8.5rem;
 }
 
 .center {
@@ -591,7 +503,7 @@
 }
 
 .centerValue {
-  font-size: 1.5rem;
+  font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--foreground);
@@ -600,7 +512,7 @@
 }
 
 .centerLabel {
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   color: var(--muted-foreground);
 }
 
@@ -610,8 +522,8 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-  font-size: 0.8125rem;
+  gap: 0.25rem;
+  font-size: 0.75rem;
   min-width: 0;
   flex: 1;
 }
@@ -624,8 +536,8 @@
 }
 
 .swatch {
-  width: 0.625rem;
-  height: 0.625rem;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -639,25 +551,58 @@
 
 .legendValue {
   margin-left: auto;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted-foreground);
+  flex-shrink: 0;
   white-space: nowrap;
+}
+
+/* Legend value — one rounded rectangle per row: count, hairline divider,
+   then the percent in the chart's amber accent. Fixed segment widths keep
+   every row's pill and divider in the same vertical column. */
+.legendPill {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background-color: var(--muted);
+  overflow: hidden;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.legendPillCount,
+.legendPillPercent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.125rem 0.3125rem;
+  line-height: 1.2;
+}
+
+.legendPillCount {
+  min-width: 1.5rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.legendPillPercent {
+  min-width: 2.5rem;
+  border-left: 1px solid color-mix(in oklch, var(--foreground), transparent 85%);
+  font-weight: 600;
 }
 
 /* Breakdown bar charts — theme-aware SVG text (recharts sets its own
    attributes, so color comes from the stylesheet, not props). */
 .barChart {
-  margin-top: 0.75rem;
   width: 100%;
 }
 
 .barChart text {
   fill: var(--muted-foreground);
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
 }
 
 .legendTotal {
-  margin: 0.375rem 0 0;
+  margin: 0;
   font-size: 0.75rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
@@ -710,83 +655,46 @@
   }
 }
 
-.skelKpiBody {
+/* Icon-rail skeleton — matches the 2.25rem gutter buttons; the rail turns
+   into a horizontal icon row on mobile, same as the real rail. */
+.skelRail {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-}
-
-.skelKpiLabel {
-  height: 0.75rem;
-  width: 60%;
-}
-
-.skelKpiValue {
-  height: 1.75rem;
-  width: 45%;
-}
-
-/* Matches .kpiHint (0.75rem + 0.125rem margin) so the KPI rail does not
-   grow when hints arrive. */
-.skelKpiHint {
-  height: 0.75rem;
-  width: 80%;
-}
-
-.skelCardTitle {
-  height: 1.125rem;
-  width: 12rem;
-}
-
-/* Matches .panelDesc (0.8125rem + 0.25rem top margin) under each title. */
-.skelPanelDesc {
-  height: 0.8125rem;
-  width: 16rem;
-  margin-top: 0.25rem;
-}
-
-/* Matches the needs-review thead row (th padding 0.5rem + ~11px label +
-   1px border ≈ 2.0625rem) so the divider + threeCol don't shift down. */
-.skelThead {
-  display: flex;
+  align-items: flex-end;
   gap: 0.5rem;
-  margin-top: 0.75rem;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.skelTheadCell {
-  height: 0.6875rem;
-  flex: 1;
   min-width: 0;
 }
 
-.skelRow {
-  /* Real rows: td padding 0.625rem*2 + 2-line studentCell/badges/actions
-     ≈ 3.5-4rem. Previous 2.5rem underestimated by ~80-150px over 8 rows. */
-  height: 3.625rem;
-  width: 100%;
+.skelRailIcon {
+  height: 2.25rem;
+  width: 2.25rem;
+  border-radius: var(--radius-xl);
+}
+
+@media (max-width: 1024px) {
+  .skelRail {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
 }
 
 .skelChartRow {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-top: 0.75rem;
+  gap: 0.875rem;
 }
 
-/* Matches the trends line chart (200px / 12.5rem tall + 0.75rem margin). */
+/* Matches the trends line chart (200px / 12.5rem tall). */
 .skelLine {
   height: 12.5rem;
   width: 100%;
   border-radius: 8px;
-  margin-top: 0.75rem;
 }
 
 .skelDonut {
-  /* Matches .chartWrap (11rem wide, 168px / 10.5rem chart height). */
-  width: 11rem;
-  height: 10.5rem;
+  /* Matches .chartWrap (8.5rem wide, 132px / 8.25rem chart height). */
+  width: 8.5rem;
+  height: 8.25rem;
   border-radius: 9999px;
   flex-shrink: 0;
 }
@@ -795,36 +703,30 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: 0.25rem;
   min-width: 0;
 }
 
 .skelLegendRow {
-  /* Real .legendItem rows are ~1.25rem with swatch + label + value. */
-  height: 1.25rem;
+  /* Real .legendItem rows are ~1.125rem with swatch + label + value. */
+  height: 1.125rem;
   width: 100%;
 }
 
 .skelBars {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
-  margin-top: 0.75rem;
+  gap: 1rem;
 }
 
 .skelBarRow {
-  height: 1.125rem;
+  flex: 1;
+  min-width: 0;
+  height: 0.75rem;
   border-radius: 4px;
 }
 
-/* Matches .legendTotal (0.75rem + 0.375rem top margin) under each bar chart. */
-.skelBarTotal {
-  height: 0.75rem;
-  width: 8rem;
-  margin-top: 0.375rem;
-}
-
-/* Bar-chart Y-axis gutter: real YAxis width={112} pushes bars right.
+/* Bar-chart Y-axis gutter: real YAxis width={104} pushes bars right.
    Without this the skeleton bars jump right on load. */
 .skelBarRowWrap {
   display: flex;
@@ -834,6 +736,6 @@
 
 .skelBarYLabel {
   height: 0.75rem;
-  width: 7rem;
+  width: 6.5rem;
   flex-shrink: 0;
 }
