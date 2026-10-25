@@ -6,7 +6,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { AppError } from "../../lib/errors.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { normalizeAdviserBatch, type AdviserBatchInputRow } from "./adviserBatch.js";
-import { assertInScope, mintUniqueAdviserCode, resolveScopeYear, toAdviserResult, toGradeEnum } from "./academics-shared.js";
+import { assertInScope, mintUniqueAdviserCode, resolveScopeYear, sectionLinkCounts, toAdviserResult, toGradeEnum } from "./academics-shared.js";
 
 const router = Router();
 
@@ -154,6 +154,28 @@ router.patch(
         teacherPromise,
       ]);
 
+      // Batched change / clear is locked for sections that already carry
+      // learners or records — the desk can still fill in a missing adviser.
+      const existing = await prisma.section.findMany({
+        where: { id: { in: sectionIds } },
+        select: { id: true, name: true, adviserId: true, adviserLabel: true },
+      });
+      const linkCounts = await sectionLinkCounts(sectionIds);
+      const locked = existing
+        .filter((s) => {
+          if (!s.adviserId && !s.adviserLabel) return false;
+          const counts = linkCounts.get(s.id);
+          return (counts?.students ?? 0) + (counts?.records ?? 0) > 0;
+        })
+        .map((s) => `"${s.name}"`);
+      if (locked.length > 0) {
+        throw new AppError(
+          409,
+          "SECTION_HAS_RECORDS",
+          `Cannot change the adviser for ${locked.join(", ")} — the section still has students or records. Clear them first.`
+        );
+      }
+
       const minted = new Set<string>();
       const codeForRow: (string | null)[] = [];
       for (const label of labelForRow) {
@@ -251,6 +273,21 @@ router.patch(
       ]);
       if (!section) throw new AppError(404, "SECTION_NOT_FOUND", "Section not found");
       assertInScope(req, section.schoolYearId);
+
+      // Change / clear is locked once the section carries a learner list or
+      // records — only an unassigned, empty section can take an adviser.
+      if (section.adviserId || section.adviserLabel) {
+        const counts = (await sectionLinkCounts([id])).get(id) ?? { students: 0, records: 0 };
+        if (counts.students + counts.records > 0) {
+          throw new AppError(
+            409,
+            "SECTION_HAS_RECORDS",
+            `Cannot change the adviser for "${section.name}" — it still has ${
+              counts.students > 0 ? "students" : "records"
+            }. Clear them first.`
+          );
+        }
+      }
 
       let nextLabel: string | null = null;
       if (trimmedId) {

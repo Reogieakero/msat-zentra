@@ -88,3 +88,51 @@ export function assertInScope(req: { termScope?: { schoolYearId?: string | null 
     );
   }
 }
+
+export interface SectionLinkCounts {
+  students: number;
+  records: number;
+}
+
+/**
+ * Students + records hanging off each section. The principal's assign desk
+ * uses this to lock Change / Clear / Delete once a section carries a learner
+ * list or any record — same linked rows the delete guard checks.
+ */
+export async function sectionLinkCounts(
+  sectionIds: string[],
+): Promise<Map<string, SectionLinkCounts>> {
+  const counts = new Map<string, SectionLinkCounts>();
+  for (const id of sectionIds) counts.set(id, { students: 0, records: 0 });
+  if (sectionIds.length === 0) return counts;
+
+  const where = { sectionId: { in: sectionIds } };
+  const [profiles, roster, assignments, attendance, anecdotal, flags, sf10] = await Promise.all([
+    prisma.studentProfile.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
+    prisma.studentRoster.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
+    prisma.teacherSubjectAssignment.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
+    prisma.attendanceRecord.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
+    prisma.anecdotalRecord.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
+    prisma.gradeFlag.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
+    prisma.adviserSf10AccessRequest.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
+  ]);
+
+  const add = (
+    rows: { sectionId: string | null; _count: { _all: number } }[],
+    key: keyof SectionLinkCounts,
+  ) => {
+    for (const row of rows) {
+      const entry = row.sectionId ? counts.get(row.sectionId) : undefined;
+      if (entry) entry[key] += row._count._all;
+    }
+  };
+
+  add(profiles, "students");
+  add(roster, "students");
+  add(assignments, "records");
+  add(attendance, "records");
+  add(anecdotal, "records");
+  add(flags, "records");
+  add(sf10, "records");
+  return counts;
+}

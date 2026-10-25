@@ -25,7 +25,7 @@ router.get(
       }
       const sections = await prisma.section.findMany({
         where: {
-          gradeLevel: { in: ["G7", "G8", "G9", "G10"] },
+          gradeLevel: { in: ["G7", "G8", "G9", "G10", "G11", "G12"] },
         },
         select: {
           id: true,
@@ -69,7 +69,7 @@ router.get(
       }
       const sections = await prisma.section.findMany({
         where: {
-          gradeLevel: { in: ["G7", "G8", "G9", "G10"] },
+          gradeLevel: { in: ["G7", "G8", "G9", "G10", "G11", "G12"] },
           timetableEntries: { some: { termId, status: "SUBMITTED" } },
         },
         select: {
@@ -127,8 +127,11 @@ router.post(
         throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
       }
       const section = await prisma.section.findUnique({ where: { id: sectionId } });
-      if (!section || !["G7", "G8", "G9", "G10"].includes(section.gradeLevel as string)) {
-        throw new AppError(403, "GRADE_BAND_NOT_ALLOWED", "Schedule review covers grades 7–10");
+      if (
+        !section ||
+        !["G7", "G8", "G9", "G10", "G11", "G12"].includes(section.gradeLevel as string)
+      ) {
+        throw new AppError(403, "GRADE_BAND_NOT_ALLOWED", "Schedule review covers grades 7–12");
       }
       const submitted = await prisma.sectionTimetableEntry.findMany({
         where: { sectionId, termId, status: "SUBMITTED" },

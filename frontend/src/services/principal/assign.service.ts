@@ -68,7 +68,11 @@ export async function fetchSections(
     }),
     signal,
   );
-  return res.data.sections;
+  return res.data.sections.map((s) => ({
+    ...s,
+    studentCount: s.studentCount ?? 0,
+    recordCount: s.recordCount ?? 0,
+  }));
 }
 
 export async function fetchTeachers(signal?: AbortSignal): Promise<Teacher[]> {

@@ -136,6 +136,8 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
             adviserName,
             adviserLabel: row.adviserLabel ?? "",
             adviserCode: row.adviserCode ?? "",
+            studentCount: 0,
+            recordCount: 0,
             assignments: [] as Assignment[],
           },
         ].sort((a, b) => a.gradeLevel - b.gradeLevel || a.name.localeCompare(b.name));

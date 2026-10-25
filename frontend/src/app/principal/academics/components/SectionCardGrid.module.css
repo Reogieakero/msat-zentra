@@ -7,116 +7,51 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(264px, 1fr));
+  gap: 0.75rem;
   align-items: stretch;
   min-width: 0;
 }
 
+/* Mini kanban board per section: bordered shell + header row + inner panel. */
 .cardBtn {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: 0.5rem;
   min-width: 0;
-  padding: 1.125rem 1.125rem 1.25rem;
+  padding: 0.625rem;
   font: inherit;
   text-align: left;
   cursor: pointer;
   color: var(--foreground);
-  overflow: hidden;
-  border-radius: calc(var(--radius-md) + 4px);
-  background:
-    linear-gradient(var(--card), var(--card)) padding-box,
-    linear-gradient(135deg, color-mix(in oklch, var(--primary), transparent 55%), transparent 45%) border-box;
-  border: 1px solid transparent;
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.25),
-    0 8px 24px -12px rgb(0 0 0 / 0.45);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent);
   transition:
-    border-color 180ms ease-out,
-    box-shadow 180ms ease-out,
-    transform 180ms ease-out;
-}
-
-.cardBtn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  opacity: 0;
-  transition: opacity 180ms ease-out;
-  background:
-    radial-gradient(
-      180px circle at var(--mx, 50%) var(--my, 0%),
-      color-mix(in oklch, var(--primary), transparent 78%),
-      transparent 70%
-    );
-  pointer-events: none;
-}
-
-.cardBtn::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 1rem;
-  right: 1rem;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in oklch, var(--primary), transparent 25%),
-    transparent
-  );
-  opacity: 0.7;
-  pointer-events: none;
+    border-color 160ms ease-out,
+    background-color 160ms ease-out,
+    transform 160ms ease-out;
 }
 
 .cardBtn:hover {
   border-color: color-mix(in oklch, var(--primary), transparent 60%);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.25),
-    0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
-  transform: translateY(-2px);
-}
-
-.cardBtn:hover::before {
-  opacity: 1;
+  background-color: color-mix(in oklch, var(--primary) 6%, var(--muted) 30%);
+  transform: translateY(-1px);
 }
 
 .cardBtn:active {
   transform: translateY(0);
 }
 
-.cardBtn > * {
-  position: relative;
-  z-index: 1;
-}
-
 .cardBtn:focus-visible {
   outline: none;
-  box-shadow:
-    inset 0 0 0 2px var(--ring, var(--primary)),
-    0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: inset 0 0 0 2px var(--ring, var(--primary));
 }
 
 .cardActive {
-  border-color: color-mix(in oklch, var(--primary), transparent 35%);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.25),
-    0 0 0 1px color-mix(in oklch, var(--primary), transparent 45%),
-    0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 50%);
-}
-
-.cardActive::after {
-  opacity: 1;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--primary),
-    transparent
-  );
+  border-color: color-mix(in oklch, var(--primary), transparent 40%);
+  background-color: color-mix(in oklch, var(--primary) 10%, transparent);
 }
 
 .cardHead {
@@ -124,12 +59,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  min-width: 0;
+  /* Bleed to the card edges so the divider runs edge-to-edge with no gutter
+     gap (same trick as KanbanBoardHeader's negative inline margin). */
+  margin: 0.125rem -0.625rem 0;
+  padding: 0 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .sectionName {
-  font-size: 1.125rem;
+  font-size: 0.9375rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -139,15 +80,19 @@
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   border-radius: 999px;
-  padding-inline: 0.75rem;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  padding-inline: 0.625rem;
 }
 
-.stats {
+.cardPanel {
   display: flex;
-  gap: 0.5rem;
-  justify-content: center;
+  gap: 0.375rem;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 0.625rem 0.5rem;
   text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  background-color: var(--card);
 }
 
 .stat {
@@ -155,19 +100,16 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.3125rem;
   min-width: 0;
-  background: transparent;
-  border: none;
-  padding: 0;
 }
 
 .statIconChip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.625rem;
+  height: 1.625rem;
   border-radius: 0.5rem;
   flex-shrink: 0;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
@@ -192,14 +134,14 @@
 }
 
 .statIcon {
-  width: 1rem;
-  height: 1rem;
+  width: 0.9375rem;
+  height: 0.9375rem;
   flex-shrink: 0;
 }
 
 .statValue {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
@@ -209,15 +151,16 @@
 
 .statLabel {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
   color: var(--muted-foreground);
+  white-space: nowrap;
 }
 
 .skeletonCard {
-  min-height: 8.5rem;
+  min-height: 7.25rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 0.75rem;
   background-color: var(--card);
 }
 

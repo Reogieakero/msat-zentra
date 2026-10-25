@@ -1,14 +1,18 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeaderSkeleton } from "../../../components/skeletons/PageHeaderSkeleton";
 
 export default function PrincipalSectionScheduleLoading() {
   return (
-    <section className="mx-auto flex w-full max-w-3xl flex-col gap-5" aria-label="Loading schedule" aria-busy="true">
-      <PageHeaderSkeleton withActions />
-      <Skeleton className="h-72 w-full" aria-hidden="true" />
-      <div className="grid gap-4 lg:grid-cols-2" aria-hidden="true">
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-40 w-full" />
+    <section className="flex w-full flex-col gap-5" aria-label="Loading schedule" aria-busy="true">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
+        <div className="flex min-w-0 flex-col gap-5">
+          <Skeleton className="h-7 w-24" aria-hidden="true" />
+          <Skeleton className="h-72 w-full" aria-hidden="true" />
+        </div>
+        <div className="flex flex-col items-end gap-2" aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-9 w-9 rounded-xl" />
+          ))}
+        </div>
       </div>
     </section>
   );

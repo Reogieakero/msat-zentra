@@ -13,6 +13,8 @@ export interface StudentRow {
   studentId: string;
   lrn: string;
   name: string;
+  /** Persisted sprite mascot; null falls back to the derived one. */
+  mascot?: string | null;
   riskLevel: RiskLevel;
   overallAverage: number;
   attendanceRatePct: number;
@@ -31,6 +33,20 @@ export interface SectionSummary {
   failPct: number;
   atRiskCount: number;
   students?: StudentRow[];
+}
+
+/** Live hover-card snapshot from `/api/academics/students/:id/stats`. */
+export interface StudentHoverStats {
+  studentId: string;
+  name: string;
+  termLabel: string;
+  schoolYear: string;
+  /** Adviser has connected/synced student data (shareStudentData ON). */
+  connected: boolean;
+  generalAverage: number | null;
+  gradedSubjects: number;
+  attendance: { present: number; total: number; pct: number | null };
+  anecdoteCount: number;
 }
 
 export interface PassFailByGrade {

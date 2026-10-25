@@ -47,6 +47,8 @@ export function SectionCardGrid({
           centered
         />
       ) : (
+        // Each card is its own mini kanban board: header row (section + grade)
+        // over an inner panel holding the metric lane.
         <div className={styles.grid} aria-label="Sections">
           {ordered.map((s) => {
             const active = s.sectionId === selectedSectionId;
@@ -59,13 +61,13 @@ export function SectionCardGrid({
                 aria-pressed={active}
                 title={active ? `Hide students of ${s.section}` : `Show students of ${s.section}`}
               >
-                <span className={`${styles.cardHead} relative`}>
+                <span className={styles.cardHead}>
                   <span className={styles.sectionName}>{s.section}</span>
                   <Pill tone="neutral" label="Grade level" className={styles.gradeBadge}>
                     {s.grade}
                   </Pill>
                 </span>
-                <span className={`${styles.stats} relative`}>
+                <span className={styles.cardPanel}>
                   <span className={styles.stat}>
                     <span className={`${styles.statIconChip} ${styles.statIconChipStudents}`}>
                       <Users className={styles.statIcon} aria-hidden />

@@ -1,16 +1,16 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 
 export default function PrincipalAcademicsLoading() {
   return (
     <section aria-label="Loading academics" aria-busy="true" className="flex flex-col gap-4">
-      <PageHeaderSkeleton />
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-hidden="true">
+      <div
+        className="grid grid-cols-[repeat(auto-fill,minmax(264px,1fr))] gap-3"
+        aria-hidden="true"
+      >
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="flex flex-col gap-2 rounded-md border p-4">
+          <div key={i} className="flex flex-col gap-2 rounded-xl border bg-muted/20 p-2.5">
             <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-24 w-full rounded-lg" />
           </div>
         ))}
       </div>

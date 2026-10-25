@@ -128,10 +128,18 @@ export function AssignAdviserDialog({
       }
       footer={
         <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
-          <Button variant="outline" onClick={onClose} disabled={isAssigning}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 px-3 text-xs"
+            onClick={onClose}
+            disabled={isAssigning}
+          >
             Cancel
           </Button>
           <Button
+            size="sm"
+            className="h-6 px-3 text-xs"
             onClick={handleAssign}
             disabled={isAssigning || !canSubmit}
             aria-busy={isAssigning || undefined}

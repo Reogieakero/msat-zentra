@@ -47,6 +47,19 @@ export function riskTone(level: string): PillTone {
   return "neutral";
 }
 
+/** Timetable section status (schedule approval desk). */
+export const SCHEDULE_STATUS_TONE: Record<string, PillTone> = {
+  submitted: "blue",
+  approved: "green",
+  returned: "amber",
+  draft: "red",
+  empty: "neutral",
+};
+
+export function scheduleTone(status: string): PillTone {
+  return SCHEDULE_STATUS_TONE[status] ?? "neutral";
+}
+
 /** Intervention outcome / plan status. */
 export function outcomeTone(status: string): PillTone {
   if (status === "resolved") return "green";

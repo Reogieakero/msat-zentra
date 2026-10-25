@@ -22,6 +22,10 @@ export interface Section {
   adviserLabel: string;
 
   adviserCode: string;
+  /** Learners enlisted in this section (profiles + roster). */
+  studentCount: number;
+  /** Linked records (assignments, attendance, anecdotal, flags, SF10 requests). */
+  recordCount: number;
   assignments: Assignment[];
 }
 

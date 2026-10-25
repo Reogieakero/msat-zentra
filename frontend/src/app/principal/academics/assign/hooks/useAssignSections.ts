@@ -176,6 +176,8 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
             adviserName: typed,
             adviserLabel: typed,
             adviserCode: "",
+            studentCount: 0,
+            recordCount: 0,
             assignments: [],
           });
         }

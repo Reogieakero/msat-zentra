@@ -12,6 +12,9 @@ type Props = {
   onCancel: () => void;
 };
 
+/** 24px overlay actions — same metric as every desk confirmation. */
+const OVERLAY_BTN = "h-6 px-3 text-xs";
+
 export function ConfirmActionDialog({
   title,
   description,
@@ -29,10 +32,19 @@ export function ConfirmActionDialog({
       description={description}
       footer={
         <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" size="sm" className={OVERLAY_BTN} onClick={onCancel}>
             Cancel
           </Button>
-          <Button variant={destructive ? "destructive" : "default"} onClick={onConfirm}>
+          <Button
+            size="sm"
+            className={
+              destructive
+                ? `${OVERLAY_BTN} bg-red-600 text-white hover:bg-red-700`
+                : OVERLAY_BTN
+            }
+            onClick={onConfirm}
+            autoFocus
+          >
             {confirmLabel}
           </Button>
         </div>

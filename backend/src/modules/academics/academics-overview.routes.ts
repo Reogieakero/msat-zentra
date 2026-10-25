@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
-import { getAcademicsSummary } from "./academics.service.js";
+import { getAcademicsSummary, getStudentHoverStats } from "./academics.service.js";
 import { getLiveHonorRoll } from "./honor-roll-live.service.js";
 
 const router = Router();
@@ -40,6 +40,26 @@ router.get(
         termId: scope?.termId ?? null,
       });
       res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
+  "/students/:studentId/stats",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      // Live hover card — no cache layer so attendance/anecdotes/averages
+      // reflect the moment the principal hovers the card.
+      const scope = req.termScope;
+      const stats = await getStudentHoverStats(String(req.params.studentId), {
+        schoolYearId: scope?.schoolYearId ?? null,
+        termId: scope?.termId ?? null,
+      });
+      res.json(stats);
     } catch (e) {
       next(e);
     }

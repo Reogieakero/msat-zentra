@@ -1,48 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { Check, Copy, Inbox, Loader2, RefreshCw, TriangleAlert } from "lucide-react";
+import { Inbox, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Pill } from "@/components/ui/pill";
 import { toast } from "@/components/ui/sonner";
-import { DropdownSelect } from "./components/DropdownSelect";
 import { AssignAdviserDialog } from "./components/AssignAdviserDialog";
 import { ConfirmActionDialog } from "./components/ConfirmActionDialog";
-import { STATUS_META } from "./components/status-dots";
+import { SectionsKanban } from "./components/sections-kanban";
 import { AssignSkeleton } from "./components/AssignSkeleton";
 import { useTerm } from "@/lib/term/TermContext";
-import type { AdvisoryEntryInput, GradeLevel } from "@/services/principal/assign.types";
+import type { AdvisoryEntryInput, GradeLevel, Section } from "@/services/principal/assign.types";
 import { useAssignAdvisers, useAssignSectionsData } from "./hooks/useAssignSections";
 import { usePrincipalAssignRealtime } from "@/lib/realtime/principalAssignChannel";
-import { PrincipalPageHeader } from "../../components/PrincipalPageHeader";
-import { PrincipalEmptyCard, PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
-import assign from "./components/section-assignments.module.css";
+import { useDock } from "@/components/dock/dock-store";
+import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
 import page from "./assign.module.css";
-
-const GRADES: GradeLevel[] = [7, 8, 9, 10, 11, 12];
 
 type DialogState = {
   grade: GradeLevel | null;
   sectionId: string;
 };
 
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  const first = parts[0]?.[0] ?? "?";
-  const second = parts.length > 1 ? (parts[1]?.[0] ?? "") : (parts[0]?.[1] ?? "");
-  return `${first}${second}`.toUpperCase();
-}
-
 export default function PrincipalAssignPage() {
-
   const { activeSchoolYear, isLoading: yearsLoading, termReady } = useTerm();
   const schoolYearId = activeSchoolYear?.id ?? "";
   const schoolYearName = activeSchoolYear?.name ?? "";
 
   const [grade, setGrade] = React.useState<GradeLevel | null>(null);
   const [dialog, setDialog] = React.useState<DialogState | null>(null);
-
   const [confirmDelete, setConfirmDelete] = React.useState<{ sectionId: string; name: string } | null>(
     null,
   );
@@ -53,6 +38,7 @@ export default function PrincipalAssignPage() {
     schoolYearId,
     schoolYearName,
   );
+  const dock = useDock();
   const [copiedCode, setCopiedCode] = React.useState<string | null>(null);
 
   const copyCode = React.useCallback(async (code: string) => {
@@ -71,20 +57,9 @@ export default function PrincipalAssignPage() {
   const sections = React.useMemo(() => sectionsQuery.data ?? [], [sectionsQuery.data]);
   const teachers = React.useMemo(() => teachersQuery.data ?? [], [teachersQuery.data]);
 
-  const gradeSections = React.useMemo(
-    () => (grade == null ? sections : sections.filter((s) => s.gradeLevel === grade)),
-    [sections, grade],
-  );
-
-  const assignedCount = React.useMemo(
-    () => gradeSections.filter((s) => s.adviserId || s.adviserName).length,
-    [gradeSections],
-  );
-
   const hasNoScope = termReady && !yearsLoading && !schoolYearId;
   const isLoading = !termReady || yearsLoading || (!!schoolYearId && sectionsQuery.isPending);
   const isError = !!schoolYearId && sectionsQuery.isError;
-  const hasNoData = !isLoading && !isError && !!schoolYearId && sections.length === 0;
 
   const retry = () => {
     void sectionsQuery.refetch();
@@ -92,14 +67,49 @@ export default function PrincipalAssignPage() {
   };
 
   const submitBatch = (entries: AdvisoryEntryInput[]): void => {
-    batch.mutate(entries);
+    const count = entries.length;
+    const scope = schoolYearName || "active school year";
+    const gradeLabel = entries[0] ? `Grade ${entries[0].gradeLevel}` : "";
+    // Confirming closes the overlay at once — the shared Dock reports the
+    // request until it settles.
+    const dockId = dock.startTask({
+      kind: "generic",
+      title: count > 1 ? `Assigning ${count} advisers` : "Assigning adviser",
+      description: `${gradeLabel ? `${gradeLabel} · ` : ""}${scope}`,
+      total: count,
+    });
+    batch.mutate(entries, {
+      onSuccess: ({ fragments }) =>
+        dock.completeTask(
+          dockId,
+          count > 1
+            ? `${fragments.length} advisers assigned`
+            : `${fragments[0]?.adviserName ?? "Adviser"} assigned`,
+        ),
+      onError: () => dock.failTask(dockId, "The advisers weren't saved. Please try again."),
+    });
+  };
+
+  const openAssign = (section: Section | null) => {
+    setDialog({ grade: section ? section.gradeLevel : grade, sectionId: section?.id ?? "" });
   };
 
   const handleConfirmDelete = (): void => {
     if (!confirmDelete) return;
-    removeSection.mutate(confirmDelete.sectionId);
+    const { sectionId, name } = confirmDelete;
     setConfirmDelete(null);
+    const dockId = dock.startTask({
+      kind: "generic",
+      title: "Deleting section",
+      description: `${name}${schoolYearName ? ` · ${schoolYearName}` : ""}`,
+    });
+    removeSection.mutate(sectionId, {
+      onSuccess: () => dock.completeTask(dockId, `"${name}" deleted`),
+      onError: () => dock.failTask(dockId, `"${name}" wasn't deleted. Please try again.`),
+    });
   };
+
+  const boardBusy = batch.isPending || removeSection.isPending || regenerateCode.isPending;
 
   return (
     <section className={page.page} aria-busy={isLoading}>
@@ -121,225 +131,22 @@ export default function PrincipalAssignPage() {
           </p>
           <Button onClick={retry}>Retry</Button>
         </div>
-      ) : hasNoData ? (
-        <PrincipalEmptyCard
-          icon={Inbox}
-          title="No sections found"
-          hint={`No sections found${schoolYearName ? ` for ${schoolYearName}` : ""}. Sections you create will appear here for advisory assignment.`}
-          action={
-            <Button onClick={() => setDialog({ grade: null, sectionId: "" })}>
-              Assign Advisory
-            </Button>
-          }
-          centered
-        />
       ) : (
-        <>
-          <PrincipalPageHeader
-            title="Assigning — Section Advisers"
-            description={
-              <>
-                School-wide (Grades 7–12). Working in <strong>{schoolYearName || "…"}</strong> —
-                input the section name and the adviser name.
-              </>
-            }
-            actions={
-              <Button
-                onClick={() => setDialog({ grade, sectionId: "" })}
-                disabled={batch.isPending}
-              >
-                Assign Advisory
-              </Button>
-            }
-          />
-
-          <div className={page.card}>
-            <div className={assign.filterRow}>
-              <div>
-                <h2 className={page.cardTitle}>
-                  {grade != null ? `Grade ${grade} sections` : "Sections & advisers"}
-                </h2>
-                <p className={page.cardSub}>
-                  {`${assignedCount} of ${gradeSections.length} with adviser`}
-                </p>
-              </div>
-              <div className={assign.filterActions}>
-                <DropdownSelect
-                  ariaLabel="Filter by grade level"
-                  value={grade != null ? String(grade) : "all"}
-                  onValueChange={(v) => setGrade(v === "all" ? null : (Number(v) as GradeLevel))}
-                  options={[
-                    { value: "all", label: "All grades" },
-                    ...GRADES.map((g) => ({ value: String(g), label: `Grade ${g}` })),
-                  ]}
-                  placeholder="All grades"
-                />
-              </div>
-            </div>
-            {gradeSections.length === 0 ? (
-              <PrincipalEmptyState
-                icon={Inbox}
-                title="No sections in this scope"
-                hint={
-                  grade == null
-                    ? "No sections in this scope yet."
-                    : `No Grade ${grade} sections in this scope.`
-                }
-              />
-            ) : (
-              <div className={assign.grid}>
-                {gradeSections.map((s) => {
-                  const pending = pendingIds.has(s.id);
-
-                  const claimed = !!s.adviserId;
-                  const awaitingClaim = !claimed && !!s.adviserName;
-                  const code = (s as { adviserCode?: string }).adviserCode ?? "";
-                  const busy =
-                    pending || batch.isPending || removeSection.isPending || regenerateCode.isPending;
-                  return (
-                    <div key={s.id} className={assign.card} aria-busy={pending || undefined}>
-                      <span className={assign.glowClip} aria-hidden>
-                        <span className={assign.cardGlow} />
-                      </span>
-
-                      <Pill
-                        tone="blue"
-                        label="Grade level"
-                        className={`${assign.gradeBadge} ${assign.gradeFloat}`}
-                      >
-                        Grade {s.gradeLevel}
-                      </Pill>
-                      <div className={assign.cardHead}>
-                        <span className={assign.avatar} aria-hidden>
-                          {initialsOf(s.name)}
-                        </span>
-                        <div className={assign.cardTitleBlock}>
-                          <span className={assign.fieldLabel}>Section</span>
-                          <span className={assign.itemName} title={s.name}>
-                            {s.name}
-                          </span>
-                        </div>
-                        {claimed ? (
-                          <span className={assign.claimMark}>
-                            <span
-                              className={assign.statusDot}
-                              style={{ backgroundColor: STATUS_META.progress.color }}
-                              aria-hidden
-                            />
-                            <span className={assign.claimLabel}>Claim</span>
-                          </span>
-                        ) : awaitingClaim ? (
-                          <span className={assign.claimMark}>
-                            <span
-                              className={assign.statusDot}
-                              style={{ backgroundColor: "#d97706" }}
-                              aria-hidden
-                            />
-                            <span className={assign.claimLabel}>Awaiting claim</span>
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className={assign.teacherBlock}>
-                        <span className={assign.fieldLabel}>Teacher</span>
-                        <span className={assign.itemTeacher}>
-                          {pending ? (
-                            <span className={assign.pendingWrap}>
-                              <Loader2 className={assign.pendingSpin} aria-hidden />
-                              {s.adviserName || "Assigning…"}
-                            </span>
-                          ) : (
-                            s.adviserName || <span className={assign.itemTerm}>No adviser</span>
-                          )}
-                        </span>
-                      </div>
-                      {awaitingClaim && code ? (
-                        <div className={assign.teacherBlock}>
-                          <span className={assign.fieldLabel}>Advisory code</span>
-                          <span
-                            className={assign.itemTeacher}
-                            style={{ display: "flex", alignItems: "center", gap: 8 }}
-                          >
-                            <code
-                              style={{
-                                fontFamily: "ui-monospace, monospace",
-                                fontWeight: 700,
-                                letterSpacing: "0.04em",
-                              }}
-                            >
-                              {code}
-                            </code>
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              aria-label={`Copy advisory code for ${s.name}`}
-                              disabled={busy}
-                              onClick={() => void copyCode(code)}
-                            >
-                              {copiedCode === code ? (
-                                <Check size={13} aria-hidden />
-                              ) : (
-                                <Copy size={13} aria-hidden />
-                              )}
-                              {copiedCode === code ? "Copied" : "Copy"}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              aria-label={`Regenerate advisory code for ${s.name}`}
-                              title="Mint a replacement code — the old one stops working"
-                              disabled={busy}
-                              onClick={() => regenerateCode.mutate(s.id)}
-                            >
-                              <RefreshCw size={13} aria-hidden />
-                              New code
-                            </Button>
-                          </span>
-                          <span className={assign.itemTerm}>
-                            Share this code with {s.adviserName} — they enter it to claim the seat.
-                          </span>
-                        </div>
-                      ) : null}
-                      <div className={`${assign.cardActions} justify-end`}>
-                        <Button
-                          size="xs"
-                          aria-label={`Assign adviser for ${s.name}`}
-                          title={claimed ? "Claimed by a teacher — locked" : undefined}
-                          disabled={busy || claimed}
-                          onClick={() => setDialog({ grade: s.gradeLevel, sectionId: s.id })}
-                        >
-                          {s.adviserName ? "Change" : "Assign"}
-                        </Button>
-                        {awaitingClaim ? (
-                          <Button
-                            variant="ghost"
-                            size="xs"
-                            aria-label={`Clear adviser for ${s.name}`}
-                            title="Clear the listed adviser and code"
-                            disabled={busy}
-                            onClick={() => clear.mutate(s.id)}
-                          >
-                            Clear
-                          </Button>
-                        ) : null}
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          className={assign.deleteButton}
-                          aria-label={`Delete ${s.name} section`}
-                          title={claimed ? "Claimed by a teacher — locked" : undefined}
-                          disabled={busy || claimed}
-                          onClick={() => setConfirmDelete({ sectionId: s.id, name: s.name })}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </>
+        <SectionsKanban
+          sections={sections}
+          grade={grade}
+          onGradeChange={setGrade}
+          schoolYearName={schoolYearName}
+          pendingIds={pendingIds}
+          busy={boardBusy}
+          copiedCode={copiedCode}
+          onCopyCode={(code) => void copyCode(code)}
+          onAssign={openAssign}
+          onClear={(sectionId) => clear.mutate(sectionId)}
+          onRegenerate={(sectionId) => regenerateCode.mutate(sectionId)}
+          onDelete={(section) => setConfirmDelete({ sectionId: section.id, name: section.name })}
+          onCreate={() => openAssign(null)}
+        />
       )}
 
       {dialog ? (

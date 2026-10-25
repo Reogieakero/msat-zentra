@@ -38,6 +38,8 @@ export interface StudentRowDTO {
   studentId: string;
   lrn: string;
   name: string;
+  /** Persisted sprite mascot; null falls back to the derived one client-side. */
+  mascot: string | null;
   riskLevel: "High" | "Moderate" | "Low";
   overallAverage: number;
   attendanceRatePct: number;
@@ -152,6 +154,7 @@ export async function getAcademicsSummary(
           id: true,
           lrn: true,
           fullName: true,
+          mascot: true,
           finalGrades: {
             where: { termId },
             select: {
@@ -191,6 +194,7 @@ export async function getAcademicsSummary(
       userId: string;
       lrn: string;
       fullName: string;
+      mascot: string | null;
       finalGrades: {
         termId: string | null;
         transmutedGrade: number | null;
@@ -207,6 +211,7 @@ export async function getAcademicsSummary(
         userId: s.userId,
         lrn: s.lrn,
         fullName: s.user.fullName,
+        mascot: s.mascot ?? null,
         finalGrades: s.finalGrades,
         attendanceRecords: s.attendanceRecords,
         anecdotalCount: s.anecdotalRecords.length,
@@ -217,6 +222,7 @@ export async function getAcademicsSummary(
           userId: `roster:${r.id}`,
           lrn: r.lrn,
           fullName: r.fullName,
+          mascot: r.mascot ?? null,
           finalGrades: r.finalGrades,
           attendanceRecords: r.attendanceRecords,
           anecdotalCount: r.anecdotalRecords.length,
@@ -284,6 +290,7 @@ export async function getAcademicsSummary(
         studentId: student.userId,
         lrn: student.lrn,
         name: student.fullName,
+        mascot: student.mascot,
         riskLevel: liveLevel,
         overallAverage,
         attendanceRatePct,
@@ -385,4 +392,137 @@ export async function getAcademicsSummary(
     honorRollPreview,
     potentialHonorRoll,
   };
+}
+
+/** Hover-card stats for one learner — live, term-scoped, sharing-gated. */
+export interface StudentHoverStatsDTO {
+  studentId: string;
+  name: string;
+  termLabel: string;
+  schoolYear: string;
+  /** Adviser has connected/synced data (shareStudentData ON). */
+  connected: boolean;
+  generalAverage: number | null;
+  gradedSubjects: number;
+  attendance: { present: number; total: number; pct: number | null };
+  anecdoteCount: number;
+}
+
+/**
+ * Per-student snapshot behind the principal academics hover card.
+ *
+ * Term resolution mirrors the summary: the requested term wins, otherwise the
+ * active school year's first term, otherwise any term of the active year.
+ * Nothing is served unless the adviser has switched data sharing ON — the
+ * principal sees the "adviser not sharing" state instead of live numbers.
+ */
+export async function getStudentHoverStats(
+  rawId: string,
+  scope?: { schoolYearId?: string | null; termId?: string | null },
+): Promise<StudentHoverStatsDTO> {
+  const isRoster = rawId.startsWith("roster:");
+  const rosterId = isRoster ? rawId.slice("roster:".length) : null;
+
+  const [student, term] = await Promise.all([
+    isRoster
+      ? prisma.studentRoster.findUnique({
+          where: { id: rosterId! },
+          select: {
+            fullName: true,
+            section: {
+              select: {
+                adviser: {
+                  select: { staffProfile: { select: { shareStudentData: true } } },
+                },
+              },
+            },
+          },
+        })
+      : prisma.studentProfile.findUnique({
+          where: { userId: rawId },
+          select: {
+            user: { select: { fullName: true } },
+            section: {
+              select: {
+                adviser: {
+                  select: { staffProfile: { select: { shareStudentData: true } } },
+                },
+              },
+            },
+          },
+        }),
+    resolveHoverTerm(scope),
+  ]);
+
+  const name = isRoster
+    ? (student as { fullName?: string } | null)?.fullName ?? "Student"
+    : (student as { user?: { fullName?: string } } | null)?.user?.fullName ?? "Student";
+  const connected =
+    (student as { section?: { adviser?: { staffProfile?: { shareStudentData?: boolean } | null } | null } | null } | null)
+      ?.section?.adviser?.staffProfile?.shareStudentData ?? false;
+
+  const termLabel = term ? `Term ${term.termNumber}` : "No active term";
+  const schoolYear = term?.schoolYear.name ?? "No active school year";
+
+  const base: StudentHoverStatsDTO = {
+    studentId: rawId,
+    name,
+    termLabel,
+    schoolYear,
+    connected,
+    generalAverage: null,
+    gradedSubjects: 0,
+    attendance: { present: 0, total: 0, pct: null },
+    anecdoteCount: 0,
+  };
+
+  if (!connected || !term) return base;
+
+  const owner = isRoster ? { rosterId } : { studentId: rawId };
+  const [grades, attendance, anecdoteCount] = await Promise.all([
+    prisma.finalGrade.findMany({
+      where: { ...owner, termId: term.id, transmutedGrade: { not: null } },
+      select: { transmutedGrade: true },
+    }),
+    prisma.attendanceRecord.findMany({
+      where: { ...owner, termId: term.id },
+      select: { status: true },
+    }),
+    prisma.anecdotalRecord.count({ where: { ...owner, termId: term.id } }),
+  ]);
+
+  const values = grades
+    .map((g) => g.transmutedGrade)
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  const present = attendance.filter((a) => a.status === "present").length;
+  const total = attendance.length;
+
+  return {
+    ...base,
+    generalAverage: values.length > 0 ? round1(values.reduce((a, b) => a + b, 0) / values.length) : null,
+    gradedSubjects: values.length,
+    attendance: { present, total, pct: total > 0 ? round1((present / total) * 100) : null },
+    anecdoteCount,
+  };
+}
+
+async function resolveHoverTerm(scope?: { schoolYearId?: string | null; termId?: string | null }) {
+  const select = { id: true, termNumber: true, schoolYear: { select: { name: true } } } as const;
+  if (scope?.termId) {
+    const term = await prisma.term.findUnique({ where: { id: scope.termId }, select });
+    if (term) return term;
+  }
+  if (scope?.schoolYearId) {
+    const term = await prisma.term.findFirst({
+      where: { schoolYearId: scope.schoolYearId },
+      orderBy: { termNumber: "asc" },
+      select,
+    });
+    if (term) return term;
+  }
+  return prisma.term.findFirst({
+    where: { schoolYear: { isActive: true } },
+    orderBy: { termNumber: "asc" },
+    select,
+  });
 }

@@ -5,7 +5,7 @@ import { invalidateTags } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
 import { AppError } from "../../lib/errors.js";
 import { gradeToNumber } from "../../lib/grades.js";
-import { assertInScope, resolveScopeYear, toGradeEnum } from "./academics-shared.js";
+import { assertInScope, resolveScopeYear, sectionLinkCounts, toGradeEnum } from "./academics-shared.js";
 
 const router = Router();
 
@@ -54,6 +54,10 @@ router.post(
         schoolYearId: section.schoolYearId,
         adviserId: "",
         adviserName: "",
+        adviserLabel: "",
+        adviserCode: "",
+        studentCount: 0,
+        recordCount: 0,
         assignments: [],
       });
     } catch (e) {
@@ -76,27 +80,15 @@ router.delete(
       if (!section) throw new AppError(404, "SECTION_NOT_FOUND", "Section not found");
       assertInScope(req, section.schoolYearId);
 
-      const [students, roster, assignments, attendance, anecdotal, flags, sf10] =
-        await Promise.all([
-          prisma.studentProfile.count({ where: { sectionId: id } }),
-          prisma.studentRoster.count({ where: { sectionId: id } }),
-          prisma.teacherSubjectAssignment.count({ where: { sectionId: id } }),
-          prisma.attendanceRecord.count({ where: { sectionId: id } }),
-          prisma.anecdotalRecord.count({ where: { sectionId: id } }),
-          prisma.gradeFlag.count({ where: { sectionId: id } }),
-          prisma.adviserSf10AccessRequest.count({ where: { sectionId: id } }),
-        ]);
-      const linked = students + roster + assignments + attendance + anecdotal + flags + sf10;
-      if (linked > 0) {
+      const counts = (await sectionLinkCounts([id])).get(id) ?? { students: 0, records: 0 };
+      if (counts.students + counts.records > 0) {
         const parts: string[] = [];
-        if (students + roster > 0) parts.push("students");
-        if (assignments > 0) parts.push("teacher assignments");
-        if (attendance + anecdotal + flags > 0) parts.push("records");
-        if (sf10 > 0) parts.push("SF10 access requests");
+        if (counts.students > 0) parts.push("students");
+        if (counts.records > 0) parts.push("records");
         throw new AppError(
           409,
           "SECTION_HAS_RECORDS",
-          `Cannot delete "${section.name}" — it still has ${parts.join(", ")}. Clear or reassign them first.`
+          `Cannot delete "${section.name}" — it still has ${parts.join(" and ")}. Clear or reassign them first.`
         );
       }
 

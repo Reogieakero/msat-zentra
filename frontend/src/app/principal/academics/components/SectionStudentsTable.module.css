@@ -1,47 +1,371 @@
-.sectionTitle {
-  margin: 0;
-  font-size: 1rem;
+/* Section roster — one mini kanban board per student, five per row.
+   No parent board wrapper: the toolbar and pagination sit on the page. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.toolbarTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.toolbarName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 700;
-  letter-spacing: -0.01em;
   color: var(--foreground);
 }
 
-.sectionDesc {
-  margin: 0.25rem 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
+.toolbarCount {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--muted-foreground);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+@media (max-width: 1600px) {
+  .grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Student mini kanban board — lighter chrome than the section cards:
+   flatter tint, hairline border, compact padding. */
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem 0.875rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent);
+  transition:
+    border-color 160ms ease-out,
+    background-color 160ms ease-out;
+}
+
+.board:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  background-color: color-mix(in oklch, var(--primary) 6%, var(--muted) 30%);
+}
+
+.boardHead {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  /* Bleed to the board edges so the divider has no gutter gap. */
+  margin: 0 -0.875rem;
+  padding: 0 1rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.boardBody {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Compact LRN chip for the 8-up grid — truncates instead of overflowing. */
+.lrnPill {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cellMain {
   margin: 0;
+  max-width: 100%;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--foreground);
-  font-variant-numeric: tabular-nums;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--primary);
 }
 
-.cellSub {
-  margin: 0.125rem 0 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.75rem;
+.empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
 }
 
-/* No data yet (no encoded subjects / no attendance records). */
-.cellMuted {
+/* Boards cascade in on mount — same entrance as the nurse/registry boards. */
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.grid > .board {
+  animation: board-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.grid > .board:nth-child(2) {
+  animation-delay: 0.03s;
+}
+
+.grid > .board:nth-child(3) {
+  animation-delay: 0.06s;
+}
+
+.grid > .board:nth-child(4) {
+  animation-delay: 0.09s;
+}
+
+.grid > .board:nth-child(5) {
+  animation-delay: 0.12s;
+}
+
+/* ── Hover card: live stats board ─────────────────────────────────────── */
+
+.hoverContent {
+  padding: 0;
+}
+
+.hoverBoard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem 0.75rem;
+  min-width: 0;
+}
+
+.hoverHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.hoverTitleBlock {
+  min-width: 0;
+}
+
+.hoverName {
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--muted-foreground);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.hoverLrn {
+  margin: 0.125rem 0 0;
+  font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.hoverMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3125rem;
+}
+
+.hoverLive {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.hoverStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+.hoverStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3125rem;
+  min-width: 0;
+  padding: 0.5rem 0.25rem;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: color-mix(in oklch, var(--muted) 35%, transparent);
+}
+
+.hoverStatLabel {
+  font-size: 0.625rem;
+  line-height: 1.3;
+  color: var(--muted-foreground);
+}
+
+/* Shared metric chips (also used by the hover stats). */
+.statIconChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.4375rem;
+  flex-shrink: 0;
+}
+
+.statIconChipStudents {
+  color: #60a5fa;
+  background: color-mix(in srgb, #3b82f6 16%, transparent);
+  border: 1px solid color-mix(in srgb, #3b82f6 32%, transparent);
+}
+
+.statIconChipAvg {
+  color: #fbbf24;
+  background: color-mix(in srgb, #f59e0b 16%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 32%, transparent);
+}
+
+.statIconChipRisk {
+  color: #f87171;
+  background: color-mix(in srgb, #ef4444 16%, transparent);
+  border: 1px solid color-mix(in srgb, #ef4444 32%, transparent);
+}
+
+.statIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+/* Adviser has not connected data sharing — the card explains instead of
+   showing live numbers. */
+.hoverWarn {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid color-mix(in oklch, #f59e0b 40%, transparent);
+  border-radius: 0.5rem;
+  background-color: color-mix(in srgb, #f59e0b 12%, transparent);
+}
+
+.hoverWarnIcon {
+  flex-shrink: 0;
+  margin-top: 0.0625rem;
+  color: #d97706;
+}
+
+.hoverWarnBody {
+  min-width: 0;
+}
+
+.hoverWarnTitle {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.hoverWarnText {
+  margin: 0.1875rem 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.hoverLoading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.hoverSkeleton {
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+  animation: hover-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes hover-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hoverSkeleton {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board,
+  .grid > .board {
+    animation: none;
+    transition: none;
+  }
 }

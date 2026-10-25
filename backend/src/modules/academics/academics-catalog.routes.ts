@@ -6,7 +6,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { AppError } from "../../lib/errors.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { gradeToNumber } from "../../lib/grades.js";
-import { toCategoryLabel } from "./academics-shared.js";
+import { toCategoryLabel, sectionLinkCounts } from "./academics-shared.js";
 
 const router = Router();
 
@@ -98,6 +98,8 @@ router.get(
         },
       });
 
+      const linkCounts = await sectionLinkCounts(sections.map((s) => s.id));
+
       res.json({
         sections: sections.map((s) => ({
           id: s.id,
@@ -109,6 +111,8 @@ router.get(
           adviserName: s.adviser?.fullName ?? (s as { adviserLabel?: string | null }).adviserLabel ?? "",
           adviserLabel: (s as { adviserLabel?: string | null }).adviserLabel ?? "",
           adviserCode: (s as { adviserCode?: string | null }).adviserCode ?? "",
+          studentCount: linkCounts.get(s.id)?.students ?? 0,
+          recordCount: linkCounts.get(s.id)?.records ?? 0,
           assignments: s.teacherAssignments.map((a) => ({
             id: a.id,
             subjectId: a.subject.id,
