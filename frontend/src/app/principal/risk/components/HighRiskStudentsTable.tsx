@@ -12,9 +12,7 @@ import {
 } from "@tanstack/react-table";
 import {
   Search,
-  ChevronDown,
   ShieldCheck,
-  X,
 } from "lucide-react";
 import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import { apiClient } from "@/lib/api/client";
@@ -24,13 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import { riskTone } from "@/lib/labels/status-tone";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableHeader,
@@ -43,6 +34,7 @@ import type { BackendStudent, RiskFactor } from "@/services/principal/riskStuden
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import styles from "./HighRiskStudentsTable.module.css";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 const FACTOR_LABEL: Record<RiskFactor, string> = {
@@ -51,19 +43,12 @@ const FACTOR_LABEL: Record<RiskFactor, string> = {
   Behavioral: "Behavioral",
 };
 
-const FACTOR_ACTIVE_CLASS: Record<RiskFactor, string> = {
-  Academic: "factorAcademic",
-  Attendance: "factorAttendance",
-  Behavioral: "factorBehavioral",
-} as const;
-
-// Same palette as the teacher overview At-Risk Factors card
-// (teacher-overview-risk.tsx RISK_COLORS): Academic amber, Attendance green,
-// Behavioral blue.
-const FACTOR_DOT: Record<RiskFactor, string> = {
-  Academic: "#f59e0b",
-  Attendance: "#22c55e",
-  Behavioral: "#3b82f6",
+// Amber = academic, green = attendance, blue = behavioral (teacher overview
+// palette), matching the shared Pill tones.
+const FACTOR_TONE: Record<RiskFactor, "amber" | "green" | "blue"> = {
+  Academic: "amber",
+  Attendance: "green",
+  Behavioral: "blue",
 };
 
 
@@ -73,10 +58,6 @@ export function HighRiskStudentsTable() {
     "zentra.risk.highRisk.search",
     ""
   );
-  const [factorFilter, setFactorFilter] = usePersistentState<"all" | RiskFactor>(
-    "zentra.risk.highRisk.factor",
-    "all"
-  );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [page, setPage] = React.useState(1);
   const debouncedQuery = useDebouncedValue(query, 300);
@@ -85,7 +66,7 @@ export function HighRiskStudentsTable() {
   const termId = activeTerm?.termId ?? null;
   const schoolYearId = activeTerm?.schoolYearId ?? null;
   const { data, isPending, isError, refetch } = useQuery({
-    queryKey: ["risk-students", "high", termId, schoolYearId, page, debouncedQuery, factorFilter],
+    queryKey: ["risk-students", "high", termId, schoolYearId, page, debouncedQuery],
     queryFn: async ({ signal }) => {
       const params: Record<string, string | number> = {
         page,
@@ -93,7 +74,6 @@ export function HighRiskStudentsTable() {
         riskLevel: "High",
       };
       if (debouncedQuery.trim()) params.q = debouncedQuery.trim();
-      if (factorFilter !== "all") params.factor = factorFilter;
       const res = await apiClient.get<{
         students: BackendStudent[];
         total: number;
@@ -113,29 +93,17 @@ export function HighRiskStudentsTable() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
 
-  // If filters shrink the result set under the current page (e.g. on page 3
-  // of 45, then filter to 10), step back to the last valid page so the
-  // requested page, the footer label, and the rows always agree.
+  // If the result set shrinks under the current page (e.g. on page 3 of 45,
+  // then search to 10), step back to the last valid page so the requested
+  // page, the footer label, and the rows always agree.
   React.useEffect(() => {
     if (!isPending && totalPages >= 1 && page > totalPages) {
       setPage(totalPages);
     }
   }, [isPending, totalPages, page]);
 
-  const hasActiveFilters = factorFilter !== "all";
-
   const applySearch = (value: string) => {
     setQuery(value);
-    setPage(1);
-  };
-
-  const applyFactor = (value: "all" | RiskFactor) => {
-    setFactorFilter(value);
-    setPage(1);
-  };
-
-  const clearFilters = () => {
-    setFactorFilter("all");
     setPage(1);
   };
 
@@ -150,8 +118,18 @@ export function HighRiskStudentsTable() {
         maxSize: 220,
         cell: ({ row }) => (
           <div className={styles.studentCell}>
-            <span className={styles.studentName}>{row.original.name}</span>
-            <span className={styles.studentLrn}>{row.original.lrn}</span>
+            <StudentMascot
+              name={row.original.name}
+              seed={row.original.lrn}
+              character={row.original.mascot ?? undefined}
+              size={30}
+            />
+            <div className={styles.studentMeta}>
+              <span className={styles.studentName}>{row.original.name}</span>
+              <Pill tone="neutral" label="LRN" className="w-fit">
+                {row.original.lrn}
+              </Pill>
+            </div>
           </div>
         ),
       },
@@ -163,7 +141,9 @@ export function HighRiskStudentsTable() {
         minSize: 160,
         maxSize: 160,
         cell: ({ row }) => (
-          <span className={styles.section}>{row.original.section}</span>
+          <Pill tone="neutral" label="Section">
+            {row.original.section}
+          </Pill>
         ),
       },
       {
@@ -192,25 +172,17 @@ export function HighRiskStudentsTable() {
         enableSorting: false,
         cell: ({ row }) => (
           <span className={styles.factors}>
-            {(Object.keys(row.original.factors) as RiskFactor[]).map((f) => (
-              <span
-                key={f}
-                className={`${styles.factorChip} ${
-                  row.original.factors[f]
-                    ? styles[FACTOR_ACTIVE_CLASS[f]]
-                    : styles.factorOff
-                }`}
-              >
-                {row.original.factors[f] ? (
-                  <span
-                    className={styles.factorDot}
-                    style={{ background: FACTOR_DOT[f] }}
-                    aria-hidden
-                  />
-                ) : null}
-                {FACTOR_LABEL[f]}
-              </span>
-            ))}
+            {(Object.keys(row.original.factors) as RiskFactor[])
+              .filter((f) => row.original.factors[f])
+              .map((f) => (
+                <Pill
+                  key={f}
+                  tone={FACTOR_TONE[f]}
+                  label={`${FACTOR_LABEL[f]} factor`}
+                >
+                  {FACTOR_LABEL[f]}
+                </Pill>
+              ))}
           </span>
         ),
       },
@@ -243,6 +215,9 @@ export function HighRiskStudentsTable() {
       }
       actions={
         <>
+          <Pill tone="green" label="Data source">
+            Adviser-shared
+          </Pill>
           <div className={styles.searchWrap}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
@@ -253,51 +228,6 @@ export function HighRiskStudentsTable() {
               aria-label="Search high-risk students"
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`${styles.filterBtn} ${
-                  factorFilter !== "all" ? styles.filterActive : ""
-                }`}
-              >
-                Factor
-                {factorFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={factorFilter === "all"}
-                onCheckedChange={() => applyFactor("all")}
-              >
-                All factors
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {(Object.keys(FACTOR_LABEL) as RiskFactor[]).map((f) => (
-                <DropdownMenuCheckboxItem
-                  key={f}
-                  checked={factorFilter === f}
-                  onCheckedChange={() => applyFactor(f)}
-                >
-                  {FACTOR_LABEL[f]}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={styles.clearBtn}
-              onClick={clearFilters}
-            >
-              <X aria-hidden />
-              Clear
-            </Button>
-          )}
         </>
       }
       footer={
@@ -318,7 +248,7 @@ export function HighRiskStudentsTable() {
               Retry
             </Button>
           </div>
-        ) : !isPending && total === 0 && !debouncedQuery.trim() && !hasActiveFilters ? (
+        ) : !isPending && total === 0 && !debouncedQuery.trim() ? (
           <PrincipalEmptyState
             icon={ShieldCheck}
             title="No high-risk students"
@@ -353,9 +283,7 @@ export function HighRiskStudentsTable() {
                   <TableCell colSpan={columns.length} className={styles.empty}>
                     {debouncedQuery.trim()
                       ? `No high-risk students match “${debouncedQuery}”.`
-                      : hasActiveFilters
-                        ? "No high-risk students match the selected filters."
-                        : "No high-risk students."}
+                      : "No high-risk students."}
                   </TableCell>
                 </TableRow>
               ) : (

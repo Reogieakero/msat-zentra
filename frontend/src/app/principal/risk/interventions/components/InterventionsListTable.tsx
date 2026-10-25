@@ -15,7 +15,7 @@ import {
   Bell,
   ChevronDown,
   HeartHandshake,
-  X,
+  Radar,
 } from "lucide-react";
 import { useTerm } from "@/lib/term/TermContext";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -39,25 +39,34 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { toast } from "@/components/ui/sonner";
 import { PrincipalEmptyCard, PrincipalEmptyState } from "../../../components/PrincipalEmptyCard";
-import { outcomeLabel, outcomeTone, riskTone } from "@/lib/labels/status-tone";
+import { riskTone } from "@/lib/labels/status-tone";
 import { Pagination } from "@/components/shared/pagination";
 import type { RiskSnapshotStudent, RiskLevelKey } from "../types";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { alertGuidance, fetchInterventionStudents } from "@/services/principal/riskInterventions.service";
 import { formatElapsedShort, msSinceDate as msSinceAction } from "@/lib/clock";
-import { ActionGlyph, FactorBadges, canAlert, latestAction, planStatus } from "./intervention-helpers";
-import { useInterventionFilters } from "./use-intervention-filters";
+import { FactorBadges, canAlert, planStatus } from "./intervention-helpers";
+import { useInterventionFilters, type InterventionActionFilter } from "./use-intervention-filters";
 import { AlertGuidanceDialog } from "./alert-guidance-dialog";
 import styles from "./InterventionsListTable.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
+
+const ACTION_TABS: { key: InterventionActionFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "none", label: "No plan yet" },
+  { key: "ongoing", label: "Ongoing" },
+];
 
 export function InterventionsListTable() {
   const queryClient = useQueryClient();
   const [alertTarget, setAlertTarget] = React.useState<RiskSnapshotStudent | null>(null);
   const [note, setNote] = React.useState("");
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "detected", desc: true },
+  ]);
   const [page, setPage] = React.useState(1);
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
@@ -67,16 +76,22 @@ export function InterventionsListTable() {
     setQuery,
     riskFilter,
     setRiskFilter,
+    actionFilter,
+    setActionFilter,
     hasActiveFilters,
   } = useInterventionFilters();
   const debouncedQuery = useDebouncedValue(query, 300);
   const { data, isPending, isError, refetch } = useQuery({
-    queryKey: ["interventions-list", termId, schoolYearId, page, debouncedQuery, riskFilter],
+    queryKey: ["interventions-list", termId, schoolYearId, page, debouncedQuery, riskFilter, actionFilter],
     queryFn: ({ signal }) =>
       fetchInterventionStudents(
         {
           riskLevel: riskFilter === "all" ? undefined : riskFilter,
           q: debouncedQuery.trim() || undefined,
+          plan: actionFilter === "all" ? undefined : actionFilter,
+          // Newest engine detection first — the queue itself is ordered the
+          // same way server-side so page 1 holds the freshest flags.
+          sort: "detected",
         },
         page,
         PAGE_SIZE,
@@ -106,15 +121,27 @@ export function InterventionsListTable() {
         id: "name",
         accessorFn: (row) => row.studentName,
         header: "Student",
-        size: 220,
-        minSize: 220,
-        maxSize: 220,
+        size: 280,
+        minSize: 280,
+        maxSize: 280,
         cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className={styles.cellMain}>{row.original.studentName}</p>
-            <p className={styles.cellSub}>
-              {row.original.lrn} · {row.original.section}
-            </p>
+          <div className={styles.studentCell}>
+            <StudentMascot
+              name={row.original.studentName}
+              seed={row.original.lrn}
+              size={30}
+            />
+            <span className={styles.studentBody}>
+              <span className={styles.studentName}>{row.original.studentName}</span>
+              <span className={styles.studentMeta}>
+                <Pill tone="neutral" label="LRN" className="tabular-nums">
+                  {row.original.lrn}
+                </Pill>
+                <Pill tone="amber" label="Section">
+                  {row.original.section}
+                </Pill>
+              </span>
+            </span>
           </div>
         ),
       },
@@ -148,21 +175,23 @@ export function InterventionsListTable() {
         cell: ({ row }) => <FactorBadges student={row.original} />,
       },
       {
-        id: "latest",
-        accessorFn: (row) => latestAction(row).time,
-        header: "Latest action",
+        id: "detected",
+        accessorFn: (row) => row.snapshotDate ?? "",
+        header: "Latest detected",
+        sortDescFirst: true,
         size: 220,
         minSize: 220,
         maxSize: 220,
         cell: ({ row }) => {
           const s = row.original;
-          const action = latestAction(s);
-          const actionMs = msSinceAction(action.time, Date.now());
+          const detectedMs = msSinceAction(s.snapshotDate, Date.now());
+          const elapsed =
+            detectedMs === null ? null : formatElapsedShort(detectedMs);
           return (
             <div className="min-w-0">
               <p className={styles.actionLabel}>
-                <ActionGlyph label={action.label} className={styles.actionIcon} />
-                <span className="truncate">{action.label}</span>
+                <Radar className={styles.actionIcon} aria-hidden />
+                <span className="truncate">Detected by engine</span>
                 {canAlert(s) && s.intervention ? (
                   <Button
                     variant="ghost"
@@ -178,8 +207,20 @@ export function InterventionsListTable() {
                   </Button>
                 ) : null}
               </p>
-              <p className={styles.cellSub} aria-live="off">
-                {actionMs === null ? "—" : `${formatElapsedShort(actionMs)} ago`}
+              <p
+                className={styles.cellSub}
+                aria-live="off"
+                title={
+                  s.snapshotDate
+                    ? new Date(s.snapshotDate).toLocaleString()
+                    : undefined
+                }
+              >
+                {elapsed === null
+                  ? "Not scored yet"
+                  : elapsed === "just now"
+                    ? "Just now"
+                    : `${elapsed} ago`}
               </p>
             </div>
           );
@@ -194,10 +235,13 @@ export function InterventionsListTable() {
         maxSize: 140,
         cell: ({ row }) => {
           const iv = row.original.intervention;
-          if (!iv) return <span className={styles.noIntervention}>No plan</span>;
+          const hasBookedSession = (iv?.sessions.length ?? 0) > 0;
+          if (!hasBookedSession) {
+            return <span className={styles.noIntervention}>No plan yet</span>;
+          }
           return (
-            <Pill tone={outcomeTone(iv.outcomeStatus)} label="Plan status">
-              {outcomeLabel(iv.outcomeStatus)}
+            <Pill tone="amber" label="Plan status">
+              Ongoing
             </Pill>
           );
         },
@@ -246,7 +290,7 @@ export function InterventionsListTable() {
   const isEmpty = !isPending && total === 0 && !debouncedQuery.trim() && !hasActiveFilters;
   React.useEffect(() => {
     setPage(1);
-  }, [debouncedQuery, riskFilter]);
+  }, [debouncedQuery, riskFilter, actionFilter]);
   if (isEmpty) {
     return (
       <PrincipalEmptyCard
@@ -269,6 +313,29 @@ export function InterventionsListTable() {
       }
       count={total}
       description="Flagged by the system. Category only, never the private write-up."
+      toolbar={
+        <div
+          className={styles.actionTabs}
+          role="tablist"
+          aria-label="Filter by plan action"
+        >
+          {ACTION_TABS.map((tab) => {
+            const active = actionFilter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActionFilter(tab.key)}
+                className={styles.actionTab}
+              >
+                <Pill tone={active ? "amber" : "neutral"}>{tab.label}</Pill>
+              </button>
+            );
+          })}
+        </div>
+      }
       actions={
         <div className={styles.headerActions}>
           <InputGroup className="max-w-40 shrink-0">
@@ -315,19 +382,6 @@ export function InterventionsListTable() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={styles.clearBtn}
-              onClick={() => {
-                setRiskFilter("all");
-              }}
-            >
-              <X aria-hidden />
-              Clear
-            </Button>
-          )}
         </div>
       }
       footer={
@@ -344,7 +398,7 @@ export function InterventionsListTable() {
             <Table className="w-full table-fixed" aria-label="Loading intervention cases">
               <TableHeader>
                 <TableRow className="bg-muted/50 [&>th]:border-t-0">
-                  {["Student", "Status", "Factor", "Latest action", "Plan"].map((h) => (
+                  {["Student", "Status", "Factor", "Latest detected", "Plan"].map((h) => (
                     <TableHead key={h} className="h-10 whitespace-nowrap">
                       {h}
                     </TableHead>

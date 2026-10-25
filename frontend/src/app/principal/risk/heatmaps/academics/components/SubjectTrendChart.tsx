@@ -2,23 +2,23 @@
 
 import * as React from "react";
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
   ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { useTheme } from "@/components/providers";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,120 +37,32 @@ import {
 } from "./types";
 import styles from "./academics.module.css";
 
-const TOOLTIP_STYLE: React.CSSProperties = {
-  borderRadius: 8,
-  border: "1px solid var(--border)",
-  background: "var(--card)",
-  color: "var(--foreground)",
-  fontSize: 12,
-};
-
-const GRADE_COLORS = [
-  "#3b82f6",
-  "#22c55e",
+/* Amber subject palette — same accent family as the attendance and risk
+   boards. Dark themes use the lighter end so bars stay legible. */
+const AMBER_SHADES_LIGHT = [
+  "#b45309",
+  "#d97706",
+  "#ea8a0a",
   "#f59e0b",
-  "#a855f7",
-  "#14b8a6",
-  "#ef4444",
+  "#f0a93b",
+  "#f6c667",
+];
+
+const AMBER_SHADES_DARK = [
+  "#fde68a",
+  "#fcd34d",
+  "#fbbf24",
+  "#f59e0b",
+  "#d97706",
+  "#b45309",
 ];
 
 type TrendRow = {
   subject: string;
-  [grade: string]: string | number | null;
+  [key: string]: string | number | null;
 };
 
 type CellStat = { avg: number; graded: number; below: number };
-
-const PASS_DOT = "#22c55e";
-const FAIL_DOT = "#ef4444";
-const EMPTY_BASELINE = 50;
-
-function dotFor(grade: string, radius: number) {
-  function TrendDot(props: {
-    cx?: number;
-    cy?: number;
-    payload?: Record<string, unknown>;
-  }) {
-    const { cx, cy, payload } = props;
-    if (cx == null || cy == null) return <g />;
-    const raw = payload ? payload[grade] : null;
-    if (typeof raw !== "number") return <g />;
-    const bad = raw < 75;
-    return (
-      <circle
-        cx={cx}
-        cy={cy}
-        r={bad ? radius + 1 : radius}
-        style={{
-          fill: bad ? FAIL_DOT : PASS_DOT,
-          stroke: "var(--card)",
-        }}
-        strokeWidth={2}
-      />
-    );
-  }
-  return TrendDot;
-}
-
-function EmptyDot(props: { cx?: number; cy?: number }) {
-  const { cx, cy } = props;
-  if (cx == null || cy == null) return <g />;
-  return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={4}
-      style={{ fill: "#ffffff", stroke: "var(--muted-foreground)" }}
-      strokeWidth={1.5}
-      strokeDasharray="2 2"
-    />
-  );
-}
-
-function TrendTooltip({
-  active,
-  payload,
-  label,
-  detailByKey,
-  series,
-}: {
-  active?: boolean;
-  payload?: { dataKey?: string | number; value?: string | number }[];
-  label?: string | number;
-  detailByKey: Record<string, CellStat>;
-  series: string[];
-}) {
-  if (!active || !payload || payload.length === 0) return null;
-  return (
-    <div className={styles.chartTip}>
-      <p className={styles.chartTipTitle}>{String(label ?? "")}</p>
-      {series.map((grade) => {
-        const entry = payload.find((p) => String(p.dataKey) === grade);
-        if (!entry || entry.value == null || entry.value === "") {
-          return (
-            <p key={grade} className={styles.chartTipRow}>
-              <span>{grade}</span>
-              <span className={styles.chartTipMuted}>No grades yet</span>
-            </p>
-          );
-        }
-        const detail = detailByKey[`${label}::${grade}`];
-        const avg = Number(entry.value);
-        return (
-          <p key={grade} className={styles.chartTipRow}>
-            <span>{grade}</span>
-            <span className={avg < 75 ? styles.chartTipBad : styles.chartTipAvg}>
-              {avg}
-              {detail
-                ? ` · ${detail.graded} graded · ${detail.below} below 75`
-                : ""}
-            </span>
-          </p>
-        );
-      })}
-    </div>
-  );
-}
 
 function GradeFilterMenu({
   grades,
@@ -186,7 +98,8 @@ function GradeFilterMenu({
   );
 }
 
-export function SubjectTrendChart({  sections,
+export function SubjectTrendChart({
+  sections,
   subjects,
   grades,
   gradeFilter,
@@ -204,18 +117,40 @@ export function SubjectTrendChart({  sections,
   selectedSubject: string | null;
   onSelectSubject: (subject: string | null) => void;
 }) {
-  const { chartData, detailByKey, series } = React.useMemo(() => {
+  const { resolvedTheme } = useTheme();
+
+  const activeGrades = React.useMemo(() => {
     const inScope =
       gradeFilter === ALL_GRADES
         ? sections
         : sections.filter((s) => s.grade === gradeFilter);
-    const activeGrades = (
+    return (
       gradeFilter === ALL_GRADES
         ? grades
         : grades.filter((g) => g === gradeFilter)
     ).filter((g) => inScope.some((s) => s.grade === g));
+  }, [sections, grades, gradeFilter]);
 
-    const acc = new Map<string, Map<string, { sum: number; count: number; below: number }>>();
+  const series = React.useMemo(() => {
+    const shades =
+      resolvedTheme === "dark" ? AMBER_SHADES_DARK : AMBER_SHADES_LIGHT;
+    return activeGrades.map((grade, i) => ({
+      key: `g${i}`,
+      grade,
+      color: shades[i % shades.length],
+    }));
+  }, [activeGrades, resolvedTheme]);
+
+  const { chartData, detailByKey } = React.useMemo(() => {
+    const inScope =
+      gradeFilter === ALL_GRADES
+        ? sections
+        : sections.filter((s) => s.grade === gradeFilter);
+
+    const acc = new Map<
+      string,
+      Map<string, { sum: number; count: number; below: number }>
+    >();
     for (const s of inScope) {
       for (const st of s.students) {
         for (const subj of st.subjects) {
@@ -237,26 +172,24 @@ export function SubjectTrendChart({  sections,
     const rows: TrendRow[] = subjects.map((subj) => {
       const row: TrendRow = { subject: subj };
       const byGrade = acc.get(subj);
-      for (const grade of activeGrades) {
-        const entry = byGrade?.get(grade);
+      series.forEach((item) => {
+        const entry = byGrade?.get(item.grade);
         if (entry && entry.count > 0) {
           const avg = round1(entry.sum / entry.count);
-          row[grade] = avg;
-          row[`__empty_${grade}`] = null;
-          detail[`${subj}::${grade}`] = {
+          row[item.key] = avg;
+          detail[`${subj}::${item.grade}`] = {
             avg,
             graded: entry.count,
             below: entry.below,
           };
         } else {
-          row[grade] = null;
-          row[`__empty_${grade}`] = EMPTY_BASELINE;
+          row[item.key] = null;
         }
-      }
+      });
       return row;
     });
-    return { chartData: rows, detailByKey: detail, series: activeGrades };
-  }, [sections, subjects, grades, gradeFilter]);
+    return { chartData: rows, detailByKey: detail };
+  }, [sections, subjects, gradeFilter, series]);
 
   const belowCount = React.useMemo(
     () => Object.values(detailByKey).filter((d) => d.avg < 75).length,
@@ -270,225 +203,161 @@ export function SubjectTrendChart({  sections,
     return min;
   }, [detailByKey]);
 
-  const colorFor = React.useCallback(
-    (grade: string) => {
-      const idx = [...grades]
-        .sort((a, b) => gradeSortKey(a) - gradeSortKey(b))
-        .indexOf(grade);
-      return GRADE_COLORS[Math.max(0, idx) % GRADE_COLORS.length];
-    },
-    [grades]
-  );
+  const chartConfig = React.useMemo(() => {
+    const config: ChartConfig = {};
+    series.forEach((item) => {
+      config[item.key] = { label: item.grade, color: item.color };
+    });
+    return config;
+  }, [series]);
 
   const hasData = chartData.some((row) =>
-    series.some((g) => row[g] != null)
+    series.some((item) => row[item.key] != null)
   );
 
   const isEmpty = !isPending && !hasData;
   if (isEmpty) {
     return (
-      <Card className={styles.glowCard}>
-        <span className={styles.glowClip} aria-hidden="true">
-          <span className={styles.cardGlow} />
-        </span>
-        <CardContent className={styles.chartBody}>
-          <div className={styles.trendEmptyFilter}>
-            <GradeFilterMenu
-              grades={grades}
-              gradeFilter={gradeFilter}
-              onGradeFilterChange={onGradeFilterChange}
-            />
-          </div>
-          <PrincipalEmptyState
-            icon={BookOpen}
-            title="No graded records"
-            hint="No graded records for the active term. Grades will appear here once finalized."
+      <KanbanBoard
+        title="Subject Trends"
+        icon={<BookOpen size={14} aria-hidden="true" />}
+        actions={
+          <GradeFilterMenu
+            grades={grades}
+            gradeFilter={gradeFilter}
+            onGradeFilterChange={onGradeFilterChange}
           />
-        </CardContent>
-      </Card>
+        }
+        ariaLabel="Subject trends"
+      >
+        <PrincipalEmptyState
+          icon={BookOpen}
+          title="No graded records"
+          hint="No graded records for the active term. Grades will appear here once finalized."
+        />
+      </KanbanBoard>
     );
   }
-  return (
-    <Card className={styles.glowCard}>
-      <span className={styles.glowClip} aria-hidden="true">
-        <span className={styles.cardGlow} />
-      </span>
-      <CardHeader>
-        <div className={styles.trendHeadRow}>
-          <div>
-            <CardTitle>Subject trend</CardTitle>
-            <CardDescription>
-              {gradeFilter === ALL_GRADES
-                ? "Average transmuted grade per subject, one line per grade level. Red is below 75, green is passing, white means no grades yet. Click a point to rank its sections."
-                : `Average transmuted grade per subject for ${gradeFilter}. Red is below 75, green is passing, white means no grades yet. Click a point to rank its sections.`}
-            </CardDescription>
-          </div>
-          <div className={styles.trendGradeWrap}>
-            <GradeFilterMenu
-              grades={grades}
-              gradeFilter={gradeFilter}
-              onGradeFilterChange={onGradeFilterChange}
-            />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className={styles.chartBody}>
-        {isPending ? (
-          <Skeleton className={styles.chartSkel} aria-hidden />
-        ) : (
-          <>
-            <div className={styles.chartScroll}>
-              <div className={styles.chartInner}>
-                <ResponsiveContainer width="100%" height={320}>
-                  <LineChart
-                    data={chartData}
-                    margin={{ top: 12, right: 16, bottom: 0, left: -8 }}
-                    className={styles.chartClickable}
-                    onClick={(state) => {
-                      const label =
-                        state && typeof state.activeLabel === "string"
-                          ? state.activeLabel
-                          : null;
-                      if (!label) return;
-                      onSelectSubject(
-                        label === selectedSubject ? null : label
-                      );
-                    }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="color-mix(in oklch, var(--foreground), transparent 90%)"
-                    />
-                    <XAxis
-                      dataKey="subject"
-                      tickLine={false}
-                      axisLine={false}
-                      interval={0}
-                      angle={-18}
-                      textAnchor="end"
-                      height={72}
-                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      domain={[50, 100]}
-                      ticks={[50, 60, 70, 75, 80, 90, 100]}
-                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                      width={36}
-                    />
-                    <Tooltip
-                      content={
-                        <TrendTooltip
-                          detailByKey={detailByKey}
-                          series={series}
-                        />
-                      }
-                      contentStyle={TOOLTIP_STYLE}
-                    />
-                    {series.length > 1 ? (
-                      <Legend
-                        wrapperStyle={{ fontSize: 12 }}
-                        formatter={(value) => (
-                          <span className={styles.chartLegend}>{value}</span>
-                        )}
-                      />
-                    ) : null}
-                    <ReferenceLine
-                      y={75}
-                      stroke="var(--destructive)"
-                      strokeDasharray="6 4"
-                      label={{
-                        value: "Passing (75)",
-                        position: "insideTopRight",
-                        fontSize: 11,
-                        fill: "var(--destructive)",
-                      }}
-                    />
-                    {series.map((grade) => {
-                      // Single-grade view: neutral line color so it never
-                      // clashes with the dot semantics (red = below 75,
-                      // green = passing). Grade 12 happens to sit on the
-                      // red slot of the multi-grade palette.
-                      const color =
-                        series.length === 1 ? "#3b82f6" : colorFor(grade);
-                      return (
-                        <Line
-                          key={grade}
-                          type="monotone"
-                          dataKey={grade}
-                          name={grade}
-                          stroke={color}
-                          strokeWidth={2.5}
-                          dot={dotFor(grade, 4)}
-                          activeDot={dotFor(grade, 6)}
-                        />
-                      );
-                    })}
 
-                    {series.map((grade) => (
-                      <Line
-                        key={`empty-${grade}`}
-                        type="monotone"
-                        dataKey={`__empty_${grade}`}
-                        stroke="transparent"
-                        dot={<EmptyDot />}
-                        activeDot={false}
-                        legendType="none"
-                        tooltipType="none"
-                        isAnimationActive={false}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+  return (
+    <KanbanBoard
+      title="Subject Trends"
+      icon={<BookOpen size={14} aria-hidden="true" />}
+      count={isPending ? undefined : subjects.length}
+      description={
+        gradeFilter === ALL_GRADES
+          ? "Average transmuted grade per subject, one bar per grade level — click a bar to rank its sections."
+          : `Average transmuted grade per subject for ${gradeFilter} — click a bar to rank its sections.`
+      }
+      actions={
+        <GradeFilterMenu
+          grades={grades}
+          gradeFilter={gradeFilter}
+          onGradeFilterChange={onGradeFilterChange}
+        />
+      }
+      ariaLabel="Subject trends"
+    >
+      {isPending ? (
+        <Skeleton className={styles.chartSkel} aria-hidden />
+      ) : (
+        <div className={styles.chartBody}>
+          <div className={styles.chartScroll}>
+            <div className={styles.chartInner}>
+              <ChartContainer
+                config={chartConfig}
+                className={styles.chartContainer}
+                style={{ height: 320, width: "100%", aspectRatio: "auto" }}
+              >
+            <BarChart
+              accessibilityLayer
+              data={chartData}
+              margin={{ top: 8, right: 8, bottom: 4, left: 0 }}
+              className={styles.chartClickable}
+              onClick={(state) => {
+                const label =
+                  state && typeof state.activeLabel === "string"
+                    ? state.activeLabel
+                    : null;
+                if (!label) return;
+                onSelectSubject(label === selectedSubject ? null : label);
+              }}
+            >
+              <CartesianGrid vertical={false} stroke="var(--border)" />
+              <XAxis
+                dataKey="subject"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                interval={0}
+                angle={-18}
+                textAnchor="end"
+                height={72}
+                tick={{ fontSize: 11 }}
+              />
+              <YAxis
+                domain={[50, 100]}
+                ticks={[50, 60, 70, 75, 80, 90, 100]}
+                tickLine={false}
+                axisLine={false}
+                width={36}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              {series.length > 1 ? (
+                <ChartLegend
+                  verticalAlign="top"
+                  align="right"
+                  content={<ChartLegendContent />}
+                />
+              ) : null}
+              <ReferenceLine
+                y={75}
+                stroke="var(--destructive)"
+                strokeDasharray="6 4"
+                label={{
+                  value: "Passing (75)",
+                  position: "insideTopRight",
+                  fontSize: 11,
+                  fill: "var(--destructive)",
+                }}
+              />
+              {series.map((item) => (
+                <Bar
+                  key={item.key}
+                  dataKey={item.key}
+                  name={item.grade}
+                  fill={`var(--color-${item.key})`}
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={28}
+                />
+              ))}
+            </BarChart>
+              </ChartContainer>
             </div>
-            <div className={styles.dotLegend} aria-label="Dot meaning">
-              <span className={styles.dotLegendItem}>
-                <span
-                  className={styles.dotLegendDot}
-                  style={{ backgroundColor: "var(--destructive)" }}
-                  aria-hidden
-                />
-                Below 75
+          </div>
+
+          <div className={styles.dotLegend} aria-label="Chart actions">
+            {selectedSubject ? (
+              <span className={styles.dotLegendSelected}>
+                Selected: {selectedSubject} (click again to clear)
               </span>
-              <span className={styles.dotLegendItem}>
-                <span
-                  className={styles.dotLegendDot}
-                  style={{ backgroundColor: "#22c55e" }}
-                  aria-hidden
-                />
-                75 and above
+            ) : (
+              <span className={styles.dotLegendHint}>
+                Click any bar to rank its sections
               </span>
-              <span className={styles.dotLegendItem}>
-                <span
-                  className={styles.dotLegendDot}
-                  style={{ backgroundColor: "#ffffff" }}
-                  aria-hidden
-                />
-                No grades yet
-              </span>
-              {selectedSubject ? (
-                <span className={styles.dotLegendSelected}>
-                  Selected: {selectedSubject} (click again to clear)
-                </span>
-              ) : (
-                <span className={styles.dotLegendHint}>
-                  Click any point to rank its sections
-                </span>
-              )}
-            </div>
-            <p className={styles.interpretation}>
-              <span className={styles.interpretationLabel}>What it means · </span>
-              {belowCount === 0
-                ? "Every subject trend sits at or above 75 — clear."
-                : lowest
-                  ? `${belowCount} grade–subject point${belowCount === 1 ? "" : "s"} below 75. Lowest: ${lowest.key.replace("::", " · ")} at ${lowest.stat.avg}.`
-                  : `${belowCount} grade–subject points below 75.`}
-            </p>
-          </>
-        )}
-      </CardContent>
-    </Card>
+            )}
+          </div>
+
+          <p className={styles.interpretation}>
+            <span className={styles.interpretationLabel}>What it means · </span>
+            {belowCount === 0
+              ? "Every subject trend sits at or above 75 — clear."
+              : lowest
+                ? `${belowCount} grade–subject point${belowCount === 1 ? "" : "s"} below 75. Lowest: ${lowest.key.replace("::", " · ")} at ${lowest.stat.avg}.`
+                : `${belowCount} grade–subject points below 75.`}
+          </p>
+        </div>
+      )}
+    </KanbanBoard>
   );
 }

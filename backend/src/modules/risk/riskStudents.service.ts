@@ -6,6 +6,7 @@ import {
   type GradeMode,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import { gradeLabel } from "../../lib/grades.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
@@ -15,6 +16,8 @@ export interface RiskStudentRow {
   lrn: string;
   name: string;
   section: string;
+  gradeLevel: string;
+  mascot: string | null;
   riskLevel: string;
   riskCount: number;
   factors: Record<RiskFactor, boolean>;
@@ -87,9 +90,12 @@ async function getRiskStudentsLive(
       }
     : null;
 
+  // Adviser data gate: only learners in sections whose adviser has claimed the
+  // section and switched student-data sharing ON reach the principal desk.
   const sectionMatch = {
     ...(schoolYearId ? { schoolYearId } : {}),
     ...(section ? { name: section } : {}),
+    adviser: { staffProfile: { shareStudentData: true } },
   };
 
   const [profiles, rosterEntries] = await Promise.all([
@@ -105,6 +111,8 @@ async function getRiskStudentsLive(
       select: {
         userId: true,
         lrn: true,
+        gradeLevel: true,
+        mascot: true,
         section: { select: { id: true, name: true } },
         user: { select: { fullName: true } },
         finalGrades: {
@@ -126,6 +134,12 @@ async function getRiskStudentsLive(
             ...(schoolYearId ? { schoolYearId } : {}),
             ...(section ? { section: { name: section } } : {}),
           },
+          {
+            section: {
+              ...(schoolYearId ? { schoolYearId } : {}),
+              adviser: { staffProfile: { shareStudentData: true } },
+            },
+          },
           ...(rosterSearch ? [rosterSearch] : []),
         ],
       },
@@ -135,6 +149,8 @@ async function getRiskStudentsLive(
         id: true,
         lrn: true,
         fullName: true,
+        gradeLevel: true,
+        mascot: true,
         sectionId: true,
         section: { select: { name: true } },
         finalGrades: {
@@ -164,6 +180,8 @@ async function getRiskStudentsLive(
     lrn: string;
     name: string;
     section: string;
+    gradeLevel: string;
+    mascot: string | null;
     finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
     attendanceRecords: { status: string; subjectId: string | null }[];
     anecdotalCount: number;
@@ -175,6 +193,8 @@ async function getRiskStudentsLive(
       lrn: s.lrn,
       name: s.user.fullName,
       section: s.section?.name ?? "—",
+      gradeLevel: gradeLabel(s.gradeLevel),
+      mascot: s.mascot,
       finalGrades: s.finalGrades,
       attendanceRecords: s.attendanceRecords,
       anecdotalCount: s.anecdotalRecords.length,
@@ -187,6 +207,8 @@ async function getRiskStudentsLive(
         lrn: r.lrn,
         name: r.fullName,
         section: r.section?.name ?? "—",
+        gradeLevel: gradeLabel(r.gradeLevel),
+        mascot: r.mascot,
         finalGrades: r.finalGrades,
         attendanceRecords: r.attendanceRecords,
         anecdotalCount: r.anecdotalRecords.length,
@@ -212,6 +234,8 @@ async function getRiskStudentsLive(
       lrn: s.lrn,
       name: s.name,
       section: s.section,
+      gradeLevel: s.gradeLevel,
+      mascot: s.mascot,
       riskLevel: liveLevel,
       riskCount: liveCount,
       factors: {

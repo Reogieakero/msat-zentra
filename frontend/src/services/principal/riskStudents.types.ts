@@ -44,6 +44,9 @@ export interface BackendStudent {
   lrn: string;
   name: string;
   section: string;
+  gradeLevel: string;
+  /** Persisted sprite mascot; null falls back to the derived one. */
+  mascot: string | null;
   riskLevel: "High" | "Moderate" | "Low";
   riskCount: number;
   factors: {

@@ -65,6 +65,11 @@ export interface StudentFilters {
   factor?: RiskFactorKey | "all";
   q?: string;
   section?: string;
+  outcomeStatus?: OutcomeStatus;
+  /** Plan state: ongoing only when guidance has booked a session. */
+  plan?: "ongoing" | "none";
+  /** Queue order requested from the API. */
+  sort?: "risk" | "detected";
 }
 
 export interface StaffOption {

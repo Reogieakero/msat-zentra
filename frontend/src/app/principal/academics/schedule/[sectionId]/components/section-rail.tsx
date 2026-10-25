@@ -153,9 +153,13 @@ export function SectionRail({
       body: (
         <p className={styles.row}>
           <span className={styles.label}>Adviser</span>
-          <span className={styles.value} title={submission.adviser?.fullName ?? undefined}>
-            {submission.adviser?.fullName ?? "No adviser assigned"}
-          </span>
+          {submission.adviser?.fullName ? (
+            <Pill tone="amber" className="max-w-[11rem] overflow-hidden">
+              {submission.adviser.fullName}
+            </Pill>
+          ) : (
+            <Pill tone="neutral">No adviser</Pill>
+          )}
         </p>
       ),
     },
@@ -210,9 +214,9 @@ export function SectionRail({
                 onClick={() => onReview("reject")}
                 disabled={reviewPending}
                 aria-busy={rejecting || undefined}
-                className="flex-1"
+                className="h-6 flex-1 px-2 text-xs"
               >
-                {rejecting ? <Loader2 size={14} className="animate-spin" aria-hidden /> : null}
+                {rejecting ? <Loader2 size={12} className="animate-spin" aria-hidden /> : null}
                 <span aria-live="polite">Reject</span>
               </Button>
               <Button
@@ -220,9 +224,9 @@ export function SectionRail({
                 onClick={() => onReview("approve")}
                 disabled={reviewPending}
                 aria-busy={approving || undefined}
-                className="flex-1"
+                className="h-6 flex-1 px-2 text-xs"
               >
-                {approving ? <Loader2 size={14} className="animate-spin" aria-hidden /> : null}
+                {approving ? <Loader2 size={12} className="animate-spin" aria-hidden /> : null}
                 <span aria-live="polite">Approve</span>
               </Button>
             </div>
@@ -256,7 +260,7 @@ export function SectionRail({
 
   return (
     <TooltipProvider delayDuration={100}>
-      <aside className={rail.rail} aria-label="Section review">
+      <aside className={rail.rail} style={{ top: "1rem" }} aria-label="Section review">
         <div ref={railRef} className={rail.railInner}>
           {items.map((item) => {
             const Icon = item.icon;

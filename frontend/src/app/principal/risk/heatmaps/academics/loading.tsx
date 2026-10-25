@@ -1,5 +1,4 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeaderSkeleton } from "../../../components/skeletons/PageHeaderSkeleton";
 import shell from "../components/heatmap.module.css";
 
 export default function PrincipalAcademicsHeatmapLoading() {
@@ -7,7 +6,6 @@ export default function PrincipalAcademicsHeatmapLoading() {
     <div className={shell.shell}>
       <div className={shell.layout}>
         <section className={shell.page} aria-label="Loading academic heatmap" aria-busy="true">
-          <PageHeaderSkeleton withActions />
           <div className="grid grid-cols-2 gap-4" aria-hidden="true">
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-24 w-full" />

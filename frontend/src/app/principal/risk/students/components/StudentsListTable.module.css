@@ -122,6 +122,22 @@
   white-space: nowrap;
 }
 
+.studentCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.studentName {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .cellSub {
   margin: 0.125rem 0 0;
   font-size: 0.75rem;
@@ -241,6 +257,15 @@
   width: 55%;
   height: 0.875rem;
   border-radius: 3px;
+  background-color: color-mix(in oklch, var(--muted), transparent 55%);
+}
+
+.skelAvatar {
+  display: block;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 999px;
+  flex-shrink: 0;
   background-color: color-mix(in oklch, var(--muted), transparent 55%);
 }
 

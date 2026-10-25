@@ -51,9 +51,15 @@ export function SectionCard({
           </p>
           <p className={styles.line}>
             <span className={styles.label}>Teacher</span>
-            <span className={styles.value} title={teacher ?? undefined}>
-              {teacher ?? <span className={styles.none}>No adviser assigned</span>}
-            </span>
+            {teacher ? (
+              <Pill tone="amber" className="max-w-[18rem] overflow-hidden" title={teacher}>
+                {teacher}
+              </Pill>
+            ) : (
+              <span className={styles.value}>
+                <span className={styles.none}>No adviser assigned</span>
+              </span>
+            )}
           </p>
         </div>
       </div>

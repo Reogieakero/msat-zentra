@@ -139,18 +139,26 @@ export interface SectionSubjectHeatmapQuery {
   subjectId?: string;
   schoolYearId: string | null;
   displayTerm: DisplayTerm;
+  /** Principal desks pass true: only adviser-shared sections count. */
+  sharedOnly?: boolean;
 }
 
 export async function getSectionSubjectHeatmap(query: SectionSubjectHeatmapQuery) {
-  const { subjectId: subjectFilter, schoolYearId, displayTerm } = query;
+  const { subjectId: subjectFilter, schoolYearId, displayTerm, sharedOnly } = query;
   const termId = displayTerm.id;
 
   const sections = await prisma.section.findMany({
-    where: schoolYearClause(schoolYearId),
+    where: {
+      ...schoolYearClause(schoolYearId),
+      ...(sharedOnly
+        ? { adviser: { staffProfile: { shareStudentData: true } } }
+        : {}),
+    },
     select: { id: true, name: true, gradeLevel: true },
     orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
   });
-  const headcounts = await sectionHeadcounts(sections.map((s) => s.id));
+  const sectionIds = sections.map((s) => s.id);
+  const headcounts = await sectionHeadcounts(sectionIds);
 
   const dayKeys = buildSchoolDayAxis(displayTerm.startDate);
   const schoolDays = countSchoolDays(dayKeys);
@@ -159,6 +167,7 @@ export async function getSectionSubjectHeatmap(query: SectionSubjectHeatmapQuery
     prisma.attendanceRecord.findMany({
       where: {
         termId,
+        sectionId: { in: sectionIds },
         NOT: { subjectId: null },
         ...(subjectFilter ? { subjectId: subjectFilter } : {}),
       },
@@ -167,6 +176,7 @@ export async function getSectionSubjectHeatmap(query: SectionSubjectHeatmapQuery
     prisma.teacherSubjectAssignment.findMany({
       where: {
         termId,
+        sectionId: { in: sectionIds },
         ...(subjectFilter ? { subjectId: subjectFilter } : {}),
       },
       select: {

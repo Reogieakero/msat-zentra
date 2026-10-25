@@ -14,7 +14,6 @@ import {
   Search,
   ChevronDown,
   ShieldCheck,
-  X,
 } from "lucide-react";
 import { PrincipalEmptyState } from "../../../components/PrincipalEmptyCard";
 import { apiClient } from "@/lib/api/client";
@@ -43,30 +42,22 @@ import { FACTOR_LABELS, type BackendStudent, type RiskFactor, type RiskLevelKey 
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import styles from "./StudentsListTable.module.css";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 const RISK_RANK: Record<RiskLevelKey, number> = { High: 3, Moderate: 2, Low: 1 };
 
-// Same palette as the teacher overview At-Risk Factors card:
-// Academic amber, Attendance green, Behavioral blue.
-const FACTOR_ACTIVE_CLASS: Record<RiskFactor, string> = {
-  Academic: "factorAcademic",
-  Attendance: "factorAttendance",
-  Behavioral: "factorBehavioral",
-} as const;
-
-const FACTOR_DOT: Record<RiskFactor, string> = {
-  Academic: "#f59e0b",
-  Attendance: "#22c55e",
-  Behavioral: "#3b82f6",
+// Shared Pill tones: Academic amber, Attendance green, Behavioral blue.
+const FACTOR_TONE: Record<RiskFactor, "amber" | "green" | "blue"> = {
+  Academic: "amber",
+  Attendance: "green",
+  Behavioral: "blue",
 };
 
 export function StudentsListTable({
   selectedSection,
-  onSectionChange,
 }: {
   selectedSection: string;
-  onSectionChange: (section: string) => void;
 }) {
   const [query, setQuery] = usePersistentState<string>(
     "zentra.risk.students.search",
@@ -145,38 +136,60 @@ export function StudentsListTable({
     setPage(1);
   };
 
-  const clearFilters = () => {
-    setQuery("");
-    onSectionChange("all");
-    setRiskFilter("all");
-    setPage(1);
-  };
-
   const columns = React.useMemo<ColumnDef<BackendStudent>[]>(
     () => [
       {
         id: "name",
         accessorFn: (row) => row.name,
         header: "Student",
-        size: 240,
-        minSize: 240,
-        maxSize: 240,
+        size: 220,
+        minSize: 220,
+        maxSize: 220,
         cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className={styles.cellMain}>{row.original.name}</p>
-            <p className={styles.cellSub}>
-              {row.original.lrn} · {row.original.section}
-            </p>
+          <div className={styles.studentCell}>
+            <StudentMascot
+              name={row.original.name}
+              seed={row.original.lrn}
+              character={row.original.mascot ?? undefined}
+              size={30}
+            />
+            <span className={styles.studentName}>{row.original.name}</span>
           </div>
+        ),
+      },
+      {
+        id: "lrn",
+        accessorFn: (row) => row.lrn,
+        header: "LRN",
+        size: 150,
+        minSize: 150,
+        maxSize: 150,
+        cell: ({ row }) => (
+          <Pill tone="neutral" label="LRN">
+            {row.original.lrn}
+          </Pill>
+        ),
+      },
+      {
+        id: "section",
+        accessorFn: (row) => row.section,
+        header: "Section",
+        size: 150,
+        minSize: 150,
+        maxSize: 150,
+        cell: ({ row }) => (
+          <Pill tone="amber" label={row.original.gradeLevel}>
+            {row.original.section}
+          </Pill>
         ),
       },
       {
         id: "risk",
         accessorFn: (row) => RISK_RANK[row.riskLevel],
         header: "Risk",
-        size: 130,
-        minSize: 130,
-        maxSize: 130,
+        size: 120,
+        minSize: 120,
+        maxSize: 120,
         cell: ({ row }) => (
           <Pill tone={riskTone(row.original.riskLevel)} label="Risk level">
             {row.original.riskLevel}
@@ -196,25 +209,13 @@ export function StudentsListTable({
         enableSorting: false,
         cell: ({ row }) => (
           <span className={styles.factors}>
-            {(Object.keys(row.original.factors) as RiskFactor[]).map((f) => (
-              <span
-                key={f}
-                className={`${styles.factorChip} ${
-                  row.original.factors[f]
-                    ? styles[FACTOR_ACTIVE_CLASS[f]]
-                    : styles.factorOff
-                }`}
-              >
-                {row.original.factors[f] ? (
-                  <span
-                    className={styles.factorDot}
-                    style={{ background: FACTOR_DOT[f] }}
-                    aria-hidden
-                  />
-                ) : null}
-                {FACTOR_LABELS[f]}
-              </span>
-            ))}
+            {(Object.keys(row.original.factors) as RiskFactor[])
+              .filter((f) => row.original.factors[f])
+              .map((f) => (
+                <Pill key={f} tone={FACTOR_TONE[f]} label={`${FACTOR_LABELS[f]} factor`}>
+                  {FACTOR_LABELS[f]}
+                </Pill>
+              ))}
           </span>
         ),
       },
@@ -298,13 +299,6 @@ export function StudentsListTable({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" className={styles.clearBtn} onClick={clearFilters}>
-              <X aria-hidden />
-              Show all
-            </Button>
-          )}
         </>
       }
       footer={
@@ -324,6 +318,8 @@ export function StudentsListTable({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Student</TableHead>
+                    <TableHead>LRN</TableHead>
+                    <TableHead>Section</TableHead>
                     <TableHead>Risk</TableHead>
                     <TableHead>Factors</TableHead>
                   </TableRow>
@@ -409,15 +405,22 @@ function SkeletonRows() {
       {Array.from({ length: 6 }).map((_, i) => (
         <TableRow key={i}>
           <TableCell>
-            <span className={styles.skelName} />
-            <span className={styles.skelLrn} />
+            <div className={styles.studentCell}>
+              <span className={styles.skelAvatar} />
+              <span className={styles.skelName} />
+            </div>
           </TableCell>
           <TableCell>
-            <span className={styles.skelCell} style={{ width: "38%" }} />
+            <span className={styles.skelChip} />
+          </TableCell>
+          <TableCell>
+            <span className={styles.skelChip} />
+          </TableCell>
+          <TableCell>
+            <span className={styles.skelCell} style={{ width: "60%" }} />
           </TableCell>
           <TableCell>
             <span className={styles.factors}>
-              <span className={styles.skelChip} />
               <span className={styles.skelChip} />
               <span className={styles.skelChip} />
             </span>

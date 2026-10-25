@@ -1,16 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
 import { ScheduleTable, type ScheduleSection } from "./components/schedule-table";
 import { ScheduleRail } from "./components/schedule-rail";
+import { ScheduleReviewOverlay } from "./components/schedule-review-overlay";
 import page from "./components/schedule.module.css";
 
 export default function PrincipalSchedulePage() {
   const { termReady } = useTerm();
+  const [reviewSection, setReviewSection] = useState<ScheduleSection | null>(null);
   const sectionsQuery = useQuery<{ sections: ScheduleSection[] }>({
     queryKey: ["principal-schedule-sections"],
     queryFn: async () => {
@@ -51,11 +54,12 @@ export default function PrincipalSchedulePage() {
       ) : (
         <div className={page.layout}>
           <div className={page.stack}>
-            <ScheduleTable sections={sections} />
+            <ScheduleTable sections={sections} onReview={setReviewSection} />
           </div>
           <ScheduleRail sections={sections} />
         </div>
       )}
+      <ScheduleReviewOverlay section={reviewSection} onClose={() => setReviewSection(null)} />
     </section>
   );
 }

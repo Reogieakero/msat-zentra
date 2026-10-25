@@ -104,6 +104,8 @@ router.get(
         typeof req.query.sectionId === "string" && req.query.sectionId.length > 0
           ? req.query.sectionId
           : undefined;
+      const sharedOnly =
+        req.query.sharedOnly === "true" || req.query.sharedOnly === "1";
       const displayTerm = await resolveDisplayTerm(req);
       if (!displayTerm) {
         res.json({ sections: [], trend: [] });
@@ -115,6 +117,7 @@ router.get(
           selectedSectionId,
           schoolYearId: ctxTerm(req).schoolYearId,
           displayTerm,
+          sharedOnly,
         }),
       );
     } catch (e) {
@@ -170,6 +173,8 @@ router.get(
         typeof req.query.subjectId === "string" && req.query.subjectId.length > 0
           ? req.query.subjectId
           : undefined;
+      const sharedOnly =
+        req.query.sharedOnly === "true" || req.query.sharedOnly === "1";
       const displayTerm = await resolveDisplayTerm(req);
       if (!displayTerm) {
         res.json({ sections: [], subjects: [], schoolDays: 0 });
@@ -180,6 +185,7 @@ router.get(
           subjectId: subjectFilter,
           schoolYearId: ctxTerm(req).schoolYearId,
           displayTerm,
+          sharedOnly,
         }),
       );
     } catch (e) {

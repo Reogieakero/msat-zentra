@@ -2,26 +2,40 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { ShieldCheck } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Users } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
+import type { RiskBoardData, RiskLevelKey } from "@/services/principal/risk.types";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
+import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import styles from "./RiskLevelDistribution.module.css";
 
-const LEVEL_FILL: Record<"High" | "Moderate" | "Low", string> = {
-  High: "var(--primary)",
-  Moderate: "color-mix(in oklch, var(--primary) 60%, var(--card))",
-  Low: "color-mix(in oklch, var(--primary) 30%, var(--card))",
+// Amber scale for the whole chart family — deep amber for the levels that
+// need attention, light amber for the calm end of the scale.
+const RISK_AMBER: Record<RiskLevelKey, string> = {
+  High: "#b45309",
+  Moderate: "#f59e0b",
+  Low: "#fcd34d",
 };
 
-const ORDERS: { level: "High" | "Moderate" | "Low"; label: string }[] = [
-  { level: "High", label: "High risk" },
-  { level: "Moderate", label: "Moderate" },
-  { level: "Low", label: "Low risk" },
-];
+const LEVELS: RiskLevelKey[] = ["High", "Moderate", "Low"];
+
+const chartConfig = {
+  High: { label: "High risk", color: RISK_AMBER.High },
+  Moderate: { label: "Moderate", color: RISK_AMBER.Moderate },
+  Low: { label: "Low risk", color: RISK_AMBER.Low },
+} satisfies ChartConfig;
 
 const gradeNum = (name: string) => {
   const m = String(name).match(/(\d+)/);
@@ -36,138 +50,144 @@ export function RiskLevelDistribution() {
   const { data, isPending } = useQuery({
     queryKey: ["risk-board", activeTerm?.termId ?? null, activeTerm?.schoolYearId ?? null],
     queryFn: async () => {
-      const res = await apiClient.get<{
-        byGrade: { grade: string; High: number; Moderate: number; Low: number; total: number }[];
-      }>("/api/risk/board");
+      const res = await apiClient.get<RiskBoardData>("/api/risk/board");
       return res.data;
     },
     staleTime: 15_000,
+    refetchOnWindowFocus: false,
   });
 
-  const byGrade = React.useMemo(() => {
-    const map = new Map<
-      number,
-      { High: number; Moderate: number; Low: number; total: number }
-    >();
-    for (const g of data?.byGrade ?? []) {
-      const n = gradeNum(g.grade);
-      if (n < 7 || n > 12) continue;
-      map.set(n, { High: g.High, Moderate: g.Moderate, Low: g.Low, total: g.total });
-    }
-    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
+  // One group of three bars per section, placed strictly Grade 7 → Grade 12.
+  // Only sections whose adviser has connected/shared student data are served.
+  const bySections = React.useMemo(() => {
+    return [...(data?.bySection ?? [])]
+      .sort((a, b) => {
+        const gradeDiff = gradeNum(a.gradeLevel) - gradeNum(b.gradeLevel);
+        if (gradeDiff !== 0) return gradeDiff;
+        return a.section.localeCompare(b.section, undefined, { numeric: true });
+      })
+      .map((s) => ({
+        section: s.section,
+        gradeLevel: s.gradeLevel,
+        High: s.High,
+        Moderate: s.Moderate,
+        Low: s.Low,
+        total: s.total,
+      }));
   }, [data]);
 
-  const isEmpty = !isPending && byGrade.length === 0;
-  return (
-    <section className={styles.section} aria-busy={isPending || undefined}>
-      {isPending ? (
-        <>
-          <Skeleton className="h-6 w-56" aria-hidden="true" />
-          <div className={styles.grid} aria-hidden="true">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className={assign.card}>
-                <span className={assign.glowClip} aria-hidden="true">
-                  <span className={assign.cardGlow} />
-                </span>
-                <div className={`${styles.cardHead} relative`}>
-                  <Skeleton className="h-5 w-28" />
-                  <Skeleton className="h-4 w-20" />
-                </div>
-                <Skeleton className="h-[104px] w-full rounded-full" />
-                <ul className={`${styles.legend} relative`}>
-                  {ORDERS.map((o) => (
-                    <li key={o.level} className={styles.legendItem}>
-                      <Skeleton className="size-2.5 shrink-0" />
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="ml-auto h-4 w-16 shrink-0" />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-      <>
-      {isEmpty ? null : <h2 className={styles.sectionTitle}>Risk Level Distribution</h2>}
+  const totals = React.useMemo(() => {
+    return bySections.reduce(
+      (acc, g) => {
+        acc.High += g.High;
+        acc.Moderate += g.Moderate;
+        acc.Low += g.Low;
+        acc.total += g.total;
+        return acc;
+      },
+      { High: 0, Moderate: 0, Low: 0, total: 0 }
+    );
+  }, [bySections]);
 
-      {byGrade.length === 0 ? (
-        <PrincipalEmptyCard
-          icon={ShieldCheck}
-          title="No students across grade levels"
-          hint="No students found across grade levels for the active term."
+  const isEmpty = !isPending && bySections.length === 0;
+
+  const peak = React.useMemo(() => {
+    if (bySections.length === 0) return null;
+    return [...bySections].sort(
+      (a, b) => b.High + b.Moderate - (a.High + a.Moderate)
+    )[0] ?? null;
+  }, [bySections]);
+
+  return (
+    <KanbanBoard
+      title="Risk Level Distribution"
+      icon={<Users size={14} aria-hidden="true" />}
+      count={isPending ? undefined : totals.total}
+      description="Three bars per section — High, Moderate and Low, ordered G7 to G12. Only adviser-connected learners are shown."
+      actions={
+        <Pill tone="green" label="Data source">
+          Adviser-shared
+        </Pill>
+      }
+    >
+      {isPending ? (
+        <div className={styles.skeletonWrap} aria-hidden="true">
+          <Skeleton className="h-[240px] w-full" />
+        </div>
+      ) : isEmpty ? (
+        <PrincipalEmptyState
+          icon={Users}
+          title="No connected learner data"
+          hint="No sections with adviser-shared learners were found for the active term."
         />
       ) : (
-        <div className={styles.grid}>
-          {byGrade.map(([grade, e]) => {
-            const series = ORDERS.map((o) => ({
-              level: o.level,
-              count: e[o.level] as number,
-            }));
-            const pct = (n: number) =>
-              e.total === 0 ? 0 : Math.round((n / e.total) * 100);
-            return (
-              <article key={grade} className={assign.card}>
-                <span className={assign.glowClip} aria-hidden="true">
-                  <span className={assign.cardGlow} />
-                </span>
-                <div className={`${styles.cardHead} relative`}>
-                  <h3 className={styles.cardTitle}>Grade {grade}</h3>
-                  <span className={styles.cardTotal}>{e.total} students</span>
-                </div>
+        <>
+          <ChartContainer
+            config={chartConfig}
+            className={styles.chart}
+            style={{ height: 260, width: "100%", aspectRatio: "auto" }}
+          >
+            <BarChart
+              accessibilityLayer
+              data={bySections}
+              barCategoryGap={18}
+              barGap={2}
+              margin={{ top: 8, right: 8, bottom: 4, left: 0 }}
+            >
+              <CartesianGrid vertical={false} stroke="var(--border)" />
+              <XAxis
+                dataKey="section"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={8}
+              />
+              <YAxis
+                allowDecimals={false}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              {LEVELS.map((level) => (
+                <Bar
+                  key={level}
+                  dataKey={level}
+                  name={chartConfig[level].label as string}
+                  fill={`var(--color-${level})`}
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={20}
+                />
+              ))}
+              <ChartLegend
+                verticalAlign="top"
+                align="right"
+                content={<ChartLegendContent />}
+              />
+            </BarChart>
+          </ChartContainer>
 
-                <div className={styles.chartWrap}>
-                  <ResponsiveContainer width="100%" height={104}>
-                    <PieChart>
-                      <Pie
-                        data={series}
-                        dataKey="count"
-                        nameKey="level"
-                        innerRadius="66%"
-                        outerRadius="100%"
-                        paddingAngle={1}
-                        stroke="none"
-                        isAnimationActive
-                        animationDuration={800}
-                      >
-                      {series.map((d) => (
-                        <Cell
-                          key={d.level}
-                          style={{ fill: LEVEL_FILL[d.level] }}
-                        />
-                      ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className={styles.center}>
-                    <span className={styles.centerValue}>
-                      {e.total.toLocaleString()}
-                    </span>
-                    <span className={styles.centerLabel}>total</span>
-                  </div>
-                </div>
-
-                <ul className={`${styles.legend} relative`}>
-                  {ORDERS.map((o) => (
-                    <li key={o.level} className={styles.legendItem}>
-                      <span
-                        className={styles.swatch}
-                        style={{ background: LEVEL_FILL[o.level] }}
-                      />
-                      <span className={styles.legendLabel}>{o.label}</span>
-                      <span className={styles.legendValue}>
-                        {`${e[o.level]} (${pct(e[o.level] as number)}%)`}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            );
-          })}
-        </div>
+          <p className={styles.insight}>
+            {peak && peak.High + peak.Moderate > 0 ? (
+              <>
+                <strong>{peak.section}</strong> carries the most at-risk learners —{" "}
+                <strong>{peak.High}</strong> high and <strong>{peak.Moderate}</strong>{" "}
+                moderate. School-wide: <strong>{totals.High}</strong> high,{" "}
+                <strong>{totals.Moderate}</strong> moderate,{" "}
+                <strong>{totals.Low}</strong> low across{" "}
+                <strong>{bySections.length}</strong> connected section
+                {bySections.length === 1 ? "" : "s"}.
+              </>
+            ) : (
+              <>
+                No at-risk learners in connected sections this term —{" "}
+                <strong>{totals.Low}</strong> learner
+                {totals.Low === 1 ? "" : "s"} currently on track.
+              </>
+            )}
+          </p>
+        </>
       )}
-      </>
-      )}
-    </section>
+    </KanbanBoard>
   );
 }

@@ -4,9 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import { fetchRecords } from "@/services/principal/records.service";
 import { RecordsHeatblocks } from "./components/RecordsHeatblocks";
-import { RecordsBreakdown } from "./components/RecordsBreakdown";
-import { PrincipalPageHeader } from "../../../components/PrincipalPageHeader";
-import { PageHeaderSkeleton } from "../../../components/skeletons/PageHeaderSkeleton";
+import { RecordsRail } from "./components/RecordsRail";
 import { PrincipalEmptyCard } from "../../../components/PrincipalEmptyCard";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/records.module.css";
@@ -25,17 +23,8 @@ export default function PrincipalRecordsPage() {
     0
   );
   const isEmpty = !isPending && !isError && total === 0;
-  const headerLoading = isPending || !termReady;
   return (
-    <section className={styles.page} aria-busy={headerLoading || undefined}>
-      {headerLoading ? (
-        <PageHeaderSkeleton />
-      ) : isEmpty ? null : (
-      <PrincipalPageHeader
-        title="Records Heatmap"
-        description="A school-wide view of behavioral records across every grade and section — with category heatblocks, severity flags, and follow-ups."
-      />
-      )}
+    <section className={styles.page} aria-busy={isPending || undefined}>
       {isEmpty ? (
         <PrincipalEmptyCard
           icon={FileText}
@@ -47,7 +36,7 @@ export default function PrincipalRecordsPage() {
       <div className={styles.topRow}>
         <RecordsHeatblocks />
 
-        <RecordsBreakdown />
+        <RecordsRail />
       </div>
       )}
     </section>

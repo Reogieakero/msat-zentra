@@ -74,6 +74,13 @@
 
 .studentCell {
   display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.studentMeta {
+  display: flex;
   flex-direction: column;
   gap: 0.125rem;
   min-width: 0;

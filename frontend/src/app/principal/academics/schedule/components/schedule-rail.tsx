@@ -151,7 +151,7 @@ export function ScheduleRail({ sections }: { sections: ScheduleSection[] }) {
 
   return (
     <TooltipProvider delayDuration={100}>
-      <aside className={rail.rail} aria-label="Schedule buckets">
+      <aside className={rail.rail} style={{ top: "1rem" }} aria-label="Schedule buckets">
         <div ref={railRef} className={rail.railInner}>
           {items.map((item) => {
             const Icon = item.icon;

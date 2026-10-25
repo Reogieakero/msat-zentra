@@ -6,11 +6,8 @@ import { ArrowRight, CalendarDays, Inbox } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
-import {
-  SECTION_CARD_STATUS_META,
-  sectionCardStatus,
-  sectionInitials,
-} from "@/components/schedule/SectionScheduleCard";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import { SECTION_CARD_STATUS_META, sectionCardStatus } from "@/components/schedule/SectionScheduleCard";
 import { scheduleTone } from "@/lib/labels/status-tone";
 import styles from "./schedule.module.css";
 
@@ -50,7 +47,13 @@ function teacherCount(entries: ScheduleEntry[]): number {
  * status chips use the same pill with the status-tone palette. Grades 11–12
  * stay listed even before they have sections or a master timetable.
  */
-export function ScheduleTable({ sections }: { sections: ScheduleSection[] }) {
+export function ScheduleTable({
+  sections,
+  onReview,
+}: {
+  sections: ScheduleSection[];
+  onReview?: (section: ScheduleSection) => void;
+}) {
   const [grade, setGrade] = React.useState<number | null>(null);
 
   const ordered = React.useMemo(
@@ -146,9 +149,11 @@ export function ScheduleTable({ sections }: { sections: ScheduleSection[] }) {
                     <tr key={section.id}>
                       <td>
                         <span className={styles.sectionCell}>
-                          <span className={styles.avatar} aria-hidden>
-                            {sectionInitials(section.name)}
-                          </span>
+                          <StudentMascot
+                            name={section.name}
+                            seed={`${section.name}:${section.gradeLevel}`}
+                            size={28}
+                          />
                           <span className={styles.sectionName} title={section.name}>
                             {section.name}
                           </span>
@@ -156,8 +161,14 @@ export function ScheduleTable({ sections }: { sections: ScheduleSection[] }) {
                       </td>
                       <td className={styles.mutedCell}>Grade {section.gradeLevel.replace("G", "")}</td>
                       <td className={styles.mutedCell} title={section.adviser?.fullName}>
-                        {section.adviser?.fullName ?? (
-                          <span className={styles.teacherNone}>No adviser</span>
+                        {section.adviser?.fullName ? (
+                          <Pill tone="amber" className="max-w-[16rem] overflow-hidden">
+                            {section.adviser.fullName}
+                          </Pill>
+                        ) : (
+                          <Pill tone="neutral">
+                            <span className={styles.teacherNone}>No adviser</span>
+                          </Pill>
                         )}
                       </td>
                       <td className={styles.mutedCell}>{teacherCount(section.timetableEntries)}</td>
@@ -165,12 +176,29 @@ export function ScheduleTable({ sections }: { sections: ScheduleSection[] }) {
                         <Pill tone={scheduleTone(status)}>{meta.label}</Pill>
                       </td>
                       <td className={styles.actionCol}>
-                        <Button asChild variant="ghost" size="xs" className="h-6 px-1.5 text-[11px]">
-                          <Link href={href} aria-label={`Review schedule for ${section.name}`}>
+                        <span className="inline-flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            className="h-6 px-1.5 text-[11px]"
+                            onClick={() => onReview?.(section)}
+                            aria-label={`Review schedule for ${section.name}`}
+                          >
                             Review
                             <ArrowRight size={12} aria-hidden />
-                          </Link>
-                        </Button>
+                          </Button>
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="xs"
+                            className="h-6 px-1.5 text-[11px]"
+                          >
+                            <Link href={href} aria-label={`Open timetable for ${section.name}`}>
+                              Open
+                            </Link>
+                          </Button>
+                        </span>
                       </td>
                     </tr>
                   );

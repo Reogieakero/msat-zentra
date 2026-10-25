@@ -2,9 +2,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import { Check, Clock, Inbox, Pencil } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import {
   buildTimetable,
   type DayConfig,
@@ -35,6 +37,8 @@ function getErrorMessage(err: unknown, fallback: string): string {
 export function usePrincipalScheduleSection(sectionId: string) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const dock = useDock();
+  const dockIdRef = useRef<string | null>(null);
   const [note, setNote] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -70,6 +74,16 @@ export function usePrincipalScheduleSection(sectionId: string) {
     onSuccess: (data, vars) => {
       void queryClient.invalidateQueries({ queryKey: ["principal-schedule-sections"] });
       const name = submission?.name ?? "Section";
+      setPendingAction(null);
+      if (dockIdRef.current) {
+        dock.completeTask(
+          dockIdRef.current,
+          vars.decision === "approve" ? `${name} approved` : `${name} sent back`,
+        );
+        dockIdRef.current = null;
+      }
+      // Close the overlay before navigating so it never flashes on the list.
+      setReviewOpen(false);
       if (vars.decision === "approve") {
         toast.success({
           title: "Schedule approved",
@@ -87,6 +101,10 @@ export function usePrincipalScheduleSection(sectionId: string) {
       const message = getErrorMessage(err, "Failed to record decision.");
       setPendingAction(null);
       setFormError(message);
+      if (dockIdRef.current) {
+        dock.failTask(dockIdRef.current, message);
+        dockIdRef.current = null;
+      }
       toast.error({ title: "Could not record decision", description: message });
     },
   });
@@ -104,6 +122,14 @@ export function usePrincipalScheduleSection(sectionId: string) {
     }
     setFormError(null);
     setPendingAction(decision);
+    dockIdRef.current = dock.startTask({
+      kind: "generic",
+      title: decision === "approve" ? "Approving schedule" : "Sending schedule back",
+      description: `${submission?.name ?? "Section"} · Grade ${(submission?.gradeLevel ?? "G-").replace("G", "")}`,
+    });
+    // Close the overlay right away — the shared dock tracks the request and
+    // the list refresh happens once the decision settles.
+    setReviewOpen(false);
     review.mutate({ decision, note: note.trim() || undefined });
   };
   const rejecting = review.isPending && pendingAction === "reject";

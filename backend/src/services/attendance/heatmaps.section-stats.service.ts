@@ -22,14 +22,21 @@ export interface SectionStatsQuery {
   selectedSectionId?: string;
   schoolYearId: string | null;
   displayTerm: DisplayTerm;
+  /** Principal desks pass true: only adviser-shared sections count. */
+  sharedOnly?: boolean;
 }
 
 export async function getSectionStats(query: SectionStatsQuery) {
-  const { session, selectedSectionId, schoolYearId, displayTerm } = query;
+  const { session, selectedSectionId, schoolYearId, displayTerm, sharedOnly } = query;
   const termId = displayTerm.id;
 
   const sections = await prisma.section.findMany({
-    where: schoolYearClause(schoolYearId),
+    where: {
+      ...schoolYearClause(schoolYearId),
+      ...(sharedOnly
+        ? { adviser: { staffProfile: { shareStudentData: true } } }
+        : {}),
+    },
     select: { id: true, name: true, gradeLevel: true },
     orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
   });

@@ -20,6 +20,8 @@ router.get(
   async (req, res, next) => {
     try {
       const session = (req.query.session === "PM" ? "PM" : "AM") as "AM" | "PM";
+      const sharedOnly =
+        req.query.sharedOnly === "true" || req.query.sharedOnly === "1";
       const displayTerm = await resolveDisplayTerm(req);
       if (!displayTerm) {
         res.json({ students: [], schoolDays: 0 });
@@ -30,6 +32,7 @@ router.get(
           session,
           schoolYearId: schoolYearOf(req),
           displayTerm,
+          sharedOnly,
         }),
       );
     } catch (e) {

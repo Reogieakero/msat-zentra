@@ -1,22 +1,30 @@
 "use client";
 
 import * as React from "react";
-import { Users } from "lucide-react";
-import { FACTOR_CHIP, type BackendHeatmap, type RiskFactor } from "@/services/principal/riskStudents.types";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { Grid3x3, Users } from "lucide-react";
+import {
+  FACTOR_CHIP,
+  type BackendHeatmap,
+  type RiskFactor,
+} from "@/services/principal/riskStudents.types";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import { PrincipalEmptyState } from "../../../components/PrincipalEmptyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./StudentHeatmap.module.css";
 
 const FACTORS: RiskFactor[] = ["Academic", "Attendance", "Behavioral"];
 
-const gridColor = (base: string, intensity: number) => {
-  const normalized = Math.max(0, Math.min(1, intensity));
-  const opacity = Math.round(18 + normalized * 72);
-  return `color-mix(in oklch, ${base} ${opacity}%, transparent)`;
+const FACTOR_GRADIENT: Record<RiskFactor, string> = {
+  Academic: "linear-gradient(90deg, #f59e0b, #b45309)",
+  Attendance: "linear-gradient(90deg, #22c55e, #15803d)",
+  Behavioral: "linear-gradient(90deg, #3b82f6, #1d4ed8)",
 };
 
-const EMPTY_CELL_BG = "color-mix(in oklch, var(--muted), transparent 45%)";
+const gradeLabel = (grade: string) => {
+  const m = String(grade).match(/(\d+)/);
+  return m ? `Grade ${m[1]}` : grade;
+};
 
 export function StudentHeatmap({
   heat,
@@ -42,127 +50,97 @@ export function StudentHeatmap({
 
   const sections = heat?.sections ?? [];
 
-  const isEmpty = !loading && sections.length === 0;
-  if (isEmpty) {
-    return (
-      <section aria-label="Section heatmap">
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <PrincipalEmptyState
-            icon={Users}
-            title="No sections to display"
-            hint="No sections with risk data for the active term. Sections will appear here once detected."
-          />
-        </div>
-      </section>
-    );
-  }
   return (
-    <section aria-label="Section heatmap">
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className={`${styles.header} relative`}>
-          <div className={styles.headerText}>
-            <h2 className={styles.sectionTitle}>Section Heatmap</h2>
-            <p className={styles.sectionDesc}>
-              Intensity of academic, attendance, and behavioral flags per section.
-              Select a row to drill into its students.
-            </p>
-          </div>
-        </div>
-        <div className={`${styles.tableBody} relative`}>
-        {loading ? (
-          <div className={styles.grid} aria-hidden="true" aria-label="Loading section heatmap">
-            <div className={`${styles.row} ${styles.headRow}`}>
-              <div className={styles.sectionHead}>
-                <Skeleton className="h-4 w-20" />
+    <KanbanBoard
+      title="Section Heatmap"
+      icon={<Grid3x3 size={14} aria-hidden="true" />}
+      count={loading ? undefined : sections.length}
+      description="Flag intensity for academic, attendance, and behavioral factors per section. Select a section to drill into its students."
+      actions={
+        <Pill tone="green" label="Data source">
+          Adviser-shared
+        </Pill>
+      }
+      ariaLabel="Section heatmap"
+    >
+      {loading ? (
+        <div className={styles.grid} aria-busy="true" aria-label="Loading section heatmap">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className={styles.card}>
+              <div className={styles.cardHead}>
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-5 w-16 rounded-md" />
               </div>
-              {FACTORS.map((f) => (
-                <div key={f} className={styles.factorHead}>
-                  <Skeleton className="size-2 shrink-0 rounded-full" />
-                  <Skeleton className="h-4 w-16" />
-                </div>
-              ))}
-            </div>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className={`${styles.row} ${styles.dataRow}`}>
-                <div className={styles.sectionName}>
-                  <Skeleton className="h-4 w-24" />
-                </div>
+              <div className={styles.factorList}>
                 {FACTORS.map((f) => (
-                  <div key={f} className={styles.cell}>
-                    <Skeleton className="h-6 w-full" />
-                  </div>
+                  <Skeleton key={f} className="h-4 w-full" />
                 ))}
               </div>
-            ))}
-          </div>
-        ) : sections.length === 0 ? (
-          <PrincipalEmptyState
-            icon={Users}
-            title="No sections to display"
-            hint="No sections with risk data for the active term. Sections will appear here once detected."
-          />
-        ) : (
-          <div className={styles.grid} role="grid" aria-label="Section risk heatmap">
-            <div className={`${styles.row} ${styles.headRow}`}>
-              <div className={styles.sectionHead}>Section</div>
-              {FACTORS.map((f) => (
-                <div key={f} className={styles.factorHead}>
-                  <span
-                    className={styles.factorDot}
-                    style={{ backgroundColor: FACTOR_CHIP[f] }}
-                    aria-hidden
-                  />
-                  {f}
-                </div>
-              ))}
             </div>
-            {sections.map((row) => {
-              const isActive = row.section === selectedSection;
-              return (
-                <button
-                  type="button"
-                  key={row.section}
-                  role="row"
-                  className={`${styles.row} ${styles.dataRow} ${isActive ? styles.active : ""}`}
-                  onClick={() => onSelect(row.section)}
-                  aria-selected={isActive}
-                >
-                  <div className={styles.sectionName}>{row.section}</div>
+          ))}
+        </div>
+      ) : sections.length === 0 ? (
+        <PrincipalEmptyState
+          icon={Users}
+          title="No sections to display"
+          hint="No sections with risk data for the active term. Sections will appear here once detected."
+        />
+      ) : (
+        <div className={styles.grid} role="list" aria-label="Section risk heatmap">
+          {sections.map((row) => {
+            const isActive = row.section === selectedSection;
+            return (
+              <button
+                type="button"
+                key={row.sectionId}
+                role="listitem"
+                className={`${styles.card} ${isActive ? styles.active : ""}`}
+                onClick={() => onSelect(row.section)}
+                aria-pressed={isActive}
+                aria-label={`${row.section}, ${gradeLabel(row.gradeLevel)}`}
+              >
+                <div className={styles.cardHead}>
+                  <span className={styles.sectionName}>{row.section}</span>
+                  <Pill tone="neutral" label="Grade level">
+                    {gradeLabel(row.gradeLevel)}
+                  </Pill>
+                </div>
+
+                <ul className={styles.factorList}>
                   {FACTORS.map((f) => {
                     const v = row.factors[f] ?? 0;
-                    const intensity = v === 0 ? 0 : maxByFactor[f] > 0 ? v / maxByFactor[f] : 0;
+                    const pct =
+                      v === 0 || maxByFactor[f] === 0
+                        ? 0
+                        : Math.max(8, (v / maxByFactor[f]) * 100);
                     return (
-                      <div
-                        key={f}
-                        className={styles.cell}
-                        style={{
-                          backgroundColor:
-                            v === 0 ? EMPTY_CELL_BG : gridColor(FACTOR_CHIP[f], intensity),
-                        }}
-                      >
+                      <li key={f} className={styles.factorRow}>
                         <span
-                          className={`${styles.cellValue} ${
-                            v === 0 ? styles.cellEmpty : ""
-                          }`}
-                        >
-                          {v}
+                          className={styles.factorDot}
+                          style={{ background: FACTOR_CHIP[f] }}
+                          aria-hidden
+                        />
+                        <span className={styles.factorLabel}>{f}</span>
+                        <span className={styles.factorTrack} aria-hidden>
+                          <span
+                            className={styles.factorBar}
+                            style={{
+                              width: `${pct}%`,
+                              background: FACTOR_GRADIENT[f],
+                              opacity: v === 0 ? 0.15 : 1,
+                            }}
+                          />
                         </span>
-                      </div>
+                        <span className={styles.factorValue}>{v}</span>
+                      </li>
                     );
                   })}
-                </button>
-              );
-            })}
-          </div>
-        )}
+                </ul>
+              </button>
+            );
+          })}
         </div>
-      </div>
-    </section>
+      )}
+    </KanbanBoard>
   );
 }

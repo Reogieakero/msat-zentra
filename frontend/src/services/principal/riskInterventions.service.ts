@@ -15,6 +15,9 @@ export async function fetchInterventionStudents(
   if (filters.factor && filters.factor !== "all") params.factor = filters.factor;
   if (filters.q?.trim()) params.q = filters.q.trim();
   if (filters.section?.trim()) params.section = filters.section.trim();
+  if (filters.outcomeStatus) params.outcomeStatus = filters.outcomeStatus;
+  if (filters.plan) params.plan = filters.plan;
+  if (filters.sort) params.sort = filters.sort;
 
   const { data } = await apiClient.get<InterventionStudentsResult>(
     "/api/risk/interventions",

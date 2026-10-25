@@ -85,6 +85,12 @@ export interface StudentFilters {
   section?: string;
   outcomeStatus?: OutcomeStatusValue;
 
+  /** Plan state derived from guidance booking a session. */
+  plan?: "ongoing" | "none";
+
+  /** Queue order: risk-first (default) or newest engine detection first. */
+  sort?: "risk" | "detected";
+
   /** @deprecated ignored — all views are real-time unified. */
   gradeMode?: "raw" | "final";
 
@@ -478,12 +484,34 @@ export async function getInterventionStudents(
       return false;
     if (filters.section && m.section !== filters.section) return false;
     if (filters.outcomeStatus && m.intervention?.outcomeStatus !== filters.outcomeStatus) return false;
+    // A plan is "ongoing" only once guidance books a session; an intervention
+    // record alone still counts as "no plan yet".
+    const hasBookedSession = (m.intervention?.sessions.length ?? 0) > 0;
+    if (filters.plan === "ongoing" && !hasBookedSession) return false;
+    if (filters.plan === "none" && hasBookedSession) return false;
     return true;
   });
 
   const total = filtered.length;
   const start = (page - 1) * pageSize;
-  const students = filtered.slice(start, start + pageSize);
+  const queue =
+    filters.sort === "detected"
+      ? [...filtered].sort((a, b) => {
+          const at = a.snapshotDate ? new Date(a.snapshotDate).getTime() : NaN;
+          const bt = b.snapshotDate ? new Date(b.snapshotDate).getTime() : NaN;
+          if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
+          if (Number.isNaN(at)) return 1;
+          if (Number.isNaN(bt)) return -1;
+          if (bt !== at) return bt - at;
+          const rank = (lvl: string) =>
+            lvl === "High" ? 0 : lvl === "Moderate" ? 1 : 2;
+          return (
+            rank(a.riskLevel) - rank(b.riskLevel) ||
+            a.studentName.localeCompare(b.studentName)
+          );
+        })
+      : filtered;
+  const students = queue.slice(start, start + pageSize);
 
   return { students, total, page, pageSize, highModerate };
 }
@@ -1143,12 +1171,34 @@ async function getLiveCohortStudents(
       return false;
     if (filters.section && m.section !== filters.section) return false;
     if (filters.outcomeStatus && m.intervention?.outcomeStatus !== filters.outcomeStatus) return false;
+    // A plan is "ongoing" only once guidance books a session; an intervention
+    // record alone still counts as "no plan yet".
+    const hasBookedSession = (m.intervention?.sessions.length ?? 0) > 0;
+    if (filters.plan === "ongoing" && !hasBookedSession) return false;
+    if (filters.plan === "none" && hasBookedSession) return false;
     return true;
   });
 
   const total = filtered.length;
   const start = (page - 1) * pageSize;
-  const students = filtered.slice(start, start + pageSize);
+  const queue =
+    filters.sort === "detected"
+      ? [...filtered].sort((a, b) => {
+          const at = a.snapshotDate ? new Date(a.snapshotDate).getTime() : NaN;
+          const bt = b.snapshotDate ? new Date(b.snapshotDate).getTime() : NaN;
+          if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
+          if (Number.isNaN(at)) return 1;
+          if (Number.isNaN(bt)) return -1;
+          if (bt !== at) return bt - at;
+          const rank = (lvl: string) =>
+            lvl === "High" ? 0 : lvl === "Moderate" ? 1 : 2;
+          return (
+            rank(a.riskLevel) - rank(b.riskLevel) ||
+            a.studentName.localeCompare(b.studentName)
+          );
+        })
+      : filtered;
+  const students = queue.slice(start, start + pageSize);
 
   return { students, total, page, pageSize, highModerate };
 }

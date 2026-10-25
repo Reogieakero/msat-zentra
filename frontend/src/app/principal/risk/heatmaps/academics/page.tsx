@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
-import { AcademicsHeader } from "./components/AcademicsHeader";
 import { KpiStrip } from "./components/KpiStrip";
 import { SubjectTrendChart } from "./components/SubjectTrendChart";
 import { SubjectSectionBreakdown } from "./components/SubjectSectionBreakdown";
@@ -19,7 +18,6 @@ import {
   type CellData,
 } from "./components/types";
 import shell from "../components/heatmap.module.css";
-import { PageHeaderSkeleton } from "../../../components/skeletons/PageHeaderSkeleton";
 
 function isBelow75(avg: number, subjectCount: number): boolean {
   return subjectCount > 0 && avg < 75;
@@ -195,16 +193,10 @@ export default function PrincipalAcademicHeatmapsPage() {
     return items.sort((a, b) => a.avg - b.avg);
   }, [sections, cellByKey, selectedSubject, gradeFilter]);
 
-  const isEmpty = !isPending && sections.length === 0;
   return (
     <div className={shell.shell}>
       <div className={shell.layout}>
         <section className={shell.page} aria-busy={isPending || undefined}>
-          {isPending ? (
-            <PageHeaderSkeleton withActions />
-          ) : isEmpty ? null : (
-          <AcademicsHeader />
-          )}
           <KpiStrip
             below={below}
             gradedTotal={gradedStudents.length}

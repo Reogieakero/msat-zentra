@@ -2,7 +2,42 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding-top: 2.5rem;
+}
+
+.filterBtn {
+  gap: 0.375rem;
+}
+
+.filterMenu {
+  min-width: 11rem;
+}
+
+/* Subject legend — one static chip per plotted subject (all subjects render). */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.legendCode {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.legendValue {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .toolbar {
@@ -46,135 +81,20 @@
   height: 280px;
 }
 
-.messageCol {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  width: 100%;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
-}
-
-.dayRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  width: 100%;
-}
-
-.dayCard {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--card);
-  padding: 0.875rem 1rem;
-  text-align: center;
-}
-
-.dayLabel {
-  margin: 0;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted-foreground);
-}
-
-.dayDate {
-  margin: 0.25rem 0 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.dayRate {
-  margin: 0.125rem 0 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 640px) {
-  .dayRow {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.messageHead {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 700;
-}
-
-.messageIcon {
-  width: 0.9375rem;
-  height: 0.9375rem;
-  color: var(--primary);
-}
-
-.messageBadge {
-  margin-left: auto;
-}
-
-.messageSub {
-  margin: 0;
+/* Bottom-fixed interpretation — same treatment as the academics heatmap. */
+.interpretation {
+  margin: 0.5rem 0 0;
+  padding-top: 0.625rem;
+  padding-left: 0.625rem;
+  border-left: 2px solid color-mix(in oklch, var(--primary), transparent 35%);
   font-size: 0.75rem;
+  line-height: 1.45;
   color: var(--muted-foreground);
 }
 
-.messageList {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.messageLine {
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--muted-foreground);
-}
-
-/* Clickable series legend: one chip per subject plus the average line. */
-.legendRow {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  height: 1.75rem;
-  padding: 0 0.625rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background-color: var(--card);
-  font: inherit;
-  font-size: 0.75rem;
-  font-weight: 500;
+.interpretationLabel {
+  font-weight: 600;
   color: var(--foreground);
-  cursor: pointer;
-  transition: opacity 140ms ease-out, background-color 140ms ease-out;
-}
-
-.chip:hover {
-  background-color: color-mix(in oklch, var(--muted), transparent 50%);
-}
-
-.chip:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-.chip[data-off] {
-  opacity: 0.45;
 }
 
 .chipSwatch {
@@ -182,12 +102,6 @@
   height: 0.625rem;
   border-radius: 2px;
   flex-shrink: 0;
-}
-
-/* Reset chip: text-only, muted, returns to Average + weakest. */
-.resetChip {
-  border-style: dashed;
-  color: var(--muted-foreground);
 }
 
 .empty {

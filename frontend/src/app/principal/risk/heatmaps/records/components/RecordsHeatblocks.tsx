@@ -2,23 +2,26 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, CircleDot, FileText } from "lucide-react";
+import { CircleDot, FileText, Search } from "lucide-react";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { FolderCard } from "@/components/ui/FolderCard";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
+import {
+  AnecdotalRecordKanbanCard,
+  humanizeCategory,
+} from "@/components/anecdotal/anecdotal-record-kanban-card";
 import styles from "./RecordsHeatblocks.module.css";
 import { CATEGORY_META, fetchRecords } from "@/services/principal/records.service";
 import type { BehavioralRecord } from "../types";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
-
-
-function severityTone(severity: BehavioralRecord["severity"]): 2 | 3 | 5 {
-  if (severity === "High") return 5;
-  if (severity === "Moderate") return 3;
-  return 2;
+function severityTone(severity: BehavioralRecord["severity"]): PillTone {
+  if (severity === "High") return "red";
+  if (severity === "Moderate") return "amber";
+  return "neutral";
 }
 
 export function RecordsHeatblocks() {
@@ -56,12 +59,12 @@ export function RecordsHeatblocks() {
 
   return (
     <>
-    <section className={styles.panel} aria-label="Anecdotal records heatblocks">
-      <div className={styles.header}>
-        <div className={styles.headerActions}>
-          <span className={styles.headCount} aria-live="polite">
-            {shownReports.length} report{shownReports.length === 1 ? "" : "s"}
-          </span>
+      <KanbanBoard
+        title="Anecdotal Records"
+        icon={<FileText size={14} aria-hidden="true" />}
+        count={isPending ? undefined : shownReports.length}
+        description="Per-student anecdotal records filed during the active term — open a folder to read the report."
+        actions={
           <div className={styles.search}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
@@ -76,16 +79,19 @@ export function RecordsHeatblocks() {
               className={styles.searchInput}
             />
           </div>
-        </div>
-      </div>
-
-      <div className={styles.content}>
+        }
+        ariaLabel="Anecdotal records"
+      >
         {isPending ? (
-          <div className={styles.grid} aria-busy="true" aria-label="Loading student records">
+          <div
+            className={styles.grid}
+            aria-busy="true"
+            aria-label="Loading student records"
+          >
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className={styles.skelFolder}>
-                <Skeleton className={styles.skelFolderShape} />
-                <Skeleton className={styles.skelFolderLabel} />
+              <div key={i} className={styles.skelCard}>
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-24 w-full" />
               </div>
             ))}
           </div>
@@ -106,42 +112,39 @@ export function RecordsHeatblocks() {
           />
         ) : (
           <>
-            <div className={styles.grid}>
-              {pagedReports.map(({ student: s, rec }, i) => {
-                return (
-                  <button
-                    key={rec.id}
-                    type="button"
-                    className={styles.folderBtn}
-                    style={{ animationDelay: `${Math.min(i, 24) * 18}ms` }}
-                    onClick={() => setPrivacyFor(s.name)}
-                    aria-label={`${s.name}, LRN ${s.lrn}, ${CATEGORY_META[rec.category].label} report from ${rec.date}`}
-                  >
-                    <FolderCard
-                      label={s.name}
-                      sublabel={`${s.lrn} · ${s.section}`}
-                      cornerTag={CATEGORY_META[rec.category].label}
-                      folderColor={CATEGORY_META[rec.category].color}
-                      files={[
-                        {
-                          name: rec.date,
-                          tag: `${CATEGORY_META[rec.category].label} • ${rec.severity}`,
-                          icon: "doc" as const,
-                          tone: severityTone(rec.severity),
-                        },
-                      ]}
-                    />
-                  </button>
-                );
-              })}
-              {Array.from({ length: PAGE_SIZE - pagedReports.length }).map((_, i) => (
-                <span
-                  key={`page-filler-${i}`}
-                  aria-hidden="true"
-                  className={styles.gridFiller}
+            <div className={styles.grid} role="list" aria-label="Anecdotal records">
+              {pagedReports.map(({ student: s, rec }, i) => (
+                <div
+                  key={rec.id}
+                  role="listitem"
+                  className={styles.cardSlot}
+                  style={{ animationDelay: `${Math.min(i, 24) * 18}ms` }}
                 >
-                  <FolderCard label={"\u00A0"} sublabel={"\u00A0"} files={[]} />
-                </span>
+                  <AnecdotalRecordKanbanCard
+                    category={rec.category}
+                    headerTitle={CATEGORY_META[rec.category].label}
+                    studentName={s.name}
+                    plainName
+                    mascotSeed={s.lrn}
+                    lrn={s.lrn}
+                    metaText={s.section}
+                    metaLabel="Section"
+                    metaTone="amber"
+                    fileName={rec.date}
+                    fileTag={`${humanizeCategory(rec.category)} • ${rec.severity}`}
+                    headerRight={
+                      <Pill
+                        tone={severityTone(rec.severity)}
+                        label="Severity"
+                        className="shrink-0"
+                      >
+                        {rec.severity}
+                      </Pill>
+                    }
+                    openLabel={`${s.name}, LRN ${s.lrn}, ${CATEGORY_META[rec.category].label} report from ${rec.date}`}
+                    onOpen={() => setPrivacyFor(s.name)}
+                  />
+                </div>
               ))}
             </div>
             {totalPages > 1 ? (
@@ -154,9 +157,7 @@ export function RecordsHeatblocks() {
             ) : null}
           </>
         )}
-
-      </div>
-    </section>
+      </KanbanBoard>
 
       <PrivacyNoticeDialog
         open={privacyFor !== null}

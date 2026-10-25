@@ -27,9 +27,14 @@ export async function getRiskHeatmap(
   schoolYearId?: string | null,
 ): Promise<HeatmapResult> {
   const sections = await prisma.section.findMany({
-    where: schoolYearId
-      ? { schoolYearId }
-      : { schoolYear: { isActive: true } },
+    where: {
+      ...(schoolYearId
+        ? { schoolYearId }
+        : { schoolYear: { isActive: true } }),
+      // Adviser data gate: only sections whose adviser has claimed the section
+      // and switched student-data sharing ON contribute to the heatmap.
+      adviser: { staffProfile: { shareStudentData: true } },
+    },
     orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
     select: { id: true, name: true, gradeLevel: true },
   });

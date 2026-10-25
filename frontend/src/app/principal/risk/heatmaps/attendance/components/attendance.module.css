@@ -64,7 +64,7 @@
   flex-wrap: wrap;
 }
 
-/* ---- KPI strip (glow cards) ---- */
+/* ---- KPI strip (kanban-style stat tiles) ---- */
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -72,26 +72,20 @@
 }
 
 .kpiCard {
-  position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
-  padding: 1rem 1.125rem;
+  padding: 0.875rem 1rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--card);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--muted), transparent 75%);
   min-width: 0;
-  transition:
-    transform 180ms ease-out,
-    box-shadow 180ms ease-out,
-    border-color 180ms ease-out;
+  transition: border-color 160ms ease, background-color 160ms ease;
 }
 
 .kpiCard:hover {
-  transform: translateY(-2px);
   border-color: color-mix(in oklch, var(--primary), transparent 55%);
-  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+  background-color: color-mix(in oklch, var(--muted), transparent 55%);
 }
 
 .glowClip {
@@ -152,6 +146,14 @@
 .kpiSub {
   font-size: 0.75rem;
   color: var(--muted-foreground);
+}
+
+/* Sub-captions are chips now — wrap so two pills can sit on one row. */
+.kpiPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.125rem;
 }
 
 .kpiSkel {

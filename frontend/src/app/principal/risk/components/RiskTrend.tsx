@@ -2,13 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { TrendingUp } from "lucide-react";
 import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import {
@@ -22,26 +16,27 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useTerm } from "@/lib/term/TermContext";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import type { RiskTrendData } from "@/services/principal/risk.types";
 import styles from "./RiskTrend.module.css";
 
-const LEVEL_FILL = {
-  high: "var(--primary)",
-  moderate: "color-mix(in oklch, var(--primary) 60%, var(--card))",
-  low: "color-mix(in oklch, var(--primary) 30%, var(--card))",
+const AMBER = {
+  high: "#b45309",
+  moderate: "#f59e0b",
+  low: "#fcd34d",
 } as const;
 
 const chartConfig = {
-  high: { label: "High risk", color: LEVEL_FILL.high },
-  moderate: { label: "Moderate", color: LEVEL_FILL.moderate },
-  low: { label: "Low risk", color: LEVEL_FILL.low },
+  high: { label: "High risk", color: AMBER.high },
+  moderate: { label: "Moderate", color: AMBER.moderate },
+  low: { label: "Low risk", color: AMBER.low },
 } satisfies ChartConfig;
 
 const SERIES = [
-  { key: "high", color: LEVEL_FILL.high },
-  { key: "moderate", color: LEVEL_FILL.moderate },
-  { key: "low", color: LEVEL_FILL.low },
+  { key: "low", label: "Low risk", color: AMBER.low },
+  { key: "moderate", label: "Moderate", color: AMBER.moderate },
+  { key: "high", label: "High risk", color: AMBER.high },
 ] as const;
 
 const RANGES = [
@@ -53,8 +48,6 @@ const RANGES = [
 type RangeKey = (typeof RANGES)[number]["value"];
 
 export function RiskTrend() {
-  const gradId = React.useId().replace(/:/g, "");
-
   // Server-scoped: the trend follows the active school year/term. Daily vs
   // per-term rows are inferred from the response, not from client state.
   const { activeSchoolYear } = useTerm();
@@ -99,148 +92,109 @@ export function RiskTrend() {
 
   const hasData = chartData.length > 0;
 
-  return (
-    <section className={styles.section}>
-      <div className={styles.head}>
-        <div className={styles.headText}>
-          <h2 className={styles.title}>Risk Trend</h2>
-          <p className={styles.subtitle}>
-            {isDaily
-              ? "Total for the active term"
-              : "School-wide risk trend by term"}
-          </p>
-        </div>
-        <div className={styles.filters}>
-          <p className={styles.scopeNote} aria-live="polite">
-            {isDaily
-              ? "Showing the active term"
-              : activeSchoolYear
-                ? `Showing ${activeSchoolYear.name}`
-                : "No active school year"}
-          </p>
-        </div>
-      </div>
+  const latest = chartData[chartData.length - 1];
+  const latestTotal = latest ? latest.high + latest.moderate + latest.low : 0;
+  const latestHighShare =
+    latest && latestTotal > 0 ? Math.round((latest.high / latestTotal) * 100) : 0;
 
-      <div className={`${assign.card} ${styles.card}`}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        {!isPending && !hasData ? (
-        <div className="relative">
-            <PrincipalEmptyState
-              icon={TrendingUp}
-              title="No trend data yet"
-              hint="No risk trend data available for the active school year and term."
-            />
-        </div>
-        ) : (
+  const rangeControl = isDaily ? (
+    <div className={styles.rangeGroup} role="group" aria-label="Trend range">
+      {RANGES.map((r) => (
+        <button
+          key={r.value}
+          type="button"
+          className={`${styles.rangeBtn} ${range === r.value ? styles.rangeActive : ""}`}
+          aria-pressed={range === r.value}
+          onClick={() => setRange(r.value)}
+        >
+          {r.label}
+        </button>
+      ))}
+    </div>
+  ) : undefined;
+
+  return (
+    <KanbanBoard
+      title="Risk History"
+      icon={<TrendingUp size={14} aria-hidden="true" />}
+      description={
+        isDaily
+          ? "Daily flagged learners shared by their advisers for the active term."
+          : "Flagged learners shared by their advisers, aggregated per term."
+      }
+      actions={
         <>
-        <div className={`${styles.cardHeader} relative`}>
-          <p className={styles.cardDesc}>
-            {isDaily
-              ? "Daily risk levels for the active term"
-              : "Risk levels aggregated per term"}
-          </p>
-          <div className={styles.cardActions}>
-            {isDaily && (
-              <div className={styles.rangeGroup}>
-                {RANGES.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    className={`${styles.rangeBtn} ${
-                      range === r.value ? styles.rangeActive : ""
-                    }`}
-                    onClick={() => setRange(r.value)}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="relative">
-          {isPending ? (
-            <div className={styles.skeleton} />
-          ) : (
-            <div className={styles.chartBox}>
-              <ChartContainer
-                config={chartConfig}
-                className={styles.chartContainer}
-              >
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 8, right: 8, bottom: 8, left: 4 }}
-                >
-                  <defs>
-                      {SERIES.map((s) => (
-                      <linearGradient
-                        key={s.key}
-                        id={`${gradId}-${s.key}`}
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          style={{ stopColor: s.color }}
-                          stopOpacity={0.35}
-                        />
-                        <stop
-                          offset="95%"
-                          style={{ stopColor: s.color }}
-                          stopOpacity={0.02}
-                        />
-                      </linearGradient>
-                    ))}
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="var(--border)"
-                  />
-                  <XAxis
-                    dataKey="term"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    minTickGap={isDaily ? 24 : 0}
-                    interval={isDaily ? "preserveStartEnd" : 0}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tickLine={false}
-                    axisLine={false}
-                    width={28}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  {SERIES.map((s) => (
-                    <Area
-                      key={s.key}
-                      dataKey={s.key}
-                      name={s.key}
-                      type="monotone"
-                      strokeWidth={2}
-                      style={{ stroke: s.color }}
-                      fill={`url(#${gradId}-${s.key})`}
-                      dot={false}
-                    />
-                  ))}
-                  <ChartLegend
-                    verticalAlign="top"
-                    align="right"
-                    content={<ChartLegendContent />}
-                  />
-                </AreaChart>
-              </ChartContainer>
-            </div>
-          )}
-        </div>
+          <Pill tone="green" label="Data source">
+            Adviser-shared
+          </Pill>
+          {rangeControl}
         </>
-        )}
-      </div>
-    </section>
+      }
+    >
+      {!isPending && !hasData ? (
+        <PrincipalEmptyState
+          icon={TrendingUp}
+          title="No shared trend data yet"
+          hint="No risk history is available for adviser-shared learners in the active school year and term."
+        />
+      ) : isPending ? (
+        <div className={styles.skeleton} aria-hidden="true" />
+      ) : (
+        <>
+          <ChartContainer
+            config={chartConfig}
+            className={styles.chartContainer}
+            style={{ height: 300, width: "100%", aspectRatio: "auto" }}
+          >
+            <BarChart
+              accessibilityLayer
+              data={chartData}
+              margin={{ top: 8, right: 8, bottom: 4, left: 0 }}
+            >
+              <CartesianGrid vertical={false} stroke="var(--border)" />
+              <XAxis
+                dataKey="term"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={isDaily ? 24 : 0}
+                interval={isDaily ? "preserveStartEnd" : 0}
+              />
+              <YAxis
+                allowDecimals={false}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              {SERIES.map((s) => (
+                <Bar
+                  key={s.key}
+                  dataKey={s.key}
+                  name={s.label}
+                  stackId="risk"
+                  fill={`var(--color-${s.key})`}
+                  radius={s.key === "high" ? [4, 4, 0, 0] : undefined}
+                />
+              ))}
+              <ChartLegend
+                verticalAlign="top"
+                align="right"
+                content={<ChartLegendContent />}
+              />
+            </BarChart>
+          </ChartContainer>
+
+          {latest ? (
+            <p className={styles.insight}>
+              Latest snapshot: <strong>{latestTotal}</strong> learners flagged,{" "}
+              <strong>{latest.high}</strong> high risk (
+              {latestHighShare}%).{" "}
+              {activeSchoolYear ? `Scoped to ${activeSchoolYear.name}.` : ""}
+            </p>
+          ) : null}
+        </>
+      )}
+    </KanbanBoard>
   );
 }

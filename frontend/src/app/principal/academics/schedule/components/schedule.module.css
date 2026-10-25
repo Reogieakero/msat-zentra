@@ -5,13 +5,8 @@
 .page {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 1.25rem;
   min-width: 0;
-  /* Sit the table in the visual middle of the desk, nudged slightly below
-     center; the rail scrolls with it. */
-  min-height: calc(100dvh - 8rem);
-  padding-top: 3rem;
 }
 
 /* Centered board + icon-only rail column. */
@@ -32,8 +27,12 @@
 .stack {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 1rem;
   min-width: 0;
+  /* Table sits in the vertical middle of the desk; the rail stays pinned to
+     the top of the page (16px under the navbar). */
+  min-height: calc(100dvh - 8rem);
 }
 
 /* The table board sits centered in the content column. */
@@ -113,25 +112,6 @@
   min-width: 0;
 }
 
-.avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  flex-shrink: 0;
-  border-radius: 999px;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--primary-foreground);
-  background: linear-gradient(
-    135deg,
-    var(--primary),
-    color-mix(in oklch, var(--primary), var(--foreground) 30%)
-  );
-}
-
 .sectionName {
   max-width: 16rem;
   overflow: hidden;
@@ -163,6 +143,76 @@
 .emptyCell {
   padding: 2rem 0.625rem;
   text-align: center;
+  color: var(--muted-foreground);
+}
+
+/* Inline review overlay body — same row rhythm as the section card. */
+.reviewBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.reviewHead {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-width: 0;
+  padding: 0.25rem;
+}
+
+.reviewMascot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary), transparent 90%);
+}
+
+.reviewMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.reviewRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.reviewLabel {
+  flex-shrink: 0;
+  min-width: 5.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.reviewValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.reviewHint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
   color: var(--muted-foreground);
 }
 

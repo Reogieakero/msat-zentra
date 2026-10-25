@@ -60,14 +60,14 @@ export function SectionAverages({
   onInspectSection: (sectionId: string, sectionName: string) => void;
 }) {
   const { data, isPending } = useQuery({
-    queryKey: ["attendance-section-averages"],
+    queryKey: ["attendance-section-averages", "shared"],
     queryFn: async () => {
       const res = await apiClient.get<{
         sections: SectionAttendanceStat[];
         schoolDays: number;
         totalEnrolled: number;
         term?: { id: string; termNumber: number };
-      }>("/api/attendance/section-stats");
+      }>("/api/attendance/section-stats", { params: { sharedOnly: true } });
       return res.data;
     },
     staleTime: 30_000,

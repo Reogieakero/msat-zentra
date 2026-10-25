@@ -6,8 +6,6 @@ import { fetchHeatmap } from "@/services/principal/riskStudents.service";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { StudentHeatmap } from "./components/StudentHeatmap";
 import { StudentsListTable } from "./components/StudentsListTable";
-import { PrincipalPageHeader } from "../../components/PrincipalPageHeader";
-import { PageHeaderSkeleton } from "../../components/skeletons/PageHeaderSkeleton";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./students.module.css";
 
@@ -46,19 +44,8 @@ export default function RiskBoardStudentsPage() {
     });
   }, [setSelectedSection]);
 
-  const sections = heat?.sections ?? [];
-  const headerLoading = heatLoading || !termReady;
-  const isEmpty = !headerLoading && sections.length === 0;
   return (
-    <section className={styles.page} aria-busy={headerLoading || undefined}>
-      {headerLoading ? (
-        <PageHeaderSkeleton />
-      ) : isEmpty ? null : (
-      <PrincipalPageHeader
-        title="At-Risk Students"
-        description="All at-risk learners across the school — intensity per section, then the full list."
-      />
-      )}
+    <section className={styles.page} aria-busy={heatLoading || undefined}>
       <StudentHeatmap
         heat={heat ?? null}
         loading={heatLoading}
@@ -69,7 +56,6 @@ export default function RiskBoardStudentsPage() {
       <div ref={tableRef} className={styles.tableAnchor}>
         <StudentsListTable
           selectedSection={selectedSection}
-          onSectionChange={setSelectedSection}
         />
       </div>
     </section>

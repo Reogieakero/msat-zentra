@@ -291,6 +291,12 @@ router.get(
         ["ongoing", "resolved", "unresolved"].includes(req.query.outcomeStatus)
           ? (req.query.outcomeStatus as "ongoing" | "resolved" | "unresolved")
           : undefined;
+      const sort =
+        req.query.sort === "detected" ? ("detected" as const) : undefined;
+      const plan =
+        req.query.plan === "ongoing" || req.query.plan === "none"
+          ? (req.query.plan as "ongoing" | "none")
+          : undefined;
 
       const result = await getInterventionStudents(
         {
@@ -300,6 +306,8 @@ router.get(
           q,
           section,
           outcomeStatus,
+          plan,
+          sort,
           includeRecovered: true,
           fullCohort: true,
           page,

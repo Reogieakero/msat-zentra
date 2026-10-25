@@ -20,16 +20,23 @@ export interface AtRiskQuery {
   session: "AM" | "PM";
   schoolYearId: string | null;
   displayTerm: DisplayTerm;
+  /** Principal desks pass true: only adviser-shared sections count. */
+  sharedOnly?: boolean;
 }
 
 export async function getAtRiskStudents(query: AtRiskQuery) {
-  const { session, schoolYearId, displayTerm } = query;
+  const { session, schoolYearId, displayTerm, sharedOnly } = query;
   const termId = displayTerm.id;
   const schoolDays = countSchoolDays(buildDayAxis(displayTerm.startDate));
 
   const [sections, profiles, rosterEntries] = await Promise.all([
     prisma.section.findMany({
-      where: schoolYearClause(schoolYearId),
+      where: {
+        ...schoolYearClause(schoolYearId),
+        ...(sharedOnly
+          ? { adviser: { staffProfile: { shareStudentData: true } } }
+          : {}),
+      },
       select: { id: true, name: true, gradeLevel: true },
     }),
     prisma.studentProfile.findMany({

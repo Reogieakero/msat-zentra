@@ -118,8 +118,7 @@ export default function PrincipalSectionSchedulePage() {
           setReviewOpen(false);
           setFormError(null);
         }}
-        sectionName={submission?.name ?? "section"}
-        sectionId={sectionId}
+        submission={submission}
         note={note}
         onNoteChange={(v) => {
           setNote(v);

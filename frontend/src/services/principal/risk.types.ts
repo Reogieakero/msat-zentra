@@ -12,6 +12,21 @@ export interface RiskBoardData {
     highRiskStudents: number;
   };
   levelDistribution: { level: RiskLevelKey; count: number }[];
+  bySection: {
+    section: string;
+    gradeLevel: string;
+    High: number;
+    Moderate: number;
+    Low: number;
+    total: number;
+  }[];
+  byGrade: {
+    grade: string;
+    High: number;
+    Moderate: number;
+    Low: number;
+    total: number;
+  }[];
   factorTotals: { Academic: number; Attendance: number; Behavioral: number };
   interventionOutcome: {
     ongoing: number;

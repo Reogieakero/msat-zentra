@@ -10,12 +10,12 @@
   background-color: var(--background);
 }
 
-/* Heatblocks (75%) beside the breakdown rail (25%). The breakdown card
-   keeps its natural height instead of stretching to match. */
+/* Heatblocks fill the desk; the breakdown lives in the icon-only rail on the
+   right (same interaction as the principal overview). */
 .topRow {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  gap: 1rem;
   align-items: start;
   min-width: 0;
 }

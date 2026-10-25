@@ -16,6 +16,14 @@ export interface RiskBoardResult {
   };
   levelDistribution: { level: RiskLevel; count: number }[];
   byGrade: { grade: string; High: number; Moderate: number; Low: number; total: number }[];
+  bySection: {
+    section: string;
+    gradeLevel: string;
+    High: number;
+    Moderate: number;
+    Low: number;
+    total: number;
+  }[];
   factorTotals: { Academic: number; Attendance: number; Behavioral: number };
   interventionOutcome: {
     ongoing: number;
@@ -65,12 +73,22 @@ export async function getRiskBoard(
   let moderate = 0;
   let low = 0;
   const byGradeMap = new Map<string, { High: number; Moderate: number; Low: number }>();
+  const bySectionMap = new Map<string, { High: number; Moderate: number; Low: number }>();
+  const sectionNameById = new Map<string, string>();
+  const sectionGradeById = new Map<string, string>();
   const addGrade = (grade: string, level: string, n: number) => {
     const e = byGradeMap.get(grade) ?? { High: 0, Moderate: 0, Low: 0 };
     if (level === "High") e.High += n;
     else if (level === "Moderate") e.Moderate += n;
     else e.Low += n;
     byGradeMap.set(grade, e);
+  };
+  const addSection = (sectionId: string, level: string, n: number) => {
+    const e = bySectionMap.get(sectionId) ?? { High: 0, Moderate: 0, Low: 0 };
+    if (level === "High") e.High += n;
+    else if (level === "Moderate") e.Moderate += n;
+    else e.Low += n;
+    bySectionMap.set(sectionId, e);
   };
 
   {
@@ -181,6 +199,25 @@ export async function getRiskBoard(
       ),
     );
     const headcounts = await sectionHeadcounts(sectionIds);
+    const sectionMeta = sectionIds.length
+      ? await prisma.section.findMany({
+          where: { id: { in: sectionIds } },
+          select: {
+            id: true,
+            name: true,
+            gradeLevel: true,
+            adviser: {
+              select: { staffProfile: { select: { shareStudentData: true } } },
+            },
+          },
+        })
+      : [];
+    const connectedSectionIds = new Set<string>();
+    for (const s of sectionMeta) {
+      sectionNameById.set(s.id, s.name);
+      sectionGradeById.set(s.id, gradeLabel(s.gradeLevel));
+      if (s.adviser?.staffProfile?.shareStudentData) connectedSectionIds.add(s.id);
+    }
     const gradeByKey = new Map<string, string>();
     const sectionByKey = new Map<string, string>();
     for (const s of profKeys) {
@@ -221,6 +258,10 @@ export async function getRiskBoard(
       ...rosterKeys.filter((r) => !registeredLrns.has(r.lrn)).map((r) => `roster:${r.id}`),
     ]);
     for (const key of rawKeys) {
+      // Adviser data gate: a learner only reaches the board when their class
+      // adviser has claimed the section and switched student-data sharing ON.
+      const sectionId = sectionByKey.get(key);
+      if (!sectionId || !connectedSectionIds.has(sectionId)) continue;
       const rawAvg = rawAvgMap.get(key);
       const finalAvg = finalAvgMap.get(key);
       const academicFlag =
@@ -245,6 +286,7 @@ export async function getRiskBoard(
       else if (level === "Moderate") moderate++;
       else low++;
       addGrade(gradeByKey.get(key) ?? "—", level, 1);
+      addSection(sectionId, level, 1);
     }
   }
 
@@ -287,6 +329,23 @@ export async function getRiskBoard(
     .map(([grade, v]) => ({ grade, ...v, total: v.High + v.Moderate + v.Low }))
     .sort((a, b) => Number(a.grade.replace(/\D/g, "")) - Number(b.grade.replace(/\D/g, "")));
 
+  const bySection = [...bySectionMap.entries()]
+    .map(([sectionId, v]) => ({
+      section: sectionNameById.get(sectionId) ?? sectionId,
+      gradeLevel: sectionGradeById.get(sectionId) ?? "",
+      ...v,
+      total: v.High + v.Moderate + v.Low,
+    }))
+    .sort((a, b) => {
+      const gradeDiff =
+        Number(a.gradeLevel.replace(/\D/g, "")) - Number(b.gradeLevel.replace(/\D/g, ""));
+      if (gradeDiff !== 0) return gradeDiff;
+      return a.section.localeCompare(b.section, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+    });
+
   return {
     kpis: {
       totalAtRiskFlags,
@@ -298,6 +357,7 @@ export async function getRiskBoard(
       { level: "Low", count: low },
     ],
     byGrade,
+    bySection,
     factorTotals: {
       Academic: academic,
       Attendance: attendance,
@@ -312,6 +372,54 @@ export interface RiskTrendResult {
   schoolYearId: string | null;
   termId: string | null;
   trend: { date: string; term: string; high: number; moderate: number; low: number }[];
+}
+
+/**
+ * Learners the principal may see: only those in sections whose adviser has
+ * claimed the section and switched student-data sharing ON.
+ */
+async function connectedLearnerIds(yearId: string): Promise<{
+  studentIds: string[];
+  rosterIds: string[];
+}> {
+  const sections = await prisma.section.findMany({
+    where: {
+      schoolYearId: yearId,
+      adviser: { staffProfile: { shareStudentData: true } },
+    },
+    select: { id: true },
+  });
+  const sectionIds = sections.map((s) => s.id);
+  if (sectionIds.length === 0) return { studentIds: [], rosterIds: [] };
+
+  const [profiles, rosters] = await Promise.all([
+    prisma.studentProfile.findMany({
+      where: { sectionId: { in: sectionIds } },
+      select: { userId: true },
+    }),
+    prisma.studentRoster.findMany({
+      where: { sectionId: { in: sectionIds } },
+      select: { id: true },
+    }),
+  ]);
+
+  return {
+    studentIds: profiles.map((p) => p.userId),
+    rosterIds: rosters.map((r) => r.id),
+  };
+}
+
+function connectedOwnerFilter({
+  studentIds,
+  rosterIds,
+}: {
+  studentIds: string[];
+  rosterIds: string[];
+}) {
+  return [
+    ...(studentIds.length > 0 ? [{ studentId: { in: studentIds } }] : []),
+    ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
+  ];
 }
 
 export async function getRiskTrend(
@@ -337,8 +445,14 @@ export async function getRiskTrend(
     const validTerm = term && term.schoolYearId === yearId ? term : null;
 
     if (validTerm) {
+      const connected = await connectedLearnerIds(yearId);
+      const ownerFilter = connectedOwnerFilter(connected);
+      if (ownerFilter.length === 0) {
+        return { schoolYearId: yearId, termId: validTerm.id, trend: [] };
+      }
+
       const snaps = await prisma.riskSnapshot.findMany({
-        where: { termId: validTerm.id },
+        where: { termId: validTerm.id, OR: ownerFilter },
         select: { snapshotDate: true, riskLevel: true },
       });
 
@@ -409,11 +523,19 @@ export async function getRiskTrend(
       })
     : [];
 
+  const connected = yearId
+    ? await connectedLearnerIds(yearId)
+    : { studentIds: [], rosterIds: [] };
+  const ownerFilter = connectedOwnerFilter(connected);
+  if (yearId && terms.length > 0 && ownerFilter.length === 0) {
+    return { schoolYearId: yearId, termId: null, trend: [] };
+  }
+
   const trend = await Promise.all(
     terms.map(async (t) => {
       const snaps = await prisma.riskSnapshot.groupBy({
         by: ["riskLevel"],
-        where: { termId: t.id },
+        where: { termId: t.id, OR: ownerFilter },
         _count: { _all: true },
       });
       const map = new Map<RiskLevel, number>();
