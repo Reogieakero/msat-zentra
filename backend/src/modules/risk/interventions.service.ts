@@ -5,6 +5,7 @@ import {
   resolveActiveTermId,
   computeRiskFactors,
   levelFromFlags,
+  sectionAttendanceTotals,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
@@ -67,6 +68,8 @@ export interface RiskSnapshotStudent {
   factors: RiskFactors;
   subjectGrades: SubjectGrade[];
   intervention: InterventionLink | null;
+  /** The learner's own profile mascot — same one the adviser's list shows. */
+  mascot?: string | null;
 }
 
 export interface InterventionStudentsResult {
@@ -97,6 +100,11 @@ export interface StudentFilters {
   includeRecovered?: boolean;
 
   fullCohort?: boolean;
+
+  /** Principal desks only: restrict to sections whose adviser shares student
+      data. Guidance desks own the records, so they pass nothing here. */
+  sharedOnly?: boolean;
+
   page?: number;
   pageSize?: number;
 }
@@ -188,7 +196,12 @@ export async function getInterventionStudents(
   }
 
   const studentWhere: Record<string, unknown> = {};
-  if (schoolYearId) studentWhere.section = { schoolYearId };
+  // Principal gate: only learners whose class adviser turned student-data
+  // sharing ON are listed here.
+  studentWhere.section = {
+    ...(schoolYearId ? { schoolYearId } : {}),
+    adviser: { staffProfile: { shareStudentData: true } },
+  };
   if (filters.hasIntervention === true) studentWhere.interventions = { some: {} };
   if (filters.hasIntervention === false) studentWhere.interventions = { none: {} };
 
@@ -213,7 +226,11 @@ export async function getInterventionStudents(
   };
 
   const rosterWhere: Record<string, unknown> = {};
-  if (schoolYearId) rosterWhere.section = { schoolYearId };
+  // Same sharing gate for enlisted learners without an account.
+  rosterWhere.section = {
+    ...(schoolYearId ? { schoolYearId } : {}),
+    adviser: { staffProfile: { shareStudentData: true } },
+  };
   if (filters.hasIntervention === true) rosterWhere.interventions = { some: {} };
   if (filters.hasIntervention === false) rosterWhere.interventions = { none: {} };
 
@@ -253,6 +270,7 @@ export async function getInterventionStudents(
             lrn: true,
             gradeLevel: true,
             section: { select: { id: true, name: true, _count: { select: { students: true } } } },
+            mascot: true,
             user: { select: { fullName: true } },
             finalGrades: {
               where: { termId },
@@ -316,6 +334,7 @@ export async function getInterventionStudents(
             fullName: true,
             gradeLevel: true,
             section: { select: { id: true, name: true } },
+            mascot: true,
             finalGrades: {
               where: { termId },
               select: {
@@ -377,6 +396,7 @@ export async function getInterventionStudents(
     attendanceRecords: { status: string; subjectId: string | null }[];
     anecdotalCount: number;
     intervention: InterventionLink | null;
+    mascot: string | null;
   };
   const byStudent = new Map<string, { date: number; row: SnapRow; profile: boolean }>();
   const consider = (lrn: string, date: Date | null, row: SnapRow, profile: boolean) => {
@@ -404,6 +424,7 @@ export async function getInterventionStudents(
       attendanceRecords: st.attendanceRecords,
       anecdotalCount: st.anecdotalRecords.length,
       intervention: toInterventionLink(st.interventions[0]),
+      mascot: st.mascot ?? null,
     }, true);
   }
   for (const s of rosterSnaps) {
@@ -422,12 +443,16 @@ export async function getInterventionStudents(
       attendanceRecords: r.attendanceRecords,
       anecdotalCount: r.anecdotalRecords.length,
       intervention: toInterventionLink(r.interventions[0]),
+      mascot: r.mascot ?? null,
     }, false);
   }
   const deduped = [...byStudent.values()].map((v) => v.row);
 
   const sectionIds = Array.from(new Set(deduped.map((r) => r.sectionId).filter(Boolean)));
-  const headcounts = await sectionHeadcounts(sectionIds);
+  const [headcounts, sectionTotals] = await Promise.all([
+    sectionHeadcounts(sectionIds),
+    sectionAttendanceTotals(sectionIds, termId),
+  ]);
 
   const highModerate = deduped.length;
 
@@ -439,6 +464,7 @@ export async function getInterventionStudents(
         transmutedGrade: g.transmutedGrade,
       })),
       attendance: st.attendanceRecords.map((a) => ({ status: a.status, subjectId: a.subjectId })),
+      attendanceTotal: sectionTotals.get(st.sectionId),
       anecdotalCount: st.anecdotalCount,
       enrolled,
     });
@@ -471,6 +497,7 @@ export async function getInterventionStudents(
       },
       subjectGrades,
       intervention: st.intervention,
+      mascot: st.mascot,
     };
   });
 
@@ -843,6 +870,7 @@ function liveCohort(
   includeRecovered: boolean,
   riskLevel: StudentFilters["riskLevel"],
   hasIntervention: StudentFilters["hasIntervention"],
+  sharedOnly: boolean,
 ): Promise<LiveCohort> {
   const key = [
     termId,
@@ -850,12 +878,20 @@ function liveCohort(
     includeRecovered ? 1 : 0,
     riskLevel ?? "-",
     hasIntervention === undefined ? "-" : hasIntervention ? 1 : 0,
+    sharedOnly ? "shared" : "all",
   ].join("|");
   const now = Date.now();
   const hit = liveCohortCache.get(key);
   if (hit && now - hit.at < LIVE_COHORT_TTL_MS) return hit.value;
 
-  const value = loadLiveCohort(termId, schoolYearId, includeRecovered, riskLevel, hasIntervention);
+  const value = loadLiveCohort(
+    termId,
+    schoolYearId,
+    includeRecovered,
+    riskLevel,
+    hasIntervention,
+    sharedOnly,
+  );
   liveCohortCache.set(key, { at: now, value });
   value.catch(() => {
     if (liveCohortCache.get(key)?.value === value) liveCohortCache.delete(key);
@@ -874,15 +910,37 @@ async function loadLiveCohort(
   includeRecovered: boolean,
   riskLevel: StudentFilters["riskLevel"],
   hasIntervention: StudentFilters["hasIntervention"],
+  sharedOnly: boolean,
 ): Promise<LiveCohort> {
+  const advisorSharing = sharedOnly
+    ? { adviser: { staffProfile: { shareStudentData: true } } }
+    : {};
+  const profileWhere =
+    schoolYearId || sharedOnly
+      ? {
+          section: {
+            ...(schoolYearId ? { schoolYearId } : {}),
+            ...advisorSharing,
+          },
+        }
+      : undefined;
+  // Rosters carry their own school year plus the section relation.
+  const rosterWhere =
+    schoolYearId || sharedOnly
+      ? {
+          ...(schoolYearId ? { schoolYearId } : {}),
+          ...(sharedOnly ? { section: advisorSharing } : {}),
+        }
+      : undefined;
   const [profiles, rosters, profileSnapDates, rosterSnapDates] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: schoolYearId ? { section: { schoolYearId } } : undefined,
+      where: profileWhere,
       select: {
         userId: true,
         lrn: true,
         gradeLevel: true,
         section: { select: { id: true, name: true, _count: { select: { students: true } } } },
+        mascot: true,
         user: { select: { fullName: true } },
         finalGrades: {
           where: { termId },
@@ -929,7 +987,7 @@ async function loadLiveCohort(
       },
     }),
     prisma.studentRoster.findMany({
-      where: schoolYearId ? { schoolYearId } : undefined,
+      where: rosterWhere,
       select: {
         id: true,
         lrn: true,
@@ -937,6 +995,7 @@ async function loadLiveCohort(
         gradeLevel: true,
         sectionId: true,
         section: { select: { id: true, name: true } },
+        mascot: true,
         finalGrades: {
           where: { termId },
           select: {
@@ -1007,6 +1066,7 @@ async function loadLiveCohort(
     ])
   );
   const headcounts = await sectionHeadcounts(sectionIds);
+  const sectionTotals = await sectionAttendanceTotals(sectionIds, termId);
 
   type LiveInput = {
     studentId: string;
@@ -1022,6 +1082,7 @@ async function loadLiveCohort(
     anecdotalCount: number;
     intervention: InterventionRow | undefined;
     snapshotDate: Date | null;
+    mascot: string | null;
   };
 
   const toStudent = (st: LiveInput): RiskSnapshotStudent | null => {
@@ -1032,6 +1093,7 @@ async function loadLiveCohort(
         transmutedGrade: g.transmutedGrade,
       })),
       attendance: st.attendanceRecords.map((a) => ({ status: a.status, subjectId: a.subjectId })),
+      attendanceTotal: sectionTotals.get(st.sectionId),
       anecdotalCount: st.anecdotalCount,
       enrolled,
     });
@@ -1089,6 +1151,7 @@ async function loadLiveCohort(
       },
       subjectGrades,
       intervention,
+      mascot: st.mascot,
     };
   };
 
@@ -1109,6 +1172,7 @@ async function loadLiveCohort(
       anecdotalCount: p.anecdotalRecords.length,
       intervention: p.interventions[0],
       snapshotDate: snapByStudent.get(p.userId) ?? null,
+      mascot: p.mascot ?? null,
     });
     if (row) kept.push(row);
   }
@@ -1128,6 +1192,7 @@ async function loadLiveCohort(
       anecdotalCount: r.anecdotalRecords.length,
       intervention: r.interventions[0],
       snapshotDate: snapByRoster.get(r.id) ?? null,
+      mascot: r.mascot ?? null,
     });
     if (row) kept.push(row);
   }
@@ -1159,6 +1224,7 @@ async function getLiveCohortStudents(
     includeRecovered,
     filters.riskLevel,
     filters.hasIntervention,
+    filters.sharedOnly === true,
   );
 
   const needle = (filters.q ?? "").trim().toLowerCase();

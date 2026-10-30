@@ -17,9 +17,13 @@
 /* ---- Friendly chart tooltip style lives in overview-chart-tip.module.css -- */
 
 /* ---- Factor / grade charts ---------------------------------------------- */
+/* Chart-only boards on this row: the plot fills the card and centers itself. */
 .chartWrap {
   display: flex;
+  flex: 1;
+  align-items: center;
   justify-content: center;
+  min-height: 0;
 }
 
 .chart {
@@ -30,18 +34,6 @@
 .chartSkel {
   height: 150px;
   border-radius: var(--radius-md);
-}
-
-/* ---- Chart-level interpretation ----------------------------------------- */
-/* Pinned to the board bottom so all three messages align horizontally. */
-.chartInterpretation {
-  margin: auto auto 0;
-  max-width: 62ch;
-  font-size: 0.75rem;
-  line-height: 1.55;
-  color: var(--muted-foreground);
-  padding: 0.25rem 0 0.25rem 0.625rem;
-  border-left: 2px solid color-mix(in oklch, #f59e0b, transparent 40%);
 }
 
 /* ---- Donut -------------------------------------------------------------- */
@@ -143,5 +135,77 @@
 @media (max-width: 900px) {
   .riskGrid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- Entrance choreography ---------------------------------------------- */
+/* The three chart lanes land one after another, then their legends tick in —
+   opacity/transform only, so the board never reflows while revealing. */
+@keyframes risk-lane-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes risk-legend-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes risk-center-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.riskGrid > * {
+  animation: risk-lane-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.riskGrid > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.riskGrid > *:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.donutCenter {
+  animation: risk-center-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.35s backwards;
+}
+
+.levelItem {
+  animation: risk-legend-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.42s backwards;
+}
+
+.levelItem:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+.levelItem:nth-child(3) {
+  animation-delay: 0.58s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .riskGrid > *,
+  .donutCenter,
+  .levelItem {
+    animation: none;
   }
 }

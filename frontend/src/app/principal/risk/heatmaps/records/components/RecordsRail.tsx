@@ -18,7 +18,7 @@ import styles from "./RecordsRail.module.css";
 // Flyout panel — same look as the principal overview rail: solid surface,
 // shadow + ring, smooth open/close, anchored left of the rail icon.
 const MENU_PANEL =
-  "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
+  "absolute top-0 right-12 z-[80] max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
 
 type RailTone = "amber" | "red";
 
@@ -107,7 +107,7 @@ export function RecordsRail() {
             const count = counts[item.key] ?? 0;
             const isRed = item.tone === "red";
             return (
-              <div key={item.key} className="relative">
+              <div key={item.key} className={`relative ${styles.railItem}`}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -169,9 +169,7 @@ export function RecordsRail() {
                     }
                     count={count}
                     description={item.description}
-                    className={`border-0 ${
-                      isRed ? styles.boardRed : styles.boardAmber
-                    }`}
+                    className={`border-0 ${styles.flyoutBoard}`}
                   >
                     {item.key === "breakdown" ? (
                       <RecordsBreakdownContent />

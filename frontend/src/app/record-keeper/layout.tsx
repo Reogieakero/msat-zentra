@@ -14,9 +14,9 @@ import {
 } from "@/components/ui/command";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
-import { SidebarToggleButton } from "@/components/nav/SidebarToggleButton";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import {
   RecordKeeperPaletteGate,
   useRecordKeeperProfileSettings,
@@ -30,7 +30,7 @@ function RecordKeeperShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [query, setQuery] = React.useState("");
   const profile = useRecordKeeperProfileSettings();
-  const { collapsed: sidebarCollapsed, toggle: toggleSidebar } =
+  const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.record-keeper.sidebar.collapsed");
 
   useRecordKeeperRealtime();
@@ -50,14 +50,11 @@ function RecordKeeperShell({ children }: { children: React.ReactNode }) {
     <div className={styles.wrapper}>
       <RecordKeeperPaletteGate />
       <header className={styles.topbar}>
-        <SidebarToggleButton
-          collapsed={sidebarCollapsed}
-          onToggle={toggleSidebar}
-        />
-
         <Link href="/record-keeper/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
+
+        <AppBreadcrumbs role="Record Keeper" />
 
         <div className={styles.spacer} />
 

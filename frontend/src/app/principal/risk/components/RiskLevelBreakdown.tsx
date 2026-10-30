@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import type { RiskBoardData, RiskFactor, RiskLevelKey } from "@/services/principal/risk.types";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -136,13 +137,13 @@ export function RiskLevelBreakdown() {
           </ul>
 
           {dominantFactor[1] > 0 && (
-            <p className={`${styles.insight} mt-auto`}>
+            <InsightCallout className="mt-auto">
               The most common trigger is{" "}
               <strong>{FACTOR_LABEL[dominantFactor[0]]}</strong> — it accounts for{" "}
               <strong>{dominantFactor[1].toLocaleString()}</strong> at-risk flag
               {dominantFactor[1] === 1 ? "" : "s"}. Targeting this area could reduce
               overall risk the fastest.
-            </p>
+            </InsightCallout>
           )}
         </>
       )}

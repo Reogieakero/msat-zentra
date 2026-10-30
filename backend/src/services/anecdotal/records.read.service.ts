@@ -77,14 +77,17 @@ export interface ReferableQuery {
 
 export async function getReferable(query: ReferableQuery) {
   const { isAdviser, userId, termId: scopeTermId, overview } = query;
-  let sectionIds: string[] = [];
-  if (isAdviser) {
-    const sections = await prisma.section.findMany({
-      where: { adviserId: userId },
-      select: { id: true },
-    });
-    sectionIds = sections.map((s) => s.id);
-  }
+  // Any teacher who advises a section is an adviser on this desk — the JWT
+  // role can still read `subject_teacher` (advisory sections are claimed in
+  // settings), so resolve the advisory scope before falling back to the
+  // subject-teacher "my observed records" scope.
+  const advised = await prisma.section.findMany({
+    where: { adviserId: userId },
+    select: { id: true },
+  });
+  const sectionIds = advised.map((s) => s.id);
+  // An `adviser` with no advisory section has no advisees to refer.
+  if (sectionIds.length === 0 && isAdviser) return [];
 
   let where: {
     observerId?: string;
@@ -94,11 +97,13 @@ export async function getReferable(query: ReferableQuery) {
 
   if (scopeTermId) where.termId = scopeTermId;
 
-  if (isAdviser && sectionIds.length > 0) {
-
+  if (sectionIds.length > 0) {
+    // Advisees are resolved through the student/roster section, so records
+    // filed by other staff about an advisee still surface here while records
+    // about students outside the advisory section never do.
     where.OR = [
-      { observerId: userId },
       { student: { sectionId: { in: sectionIds } } },
+      { roster: { sectionId: { in: sectionIds } } },
       { sectionId: { in: sectionIds } },
     ];
   } else {

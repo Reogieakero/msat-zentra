@@ -28,14 +28,34 @@ export async function getMyCases(ctx: AdmContext, query: MyCasesQuery) {
   const scopeTermId = ctx.termId;
   const termFilter = scopeTermId ? { termId: scopeTermId } : {};
 
+  // Every ADM case for the adviser's own advisees, regardless of who opened
+  // it (guidance/nurse/coordinator) — the monitoring desk tracks the learner,
+  // not the referral's author. Only dismissed referrals are hidden.
   const liveReferral: Prisma.ReferralWhereInput = {
-    referredBy: teacherId,
     status: { not: "dismissed" },
   };
-  const where: Prisma.AdmLearnerProfileWhereInput =
-    sectionIds.length > 0
-      ? { student: { sectionId: { in: sectionIds } }, referral: liveReferral, ...termFilter }
-      : { referral: liveReferral, ...termFilter };
+  // No advisory section → no advisees. A subject-teacher account must not see
+  // the whole school's cases just because it has no advisory scope.
+  if (sectionIds.length === 0) {
+    if (!hasPaginationParams) return [];
+    return {
+      data: [],
+      rows: [],
+      cases: [],
+      total: 0,
+      unfilteredTotal: 0,
+      summary: { total: 0, filtered: 0 },
+      page: 1,
+      totalPages: 1,
+      limit: pageSize,
+      pageSize,
+    };
+  }
+  const where: Prisma.AdmLearnerProfileWhereInput = {
+    student: { sectionId: { in: sectionIds } },
+    referral: liveReferral,
+    ...termFilter,
+  };
 
   const profiles = await prisma.admLearnerProfile.findMany({
     where,
@@ -74,65 +94,12 @@ export async function getMyCases(ctx: AdmContext, query: MyCasesQuery) {
     orderBy: { createdAt: "desc" },
   });
 
-  const earlyWhere: Prisma.ReferralWhereInput =
-    sectionIds.length > 0
-      ? {
-          referredToRole: "adm_coordinator",
-          referredBy: teacherId,
-          status: { not: "dismissed" },
-          admProfiles: { none: {} },
-          ...termFilter,
-          OR: [
-            { student: { sectionId: { in: sectionIds } } },
-            { roster: { sectionId: { in: sectionIds } } },
-          ],
-        }
-      : {
-          referredBy: teacherId,
-          referredToRole: "adm_coordinator",
-          status: { not: "dismissed" },
-          admProfiles: { none: {} },
-          ...termFilter,
-        };
-  const earlyReferrals = await prisma.referral.findMany({
-    where: earlyWhere,
-    select: {
-      id: true,
-      status: true,
-      consultReviewer: true,
-      student: {
-        select: {
-          userId: true,
-          lrn: true,
-          gradeLevel: true,
-          photoUrl: true,
-          mascot: true,
-          user: { select: { fullName: true } },
-          section: { select: { name: true } },
-        },
-      },
-      roster: {
-        select: {
-          id: true,
-          lrn: true,
-          fullName: true,
-          gradeLevel: true,
-          mascot: true,
-          section: { select: { name: true } },
-        },
-      },
-      anecdotalRecord: { select: { observationDatetime: true } },
-      homeVisitations: { select: { id: true } },
-    },
-    orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
-  });
-
   const stageLabel = new Map(ADM_STAGE_FLOW.map((s) => [s.stage, s.label]));
 
-  const referralIds = [
-    ...profiles.map((p) => p.referralId),
-    ...earlyReferrals.map((r) => r.id),
-  ];
+  // Only learners with an opened ADM case (an AdmLearnerProfile) belong on
+  // the advisory tracking desk — a referral still waiting on guidance intake
+  // has nothing to track yet.
+  const referralIds = profiles.map((p) => p.referralId);
   const timelines = await buildCaseTimeline(referralIds);
 
   const approverIds = [
@@ -150,39 +117,7 @@ export async function getMyCases(ctx: AdmContext, query: MyCasesQuery) {
     });
     for (const a of approvers) approverRoles.set(a.id, String(a.role));
   }
-  const earlyCases = earlyReferrals.map((r) => ({
-    id: `referral:${r.id}`,
-    studentId: r.student?.userId ?? `roster:${r.roster!.id}`,
-    studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
-    lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
-    mascot: r.student?.mascot ?? r.roster?.mascot ?? null,
-    gradeLevel: r.student?.gradeLevel ?? r.roster?.gradeLevel ?? "",
-    section: r.student?.section?.name ?? r.roster?.section?.name ?? "",
-    photoUrl: r.student?.photoUrl ?? null,
-    referralId: r.id,
-    referralStatus: r.status,
-    consultReviewer: r.consultReviewer ?? null,
-    stage: "consultation",
-    stageLabel: stageLabel.get("consultation") ?? "Consultation & Referral",
-    eligibilityStatus: "pending" as const,
-    approved: false,
-    approvedAt: null as string | null,
-    datePrepared: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
-    meetingAttended: null as boolean | null,
-    hasHomeVisit: r.homeVisitations.length > 0,
-    modulesSubmitted: 0,
-    modulesTotal: 0,
-    devicesIssued: 0,
-    devicesReturned: 0,
-    certificationIssued: false,
-    certificationAt: null as string | null,
-    lastMeetingAt: null as string | null,
-    lastModuleAt: null as string | null,
-    timeline: timelines.get(r.id) ?? [],
-  }));
-
-  const merged = [
-    ...profiles.map((p) => {
+  const merged = profiles.map((p) => {
       const meetings = p.parentMeetings ?? [];
       const timeline = timelines.get(p.referralId) ?? [];
       timeline.push({
@@ -254,9 +189,7 @@ export async function getMyCases(ctx: AdmContext, query: MyCasesQuery) {
             : null,
         timeline,
       };
-    }),
-    ...earlyCases,
-  ];
+    });
 
   if (!hasPaginationParams) {
     return merged;

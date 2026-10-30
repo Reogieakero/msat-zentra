@@ -2,6 +2,28 @@
   min-width: 0;
 }
 
+/* Rows cascade in for each page of results — opacity/transform only. */
+.rowIn {
+  animation: row-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rowIn {
+    animation: none;
+  }
+}
+
 .header {
   display: flex;
   align-items: flex-start;

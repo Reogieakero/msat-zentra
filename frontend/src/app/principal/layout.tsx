@@ -7,11 +7,12 @@ import { logout } from "@/lib/api/client";
 import { PrincipalSidebar } from "@/components/principal-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
-import { SidebarToggleButton } from "@/components/nav/SidebarToggleButton";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { PrincipalBell } from "./components/PrincipalBell";
 import { usePrincipalRealtime } from "@/lib/realtime/principalChannel";
 import {
@@ -24,7 +25,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
 
-  const { collapsed: sidebarCollapsed, toggle: toggleSidebar } =
+  const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.principal.sidebar.collapsed");
 
   usePrincipalRealtime();
@@ -43,14 +44,11 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
     <div className={styles.wrapper}>
       <PrincipalPaletteGate />
       <header className={styles.topbar}>
-        <SidebarToggleButton
-          collapsed={sidebarCollapsed}
-          onToggle={toggleSidebar}
-        />
-
         <Link href="/principal/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
+
+        <AppBreadcrumbs role="Principal" />
 
         <div className={styles.spacer} />
 
@@ -78,14 +76,24 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
             className={styles.avatarButton}
             aria-label="Account menu"
           >
-            <Avatar size="sm">
-              {profile.data?.photoUrl ? (
-                <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
-              ) : null}
-              <AvatarFallback>
-                <UserRound className={styles.avatarIcon} />
-              </AvatarFallback>
-            </Avatar>
+            {profile.data?.mascot ? (
+              <span className="flex size-8 items-center justify-center overflow-hidden rounded-full border border-border bg-muted/40">
+                <StudentMascot
+                  name={profile.data.fullName || "You"}
+                  character={profile.data.mascot}
+                  size={32}
+                />
+              </span>
+            ) : (
+              <Avatar size="sm">
+                {profile.data?.photoUrl ? (
+                  <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
+                ) : null}
+                <AvatarFallback>
+                  <UserRound className={styles.avatarIcon} />
+                </AvatarFallback>
+              </Avatar>
+            )}
           </button>
         </KanbanAccountMenu>
       </header>

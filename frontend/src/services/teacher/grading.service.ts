@@ -61,6 +61,13 @@ export async function saveComponentWeight(
   await apiClient.post(`/api/teacher/grading/classes/${assignmentId}/components`, input);
 }
 
+export async function saveComponentWeights(
+  assignmentId: string,
+  weights: { componentType: ComponentType; weightPercentage: number }[]
+): Promise<void> {
+  await apiClient.post(`/api/teacher/grading/classes/${assignmentId}/components/batch`, { weights });
+}
+
 export const WEIGHT_PRESETS: { key: WeightPreset; label: string; hint: string }[] = [
   { key: "SHS", label: "SHS standard", hint: "WW 25 / PT 45 / E 30" },
   { key: "JHS_LANG", label: "Languages, AP, EsP", hint: "WW 30 / PT 50 / E 20" },

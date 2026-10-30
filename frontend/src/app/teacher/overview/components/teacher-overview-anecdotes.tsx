@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 import { NotebookPen } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import {
   AnecdotalRecordKanbanCard,
@@ -150,9 +150,9 @@ export function TeacherOverviewAnecdotes() {
                   fileTag={humanizeCategory(r.category)}
                   headerRight={
                     r.signed ? (
-                      <Badge variant="green" className="shrink-0 rounded-md">
+                      <Pill tone="green" label="Signature status" className="shrink-0">
                         Signed
-                      </Badge>
+                      </Pill>
                     ) : undefined
                   }
                   openLabel={`Open ${r.studentName}'s record from ${recordDate(r.observationDate)}`}

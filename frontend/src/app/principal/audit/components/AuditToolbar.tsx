@@ -2,7 +2,6 @@ import * as React from "react";
 import {
   ChevronDown,
   Search,
-  X,
   Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,6 @@ import {
   type AuditRole,
 } from "@/services/principal/audit.types";
 import styles from "./audit-toolbar.module.css";
-import ivStyles from "../../risk/interventions/components/InterventionsListTable.module.css";
 
 export type ActorScope = "all" | "me";
 
@@ -49,18 +47,24 @@ function FilterDropdown({
         <Button
           variant="outline"
           size="sm"
-          className={`${ivStyles.filterBtn} ${
-            active !== "all" ? ivStyles.filterActive : ""
-          }`}
+          className={`${styles.filterBtn} ${active !== "all" ? styles.filterActive : ""}`}
         >
           {label}
           {active !== "all" && (
-            <span className={ivStyles.filterDot} aria-hidden />
+            <span className={styles.filterDot} aria-hidden />
           )}
           <ChevronDown aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className={ivStyles.filterMenu}>
+      <DropdownMenuContent
+        align="end"
+        className={styles.menu}
+        style={{
+          width: "auto",
+          minWidth: "var(--radix-dropdown-menu-trigger-width)",
+          maxWidth: "min(24rem, 90vw)",
+        }}
+      >
         <DropdownMenuCheckboxItem
           checked={active === "all"}
           onCheckedChange={() => onSelect("all")}
@@ -143,13 +147,6 @@ export function AuditToolbar({
     ...sourceTables.map((t) => ({ value: t, label: t })),
   ];
 
-  const hasActiveFilters =
-    actionType !== "all" ||
-    actorRole !== "all" ||
-    actorScope !== "all" ||
-    sourceTable !== "all" ||
-    query.trim() !== "";
-
   return (
     <div className={styles.toolbar}>
       <div className={styles.searchWrap}>
@@ -192,24 +189,6 @@ export function AuditToolbar({
         allLabel="All tables"
         onSelect={(v) => onSourceTableChange(v)}
       />
-
-      {hasActiveFilters ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className={ivStyles.clearBtn}
-          onClick={() => {
-            onActionTypeChange("all");
-            onActorRoleChange("all");
-            onActorScopeChange("all");
-            onSourceTableChange("all");
-            onQueryChange("");
-          }}
-        >
-          <X aria-hidden />
-          Clear
-        </Button>
-      ) : null}
 
       <Button size="sm" variant="outline" onClick={onExport} disabled={exporting} aria-busy={exporting}>
         {exporting ? <Spinner className="size-4" aria-hidden /> : <Download aria-hidden />}

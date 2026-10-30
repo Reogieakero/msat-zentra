@@ -3,8 +3,9 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient, getAccessToken } from "@/lib/api/client";
-import { decodeTokenIdentity, isTeacherRole } from "@/lib/auth/roles";
+import { decodeTokenIdentity, canSteerTermRole } from "@/lib/auth/roles";
 import {
+  clearStoredTerm,
   purgeLegacyTermStorage,
   readStoredTerm,
   readTermPrompt,
@@ -30,7 +31,7 @@ export interface SchoolYearOption {
   terms: TermOption[];
 }
 
-/** The term a teacher selected. Only teacher roles ever hold one. */
+/** The term a term-steering role selected (teachers, principal). */
 export type ActiveTerm = StoredTerm;
 
 /** Server-marked active school year (from `/api/academics/school-years`). */
@@ -73,6 +74,8 @@ interface TermContextValue {
   activeSchoolYear: ActiveSchoolYear | null;
   termReady: boolean;
   setActiveTerm: (term: ActiveTerm) => void;
+  /** Drop the stored pick so pages follow the server's active scope again. */
+  clearActiveTerm: () => void;
   promptRequired: boolean;
   setPromptRequired: (required: boolean) => void;
 }
@@ -89,7 +92,7 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
   // as soon as the provider re-renders (e.g. when LoginForm sets the prompt).
   const identity = decodeTokenIdentity(getAccessToken());
   const userSub = identity?.sub ?? null;
-  const isTeacher = identity ? isTeacherRole(identity.role) : false;
+  const steersTerm = identity ? canSteerTermRole(identity.role) : false;
 
   const hasToken = ready && getAccessToken() != null;
 
@@ -159,6 +162,16 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
     [queryClient],
   );
 
+  const clearActiveTerm = React.useCallback(() => {
+    const sub = decodeTokenIdentity(getAccessToken())?.sub ?? null;
+    clearStoredTerm(sub);
+    setActiveTermState(null);
+    void queryClient.invalidateQueries({
+      predicate: (q) =>
+        q.queryKey[0] !== "term-picker" && q.queryKey[0] !== "school-years",
+    });
+  }, [queryClient]);
+
   const setPromptRequired = React.useCallback((required: boolean) => {
     setPromptRequiredState(required);
     writeTermPrompt(required);
@@ -174,11 +187,13 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
       schoolYears: query.data ?? [],
       isLoading: query.isLoading,
       isError: query.isError,
-      // Non-teacher roles never see term state, even if a stale value exists.
-      activeTerm: isTeacher ? activeTerm : null,
+      // Roles that cannot steer the term never see term state, even if a stale
+      // value exists in storage.
+      activeTerm: steersTerm ? activeTerm : null,
       activeSchoolYear,
       termReady: ready,
       setActiveTerm,
+      clearActiveTerm,
       promptRequired,
       setPromptRequired,
     }),
@@ -186,11 +201,12 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
       query.data,
       query.isLoading,
       query.isError,
-      isTeacher,
+      steersTerm,
       activeTerm,
       activeSchoolYear,
       ready,
       setActiveTerm,
+      clearActiveTerm,
       promptRequired,
       setPromptRequired,
     ],

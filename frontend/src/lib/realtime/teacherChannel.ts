@@ -147,6 +147,8 @@ export function useTeacherRealtime(enabled = true) {
         return SCHEDULE;
       if (table.startsWith("referral")) return REFERRAL;
       if (table.startsWith("anecdotal")) return ANECDOTAL;
+      if (table.startsWith("adm_module"))
+        return [["adm-my-cases"], ["adm-monitoring"]];
       if (table.startsWith("student_roster") || table.startsWith("intervention"))
         return ADVISORY;
       if (table.startsWith("adviser_sf10_access_request"))

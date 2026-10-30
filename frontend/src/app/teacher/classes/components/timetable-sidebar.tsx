@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { UserRound } from "lucide-react";
+import { Pill } from "@/components/ui/pill";
 import type { buildTimetableReminder, getReminderMeta } from "./my-timetable-reminder";
 import menuStyles from "./timetable-menu.module.css";
 
@@ -21,9 +22,9 @@ export interface LinkedName {
 
 function CodePill({ code }: { code: string }) {
   return (
-    <span className="inline-flex items-center rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-sans text-xs font-medium text-amber-700 dark:text-amber-400">
+    <Pill tone="amber" label="Teacher code">
       {code}
-    </span>
+    </Pill>
   );
 }
 

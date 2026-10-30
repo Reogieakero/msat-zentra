@@ -5,12 +5,9 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
+import { registryProfileSchema } from "../registry/registry.schemas.js";
 
 const router = Router();
-
-const HEX_COLOR = z
-  .string()
-  .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a #RRGGBB hex value");
 
 async function readPrincipalProfileSettings(principalId: string) {
   const [user, profile] = await Promise.all([
@@ -20,12 +17,13 @@ async function readPrincipalProfileSettings(principalId: string) {
     }),
     prisma.staffProfile.findUnique({
       where: { userId: principalId },
-      select: { photoUrl: true, primaryColor: true, secondaryColor: true },
+      select: { photoUrl: true, mascot: true, primaryColor: true, secondaryColor: true },
     }),
   ]);
   return {
     fullName: user?.fullName ?? "",
     photoUrl: profile?.photoUrl ?? null,
+    mascot: profile?.mascot ?? null,
     primaryColor: profile?.primaryColor ?? null,
     secondaryColor: profile?.secondaryColor ?? null,
   };
@@ -48,19 +46,13 @@ router.patch(
   "/settings/profile",
   requireAuth,
   requireRole("principal"),
-  validate(
-    "body",
-    z.object({
-      fullName: z.string().trim().min(1).max(100).optional(),
-      primaryColor: HEX_COLOR.nullable().optional(),
-      secondaryColor: HEX_COLOR.nullable().optional(),
-    })
-  ),
+  validate("body", registryProfileSchema),
   async (req, res, next) => {
     try {
       const principalId = req.user!.id;
-      const { fullName, primaryColor, secondaryColor } = req.body as {
+      const { fullName, mascot, primaryColor, secondaryColor } = req.body as {
         fullName?: string;
+        mascot?: string | null;
         primaryColor?: string | null;
         secondaryColor?: string | null;
       };
@@ -71,9 +63,14 @@ router.patch(
             data: { fullName },
           });
         }
-        const palette: { primaryColor?: string | null; secondaryColor?: string | null } = {};
+        const palette: {
+          primaryColor?: string | null;
+          secondaryColor?: string | null;
+          mascot?: string | null;
+        } = {};
         if (primaryColor !== undefined) palette.primaryColor = primaryColor;
         if (secondaryColor !== undefined) palette.secondaryColor = secondaryColor;
+        if (mascot !== undefined) palette.mascot = mascot;
         if (Object.keys(palette).length > 0) {
           await tx.staffProfile.upsert({
             where: { userId: principalId },

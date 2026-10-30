@@ -40,6 +40,12 @@
   width: 100%;
   max-width: 60rem;
   margin-inline: auto;
+  animation: board-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Right rail slides in from the gutter once the board has landed. */
+.railIn {
+  animation: rail-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.9s backwards;
 }
 
 /* Grade filter — shared pills, one button each. */
@@ -48,6 +54,35 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem;
+}
+
+/* Filter chips land after the board, one after another. */
+.filterRow > * {
+  animation: row-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.25s backwards;
+}
+
+.filterRow > *:nth-child(2) {
+  animation-delay: 0.33s;
+}
+
+.filterRow > *:nth-child(3) {
+  animation-delay: 0.41s;
+}
+
+.filterRow > *:nth-child(4) {
+  animation-delay: 0.49s;
+}
+
+.filterRow > *:nth-child(5) {
+  animation-delay: 0.57s;
+}
+
+.filterRow > *:nth-child(6) {
+  animation-delay: 0.65s;
+}
+
+.filterRow > *:nth-child(7) {
+  animation-delay: 0.73s;
 }
 
 .filterButton {
@@ -69,6 +104,14 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background-color: var(--card);
+  /* The table is a board, not a scroll region — hide the horizontal bar but
+     keep the overflow so narrow viewports can still pan. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tableWrap::-webkit-scrollbar {
+  display: none;
 }
 
 .table {
@@ -78,27 +121,23 @@
   font-size: 0.8125rem;
 }
 
-.table th {
-  padding: 0.5rem 0.625rem;
-  text-align: left;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-
 .table td {
   padding: 0.5rem 0.625rem;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   text-align: left;
+  transition: background-color 140ms ease-out;
 }
 
 .table tbody tr:last-child td {
   border-bottom: 0;
+}
+
+.table tbody tr {
+  /* Rows cascade in; each row sets its own animation-delay inline so the
+     stagger survives grade-filter changes (the tbody is keyed). The last row
+     of the longest board lands right at the 5s mark. */
+  animation: row-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .table tbody tr:hover {
@@ -261,4 +300,48 @@
   flex-shrink: 0;
   font-size: 0.625rem;
   color: var(--muted-foreground);
+}
+
+/* Entrance choreography — same expo-out curve as the academics board:
+   the panel lifts in, then rows cascade, while the rail slides from the gutter. */
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rail-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardWrap,
+  .railIn,
+  .filterRow > *,
+  .table tbody tr {
+    animation: none;
+  }
 }

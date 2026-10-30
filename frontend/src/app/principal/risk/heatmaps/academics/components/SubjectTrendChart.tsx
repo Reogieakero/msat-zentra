@@ -20,14 +20,8 @@ import {
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { useTheme } from "@/components/providers";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { BookOpen, ChevronDown } from "lucide-react";
+import { Pill } from "@/components/ui/pill";
+import { BookOpen } from "lucide-react";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import {
   ALL_GRADES,
@@ -64,7 +58,7 @@ type TrendRow = {
 
 type CellStat = { avg: number; graded: number; below: number };
 
-function GradeFilterMenu({
+function GradePillTabs({
   grades,
   gradeFilter,
   onGradeFilterChange,
@@ -74,27 +68,29 @@ function GradeFilterMenu({
   onGradeFilterChange: (grade: string) => void;
 }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={styles.trendGradeBtn}>
-          {gradeFilter}
-          <ChevronDown aria-hidden />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className={styles.trendGradeMenu}>
-        {[...grades]
+    <div className={styles.filterRow} role="group" aria-label="Filter by grade level">
+      {[
+        { value: ALL_GRADES, label: "All grades" },
+        ...[...grades]
           .sort((a, b) => gradeSortKey(a) - gradeSortKey(b))
-          .map((g) => (
-            <DropdownMenuItem
-              key={g}
-              onSelect={() => onGradeFilterChange(g)}
-              className={styles.trendGradeItem}
-            >
-              <span>{g}</span>
-            </DropdownMenuItem>
-          ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          .map((g) => ({ value: g, label: g })),
+      ].map((option) => {
+        const active = gradeFilter === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onGradeFilterChange(option.value)}
+            aria-pressed={active}
+            className={styles.filterButton}
+          >
+            <Pill tone={active ? "blue" : "neutral"} className={styles.filterPill}>
+              {option.label}
+            </Pill>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -219,10 +215,11 @@ export function SubjectTrendChart({
   if (isEmpty) {
     return (
       <KanbanBoard
+        className={styles.emptyBoard}
         title="Subject Trends"
         icon={<BookOpen size={14} aria-hidden="true" />}
-        actions={
-          <GradeFilterMenu
+        headerCenter={
+          <GradePillTabs
             grades={grades}
             gradeFilter={gradeFilter}
             onGradeFilterChange={onGradeFilterChange}
@@ -230,11 +227,14 @@ export function SubjectTrendChart({
         }
         ariaLabel="Subject trends"
       >
-        <PrincipalEmptyState
-          icon={BookOpen}
-          title="No graded records"
-          hint="No graded records for the active term. Grades will appear here once finalized."
-        />
+        <div className={styles.emptyInsight}>
+          <PrincipalEmptyState
+            icon={BookOpen}
+            title="No graded records"
+            hint="No graded records for the active term. Grades will appear here once finalized."
+            tone="amber"
+          />
+        </div>
       </KanbanBoard>
     );
   }
@@ -249,8 +249,8 @@ export function SubjectTrendChart({
           ? "Average transmuted grade per subject, one bar per grade level — click a bar to rank its sections."
           : `Average transmuted grade per subject for ${gradeFilter} — click a bar to rank its sections.`
       }
-      actions={
-        <GradeFilterMenu
+      headerCenter={
+        <GradePillTabs
           grades={grades}
           gradeFilter={gradeFilter}
           onGradeFilterChange={onGradeFilterChange}

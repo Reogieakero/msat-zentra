@@ -72,6 +72,11 @@ export const advanceSchema = z.object({
   stage: z.enum(ADM_STAGES as [AdmStage, ...AdmStage[]]),
 });
 
+/** The Principal must say why a certified case is going back for revision. */
+export const principalReturnSchema = z.object({
+  reason: z.string().trim().min(5).max(1000),
+});
+
 export const certificationSchema = z.object({
   recommendation: z.string().trim().min(10).max(5000),
 });
@@ -110,3 +115,30 @@ export const admDevicesQuerySchema = paginationQuerySchema().extend({
 export const admMyCasesQuerySchema = paginationQuerySchema().extend({
   highlight: z.string().trim().max(120).optional(),
 });
+
+/** Adviser-pasted module upload link (Google Drive / any https URL). */
+const submissionUrlSchema = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine(
+    (value) => value === "" || /^https?:\/\//i.test(value),
+    "Upload link must start with http:// or https://",
+  );
+
+const admModuleFields = {
+  moduleName: z.string().trim().min(1).max(120).optional(),
+  releaseDate: z.string().datetime().nullable().optional(),
+  dueDate: z.string().datetime().nullable().optional(),
+  submissionUrl: submissionUrlSchema.nullable().optional(),
+  studentSubmissionUrl: submissionUrlSchema.nullable().optional(),
+  remarks: z.string().trim().max(1000).nullable().optional(),
+  submitted: z.boolean().optional(),
+};
+
+export const admModuleCreateSchema = z.object({
+  ...admModuleFields,
+  moduleName: z.string().trim().min(1).max(120),
+});
+
+export const admModuleUpdateSchema = z.object(admModuleFields);

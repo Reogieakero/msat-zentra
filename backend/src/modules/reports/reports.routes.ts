@@ -22,6 +22,10 @@ router.get(
       scope: z.enum(["school", "grade", "section"]).optional(),
       gradeLevel: z.string().trim().max(20).optional(),
       sectionId: z.string().trim().max(120).optional(),
+      // Principal reports may be steered to another term/school year from the
+      // page's scope picker; both default to the server-resolved active scope.
+      termId: z.string().trim().max(120).optional(),
+      schoolYearId: z.string().trim().max(120).optional(),
     }),
   ),
   cache({ ttl: CACHE_TTLS.semiStatic, tags: [CACHE_TAGS.reports, "principal"] }),
@@ -36,13 +40,21 @@ router.get(
         typeof req.query.gradeLevel === "string" ? req.query.gradeLevel : undefined;
       const sectionId =
         typeof req.query.sectionId === "string" ? req.query.sectionId : undefined;
+      // Explicit picker selection wins; otherwise fall back to the active
+      // school year + current term resolved by the term-scope middleware.
+      const termId =
+        typeof req.query.termId === "string" ? req.query.termId : (req.termScope?.termId ?? null);
+      const schoolYearId =
+        typeof req.query.schoolYearId === "string"
+          ? req.query.schoolYearId
+          : (req.termScope?.schoolYearId ?? null);
 
       const payload = await getReports({
         scope,
         gradeLevel,
         sectionId,
-        schoolYearId: req.termScope?.schoolYearId ?? null,
-        termId: req.termScope?.termId ?? null,
+        schoolYearId,
+        termId,
       });
       res.json(payload);
     } catch (e) {

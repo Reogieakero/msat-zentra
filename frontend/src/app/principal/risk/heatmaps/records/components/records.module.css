@@ -10,14 +10,32 @@
   background-color: var(--background);
 }
 
-/* Heatblocks fill the desk; the breakdown lives in the icon-only rail on the
-   right (same interaction as the principal overview). */
+/* Record boards fill the desk; the icon rail anchors the right edge and its
+   folder flyout opens leftwards as a kanban board. */
 .topRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 2.75rem;
   gap: 1rem;
   align-items: start;
   min-width: 0;
+  animation: page-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topRow {
+    animation: none;
+  }
 }
 
 .topRow > * {

@@ -20,6 +20,9 @@ export interface HonorRollCandidate {
 
   band: DescriptorBand;
 
+  /** Stored mascot from the adviser roster, or the canonical hash pick. */
+  mascot: string | null;
+
   status: AwardStatus;
 
   unlockedSubjects?: number;
@@ -40,6 +43,7 @@ export interface LiveHonorCandidateDTO {
   gradeLevel: number;
   generalAverage: number;
   lowestSubject: number;
+  mascot?: string | null;
   subjects: LiveHonorSubjectDTO[];
 }
 

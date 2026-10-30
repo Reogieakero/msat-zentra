@@ -50,8 +50,10 @@ router.get(
   etag(),
   async (req, res, next) => {
     try {
-      // Real-time unified: ?gradeMode accepted but ignored.
-      const board = await getRiskBoard(undefined, req.termScope ?? undefined);
+      // Real-time unified: ?gradeMode accepted but ignored. ?scope=adm limits
+      // the board to learners with an ADM case (principal ADM desk).
+      const admOnly = req.query.scope === "adm";
+      const board = await getRiskBoard(undefined, req.termScope ?? undefined, admOnly);
       res.json(board);
     } catch (e) {
       next(e);
@@ -310,6 +312,8 @@ router.get(
           sort,
           includeRecovered: true,
           fullCohort: true,
+          // Principal desk: only adviser-shared learners.
+          sharedOnly: true,
           page,
           pageSize,
         },

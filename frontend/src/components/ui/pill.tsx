@@ -9,7 +9,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type PillTone = "neutral" | "amber" | "red" | "green" | "blue" | "violet";
+export type PillTone =
+  | "neutral"
+  | "amber"
+  | "red"
+  | "green"
+  | "blue"
+  | "violet"
+  | "teal"
+  | "indigo"
+  | "rose"
+  | "sky";
 
 const TONES: Record<PillTone, string> = {
   /* Plain grey chip — identity values such as LRN / section name. */
@@ -19,6 +29,10 @@ const TONES: Record<PillTone, string> = {
   green: "bg-green-500/20 text-green-700 dark:text-green-400",
   blue: "bg-blue-500/20 text-blue-700 dark:text-blue-400",
   violet: "bg-violet-500/20 text-violet-700 dark:text-violet-400",
+  teal: "bg-teal-500/20 text-teal-700 dark:text-teal-400",
+  indigo: "bg-indigo-500/20 text-indigo-700 dark:text-indigo-400",
+  rose: "bg-rose-500/20 text-rose-700 dark:text-rose-400",
+  sky: "bg-sky-500/20 text-sky-700 dark:text-sky-400",
 };
 
 /**

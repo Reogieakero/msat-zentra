@@ -49,6 +49,8 @@ export interface AnecdotalRecordKanbanCardProps {
   plainName?: boolean;
   /** Seed for the student's mascot; renders the mascot when provided. */
   mascotSeed?: string;
+  /** Mascot sprite assigned to the student in their profile (takes precedence). */
+  mascotCharacter?: string;
   fileName: string;
   fileTag: string;
   /** Right side of the card title — e.g. the green Signed pill. */
@@ -59,6 +61,10 @@ export interface AnecdotalRecordKanbanCardProps {
   folderColor?: string;
   /** Folder alignment inside the card. Defaults to centered. */
   folderAlign?: "center" | "start";
+  /** Identity + folder side by side instead of stacked. Defaults to vertical. */
+  layout?: "vertical" | "horizontal" | "folder-left";
+  /** Mascot sprite size in px. Defaults to 28 (44 in the folder-left layout). */
+  mascotSize?: number;
   /** File tone override. Defaults to the category map. */
   tone?: 1 | 2 | 3 | 4 | 5;
   /** Accessible label for the open button. */
@@ -83,18 +89,48 @@ export function AnecdotalRecordKanbanCard({
   lrn,
   plainName = false,
   mascotSeed,
+  mascotCharacter,
   fileName,
   fileTag,
   headerRight,
   categoryColor,
   folderColor,
   folderAlign = "center",
+  layout = "vertical",
+  mascotSize,
   tone,
   openLabel,
   onOpen,
 }: AnecdotalRecordKanbanCardProps) {
+  const horizontal = layout === "horizontal";
+  const folderLeft = layout === "folder-left";
   const iconColor =
     categoryColor ?? ANECDOTAL_CATEGORY_COLORS[category] ?? "var(--muted-foreground)";
+  const spriteSize = mascotSize ?? (folderLeft ? 44 : 28);
+  const folderNode = (
+    <span
+      className={
+        folderLeft
+          ? "w-[112px] shrink-0"
+          : horizontal
+            ? "w-[120px]"
+            : "w-full max-w-[220px]"
+      }
+    >
+      <FolderCard
+        label=""
+        folderColor={folderColor ?? ANECDOTAL_CATEGORY_COLORS[category]}
+        files={[
+          {
+            name: fileName,
+            tag: fileTag,
+            tone: tone ?? ANECDOTAL_CATEGORY_TONES[category] ?? 1,
+            icon: "doc",
+          },
+        ]}
+      />
+    </span>
+  );
   return (
     <button
       type="button"
@@ -109,10 +145,30 @@ export function AnecdotalRecordKanbanCard({
         </span>
         {headerRight ?? null}
       </span>
-      <span className="flex min-w-0 flex-col gap-2 rounded-lg border bg-white p-3 shadow-sm dark:bg-card">
-        <span className="flex min-w-0 items-center gap-1.5">
+      <span
+        className={
+          folderLeft
+            ? "flex min-w-0 flex-row items-center gap-3 rounded-lg border bg-white p-3 shadow-sm dark:bg-card"
+            : horizontal
+              ? "flex min-w-0 flex-row items-center gap-3 rounded-lg border bg-white p-3 shadow-sm dark:bg-card"
+              : "flex min-w-0 flex-col gap-2 rounded-lg border bg-white p-3 shadow-sm dark:bg-card"
+        }
+      >
+        {folderLeft ? folderNode : null}
+        <span
+          className={
+            horizontal || folderLeft
+              ? "flex min-w-0 flex-1 items-center gap-1.5"
+              : "flex min-w-0 items-center gap-1.5"
+          }
+        >
           {mascotSeed ? (
-            <StudentMascot name={studentName} seed={mascotSeed} size={28} />
+            <StudentMascot
+              name={studentName}
+              seed={mascotSeed}
+              character={mascotCharacter}
+              size={spriteSize}
+            />
           ) : null}
           <span
             className={
@@ -157,24 +213,17 @@ export function AnecdotalRecordKanbanCard({
             </span>
           </span>
         </span>
-        <span
-          className={`flex w-full ${folderAlign === "start" ? "justify-start" : "justify-center"}`}
-        >
-          <span className="w-full max-w-[220px]">
-            <FolderCard
-              label=""
-              folderColor={folderColor ?? ANECDOTAL_CATEGORY_COLORS[category]}
-              files={[
-                {
-                  name: fileName,
-                  tag: fileTag,
-                  tone: tone ?? ANECDOTAL_CATEGORY_TONES[category] ?? 1,
-                  icon: "doc",
-                },
-              ]}
-            />
+        {folderLeft ? null : (
+          <span
+            className={
+              horizontal
+                ? "flex shrink-0 justify-center"
+                : `flex w-full ${folderAlign === "start" ? "justify-start" : "justify-center"}`
+            }
+          >
+            {folderNode}
           </span>
-        </span>
+        )}
       </span>
     </button>
   );

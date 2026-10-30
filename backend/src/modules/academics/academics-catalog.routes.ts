@@ -100,6 +100,26 @@ router.get(
 
       const linkCounts = await sectionLinkCounts(sections.map((s) => s.id));
 
+      // Claim timestamp comes from the audit trail (the Section row has no
+      // claimedAt column). Latest claim wins; release/re-claim starts a new one.
+      const claimedIds = sections.filter((s) => s.adviserId).map((s) => s.id);
+      const claimRows = claimedIds.length
+        ? await prisma.auditLog.findMany({
+            where: {
+              sourceTable: "sections",
+              sourceId: { in: claimedIds },
+              actionType: "update",
+              reason: { startsWith: "Teacher claimed advisory section" },
+            },
+            orderBy: { createdAt: "desc" },
+            select: { sourceId: true, createdAt: true },
+          })
+        : [];
+      const claimedAt = new Map<string, Date>();
+      for (const row of claimRows) {
+        if (!claimedAt.has(row.sourceId)) claimedAt.set(row.sourceId, row.createdAt);
+      }
+
       res.json({
         sections: sections.map((s) => ({
           id: s.id,
@@ -111,6 +131,7 @@ router.get(
           adviserName: s.adviser?.fullName ?? (s as { adviserLabel?: string | null }).adviserLabel ?? "",
           adviserLabel: (s as { adviserLabel?: string | null }).adviserLabel ?? "",
           adviserCode: (s as { adviserCode?: string | null }).adviserCode ?? "",
+          adviserClaimedAt: claimedAt.get(s.id)?.toISOString() ?? null,
           studentCount: linkCounts.get(s.id)?.students ?? 0,
           recordCount: linkCounts.get(s.id)?.records ?? 0,
           assignments: s.teacherAssignments.map((a) => ({

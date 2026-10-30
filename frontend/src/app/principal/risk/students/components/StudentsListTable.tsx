@@ -4,15 +4,12 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getCoreRowModel,
-  getSortedRowModel,
   useReactTable,
   flexRender,
   type ColumnDef,
-  type SortingState,
 } from "@tanstack/react-table";
 import {
   Search,
-  ChevronDown,
   ShieldCheck,
 } from "lucide-react";
 import { PrincipalEmptyState } from "../../../components/PrincipalEmptyCard";
@@ -24,18 +21,9 @@ import { Pill } from "@/components/ui/pill";
 import { riskTone } from "@/lib/labels/status-tone";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
   Table,
-  TableHeader,
   TableBody,
   TableRow,
-  TableHead,
   TableCell,
 } from "@/components/ui/table";
 import { FACTOR_LABELS, type BackendStudent, type RiskFactor, type RiskLevelKey } from "@/services/principal/riskStudents.types";
@@ -67,7 +55,6 @@ export function StudentsListTable({
     "zentra.risk.students.risk",
     "all"
   );
-  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [page, setPage] = React.useState(1);
   const debouncedQuery = useDebouncedValue(query, 300);
 
@@ -142,9 +129,9 @@ export function StudentsListTable({
         id: "name",
         accessorFn: (row) => row.name,
         header: "Student",
-        size: 220,
-        minSize: 220,
-        maxSize: 220,
+        size: 280,
+        minSize: 280,
+        maxSize: 280,
         cell: ({ row }) => (
           <div className={styles.studentCell}>
             <StudentMascot
@@ -153,21 +140,13 @@ export function StudentsListTable({
               character={row.original.mascot ?? undefined}
               size={30}
             />
-            <span className={styles.studentName}>{row.original.name}</span>
+            <span className={styles.studentMeta}>
+              <span className={styles.studentName}>{row.original.name}</span>
+              <Pill tone="neutral" label="LRN" className={styles.lrnPill}>
+                {row.original.lrn}
+              </Pill>
+            </span>
           </div>
-        ),
-      },
-      {
-        id: "lrn",
-        accessorFn: (row) => row.lrn,
-        header: "LRN",
-        size: 150,
-        minSize: 150,
-        maxSize: 150,
-        cell: ({ row }) => (
-          <Pill tone="neutral" label="LRN">
-            {row.original.lrn}
-          </Pill>
         ),
       },
       {
@@ -227,10 +206,7 @@ export function StudentsListTable({
     data: students,
     columns,
     getRowId: (row) => row.studentId,
-    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    state: { sorting },
   });
 
   const rows = table.getRowModel().rows;
@@ -240,22 +216,15 @@ export function StudentsListTable({
     <KanbanBoard
       title="At-Risk Students"
       icon={<ShieldCheck size={14} aria-hidden="true" />}
-      count={showSkeleton ? undefined : total}
-      description={
-        selectedSection === "all"
-          ? showSkeleton
-            ? "All at-risk learners across every section — …"
-            : `All at-risk learners across every section — ${total} student${total === 1 ? "" : "s"}.`
-          : showSkeleton
-            ? `At-risk learners in ${selectedSection} — …`
-            : `At-risk learners in ${selectedSection} — ${total} student${total === 1 ? "" : "s"}.`
-      }
       actions={
         <>
+          <Pill tone="green" label="Data source">
+            Adviser-shared
+          </Pill>
           <div className={styles.searchWrap}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
-              className={styles.search}
+              className={`${styles.search} rounded-[16px]`}
               style={{ height: "2rem" }}
               placeholder="Search name or LRN…"
               value={query}
@@ -263,43 +232,31 @@ export function StudentsListTable({
               aria-label="Search at-risk students"
             />
           </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                style={{ height: "2rem" }}
-                aria-label={`Filter students by risk level, currently showing: ${riskFilter === "all" ? "All levels" : riskFilter}`}
-                className={`${styles.filterBtn} ${
-                  riskFilter !== "all" ? styles.filterActive : ""
-                }`}
-              >
-                {riskFilter === "all" ? "Risk" : riskFilter}
-                {riskFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={riskFilter === "all"}
-                onCheckedChange={() => applyRisk("all")}
-              >
-                All levels
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {(["High", "Moderate", "Low"] as RiskLevelKey[]).map((lvl) => (
-                <DropdownMenuCheckboxItem
-                  key={lvl}
-                  checked={riskFilter === lvl}
-                  onCheckedChange={() => applyRisk(lvl)}
-                >
-                  {lvl}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </>
+      }
+      headerCenter={
+        <div className={styles.filterRow} role="group" aria-label="Filter by risk level">
+          {([
+            { value: "all" as const, label: "All levels" },
+            { value: "High" as const, label: "High risk" },
+            { value: "Moderate" as const, label: "Moderate risk" },
+          ]).map((option) => {
+            const active = riskFilter === option.value;
+            return (
+              <button
+                key={option.label}
+                type="button"
+                onClick={() => applyRisk(option.value)}
+                aria-pressed={active}
+                className={styles.filterButton}
+              >
+                <Pill tone={active ? "blue" : "neutral"} className={styles.filterPill}>
+                  {option.label}
+                </Pill>
+              </button>
+            );
+          })}
+        </div>
       }
       footer={
         <Pagination
@@ -315,15 +272,6 @@ export function StudentsListTable({
           {showSkeleton ? (
             <div className={styles.tableWrap} aria-label="Loading students for selected section" aria-busy="true">
               <Table aria-label="At-risk students">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>LRN</TableHead>
-                    <TableHead>Section</TableHead>
-                    <TableHead>Risk</TableHead>
-                    <TableHead>Factors</TableHead>
-                  </TableRow>
-                </TableHeader>
                 <TableBody>
                   <SkeletonRows />
                 </TableBody>
@@ -357,27 +305,13 @@ export function StudentsListTable({
           ) : (
             <div className={styles.tableWrap}>
               <Table aria-label="At-risk students" className="w-full table-fixed">
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
-                      {headerGroup.headers.map((header) => (
-                        <TableHead
-                          key={header.id}
-                          style={{ width: header.getSize() }}
-                          onClick={header.column.getToggleSortingHandler()}
-                          className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
                 <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.id}>
+                  {rows.map((row, index) => (
+                    <TableRow
+                      key={row.id}
+                      className={styles.rowIn}
+                      style={{ animationDelay: `${60 + Math.min(index, 11) * 45}ms` }}
+                    >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
@@ -407,11 +341,11 @@ function SkeletonRows() {
           <TableCell>
             <div className={styles.studentCell}>
               <span className={styles.skelAvatar} />
-              <span className={styles.skelName} />
+              <span className={styles.studentMeta}>
+                <span className={styles.skelName} />
+                <span className={styles.skelLrn} />
+              </span>
             </div>
-          </TableCell>
-          <TableCell>
-            <span className={styles.skelChip} />
           </TableCell>
           <TableCell>
             <span className={styles.skelChip} />

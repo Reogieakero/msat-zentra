@@ -5,6 +5,7 @@ import {
   evaluateRosterRisk,
   levelFromFlags,
   resolveActiveTermId,
+  sectionAttendanceTotals,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import type { Request } from "express";
@@ -94,6 +95,7 @@ export async function getBatchLevels(
         ),
       ];
       const pHeadcounts = await sectionHeadcounts(pSectionIds);
+      const pTotals = await sectionAttendanceTotals(pSectionIds, termId);
       for (const pr of profileRows) {
         const enrolled = pHeadcounts.get(pr.section?.id ?? "") ?? 0;
         const flags = computeRiskFactors({
@@ -102,6 +104,7 @@ export async function getBatchLevels(
             status: a.status,
             subjectId: a.subjectId,
           })),
+          attendanceTotal: pTotals.get(pr.section?.id ?? ""),
           anecdotalCount: pr.anecdotalRecords.length,
           enrolled,
         });
@@ -151,12 +154,15 @@ export async function getBatchLevels(
       for (const g of anecdotalGroups) {
         if (g.rosterId) anecBy.set(g.rosterId, g._count._all);
       }
+      const rosterSectionIds = [...new Set(rosterSection.values())];
+      const rosterTotals = await sectionAttendanceTotals(rosterSectionIds, termId);
       for (const rid of rosterIds) {
         const sectionId = rosterSection.get(rid);
         const enrolled = sectionId ? (headcounts.get(sectionId) ?? 0) : 0;
         const flags = computeRiskFactors({
           finalGrades: gradesBy.get(rid) ?? [],
           attendance: attBy.get(rid) ?? [],
+          attendanceTotal: sectionId ? rosterTotals.get(sectionId) : undefined,
           anecdotalCount: anecBy.get(rid) ?? 0,
           enrolled,
         });

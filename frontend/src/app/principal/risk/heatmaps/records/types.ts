@@ -28,6 +28,8 @@ export interface AcademicRecord {
 export interface RecordStudent {
   lrn: string;
   name: string;
+  /** Mascot picked in the student's (adviser-managed) profile, if any. */
+  mascot?: string | null;
   status: StudentStatus;
   gradeLevel: string;
   section: string;

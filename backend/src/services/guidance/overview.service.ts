@@ -4,6 +4,7 @@ import {
   computeRiskFactors,
   isAtRisk,
   levelFromFlags,
+  sectionAttendanceTotals,
 } from "../risk.js";
 import {
   ADM_LABEL,
@@ -304,6 +305,9 @@ export async function getOverview(ctx: GuidanceContext) {
   ]);
 
   const headcounts = await sectionHeadcounts(sectionPopulations.map((s) => s.id));
+  const sectionTotals = termId
+    ? await sectionAttendanceTotals(sectionPopulations.map((s) => s.id), termId)
+    : new Map<string, number>();
 
   const registeredLrns = new Set(students.map((s) => s.lrn));
   const riskCohort: {
@@ -349,6 +353,7 @@ export async function getOverview(ctx: GuidanceContext) {
     const flags = computeRiskFactors({
       finalGrades: s.finalGrades,
       attendance: s.attendanceRecords,
+      attendanceTotal: sectionTotals.get(s.sectionId),
       anecdotalCount: s.anecdotalCount,
       enrolled: headcounts.get(s.sectionId) ?? s.enrolledFallback,
     });

@@ -7,6 +7,7 @@ export const TEACHER_QUERY_KEYS = [
   ["teacher-overview-secondary"],
   ["teacher-student-list"],
   ["advisory-students"],
+  ["advisory-modules"],
   ["teacher-sf10-access"],
   ["advisee-academic"],
   ["advisee-attendance"],
@@ -72,6 +73,7 @@ export const TEACHER_SCOPE_KEYS = {
   referrals: [["myReferrals"], ["referableAnecdotal"]],
   advisory: [
     ["advisory-students"],
+    ["advisory-modules"],
     ["teacher-sf10-access"],
     ["advisee-academic"],
     ["advisee-attendance"],

@@ -136,7 +136,6 @@ export default function PrincipalAssignPage() {
           sections={sections}
           grade={grade}
           onGradeChange={setGrade}
-          schoolYearName={schoolYearName}
           pendingIds={pendingIds}
           busy={boardBusy}
           copiedCode={copiedCode}

@@ -21,8 +21,6 @@ import type {
   AuditRole,
 } from "@/services/principal/audit.types";
 import styles from "./page.module.css";
-import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
-import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
@@ -173,58 +171,47 @@ function PrincipalAuditPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedQuery]);
 
-  const isEmpty = !loading && !error && totalCount === 0 && !hasActiveFilters && query.trim() === "";
-  const headerLoading = loading;
   return (
-    <section className={styles.page} aria-busy={headerLoading || undefined}>
-      {headerLoading ? (
-        <PageHeaderSkeleton />
-      ) : isEmpty ? null : (
-      <PrincipalPageHeader
-        title="Audit Log"
-        description="School-wide record of sensitive actions. Immutable — entries cannot be edited or deleted."
-      />
-      )}
-
+    <section className={styles.page} aria-busy={loading || undefined}>
       <KanbanBoard
-        title="Audit Entries"
+        title="Audit Log"
         icon={<ShieldCheck size={14} aria-hidden="true" />}
         count={totalCount}
         description={
           totalCount === 0
-            ? "No audit entries on record."
-            : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school.`
+            ? "Immutable record of sensitive actions — entries cannot be edited or deleted."
+            : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school. Immutable — entries cannot be edited or deleted.`
         }
-        toolbar={
-            <AuditToolbar
-              actionType={actionType}
-              onActionTypeChange={(v) => {
-                setActionType(v);
-                pager.setFilters({ actionType: v === "all" ? undefined : v });
-              }}
-              actorRole={actorRole}
-              onActorRoleChange={(v) => {
-                setActorRole(v);
-                pager.setFilters({ actorRole: v === "all" ? undefined : v });
-              }}
-              actorScope={actorScope}
-              onActorScopeChange={(v) => {
-                setActorScope(v);
-                pager.setFilters({ scope: v === "all" ? undefined : v });
-              }}
-              sourceTable={sourceTable}
-              onSourceTableChange={(v) => {
-                setSourceTable(v);
-                pager.setFilters({ sourceTable: v === "all" ? undefined : v });
-              }}
-              sourceTables={knownTables}
-              query={query}
-              onQueryChange={(v) => {
-                setQuery(v);
-              }}
-              onExport={handleExport}
-              exporting={exporting}
-            />
+        headerToolbar={
+          <AuditToolbar
+            actionType={actionType}
+            onActionTypeChange={(v) => {
+              setActionType(v);
+              pager.setFilters({ actionType: v === "all" ? undefined : v });
+            }}
+            actorRole={actorRole}
+            onActorRoleChange={(v) => {
+              setActorRole(v);
+              pager.setFilters({ actorRole: v === "all" ? undefined : v });
+            }}
+            actorScope={actorScope}
+            onActorScopeChange={(v) => {
+              setActorScope(v);
+              pager.setFilters({ scope: v === "all" ? undefined : v });
+            }}
+            sourceTable={sourceTable}
+            onSourceTableChange={(v) => {
+              setSourceTable(v);
+              pager.setFilters({ sourceTable: v === "all" ? undefined : v });
+            }}
+            sourceTables={knownTables}
+            query={query}
+            onQueryChange={(v) => {
+              setQuery(v);
+            }}
+            onExport={handleExport}
+            exporting={exporting}
+          />
         }
         footer={
           <Pagination
@@ -235,41 +222,41 @@ function PrincipalAuditPageInner() {
           />
         }
       >
-          {error ? (
-            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-                aria-hidden="true"
-              >
-                <TriangleAlert size={24} className="text-muted-foreground" />
-              </span>
-              <p className="font-medium">Couldn&apos;t load the audit log</p>
-              <p className="max-w-sm text-sm text-muted-foreground">{error}</p>
-              <Button variant="outline" size="sm" onClick={handleRetry}>
-                Retry
-              </Button>
-            </div>
-          ) : loading ? (
-            <div className="relative overflow-x-auto rounded-md border">
-              <AuditSkeleton rows={PAGE_SIZE} />
-            </div>
-          ) : entries.length === 0 ? (
-            <PrincipalEmptyState
-              icon={ShieldCheck}
-              title="No audit entries"
-              hint={
-                query.trim()
-                  ? `No audit entries match "${query}".`
-                  : hasActiveFilters
-                    ? "No audit entries match the selected filters."
-                    : "Sensitive actions will appear here once recorded."
-              }
-            />
-          ) : (
-            <div className="relative">
-              <AuditTable entries={entries} />
-            </div>
-          )}
+        {error ? (
+          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+              aria-hidden="true"
+            >
+              <TriangleAlert size={24} className="text-muted-foreground" />
+            </span>
+            <p className="font-medium">Couldn&apos;t load the audit log</p>
+            <p className="max-w-sm text-sm text-muted-foreground">{error}</p>
+            <Button variant="outline" size="sm" onClick={handleRetry}>
+              Retry
+            </Button>
+          </div>
+        ) : loading ? (
+          <div className="relative overflow-x-auto rounded-md border">
+            <AuditSkeleton rows={PAGE_SIZE} />
+          </div>
+        ) : entries.length === 0 ? (
+          <PrincipalEmptyState
+            icon={ShieldCheck}
+            title="No audit entries"
+            hint={
+              query.trim()
+                ? `No audit entries match "${query}".`
+                : hasActiveFilters
+                  ? "No audit entries match the selected filters."
+                  : "Sensitive actions will appear here once recorded."
+            }
+          />
+        ) : (
+          <div className="relative">
+            <AuditTable entries={entries} />
+          </div>
+        )}
       </KanbanBoard>
     </section>
   );

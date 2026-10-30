@@ -14,6 +14,9 @@ export interface StudentListRow {
   computedAverage: number | null;
 
   academicGrade: number | null;
+
+  /** Anecdotal records filed for this learner in the active term. */
+  anecdotalCount: number;
 }
 
 export interface StudentListClass {
@@ -61,5 +64,6 @@ export interface StudentListResponse {
   advisorySections: AdvisorySectionItem[];
   class: StudentListClass | null;
   advisorySection: AdvisorySectionInfo | null;
+  anecdotalVisible: boolean;
   students: StudentListRow[];
 }

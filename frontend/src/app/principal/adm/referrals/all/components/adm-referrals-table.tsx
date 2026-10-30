@@ -1,33 +1,18 @@
 "use client";
+
 import * as React from "react";
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  flexRender,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type SortingState,
-} from "@tanstack/react-table";
-import {
-  ShieldCheck,
-  Check,
-  ArrowLeftRight,
-  FolderOpen,
-} from "lucide-react";
+import { ArrowLeftRight, Check, FolderOpen, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
-  TableHeader,
   TableBody,
-  TableRow,
-  TableHead,
   TableCell,
+  TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Pill } from "@/components/ui/pill";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import {
   admStageTone,
@@ -36,12 +21,15 @@ import {
 } from "@/lib/labels/status-tone";
 import type { AdmReferralRow } from "@/services/principal/adm.types";
 import {
-  stageLabel,
-  isAwaitingSignature,
   canReturn,
+  isAwaitingSignature,
+  stageLabel,
   type AdmCase,
 } from "../../../adm";
 import styles from "../all.module.css";
+
+export type AdmReferralLaneFilter = "all" | "awaiting" | "returned" | "signed";
+
 function asCase(r: AdmReferralRow): AdmCase {
   return {
     id: r.id,
@@ -62,13 +50,25 @@ function asCase(r: AdmReferralRow): AdmCase {
     forms: r.forms,
   };
 }
-function eligibilityPill(status: AdmReferralRow["eligibilityStatus"]) {
-  return (
-    <Pill tone={eligibilityTone(status)} label="Eligibility">
-      {eligibilityLabel(status)}
-    </Pill>
-  );
+
+export function matchesLane(row: AdmReferralRow, lane: AdmReferralLaneFilter) {
+  if (lane === "returned") return row.returnedAt !== null;
+  if (lane === "signed") return row.approvedBy !== null;
+  if (lane === "awaiting")
+    return row.approvedBy === null && row.returnedAt === null;
+  return true;
 }
+
+const COLUMNS = [
+  "Student",
+  "Stage",
+  "Eligibility",
+  "Status",
+  "Forms",
+  "Dates",
+  "Actions",
+];
+
 export function AdmReferralsTable({
   rows,
   totalCount,
@@ -76,10 +76,12 @@ export function AdmReferralsTable({
   isFetching = false,
   error,
   search,
+  laneFilter,
   actionId,
   onRequestSign,
   onRequestReturn,
   onViewForms,
+  onRetry,
 }: {
   rows: AdmReferralRow[];
   totalCount: number;
@@ -87,222 +89,32 @@ export function AdmReferralsTable({
   isFetching?: boolean;
   error: string | null;
   search: string;
+  laneFilter: AdmReferralLaneFilter;
   actionId: string | null;
   onRequestSign: (id: string) => void;
   onRequestReturn: (id: string) => void;
   onViewForms: (row: AdmReferralRow) => void;
+  onRetry: () => void;
 }) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] =
-    React.useState<ColumnFiltersState>([]);
-  const columns = React.useMemo<ColumnDef<AdmReferralRow>[]>(
-    () => [
-      {
-        id: "student",
-        accessorFn: (row) => row.student,
-        header: "Student",
-        size: 220,
-        minSize: 220,
-        maxSize: 220,
-        cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className={styles.cellMain}>{row.original.student}</p>
-            <p className={styles.cellSub}>
-              {row.original.lrn}
-              {row.original.section ? ` · ${row.original.section}` : ""}
-            </p>
-          </div>
-        ),
-      },
-      {
-        id: "grade",
-        accessorFn: (row) => row.grade,
-        header: "Grade",
-        size: 80,
-        minSize: 80,
-        maxSize: 80,
-        cell: ({ row }) => (
-          <span className={styles.muted}>{row.original.grade}</span>
-        ),
-      },
-      {
-        id: "stage",
-        accessorFn: (row) => stageLabel(row.stage),
-        header: "Stage",
-        size: 170,
-        minSize: 170,
-        maxSize: 170,
-        cell: ({ row }) => (
-          <Pill tone={admStageTone(row.original.stage)} label="ADM stage">
-            {stageLabel(row.original.stage)}
-          </Pill>
-        ),
-      },
-      {
-        id: "eligibility",
-        accessorFn: (row) => row.eligibilityStatus,
-        header: "Eligibility",
-        size: 130,
-        minSize: 130,
-        maxSize: 130,
-        cell: ({ row }) => eligibilityPill(row.original.eligibilityStatus),
-      },
-      {
-        id: "approval",
-        accessorFn: (row) =>
-          isAwaitingSignature(asCase(row))
-            ? "0-awaiting"
-            : row.approvedBy
-              ? "2-signed"
-              : "1-pending",
-        header: "Approval",
-        size: 180,
-        minSize: 180,
-        maxSize: 180,
-        cell: ({ row }) => {
-          const r = row.original;
-          const awaiting = isAwaitingSignature(asCase(r));
-          if (awaiting) {
-            return (
-              <span className={styles.actionBtns}>
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label={`Sign and approve case for ${r.student}`}
-                  title="Sign & approve"
-                  disabled={actionId !== null}
-                  aria-busy={actionId === r.id}
-                  onClick={() => onRequestSign(r.id)}
-                >
-                  {actionId === r.id ? (
-                    <Spinner aria-hidden />
-                  ) : (
-                    <Check aria-hidden />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Return case for ${r.student} for revision`}
-                  title="Return for revision"
-                  disabled={actionId !== null}
-                  onClick={() => onRequestReturn(r.id)}
-                >
-                  <ArrowLeftRight aria-hidden />
-                </Button>
-              </span>
-            );
-          }
-          if (r.approvedBy) {
-            return (
-              <Pill tone="green" label="Principal approval">
-                Signed
-              </Pill>
-            );
-          }
-          return (
-            <span className={styles.actionBtns}>
-              <span className={styles.approvalPending}>Awaiting signature</span>
-              {canReturn(asCase(r)) ? (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Return case for ${r.student} for revision`}
-                  title="Return for revision"
-                  onClick={() => onRequestReturn(r.id)}
-                >
-                  <ArrowLeftRight aria-hidden />
-                </Button>
-              ) : null}
-            </span>
-          );
-        },
-      },
-      {
-        id: "forms",
-        accessorFn: (row) => row.forms?.length ?? 0,
-        header: "Forms",
-        size: 140,
-        minSize: 140,
-        maxSize: 140,
-        cell: ({ row }) => {
-          const r = row.original;
-          const count = r.forms?.length ?? 0;
-          if (count === 0)
-            return <span className={styles.noForms}>No forms</span>;
-          return (
-            <Button
-              variant="outline"
-              size="sm"
-              className={styles.formsBtn}
-              aria-label={`View ${count} linked form${count === 1 ? "" : "s"} for ${r.student}`}
-              title={`${count} linked form${count === 1 ? "" : "s"}`}
-              onClick={() => onViewForms(r)}
-            >
-              <FolderOpen aria-hidden />
-              {count}
-            </Button>
-          );
-        },
-      },
-      {
-        id: "date",
-        accessorFn: (row) => row.approvalDate ?? row.datePrepared,
-        header: "Date",
-        size: 120,
-        minSize: 120,
-        maxSize: 120,
-        cell: ({ row }) => (
-          <span className={styles.mono}>
-            {row.original.approvalDate ?? row.original.datePrepared}
-          </span>
-        ),
-      },
-    ],
-    [actionId, onRequestSign, onRequestReturn, onViewForms],
+  const visibleRows = React.useMemo(
+    () => rows.filter((row) => matchesLane(row, laneFilter)),
+    [rows, laneFilter],
   );
-  const table = useReactTable({
-    data: rows,
-    columns,
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: { sorting, columnFilters },
-  });
+
   if (loading) {
     return (
       <div className="relative overflow-x-auto rounded-md border">
-        <Table className="w-full table-fixed" aria-label="Loading referral cases">
-          <TableHeader>
-            <TableRow className="bg-muted/50 [&>th]:border-t-0">
-              {[
-                "Student",
-                "Grade",
-                "Stage",
-                "Eligibility",
-                "Approval",
-                "Forms",
-                "Date",
-              ].map((h) => (
-                <TableHead key={h} className="h-10 whitespace-nowrap">
-                  {h}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
+        <Table className="w-full" aria-label="Loading referral cases">
           <TableBody>
-            {Array.from({ length: 10 }).map((_, i) => (
+            {Array.from({ length: 8 }).map((_, i) => (
               <TableRow key={i}>
                 <TableCell>
-                  <Skeleton className={styles.skelName} />
-                  <Skeleton className={styles.skelLrn} />
+                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="mt-1.5 h-3 w-24" />
                 </TableCell>
-                {Array.from({ length: 6 }).map((__, j) => (
+                {Array.from({ length: COLUMNS.length - 1 }).map((__, j) => (
                   <TableCell key={j}>
-                    <Skeleton className={styles.skelCell} />
+                    <Skeleton className="h-3 w-16" />
                   </TableCell>
                 ))}
               </TableRow>
@@ -312,13 +124,18 @@ export function AdmReferralsTable({
       </div>
     );
   }
+
   if (error) {
     return (
-      <p className={styles.empty} role="alert">
-        {error}
-      </p>
+      <div className="flex flex-col items-center gap-3 py-10" role="alert">
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          Try again
+        </Button>
+      </div>
     );
   }
+
   if (totalCount === 0) {
     return (
       <PrincipalEmptyState
@@ -332,59 +149,163 @@ export function AdmReferralsTable({
       />
     );
   }
+
   return (
-    <>
-      <div className="relative overflow-x-auto rounded-md border" aria-busy={isFetching || undefined}>
-        <Table className="w-full table-fixed" aria-label="ADM referral cases">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow
-                key={headerGroup.id}
-                className="bg-muted/50 [&>th]:border-t-0"
+    <div
+      className="relative overflow-x-auto rounded-md border"
+      aria-busy={isFetching || undefined}
+    >
+      <Table className="w-full" aria-label="ADM referral cases">
+        <TableBody>
+          {visibleRows.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={COLUMNS.length}
+                className="h-24 text-center text-sm text-muted-foreground"
               >
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={{ width: header.getSize() }}
-                    onClick={header.column.getToggleSortingHandler()}
-                    className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+                No cases in this lane on this page.
+              </TableCell>
+            </TableRow>
+          ) : (
+            visibleRows.map((row) => {
+              const awaiting = isAwaitingSignature(asCase(row));
+              const returned = row.returnedAt !== null;
+              const signed = row.approvedBy !== null;
+              const formCount = row.forms?.length ?? 0;
+              const busy = actionId === row.id;
+              const locked = actionId !== null;
+              return (
                 <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{ width: cell.column.getSize() }}
-                      className="truncate"
+                  <TableCell className="min-w-56">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <StudentMascot name={row.student} seed={row.lrn} size={32} />
+                      <div className="flex min-w-0 flex-col items-start gap-1">
+                        <p className="max-w-full truncate text-sm font-medium">
+                          {row.student}
+                        </p>
+                        <span className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
+                          <Pill label="LRN" className="tabular-nums">
+                            {row.lrn}
+                          </Pill>
+                          {row.section ? (
+                            <Pill tone="amber" label="Section">
+                              {row.section}
+                            </Pill>
+                          ) : null}
+                          <Pill label="Grade">{row.grade}</Pill>
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Pill
+                      tone={admStageTone(row.stage)}
+                      label="ADM stage"
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                      {stageLabel(row.stage)}
+                    </Pill>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Pill
+                      tone={eligibilityTone(row.eligibilityStatus)}
+                      label="Eligibility"
+                    >
+                      {eligibilityLabel(row.eligibilityStatus)}
+                    </Pill>
+                  </TableCell>
+                  <TableCell className="max-w-64 min-w-52">
+                    {returned ? (
+                      <div className="min-w-0">
+                        <Pill tone="red" label="Approval state">
+                          Returned
+                        </Pill>
+                        <p
+                          className="mt-1 line-clamp-2 text-xs text-destructive"
+                          title={row.returnReason ?? undefined}
+                        >
+                          {row.returnReason ?? "No reason recorded."}
+                        </p>
+                      </div>
+                    ) : signed ? (
+                      <Pill tone="green" label="Principal approval">
+                        Signed
+                      </Pill>
+                    ) : (
+                      <Pill tone="amber" label="Approval state">
+                        Awaiting
+                      </Pill>
+                    )}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {formCount === 0 ? (
+                      <span className={styles.noForms}>No forms</span>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[11px] [&_svg]:size-3"
+                        aria-label={`View ${formCount} linked form${formCount === 1 ? "" : "s"} for ${row.student}`}
+                        title={`${formCount} linked form${formCount === 1 ? "" : "s"}`}
+                        onClick={() => onViewForms(row)}
+                      >
+                        <FolderOpen aria-hidden />
+                        {formCount}
+                      </Button>
+                    )}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-xs text-muted-foreground tabular-nums">
+                    <span className="block">Prepared {row.datePrepared}</span>
+                    {row.approvalDate ? (
+                      <span className="block">Signed {row.approvalDate}</span>
+                    ) : null}
+                    {returned ? (
+                      <span className="block text-destructive">
+                        Returned {row.returnedAt}
+                      </span>
+                    ) : null}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <span className="flex items-center gap-1">
+                      {awaiting ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[11px] [&_svg]:size-3"
+                          aria-label={`Sign and approve case for ${row.student}`}
+                          title="Sign & approve"
+                          disabled={locked}
+                          aria-busy={busy || undefined}
+                          onClick={() => onRequestSign(row.id)}
+                        >
+                          {busy ? <Spinner aria-hidden /> : <Check aria-hidden />}
+                          Sign
+                        </Button>
+                      ) : null}
+                      {canReturn(asCase(row)) && !returned ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-[11px] [&_svg]:size-3"
+                          aria-label={`Return case for ${row.student} for revision`}
+                          title="Return for revision"
+                          disabled={locked}
+                          onClick={() => onRequestReturn(row.id)}
+                        >
+                          <ArrowLeftRight aria-hidden />
+                          Return
+                        </Button>
+                      ) : null}
+                      {!awaiting && (!canReturn(asCase(row)) || returned) ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : null}
+                    </span>
+                  </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No referrals match your search.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

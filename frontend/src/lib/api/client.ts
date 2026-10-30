@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from "axios";
-import { decodeTokenIdentity, isTeacherRole } from "@/lib/auth/roles";
+import { decodeTokenIdentity, canSteerTermRole } from "@/lib/auth/roles";
 import { clearTermStorage, readStoredTerm, type StoredTerm } from "@/lib/term/termStorage";
 
 export const apiClient: AxiosInstance = axios.create({
@@ -14,10 +14,10 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  // Only teacher roles carry a term. Every other desk is scoped server-side,
-  // so its requests must never send term/school-year scope headers.
+  // Only term-steering roles (teachers + principal) carry a term. Every other
+  // desk is scoped server-side, so its requests must never send term headers.
   const identity = decodeTokenIdentity(token);
-  if (identity && isTeacherRole(identity.role)) {
+  if (identity && canSteerTermRole(identity.role)) {
     const scope = getActiveTermScope();
     if (scope?.schoolYearId) {
       (config.headers as Record<string, string>)["x-school-year-id"] = scope.schoolYearId;
@@ -69,7 +69,7 @@ export type ActiveTermScope = StoredTerm;
 export function getActiveTermScope(): ActiveTermScope | null {
   if (typeof window === "undefined") return null;
   const identity = decodeTokenIdentity(getAccessToken());
-  if (!identity || !isTeacherRole(identity.role)) return null;
+  if (!identity || !canSteerTermRole(identity.role)) return null;
   return readStoredTerm(identity.sub);
 }
 

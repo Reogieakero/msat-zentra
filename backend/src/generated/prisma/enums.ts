@@ -208,7 +208,8 @@ export const AdmFormType = {
   ANECDOTAL_REPORT: 'ANECDOTAL_REPORT',
   CERTIFICATION: 'CERTIFICATION',
   MINUTES_OF_MEETING: 'MINUTES_OF_MEETING',
-  HV_FORM: 'HV_FORM'
+  HV_FORM: 'HV_FORM',
+  PRINCIPAL_SIGNAGE: 'PRINCIPAL_SIGNAGE'
 } as const
 
 export type AdmFormType = (typeof AdmFormType)[keyof typeof AdmFormType]
@@ -331,3 +332,20 @@ export const AdmFormStatus = {
 } as const
 
 export type AdmFormStatus = (typeof AdmFormStatus)[keyof typeof AdmFormStatus]
+
+
+export const AdvisoryModuleKind = {
+  general: 'general',
+  adm: 'adm'
+} as const
+
+export type AdvisoryModuleKind = (typeof AdvisoryModuleKind)[keyof typeof AdvisoryModuleKind]
+
+
+export const AdvisorySubmissionKind = {
+  link: 'link',
+  file: 'file',
+  physical: 'physical'
+} as const
+
+export type AdvisorySubmissionKind = (typeof AdvisorySubmissionKind)[keyof typeof AdvisorySubmissionKind]

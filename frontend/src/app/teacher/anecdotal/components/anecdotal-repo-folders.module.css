@@ -7,41 +7,6 @@
   overflow: hidden;
 }
 
-.header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.headerText {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.sectionTitle {
-  font-size: 1rem;
-}
-
-.sectionDesc {
-  font-size: 0.8125rem;
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.search {
-  width: 16rem;
-  max-width: 100%;
-}
-
 .filterSelect {
   min-width: 0;
   justify-content: space-between;

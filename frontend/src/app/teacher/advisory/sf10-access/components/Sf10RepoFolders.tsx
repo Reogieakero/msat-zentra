@@ -4,6 +4,7 @@ import * as React from "react";
 import { FileText, FolderOpen } from "lucide-react";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { Input } from "@/components/ui/input";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { StudentMascot } from "../../referrals/components/StudentMascot";
 import type { HasRow } from "@/services/teacher/sf10Access.service";
@@ -105,16 +106,21 @@ export function Sf10RepoFolders({
                 The approved list could not be loaded for this request. Check your connection and try again.
               </p>
             </div>
+          ) : pageRows.length === 0 && needle ? (
+            <div className="flex w-full justify-center px-1 py-10">
+              <InsightCallout role="status" className="w-full max-w-xl text-left">
+                <strong>No folders match “{query}”.</strong> Try a different name or LRN — or
+                clear the search to see every approved SF10 file.
+              </InsightCallout>
+            </div>
           ) : pageRows.length === 0 ? (
             <div className={styles.empty}>
               <FolderOpen size={20} aria-hidden className="text-muted-foreground" />
-              <p className={styles.emptyTitle}>{needle ? "No folders match" : "No approved files yet"}</p>
+              <p className={styles.emptyTitle}>No approved files yet</p>
               <p className={styles.emptyBody}>
-                {needle
-                  ? `Nothing matches "${query}". Try a different name or LRN.`
-                  : denied
-                    ? "This request was denied. See the rejected list on the right."
-                    : "Approved students will appear here as folders once the registrar or record keeper grants access."}
+                {denied
+                  ? "This request was denied. See the rejected list on the right."
+                  : "Approved students will appear here as folders once the registrar or record keeper grants access."}
               </p>
             </div>
           ) : (

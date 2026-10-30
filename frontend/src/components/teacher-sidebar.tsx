@@ -68,6 +68,7 @@ function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
         { title: "Anecdotal", href: "/teacher/anecdotal", icon: FilePenLine },
         { title: "Referrals", href: "/teacher/advisory/referrals", icon: Send },
         { title: "ADM", href: "/teacher/advisory/adm-cases", icon: Inbox },
+        { title: "Modules", href: "/teacher/advisory/modules", icon: BookOpen },
         { title: "Class Schedule", href: "/teacher/advisory/schedule", icon: CalendarDays },
         { title: "SF10 Access", href: "/teacher/advisory/sf10-access", icon: FileText },
       ]},

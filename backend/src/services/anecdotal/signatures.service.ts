@@ -35,7 +35,7 @@ export async function saveSignature(ctx: AnecdotalContext, signatureImage: strin
     actionType: "anecdotal_edit",
     sourceTable: "staff_profiles",
     sourceId: ctx.userId,
-    reason: "Teacher signature saved",
+    reason: "Staff signature saved",
   });
   return { imageUrl: profile.signatureImageUrl };
 }

@@ -19,6 +19,7 @@ import {
 import { scheduleTone } from "@/lib/labels/status-tone";
 import rail from "@/app/principal/overview/components/PrincipalOverviewRail.module.css";
 import type { ScheduleSection } from "./schedule-table";
+import { sectionPath } from "./section-path";
 import styles from "./schedule.module.css";
 
 const MENU_PANEL =
@@ -151,7 +152,11 @@ export function ScheduleRail({ sections }: { sections: ScheduleSection[] }) {
 
   return (
     <TooltipProvider delayDuration={100}>
-      <aside className={rail.rail} style={{ top: "1rem" }} aria-label="Schedule buckets">
+      <aside
+        className={`${rail.rail} ${styles.railIn}`}
+        style={{ top: "1rem" }}
+        aria-label="Schedule buckets"
+      >
         <div ref={railRef} className={rail.railInner}>
           {items.map((item) => {
             const Icon = item.icon;
@@ -208,7 +213,7 @@ export function ScheduleRail({ sections }: { sections: ScheduleSection[] }) {
                           return (
                             <li key={section.id}>
                               <Link
-                                href={`/principal/academics/schedule/${section.id}`}
+                                href={sectionPath(section)}
                                 className={styles.railRow}
                                 onClick={() => setOpenKey(null)}
                               >

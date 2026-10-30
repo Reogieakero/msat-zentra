@@ -9,12 +9,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
-import { SidebarToggleButton } from "@/components/nav/SidebarToggleButton";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { NURSE_REFERRAL_DRAFT_KEY } from "@/services/nurse/referrals.service";
 import { useNurseRealtime } from "@/lib/realtime/nurseChannel";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { NurseNotificationsBell } from "./components/nurse-notifications-bell";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
 import {
@@ -29,7 +29,7 @@ function NurseShell({ children }: { children: React.ReactNode }) {
   const { allowed } = useRoleGuard(["nurse"]);
   useNurseRealtime(allowed);
   const profile = useNurseProfileSettings();
-  const { collapsed: sidebarCollapsed, toggle: toggleSidebar } =
+  const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.nurse.sidebar.collapsed");
 
   const handleLogout = () => {
@@ -61,14 +61,11 @@ function NurseShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
-        <SidebarToggleButton
-          collapsed={sidebarCollapsed}
-          onToggle={toggleSidebar}
-        />
-
         <Link href="/nurse/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
+
+        <AppBreadcrumbs role="School Nurse" />
 
         <div className={styles.spacer} />
 

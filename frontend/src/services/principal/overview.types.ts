@@ -32,6 +32,8 @@ export interface OverviewSectionRow {
 export interface OverviewData {
   kpis: OverviewKpis;
   atRisk: OverviewAtRisk;
+  /** Learners in adviser-shared sections (risk-board denominator). */
+  sharedEnrollment?: number;
   riskByLevel: OverviewRiskLevels;
   riskByGrade: OverviewRiskGradeRow[];
   sections: OverviewSectionRow[];

@@ -90,6 +90,8 @@ export const ModelName = {
   AdmModule: 'AdmModule',
   AdmDevice: 'AdmDevice',
   AdmForm: 'AdmForm',
+  AdvisoryModule: 'AdvisoryModule',
+  AdvisoryModuleSubmission: 'AdvisoryModuleSubmission',
   Sf10Record: 'Sf10Record',
   Sf10RecordVersion: 'Sf10RecordVersion',
   AuditLog: 'AuditLog',
@@ -626,6 +628,8 @@ export const AdmLearnerProfileScalarFieldEnum = {
   preparedBy: 'preparedBy',
   approvedBy: 'approvedBy',
   approvedAt: 'approvedAt',
+  returnedAt: 'returnedAt',
+  returnReason: 'returnReason',
   certificationDetails: 'certificationDetails',
   termId: 'termId',
   confidentialityLevel: 'confidentialityLevel'
@@ -683,7 +687,12 @@ export const AdmModuleScalarFieldEnum = {
   dueDate: 'dueDate',
   submitted: 'submitted',
   submissionDate: 'submissionDate',
-  recordedBy: 'recordedBy'
+  submissionUrl: 'submissionUrl',
+  studentSubmissionUrl: 'studentSubmissionUrl',
+  remarks: 'remarks',
+  recordedBy: 'recordedBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type AdmModuleScalarFieldEnum = (typeof AdmModuleScalarFieldEnum)[keyof typeof AdmModuleScalarFieldEnum]
@@ -716,6 +725,45 @@ export const AdmFormScalarFieldEnum = {
 } as const
 
 export type AdmFormScalarFieldEnum = (typeof AdmFormScalarFieldEnum)[keyof typeof AdmFormScalarFieldEnum]
+
+
+export const AdvisoryModuleScalarFieldEnum = {
+  id: 'id',
+  sectionId: 'sectionId',
+  kind: 'kind',
+  moduleName: 'moduleName',
+  moduleUrl: 'moduleUrl',
+  description: 'description',
+  releaseDate: 'releaseDate',
+  dueDate: 'dueDate',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AdvisoryModuleScalarFieldEnum = (typeof AdvisoryModuleScalarFieldEnum)[keyof typeof AdvisoryModuleScalarFieldEnum]
+
+
+export const AdvisoryModuleSubmissionScalarFieldEnum = {
+  id: 'id',
+  moduleId: 'moduleId',
+  studentId: 'studentId',
+  rosterId: 'rosterId',
+  submissionUrl: 'submissionUrl',
+  submissionKind: 'submissionKind',
+  fileUrl: 'fileUrl',
+  fileName: 'fileName',
+  fileMimeType: 'fileMimeType',
+  fileSize: 'fileSize',
+  submitted: 'submitted',
+  submittedAt: 'submittedAt',
+  remarks: 'remarks',
+  recordedBy: 'recordedBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AdvisoryModuleSubmissionScalarFieldEnum = (typeof AdvisoryModuleSubmissionScalarFieldEnum)[keyof typeof AdvisoryModuleSubmissionScalarFieldEnum]
 
 
 export const Sf10RecordScalarFieldEnum = {

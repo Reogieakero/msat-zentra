@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useTerm } from "@/lib/term/TermContext";
 import { fetchOverview } from "@/services/principal/overview.service";
+import { CountUpNumber } from "./CountUpNumber";
 import styles from "./PrincipalOverviewStats.module.css";
 
 interface StatItem {
@@ -142,13 +143,12 @@ export function PrincipalOverviewStats() {
               />
               <div className={styles.stat}>
                 <span className={styles.statTop}>
-                  <span
+                  <CountUpNumber
                     className={`${styles.statNumber} ${
                       s.value === 0 ? styles.statNumberZero : ""
                     }`}
-                  >
-                    {s.value}
-                  </span>
+                    value={s.value}
+                  />
                   <span className={styles.statMascot} aria-hidden="true">
                     <StudentMascot name={s.title} character={s.mascot} size={36} />
                   </span>

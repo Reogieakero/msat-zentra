@@ -16,6 +16,7 @@ import {
   type AttentionItem,
   type BackendAcademicSummary,
   type CellData,
+  type UngradedStudent,
 } from "./components/types";
 import shell from "../components/heatmap.module.css";
 
@@ -67,6 +68,32 @@ export default function PrincipalAcademicHeatmapsPage() {
         .length,
     [gradedStudents]
   );
+  const sharedStudents = React.useMemo(
+    () =>
+      sections
+        .filter((s) => s.shared === true)
+        .reduce((n, s) => n + s.students.length, 0),
+    [sections]
+  );
+  const ungradedStudents = React.useMemo<UngradedStudent[]>(() => {
+    const rows: UngradedStudent[] = [];
+    for (const section of sections) {
+      if (section.shared !== true) continue;
+      for (const student of section.students) {
+        if (student.subjects.length > 0) continue;
+        rows.push({
+          studentId: student.studentId,
+          name: student.name,
+          lrn: student.lrn,
+          mascot: student.mascot,
+          section: section.section,
+          grade: section.grade,
+        });
+      }
+    }
+    return rows.sort((a, b) => a.name.localeCompare(b.name));
+  }, [sections]);
+  const ungraded = ungradedStudents.length;
   const riskySections = React.useMemo(
     () =>
       sections.filter((s) =>
@@ -155,11 +182,11 @@ export default function PrincipalAcademicHeatmapsPage() {
     return Array.from(set).sort((a, b) => gradeSortKey(a) - gradeSortKey(b));
   }, [sections]);
 
-  // Single-grade default lives in the trend card now: normalize any legacy
-  // "all grades" value (or a grade absent from current data) to Grade 7
-  // when available, else the first available grade.
+  // Keep the trend filter on a grade that exists in the current data — but
+  // the "All grades" sentinel is a valid choice and must survive the sweep.
   React.useEffect(() => {
     if (grades.length === 0) return;
+    if (gradeFilter === ALL_GRADES) return;
     if (!grades.includes(gradeFilter)) {
       setGradeFilter(grades.includes("Grade 7") ? "Grade 7" : grades[0]);
     }
@@ -202,6 +229,9 @@ export default function PrincipalAcademicHeatmapsPage() {
             gradedTotal={gradedStudents.length}
             riskySections={riskySections}
             sectionCount={sections.length}
+            ungraded={ungraded}
+            ungradedStudents={ungradedStudents}
+            sharedTotal={sharedStudents}
             isPending={isPending}
           />
           <SubjectTrendChart

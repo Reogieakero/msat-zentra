@@ -13,6 +13,10 @@ import {
 
 const router = Router();
 
+// The master signature is staff-wide: the principal signs ADM cases with the
+// same drawn signature advisers use on OCForm-01.
+const SIGNATURE_ROLES = [...FILER_ROLES, "principal"] as const;
+
 function ctxOf(req: { user?: { id: string; role: string }; termScope?: { termId: string } | null }) {
   return {
     userId: req.user!.id,
@@ -24,7 +28,7 @@ function ctxOf(req: { user?: { id: string; role: string }; termScope?: { termId:
 router.get(
   "/signature",
   requireAuth,
-  requireRole(...FILER_ROLES),
+  requireRole(...SIGNATURE_ROLES),
   async (req, res, next) => {
     try {
       res.json(await getSignature(req.user!.id));
@@ -37,7 +41,7 @@ router.get(
 router.put(
   "/signature",
   requireAuth,
-  requireRole(...FILER_ROLES),
+  requireRole(...SIGNATURE_ROLES),
   validate("body", signSchema),
   async (req, res, next) => {
     try {

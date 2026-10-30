@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { KanbanBoard } from "@/components/ui/kanban-board";
-import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
 
 type Props = {
   open: boolean;
@@ -23,11 +23,12 @@ export function LockGradesModal({ open, subjectLabel, unlockCount, pending, erro
   const [code, setCode] = React.useState("");
   const [show, setShow] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Client-only mount flag without a setState-in-effect (react-compiler gate).
+  const mounted = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   // Reset the form when the modal opens (render-time adjustment, not an effect).
   const [prevOpen, setPrevOpen] = React.useState(open);
@@ -90,11 +91,11 @@ export function LockGradesModal({ open, subjectLabel, unlockCount, pending, erro
           }
           description={
             <span className="flex flex-wrap items-center gap-1">
-              {subjectPart ? <AmberRectPill>{subjectPart}</AmberRectPill> : null}
-              {sectionPart ? <AmberRectPill>{sectionPart}</AmberRectPill> : null}
-              <AmberRectPill>
+              {subjectPart ? <Pill tone="amber" label="Subject">{subjectPart}</Pill> : null}
+              {sectionPart ? <Pill tone="amber" label="Section">{sectionPart}</Pill> : null}
+              <Pill tone="amber" label="Learners ready to lock">
                 {unlockCount} learner{unlockCount === 1 ? "" : "s"} ready to lock
-              </AmberRectPill>
+              </Pill>
             </span>
           }
           ariaLabel="Lock grades"

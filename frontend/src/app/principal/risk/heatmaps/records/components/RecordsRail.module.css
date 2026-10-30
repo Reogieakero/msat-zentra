@@ -3,6 +3,8 @@
    board in a flyout. */
 
 .rail {
+  position: relative;
+  z-index: 30;
   align-self: start;
   min-width: 0;
 }
@@ -64,13 +66,9 @@
   color: #fff;
 }
 
-/* Board tint — the flyout board inherits its queue's accent. */
-.boardAmber {
-  background-color: color-mix(in oklch, #f59e0b 7%, var(--card));
-}
-
-.boardRed {
-  background-color: color-mix(in oklch, var(--destructive) 7%, var(--card));
+/* Flyout board — plain white card surface (no queue tint). */
+.flyoutBoard {
+  background-color: var(--card);
 }
 
 .tipTitle {
@@ -81,30 +79,55 @@
   opacity: 0.6;
 }
 
-/* Flyout panel — smooth open/close in both themes. */
+/* Flyout panel — smooth open/close in both themes. Opens left of the rail
+   icons, since the rail anchors the right edge of the desk. */
 .menu {
   transform-origin: top right;
   transition:
-    opacity 180ms ease-out,
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 180ms;
+    opacity 260ms ease-out,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 260ms;
 }
 
 .menuOpen {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateX(0) scale(1);
   visibility: visible;
 }
 
 .menuClosed {
   opacity: 0;
-  transform: translateY(-6px) scale(0.98);
+  transform: translateX(6px) scale(0.98);
   visibility: hidden;
   pointer-events: none;
+}
+
+/* Rail entries settle in one after another, slow enough to read as motion. */
+.railItem {
+  animation: rail-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.railItem:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+@keyframes rail-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .menu {
     transition: none;
+  }
+
+  .railItem {
+    animation: none;
   }
 }

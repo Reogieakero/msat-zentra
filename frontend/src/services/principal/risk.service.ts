@@ -9,9 +9,14 @@ import type {
   RiskFactor,
 } from "./risk.types";
 
-// Real-time unified: no gradeMode — backend ignores it.
-export async function fetchRiskBoard(): Promise<RiskBoardData> {
-  const { data } = await apiClient.get<RiskBoardData>("/api/risk/board");
+// Real-time unified: no gradeMode — backend ignores it. `admOnly` scopes the
+// board to learners with an ADM case (principal ADM desk).
+export async function fetchRiskBoard(opts?: {
+  admOnly?: boolean;
+}): Promise<RiskBoardData> {
+  const { data } = await apiClient.get<RiskBoardData>("/api/risk/board", {
+    params: opts?.admOnly ? { scope: "adm" } : undefined,
+  });
   return data;
 }
 

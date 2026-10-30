@@ -127,6 +127,158 @@ export async function enlistRoster(
   return response;
 }
 
+export interface UpdateRosterInput {
+  fullName: string;
+  lrn: string;
+}
+
+/**
+ * Advisory list edit: the adviser may correct a learner's name and LRN.
+ * Works for both roster-only learners (`roster:<id>`) and learners who
+ * already have an account (StudentProfile.lrn + User.fullName). LRN stays
+ * unique across the school year and cannot steal a real account's LRN.
+ */
+export async function updateRosterStudent(
+  ctx: AdvisoryContext,
+  studentId: string,
+  input: UpdateRosterInput,
+  yearId: string | null,
+) {
+  const teacherId = ctx.userId;
+  if (!yearId) {
+    throw new AppError(409, "NO_ACTIVE_YEAR", "No active school year");
+  }
+  const sections = await adviserSectionsOr404(teacherId, yearId);
+  const sectionIds = sections.map((s) => s.id);
+
+  if (studentId.startsWith("roster:")) {
+    const rosterId = studentId.slice("roster:".length);
+    const entry = await prisma.studentRoster.findUnique({
+      where: { id: rosterId },
+      include: { section: { select: { name: true } } },
+    });
+    if (!entry || !sectionIds.includes(entry.sectionId)) {
+      throw new AppError(404, "ADVISEE_NOT_FOUND", "This student is not in your advisory");
+    }
+    if (entry.lrn !== input.lrn) {
+      const duplicate = await prisma.studentRoster.findFirst({
+        where: { lrn: input.lrn, schoolYearId: yearId, NOT: { id: entry.id } },
+        select: { id: true },
+      });
+      if (duplicate) {
+        throw new AppError(409, "LRN_ENLISTED", "This LRN is already enlisted");
+      }
+      const registered = await prisma.studentProfile.findUnique({
+        where: { lrn: input.lrn },
+        select: { userId: true, user: { select: { email: true } } },
+      });
+      // SF10 placeholders are not real accounts, same rule as enlistment.
+      if (registered && !isSf10ProvisionedEmail(registered.user.email)) {
+        throw new AppError(409, "LRN_REGISTERED", "This LRN already has an account");
+      }
+    }
+    const updated = await prisma.studentRoster.update({
+      where: { id: entry.id },
+      data: { fullName: input.fullName, lrn: input.lrn },
+    });
+    await afterRosterWrite(
+      teacherId,
+      updated.id,
+      `Updated ${entry.fullName} (${entry.lrn}) → ${updated.fullName} (${updated.lrn}) in ${entry.section.name}`,
+      `You updated ${updated.fullName} (${updated.lrn}) in ${entry.section.name}.`,
+    );
+    return {
+      studentId: `roster:${updated.id}`,
+      name: updated.fullName,
+      lrn: updated.lrn,
+    };
+  }
+
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId: studentId },
+    select: {
+      userId: true,
+      lrn: true,
+      sectionId: true,
+      section: { select: { name: true } },
+      user: { select: { fullName: true } },
+    },
+  });
+  if (!profile || !profile.sectionId || !sectionIds.includes(profile.sectionId)) {
+    throw new AppError(404, "ADVISEE_NOT_FOUND", "This student is not in your advisory");
+  }
+  if (profile.lrn !== input.lrn) {
+    const duplicate = await prisma.studentProfile.findUnique({
+      where: { lrn: input.lrn },
+      select: { userId: true },
+    });
+    if (duplicate && duplicate.userId !== profile.userId) {
+      throw new AppError(409, "LRN_REGISTERED", "This LRN already has an account");
+    }
+    // A roster-only learner already holding this LRN would be silently merged
+    // into this account (the list de-dupes by LRN), so block it instead.
+    const rosterDuplicate = await prisma.studentRoster.findUnique({
+      where: { lrn_schoolYearId: { lrn: input.lrn, schoolYearId: yearId } },
+      select: { id: true },
+    });
+    if (rosterDuplicate) {
+      throw new AppError(409, "LRN_ENLISTED", "This LRN is already enlisted");
+    }
+  }
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: profile.userId },
+      data: { fullName: input.fullName },
+    }),
+    prisma.studentProfile.update({
+      where: { userId: profile.userId },
+      data: { lrn: input.lrn },
+    }),
+  ]);
+  await afterRosterWrite(
+    teacherId,
+    profile.userId,
+    `Updated ${profile.user.fullName} (${profile.lrn}) → ${input.fullName} (${input.lrn}) in ${profile.section?.name ?? "advisory"}`,
+    `You updated ${input.fullName} (${input.lrn}) in ${profile.section?.name ?? "your advisory"}.`,
+  );
+  return { studentId: profile.userId, name: input.fullName, lrn: input.lrn };
+}
+
+/** Shared audit + cache invalidation + self-notification tail for roster writes. */
+async function afterRosterWrite(
+  teacherId: string,
+  sourceId: string,
+  auditReason: string,
+  notification: string,
+) {
+  try {
+    await writeAudit({
+      userId: teacherId,
+      actionType: "update",
+      sourceTable: "student_roster",
+      sourceId,
+      reason: auditReason,
+    });
+    await invalidateTags([
+      "registrar",
+      "record-keeper",
+      "academics",
+      "overview",
+      "principal",
+      "teacher",
+    ]);
+    await fanoutNotification({
+      userId: teacherId,
+      sourceTable: "student_roster",
+      action: "update_self",
+      message: notification,
+      sourceId,
+    });
+  } catch {
+    /* best-effort side effects */
+  }
+}
+
 export interface AttendanceSheetQuery {
   sectionId?: string;
   subjectId?: string;

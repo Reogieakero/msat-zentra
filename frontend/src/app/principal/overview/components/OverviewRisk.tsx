@@ -6,8 +6,10 @@ import { ShieldCheck, ShieldHalf, GraduationCap } from "lucide-react";
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid, Cell, Pie, PieChart } from "recharts";
 import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { useTerm } from "@/lib/term/TermContext";
 import {
   interpretGradeRisk,
@@ -20,6 +22,7 @@ import {
 } from "./overview-risk-interpret";
 import { fetchOverview } from "@/services/principal/overview.service";
 import { FriendlyTooltip } from "./overview-chart-tip";
+import { CountUpNumber } from "./CountUpNumber";
 import styles from "./OverviewRisk.module.css";
 
 const chartConfig = {
@@ -76,7 +79,7 @@ export function OverviewRisk() {
             data.atRisk.grades,
             data.atRisk.behavior,
             data.atRisk.students,
-            data.kpis.enrollment
+            data.sharedEnrollment ?? data.kpis.enrollment
           )
         : "",
     [data]
@@ -123,8 +126,12 @@ export function OverviewRisk() {
             <ShieldCheck size={14} />
           </span>
         }
-        count={isPending || riskEmpty ? undefined : data?.atRisk.students ?? 0}
-        description="Students flagged by the live risk engine this term."
+        description="Learners flagged by the live risk engine across adviser-shared sections this term."
+        actions={
+          <Pill tone="green" label="Data source">
+            Adviser-shared
+          </Pill>
+        }
       >
         {isPending ? (
           <Skeleton className={styles.chartSkel} />
@@ -155,7 +162,13 @@ export function OverviewRisk() {
                     cursor={{ fill: "color-mix(in oklch, #f59e0b, transparent 92%)" }}
                     content={<FriendlyTooltip unit="learners flagged" />}
                   />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={44}>
+                  <Bar
+                    dataKey="value"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={44}
+                    animationDuration={750}
+                    animationEasing="ease-out"
+                  >
                     {rows.map((r) => (
                       <Cell key={r.key} style={{ fill: r.color }} />
                     ))}
@@ -163,7 +176,7 @@ export function OverviewRisk() {
                 </BarChart>
               </ChartContainer>
             </div>
-            <p className={styles.chartInterpretation}>{interpretation}</p>
+            <InsightCallout className="mt-auto">{interpretation}</InsightCallout>
           </>
         )}
       </KanbanBoard>
@@ -176,8 +189,12 @@ export function OverviewRisk() {
             <ShieldHalf size={14} />
           </span>
         }
-        count={isPending || levelEmpty ? undefined : levelsTotal}
-        description="Live split of tracked learners by risk level."
+        description="Live split of adviser-shared learners by risk level."
+        actions={
+          <Pill tone="green" label="Data source">
+            Adviser-shared
+          </Pill>
+        }
       >
         {isPending ? (
           <Skeleton className={styles.donutSkel} />
@@ -210,6 +227,9 @@ export function OverviewRisk() {
                     outerRadius={54}
                     paddingAngle={2}
                     strokeWidth={0}
+                    animationDuration={850}
+                    animationBegin={120}
+                    animationEasing="ease-out"
                   >
                     {levelRows.map((entry) => (
                       <Cell key={entry.key} style={{ fill: entry.color }} />
@@ -218,7 +238,7 @@ export function OverviewRisk() {
                 </PieChart>
               </ChartContainer>
               <div className={styles.donutCenter}>
-                <span className={styles.donutTotal}>{levelsTotal}</span>
+                <CountUpNumber className={styles.donutTotal} value={levelsTotal} />
                 <span className={styles.donutLabel}>students</span>
               </div>
             </div>
@@ -233,7 +253,7 @@ export function OverviewRisk() {
                 </li>
               ))}
             </ul>
-            <p className={styles.chartInterpretation}>{levelInterpretation}</p>
+            <InsightCallout className="mt-auto">{levelInterpretation}</InsightCallout>
           </>
         )}
       </KanbanBoard>
@@ -246,8 +266,12 @@ export function OverviewRisk() {
             <GraduationCap size={14} />
           </span>
         }
-        count={isPending || gradeEmpty ? undefined : gradeRows.reduce((s, r) => s + r.count, 0)}
-        description="Where this term's flagged learners sit across grade levels."
+        description="Where adviser-shared flagged learners sit across grade levels this term."
+        actions={
+          <Pill tone="green" label="Data source">
+            Adviser-shared
+          </Pill>
+        }
       >
         {isPending ? (
           <Skeleton className={styles.chartSkel} />
@@ -278,7 +302,13 @@ export function OverviewRisk() {
                     cursor={{ fill: "color-mix(in oklch, #f59e0b, transparent 92%)" }}
                     content={<FriendlyTooltip unit="learners flagged" />}
                   />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                  <Bar
+                    dataKey="count"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={30}
+                    animationDuration={750}
+                    animationEasing="ease-out"
+                  >
                     {gradeRows.map((r) => (
                       <Cell key={r.grade} style={{ fill: GRADE_BAR_FILL }} />
                     ))}
@@ -286,7 +316,7 @@ export function OverviewRisk() {
                 </BarChart>
               </ChartContainer>
             </div>
-            <p className={styles.chartInterpretation}>{gradeInterpretation}</p>
+            <InsightCallout className="mt-auto">{gradeInterpretation}</InsightCallout>
           </>
         )}
       </KanbanBoard>

@@ -22,6 +22,8 @@ export interface Section {
   adviserLabel: string;
 
   adviserCode: string;
+  /** When the listed adviser claimed the seat (from the audit trail). */
+  adviserClaimedAt?: string | null;
   /** Learners enlisted in this section (profiles + roster). */
   studentCount: number;
   /** Linked records (assignments, attendance, anecdotal, flags, SF10 requests). */

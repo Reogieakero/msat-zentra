@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTerm } from "@/lib/term/TermContext";
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
-import { UnlinkCodeDialog, AmberRectPill } from "./UnlinkCodeDialog";
+import { UnlinkCodeDialog } from "./UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
 import { useDock } from "@/components/dock/dock-store";
 import {
   buildTimetable,
@@ -287,7 +288,9 @@ export function MyTimetable() {
                     .map((part) => part.trim())
                     .filter(Boolean)
                     .map((part) => (
-                      <AmberRectPill key={part}>{part}</AmberRectPill>
+                      <Pill key={part} tone="amber" label="Term">
+                        {part}
+                      </Pill>
                     ))}
                 </span>
               }

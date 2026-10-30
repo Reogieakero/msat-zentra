@@ -237,6 +237,16 @@ export type AdmDevice = Prisma.AdmDeviceModel
  */
 export type AdmForm = Prisma.AdmFormModel
 /**
+ * Model AdvisoryModule
+ * 
+ */
+export type AdvisoryModule = Prisma.AdvisoryModuleModel
+/**
+ * Model AdvisoryModuleSubmission
+ * 
+ */
+export type AdvisoryModuleSubmission = Prisma.AdvisoryModuleSubmissionModel
+/**
  * Model Sf10Record
  * 
  */

@@ -33,7 +33,7 @@ export async function advisoryRoster(termId: string, sectionId: string) {
   const keyOf = (studentId: string | null, rosterId: string | null): string | null =>
     studentId ?? (rosterId ? `roster:${rosterId}` : null);
 
-  const [profileFinals, rosterFinals, takes, avgs, term] = await Promise.all([
+  const [profileFinals, rosterFinals, takes, avgs, term, anecdoteRows] = await Promise.all([
     profileIds.length > 0 && offeredIds.length > 0
       ? prisma.finalGrade.findMany({
           where: { termId, subjectId: { in: offeredIds }, studentId: { in: profileIds } },
@@ -57,7 +57,26 @@ export async function advisoryRoster(termId: string, sectionId: string) {
       where: { id: termId },
       select: { startDate: true, endDate: true },
     }),
+    profileIds.length > 0 || rosterIds.length > 0
+      ? prisma.anecdotalRecord.findMany({
+          where: {
+            termId,
+            OR: [
+              ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
+              ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
+            ],
+          },
+          select: { studentId: true, rosterId: true },
+        })
+      : Promise.resolve([] as { studentId: string | null; rosterId: string | null }[]),
   ]);
+
+  const anecdoteCountByKey = new Map<string, number>();
+  for (const a of anecdoteRows) {
+    const key = keyOf(a.studentId, a.rosterId);
+    if (!key) continue;
+    anecdoteCountByKey.set(key, (anecdoteCountByKey.get(key) ?? 0) + 1);
+  }
 
   const finalsByKey = new Map<string, { computedAverage: number | null; transmutedGrade: number | null }[]>();
   for (const f of profileFinals) {
@@ -153,6 +172,7 @@ export async function advisoryRoster(termId: string, sectionId: string) {
         attendancePercentage: avg === null ? null : Math.round(avg * 1000) / 10,
         computedAverage: mean(finals.map((f) => f.computedAverage)),
         academicGrade: mean(finals.map((f) => f.transmutedGrade)),
+        anecdotalCount: anecdoteCountByKey.get(s.studentId) ?? 0,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import { ATTENDANCE_RISK_CUTOFF, subjectAverageAttendance } from "../attendance.js";
-import { computeRiskFactors, levelFromFlags } from "../risk.js";
+import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../risk.js";
 import {
   ACTION_LABEL,
   COMPONENT_TYPE_LABEL,
@@ -382,6 +382,7 @@ export async function getOverview(
     ]);
     const keyOf = (studentId: string | null, rosterId: string | null): string | null =>
       studentId ?? (rosterId ? `roster:${rosterId}` : null);
+    const sectionTotals = await sectionAttendanceTotals(handledSectionIds, termId);
     const finalsByKey = new Map<string, { computedAverage: number | null; transmutedGrade: number | null }[]>();
     for (const f of classFinals) {
       const key = keyOf(f.studentId, f.rosterId);
@@ -418,6 +419,7 @@ export async function getOverview(
         finalGrades: finalsByKey.get(b.studentId) ?? [],
         rawAverages,
         attendance: attByKey.get(b.studentId) ?? [],
+        attendanceTotal: sectionTotals.get(b.sectionId),
         anecdotalCount: 0,
         enrolled: 0,
       });
@@ -794,6 +796,7 @@ export async function getOverview(
         finalGrades,
         rawAverages: rawAveragesFor(key),
         attendance,
+        attendanceTotal: sectionTotals.get(advisorySection.id),
         anecdotalCount,
         enrolled,
       });
@@ -818,6 +821,7 @@ export async function getOverview(
       countBySection.set(advisorySection.id, enrolled);
     }
     const subjectAvgs = await subjectAverageAttendance([advisorySection.id], termId);
+    const sectionTotals = await sectionAttendanceTotals([advisorySection.id], termId);
     advisoryStudents = [
       ...advisees.map((s) => {
         const { flags, activeFlags, flag } = toFlags(

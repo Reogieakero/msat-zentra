@@ -11,6 +11,7 @@ import {
   buildTimetable,
   type DayConfig,
 } from "@/app/teacher/schedule/components/schedule-time";
+import { findSectionByRef } from "../../components/section-path";
 interface SubmissionEntry {
   day: number;
   period: number;
@@ -34,7 +35,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message;
   return fallback;
 }
-export function usePrincipalScheduleSection(sectionId: string) {
+export function usePrincipalScheduleSection(sectionRef: string) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const dock = useDock();
@@ -51,7 +52,7 @@ export function usePrincipalScheduleSection(sectionId: string) {
       );
       return data;
     },
-    select: (d) => d.sections.find((s) => s.id === sectionId) ?? null,
+    select: (d) => findSectionByRef(d.sections, sectionRef),
     staleTime: 30_000,
   });
   const configQuery = useQuery<{ config: DayConfig }>({
@@ -64,8 +65,9 @@ export function usePrincipalScheduleSection(sectionId: string) {
   const submission = sectionsQuery.data ?? null;
   const review = useMutation({
     mutationFn: async (vars: { decision: "approve" | "reject"; note?: string }) => {
+      if (!submission) throw new Error("Section is not loaded yet.");
       const { data } = await apiClient.post("/api/academics/schedule/review", {
-        sectionId,
+        sectionId: submission.id,
         decision: vars.decision,
         note: vars.note,
       });
@@ -115,7 +117,7 @@ export function usePrincipalScheduleSection(sectionId: string) {
   );
   const submittedCount = (submission?.timetableEntries ?? []).filter((e) => e.status === "SUBMITTED").length;
   const handleReview = (decision: "approve" | "reject") => {
-    if (review.isPending) return;
+    if (!submission || review.isPending) return;
     if (decision === "reject" && !note.trim()) {
       setFormError("A revision note is required to send a schedule back.");
       return;

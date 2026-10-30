@@ -11,7 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FileDown, ImageDown, Loader2, PenLine, Printer, Trash2 } from "lucide-react";
+import { FileDown, ImageDown, Loader2, PenLine, Trash2 } from "lucide-react";
 import { OcForm01Print } from "./OcForm01Print";
 import { SignaturePad } from "./SignaturePad";
 import styles from "./OcForm01PreviewDialog.module.css";
@@ -360,24 +360,6 @@ export function OcForm01PreviewDialog({
               </TooltipContent>
             </Tooltip>
           ) : null}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-6 px-2 text-[11px]"
-                onClick={() => window.print()}
-                disabled={!detail}
-              >
-                <Printer aria-hidden />
-                Print
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              Print the anecdotal report (A4 portrait)
-            </TooltipContent>
-          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

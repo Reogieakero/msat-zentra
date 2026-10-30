@@ -30,7 +30,7 @@
 .cardSlot {
   display: flex;
   min-width: 0;
-  animation: rise 240ms ease-out both;
+  animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   will-change: transform;
 }
 
@@ -55,11 +55,11 @@
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(12px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 

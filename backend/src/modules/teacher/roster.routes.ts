@@ -7,8 +7,12 @@ import { etag } from "../../lib/etag.js";
 import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { TEACHER_ROLES } from "./advisory.repository.js";
 import { attendanceSheetQuerySchema } from "./teacher.schemas.js";
-import { rosterSchema } from "./advisory.schemas.js";
-import { enlistRoster, getAttendanceSheet } from "../../services/advisory/roster.service.js";
+import { rosterSchema, rosterUpdateSchema } from "./advisory.schemas.js";
+import {
+  enlistRoster,
+  getAttendanceSheet,
+  updateRosterStudent,
+} from "../../services/advisory/roster.service.js";
 
 const router = Router();
 
@@ -41,6 +45,29 @@ router.post(
       }, yearId);
 
       res.status(201).json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.patch(
+  "/roster/:studentId",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  validate("body", rosterUpdateSchema),
+  async (req, res, next) => {
+    try {
+      const body = req.body as { fullName: string; lrn: string };
+      const yearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
+      res.json(
+        await updateRosterStudent(
+          ctxOf(req),
+          String(req.params.studentId),
+          { fullName: body.fullName, lrn: body.lrn },
+          yearId,
+        ),
+      );
     } catch (e) {
       next(e);
     }

@@ -29,7 +29,7 @@
 
 .section {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
   margin: 0;
   min-width: 0;
@@ -53,19 +53,10 @@
   color: var(--muted-foreground);
 }
 
-.value {
-  min-width: 0;
+/* Long section names clip instead of pushing the card wide. */
+.sectionPill {
+  max-width: 24rem;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.section .value {
-  font-size: 0.9375rem;
-  font-weight: 700;
 }
 
 .none {

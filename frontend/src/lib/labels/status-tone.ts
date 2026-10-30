@@ -26,6 +26,22 @@ export function admStageTone(stage: string): PillTone {
   return ADM_STAGE_TONE[stage] ?? "neutral";
 }
 
+/** ADM linked-form status (AdmFormStatus). */
+export const ADM_FORM_STATUS_TONE: Record<string, PillTone> = {
+  pending: "amber",
+  submitted: "blue",
+  verified: "green",
+};
+
+export function formStatusTone(status: string): PillTone {
+  return ADM_FORM_STATUS_TONE[status] ?? "neutral";
+}
+
+/** Form statuses render capitalised ("verified" → "Verified"). */
+export function formStatusLabel(status: string): string {
+  return status ? status.charAt(0).toUpperCase() + status.slice(1) : status;
+}
+
 /** ADM eligibility verdict. */
 export function eligibilityTone(status: string): PillTone {
   if (status === "eligible") return "green";
@@ -73,4 +89,28 @@ export function outcomeLabel(status: string): string {
   if (status === "unresolved") return "Unresolved";
   if (status === "ongoing") return "Ongoing";
   return "No plan";
+}
+
+/**
+ * Actor role → chip tone. Every desk role gets its own colour family so the
+ * same role reads identically anywhere a role `<Pill>` is rendered (audit rows,
+ * account desks, settings). `system` stays neutral — it has no human actor.
+ */
+export const ROLE_TONE: Record<string, PillTone> = {
+  principal: "amber",
+  registrar: "violet",
+  record_keeper: "blue",
+  adviser: "green",
+  subject_teacher: "teal",
+  guidance_counselor: "indigo",
+  nurse: "rose",
+  adm_coordinator: "sky",
+  student: "blue",
+  parent: "violet",
+  system: "neutral",
+};
+
+export function roleTone(role: string | null | undefined): PillTone {
+  if (!role) return "neutral";
+  return ROLE_TONE[role] ?? "neutral";
 }

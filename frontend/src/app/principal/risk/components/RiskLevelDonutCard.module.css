@@ -33,6 +33,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* The ring settles in while recharts sweeps the arcs round. */
+  animation: donut-settle 0.85s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes donut-settle {
+  from {
+    opacity: 0;
+    transform: scale(0.9) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
 }
 
 .center {
@@ -43,6 +56,18 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  animation: center-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+}
+
+@keyframes center-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .centerValue {
@@ -71,6 +96,30 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  animation: legend-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.legendItem:nth-child(1) {
+  animation-delay: 0.45s;
+}
+
+.legendItem:nth-child(2) {
+  animation-delay: 0.55s;
+}
+
+.legendItem:nth-child(3) {
+  animation-delay: 0.65s;
+}
+
+@keyframes legend-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .swatch {
@@ -90,4 +139,12 @@
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chartWrap,
+  .center,
+  .legendItem {
+    animation: none;
+  }
 }

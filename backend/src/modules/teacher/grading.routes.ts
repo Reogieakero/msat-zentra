@@ -10,6 +10,7 @@ import {
   assessmentPatchSchema,
   assessmentSchema,
   componentSchema,
+  componentsBatchSchema,
   presetSchema,
 } from "./grading.schemas.js";
 import {
@@ -19,6 +20,7 @@ import {
   getClassWorkspace,
   patchAssessment,
   upsertComponent,
+  upsertComponents,
 } from "../../services/teacher/grading.service.js";
 
 const router = Router();
@@ -69,6 +71,34 @@ router.post(
       await invalidateGradingCaches();
 
       res.status(201).json(component);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.post(
+  "/classes/:assignmentId/components/batch",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  validate("body", componentsBatchSchema),
+  async (req, res, next) => {
+    try {
+      const { weights } = req.body as {
+        weights: {
+          componentType: "WRITTEN_WORK" | "PERFORMANCE_TASK" | "EXAM";
+          weightPercentage: number;
+        }[];
+      };
+      const result = await upsertComponents(
+        await gradingCtxOf(req),
+        String(req.params.assignmentId),
+        { weights },
+      );
+
+      await invalidateGradingCaches();
+
+      res.status(201).json(result);
     } catch (e) {
       next(e);
     }

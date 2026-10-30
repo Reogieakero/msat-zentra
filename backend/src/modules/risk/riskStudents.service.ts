@@ -3,6 +3,7 @@ import {
   computeRiskFactors,
   levelFromFlags,
   resolveActiveTermId,
+  sectionAttendanceTotals,
   type GradeMode,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
@@ -174,12 +175,16 @@ async function getRiskStudentsLive(
     ]),
   ) as string[];
   const headcounts = await sectionHeadcounts(sectionIds);
+  const sectionTotals = termId
+    ? await sectionAttendanceTotals(sectionIds, termId)
+    : new Map<string, number>();
 
   type Candidate = {
     studentId: string;
     lrn: string;
     name: string;
     section: string;
+    sectionId: string;
     gradeLevel: string;
     mascot: string | null;
     finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
@@ -193,6 +198,7 @@ async function getRiskStudentsLive(
       lrn: s.lrn,
       name: s.user.fullName,
       section: s.section?.name ?? "—",
+      sectionId: s.section?.id ?? "",
       gradeLevel: gradeLabel(s.gradeLevel),
       mascot: s.mascot,
       finalGrades: s.finalGrades,
@@ -207,6 +213,7 @@ async function getRiskStudentsLive(
         lrn: r.lrn,
         name: r.fullName,
         section: r.section?.name ?? "—",
+        sectionId: r.sectionId,
         gradeLevel: gradeLabel(r.gradeLevel),
         mascot: r.mascot,
         finalGrades: r.finalGrades,
@@ -221,6 +228,7 @@ async function getRiskStudentsLive(
     const flags = computeRiskFactors({
       finalGrades: s.finalGrades,
       attendance: s.attendanceRecords,
+      attendanceTotal: sectionTotals.get(s.sectionId),
       anecdotalCount: s.anecdotalCount,
       enrolled: s.enrolled,
     });

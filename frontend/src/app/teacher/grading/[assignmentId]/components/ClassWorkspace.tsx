@@ -4,8 +4,9 @@ import * as React from "react";
 import { ArrowLeft, Scale, SearchIcon } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
-import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
 import { gradeLabel } from "@/services/teacher/grading.compute";
+import { compareSurnameFirst } from "@/lib/names";
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 import kanbanStyles from "@/app/teacher/schedule/components/subject-kanban.module.css";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,13 @@ type Props = {
 };
 
 export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
-  const { assignment, students } = detail;
+  const { assignment } = detail;
+  // Alphabetical by surname (then given name) so every list on this page —
+  // score table, encode view, finals — reads like the advisory roster.
+  const students = React.useMemo(
+    () => [...detail.students].sort((a, b) => compareSurnameFirst(a.name, b.name)),
+    [detail.students],
+  );
   const refreshAcademic = useRefreshAcademic();
   const [weightsOpen, setWeightsOpen] = React.useState(false);
   const [view] = React.useState<WorkspaceView>("scores");
@@ -53,29 +60,29 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
 
   return (
     <section className={styles.page}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <SubjectRail currentId={queryKeyId} />
-        </div>
-        {weightsConfigured && !selectedAssessment ? (
-          <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
-            <InputGroupInput
-              placeholder="Search assessments..."
-              value={assessmentQuery}
-              onChange={(event) => setAssessmentQuery(event.target.value)}
-              aria-label="Search assessments"
-            />
-            <InputGroupAddon>
-              <SearchIcon />
-            </InputGroupAddon>
-          </InputGroup>
-        ) : null}
-      </div>
       <div
         className={styles.layout}
         style={weightsConfigured ? undefined : { gridTemplateColumns: "minmax(0, 1fr)" }}
       >
         <div className={styles.main}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <SubjectRail currentId={queryKeyId} />
+            </div>
+            {weightsConfigured && !selectedAssessment ? (
+              <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
+                <InputGroupInput
+                  placeholder="Search assessments..."
+                  value={assessmentQuery}
+                  onChange={(event) => setAssessmentQuery(event.target.value)}
+                  aria-label="Search assessments"
+                />
+                <InputGroupAddon>
+                  <SearchIcon />
+                </InputGroupAddon>
+              </InputGroup>
+            ) : null}
+          </div>
           {!weightsConfigured ? (
             <div className={emptyStyles.emptyWrap}>
               <div
@@ -102,8 +109,8 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
                   }
                   actions={
                     <span className="flex items-center gap-1.5">
-                      <AmberRectPill>{assignment.sectionName}</AmberRectPill>
-                      <AmberRectPill>Grade {gradeLabel(assignment.gradeLevel)}</AmberRectPill>
+                      <Pill tone="amber" label="Section">{assignment.sectionName}</Pill>
+                      <Pill tone="amber" label="Grade level">Grade {gradeLabel(assignment.gradeLevel)}</Pill>
                     </span>
                   }
                   description="Final grades cannot compute until the WW / PT / E shares are set."

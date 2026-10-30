@@ -64,91 +64,139 @@
   flex-wrap: wrap;
 }
 
-/* ---- KPI strip (kanban-style stat tiles) ---- */
+/* ---- KPI strip (one kanban board per stat) ---- */
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
+  align-items: stretch;
 }
 
-.kpiCard {
+.kpiGrid > * {
+  min-width: 0;
+}
+
+/* Gray board surface — same framing as the principal overview KPI columns. */
+.board {
+  background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+  transition:
+    transform 170ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 170ms ease,
+    box-shadow 170ms ease;
+}
+
+.board:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, #f59e0b 32%, var(--border));
+  box-shadow: 0 8px 20px -16px color-mix(in oklch, #f59e0b 55%, transparent);
+}
+
+:global(.dark) .board {
+  background-color: color-mix(in oklch, var(--muted) 20%, transparent);
+}
+
+/* Stat board body: an inner value card (number + mascot + hint) sitting
+   inside the board, mirroring the principal overview KPI strip. */
+.stat {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
-  padding: 0.875rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: color-mix(in oklch, var(--muted), transparent 75%);
+  gap: 0.375rem;
   min-width: 0;
-  transition: border-color 160ms ease, background-color 160ms ease;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
 }
 
-.kpiCard:hover {
-  border-color: color-mix(in oklch, var(--primary), transparent 55%);
-  background-color: color-mix(in oklch, var(--muted), transparent 55%);
-}
-
-.glowClip {
+/* One light sweep as the strip settles — the board powering on, not a loop. */
+.stat::after {
+  content: "";
   position: absolute;
   inset: 0;
-  overflow: hidden;
-  border-radius: var(--radius-lg);
   pointer-events: none;
-}
-
-.cardGlow {
-  position: absolute;
-  inset: auto -25% -50% -25%;
-  height: 75%;
-  background: radial-gradient(
-    ellipse at center,
-    color-mix(in oklch, var(--primary), transparent 80%),
-    transparent 70%
+  background: linear-gradient(
+    105deg,
+    transparent 28%,
+    color-mix(in oklch, #f59e0b 14%, transparent) 50%,
+    transparent 72%
   );
-  filter: blur(24px);
-  pointer-events: none;
+  transform: translateX(-140%);
+  animation: stat-sheen 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
 }
 
-.kpiTop {
+@keyframes stat-sheen {
+  from {
+    transform: translateX(-140%);
+  }
+  to {
+    transform: translateX(140%);
+  }
+}
+
+/* Amber — the risk desk accent for every icon + figure. */
+.icon {
+  display: inline-flex;
+  color: #f59e0b;
+}
+
+.statTop {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
+  min-width: 0;
 }
 
-.kpiIcon {
-  color: var(--primary);
+/* Decorative sprite chip beside the figure. */
+.statMascot {
+  display: inline-flex;
   flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background-color: color-mix(in oklch, var(--muted) 40%, transparent);
 }
 
-.kpiIconBad {
-  color: var(--destructive);
-  flex-shrink: 0;
-}
-
-.kpiValue {
-  font-size: 1.5rem;
+.statNumber {
+  display: inline-block;
+  font-size: 1.75rem;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1;
+  color: #b45309;
   font-variant-numeric: tabular-nums;
-  color: var(--foreground);
-  text-transform: capitalize;
   white-space: nowrap;
+  animation: stat-number-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.18s backwards;
+}
+
+@keyframes stat-number-in {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+:global(.dark) .statNumber {
+  color: #f59e0b;
+}
+
+.statHint {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.kpiLabel {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.kpiSub {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
-/* Sub-captions are chips now — wrap so two pills can sit on one row. */
+/* Sub-captions are chips — wrap so two pills can sit on one row. */
 .kpiPills {
   display: flex;
   flex-wrap: wrap;
@@ -157,8 +205,77 @@
 }
 
 .kpiSkel {
-  height: 5.5rem;
-  border-radius: var(--radius-lg);
+  height: 9rem;
+  border-radius: var(--radius-xl);
+}
+
+/* Boards cascade in so the strip settles instead of popping. */
+@keyframes stat-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kpiGrid > * {
+  animation: stat-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.kpiGrid > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.kpiGrid > *:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.kpiGrid > *:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+/* Sheen + figure trail each board's entrance so the strip reads as a wave. */
+.kpiGrid > *:nth-child(2) .stat::after {
+  animation-delay: 0.5s;
+}
+
+.kpiGrid > *:nth-child(3) .stat::after {
+  animation-delay: 0.65s;
+}
+
+.kpiGrid > *:nth-child(4) .stat::after {
+  animation-delay: 0.8s;
+}
+
+.kpiGrid > *:nth-child(2) .statNumber {
+  animation-delay: 0.3s;
+}
+
+.kpiGrid > *:nth-child(3) .statNumber {
+  animation-delay: 0.42s;
+}
+
+.kpiGrid > *:nth-child(4) .statNumber {
+  animation-delay: 0.54s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpiGrid > *,
+  .stat::after,
+  .statNumber {
+    animation: none;
+  }
+
+  .board {
+    transition: none;
+  }
+
+  .board:hover {
+    transform: none;
+  }
 }
 
 @media (max-width: 1023px) {

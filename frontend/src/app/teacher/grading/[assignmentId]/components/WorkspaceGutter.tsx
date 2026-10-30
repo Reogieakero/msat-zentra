@@ -10,7 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
 import { gradeLabel } from "@/services/teacher/grading.compute";
 import type {
   ClassAssignment,
@@ -156,6 +156,15 @@ export function WorkspaceGutter({
   const [editingWeights, setEditingWeights] = React.useState(false);
   const railRef = React.useRef<HTMLDivElement>(null);
 
+  // Re-opening the weights flyout should always land on the summary view,
+  // never a half-filled editor left over from a previous open.
+  // Render-time adjustment (not an effect) to satisfy the react-compiler gate.
+  const [prevOpenKey, setPrevOpenKey] = React.useState<MenuKey | null>(openKey);
+  if (openKey !== prevOpenKey) {
+    setPrevOpenKey(openKey);
+    if (!openKey && editingWeights) setEditingWeights(false);
+  }
+
   React.useEffect(() => {
     if (!openKey) return;
     const onPointerDown = (e: PointerEvent) => {
@@ -216,18 +225,18 @@ export function WorkspaceGutter({
               }
               actions={
                 <span className="flex items-center gap-1.5">
-                  <AmberRectPill>{assignment.sectionName}</AmberRectPill>
-                  <AmberRectPill>Grade {gradeLabel(assignment.gradeLevel)}</AmberRectPill>
+                  <Pill tone="amber" label="Section">{assignment.sectionName}</Pill>
+                  <Pill tone="amber" label="Grade level">Grade {gradeLabel(assignment.gradeLevel)}</Pill>
                 </span>
               }
               description={`${assignment.subjectCode} · Term ${assignment.termNumber}`}
               className="border-0"
             >
               <span className="flex flex-wrap items-center gap-1.5 px-1">
-                <AmberRectPill>
+                <Pill tone="amber" label="Enrolled students">
                   {studentCount} student{studentCount === 1 ? "" : "s"} enrolled
-                </AmberRectPill>
-                <AmberRectPill>{assignment.subjectCategory === "ELECTIVE" ? "Elective" : "Core"}</AmberRectPill>
+                </Pill>
+                <Pill tone="amber" label="Subject category">{assignment.subjectCategory === "ELECTIVE" ? "Elective" : "Core"}</Pill>
               </span>
             </KanbanBoard>
           </div>
@@ -261,7 +270,7 @@ export function WorkspaceGutter({
                 <WeightsEditor
                   key={openKey === "weights" ? "open" : "closed"}
                   detail={detail}
-                  onCancel={() => setEditingWeights(false)}
+                  onConfirm={() => setOpenKey(null)}
                   onSaved={() => {
                     setEditingWeights(false);
                     setOpenKey(null);

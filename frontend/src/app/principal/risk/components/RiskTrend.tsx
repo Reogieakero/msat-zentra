@@ -167,7 +167,7 @@ export function RiskTrend() {
                 width={28}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
-              {SERIES.map((s) => (
+              {SERIES.map((s, index) => (
                 <Bar
                   key={s.key}
                   dataKey={s.key}
@@ -175,6 +175,10 @@ export function RiskTrend() {
                   stackId="risk"
                   fill={`var(--color-${s.key})`}
                   radius={s.key === "high" ? [4, 4, 0, 0] : undefined}
+                  isAnimationActive
+                  animationBegin={180 + index * 160}
+                  animationDuration={1000}
+                  animationEasing="ease-out"
                 />
               ))}
               <ChartLegend

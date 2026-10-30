@@ -3,9 +3,10 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  Bar,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   XAxis,
   YAxis,
 } from "recharts";
@@ -15,20 +16,14 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pill } from "@/components/ui/pill";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/components/providers";
 import styles from "./SchoolTrend.module.css";
 
@@ -273,39 +268,38 @@ export function SchoolTrend() {
     <KanbanBoard
       title="Subject Trends"
       icon={<CalendarDays size={14} aria-hidden="true" />}
-      count={isPending ? undefined : series.length}
       description="Daily present share of enrolled headcount for every subject offered in the selected grade — plotted against the school average."
       actions={
-        <>
-          <Pill tone="green" label="Data source">
-            Adviser-shared
-          </Pill>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className={styles.filterBtn}>
-                {filteredScope}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={gradeFilter === "all"}
-                onCheckedChange={() => setGradeFilter("all")}
+        <Pill tone="green" label="Data source">
+          Adviser-shared
+        </Pill>
+      }
+      headerCenter={
+        <div
+          className={styles.filterRow}
+          role="group"
+          aria-label="Filter by grade level"
+        >
+          {[{ value: "all", label: "All grades" }, ...grades.map((g) => ({
+            value: g,
+            label: `Grade ${g}`,
+          }))].map((option) => {
+            const active = gradeFilter === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setGradeFilter(option.value)}
+                aria-pressed={active}
+                className={styles.filterButton}
               >
-                All grades
-              </DropdownMenuCheckboxItem>
-              {grades.map((g) => (
-                <DropdownMenuCheckboxItem
-                  key={g}
-                  checked={gradeFilter === g}
-                  onCheckedChange={() => setGradeFilter(g)}
-                >
-                  Grade {g}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </>
+                <Pill tone={active ? "blue" : "neutral"} className={styles.filterPill}>
+                  {option.label}
+                </Pill>
+              </button>
+            );
+          })}
+        </div>
       }
     >
       {isEmpty ? (
@@ -349,11 +343,18 @@ export function SchoolTrend() {
 
           <div className={styles.chartWrap}>
             <ChartContainer config={chartConfig} className={styles.chart}>
-              <LineChart
+              <ComposedChart
+                accessibilityLayer
                 data={chartData}
+                barCategoryGap="18%"
+                barGap={1}
                 margin={{ top: 8, right: 12, bottom: 0, left: -4 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <CartesianGrid
+                  vertical={false}
+                  stroke="var(--border)"
+                  strokeDasharray="3 3"
+                />
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
@@ -369,6 +370,7 @@ export function SchoolTrend() {
                   tickFormatter={(v: number) => `${v}%`}
                 />
                 <ChartTooltip
+                  cursor={{ fill: "var(--muted)", fillOpacity: 0.35 }}
                   content={
                     <ChartTooltipContent
                       labelFormatter={(label) => `${label}`}
@@ -382,7 +384,7 @@ export function SchoolTrend() {
                           <span className="text-muted-foreground">
                             {String(name)}
                           </span>
-                          <span className="ml-auto font-mono font-medium tabular-nums">
+                          <span className="ml-auto font-sans font-medium tabular-nums">
                             {value}%
                           </span>
                         </div>
@@ -391,15 +393,17 @@ export function SchoolTrend() {
                   }
                 />
                 {series.map((item, i) => (
-                  <Line
+                  <Bar
                     key={item.key}
-                    type="monotone"
                     dataKey={item.key}
                     name={item.name}
-                    stroke={colorOf(i)}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4 }}
+                    fill={colorOf(i)}
+                    radius={[3, 3, 0, 0]}
+                    maxBarSize={14}
+                    isAnimationActive
+                    animationBegin={Math.min(i * 120, 600)}
+                    animationDuration={1100}
+                    animationEasing="ease-out"
                   />
                 ))}
                 <Line
@@ -412,17 +416,15 @@ export function SchoolTrend() {
                   dot={false}
                   activeDot={{ r: 4 }}
                 />
-              </LineChart>
+              </ComposedChart>
             </ChartContainer>
           </div>
 
           {interpretation.length > 0 ? (
-            <p className={styles.interpretation}>
-              <span className={styles.interpretationLabel}>
-                What it means ·{" "}
-              </span>
+            <InsightCallout className="mt-auto">
+              <strong>What it means · </strong>
               {interpretation.join(" ")}
-            </p>
+            </InsightCallout>
           ) : null}
         </div>
       )}

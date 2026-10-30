@@ -13,7 +13,6 @@ import {
   SearchIcon,
   ShieldCheck,
   Bell,
-  ChevronDown,
   HeartHandshake,
   Radar,
 } from "lucide-react";
@@ -24,18 +23,9 @@ import { Pill } from "@/components/ui/pill";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
   Table,
-  TableHeader,
   TableBody,
   TableRow,
-  TableHead,
   TableCell,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -58,6 +48,12 @@ const ACTION_TABS: { key: InterventionActionFilter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "none", label: "No plan yet" },
   { key: "ongoing", label: "Ongoing" },
+];
+
+const RISK_TABS: { key: "all" | RiskLevelKey; label: string }[] = [
+  { key: "all", label: "All levels" },
+  { key: "High", label: "High" },
+  { key: "Moderate", label: "Moderate" },
 ];
 
 export function InterventionsListTable() {
@@ -129,6 +125,7 @@ export function InterventionsListTable() {
             <StudentMascot
               name={row.original.studentName}
               seed={row.original.lrn}
+              character={row.original.mascot ?? undefined}
               size={30}
             />
             <span className={styles.studentBody}>
@@ -311,34 +308,71 @@ export function InterventionsListTable() {
           <HeartHandshake size={14} />
         </span>
       }
-      count={total}
-      description="Flagged by the system. Category only, never the private write-up."
-      toolbar={
-        <div
-          className={styles.actionTabs}
-          role="tablist"
-          aria-label="Filter by plan action"
-        >
-          {ACTION_TABS.map((tab) => {
-            const active = actionFilter === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setActionFilter(tab.key)}
-                className={styles.actionTab}
-              >
-                <Pill tone={active ? "amber" : "neutral"}>{tab.label}</Pill>
-              </button>
-            );
-          })}
+      headerCenter={
+        <div className={styles.headerFilters}>
+          <div
+            className={styles.actionTabs}
+            role="tablist"
+            aria-label="Filter by plan action"
+          >
+            {ACTION_TABS.map((tab) => {
+              const active = actionFilter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setActionFilter(tab.key)}
+                  className={styles.actionTab}
+                >
+                  <Pill
+                    tone={active ? "blue" : "neutral"}
+                    className={styles.filterPill}
+                  >
+                    {tab.label}
+                  </Pill>
+                </button>
+              );
+            })}
+          </div>
+          <span className={styles.filterDivider} aria-hidden>
+            |
+          </span>
+          <div
+            className={styles.actionTabs}
+            role="tablist"
+            aria-label="Filter by risk level"
+          >
+            {RISK_TABS.map((tab) => {
+              const active = riskFilter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setRiskFilter(tab.key)}
+                  className={styles.actionTab}
+                >
+                  <Pill
+                    tone={active ? "blue" : "neutral"}
+                    className={styles.filterPill}
+                  >
+                    {tab.label}
+                  </Pill>
+                </button>
+              );
+            })}
+          </div>
         </div>
       }
       actions={
         <div className={styles.headerActions}>
-          <InputGroup className="max-w-40 shrink-0">
+          <Pill tone="green" label="Data source" className={styles.filterPill}>
+            Adviser-shared
+          </Pill>
+          <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
             <InputGroupInput
               placeholder="Filter students..."
               value={query}
@@ -349,39 +383,6 @@ export function InterventionsListTable() {
               <SearchIcon />
             </InputGroupAddon>
           </InputGroup>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`${styles.filterBtn} ${
-                  riskFilter !== "all" ? styles.filterActive : ""
-                }`}
-              >
-                Risk
-                {riskFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={riskFilter === "all"}
-                onCheckedChange={() => setRiskFilter("all")}
-              >
-                All levels
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {(["High", "Moderate", "Low"] as RiskLevelKey[]).map((lvl) => (
-                <DropdownMenuCheckboxItem
-                  key={lvl}
-                  checked={riskFilter === lvl}
-                  onCheckedChange={() => setRiskFilter(lvl)}
-                >
-                  {lvl}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       }
       footer={
@@ -396,15 +397,6 @@ export function InterventionsListTable() {
         {isPending ? (
           <div className="relative overflow-x-auto rounded-md border">
             <Table className="w-full table-fixed" aria-label="Loading intervention cases">
-              <TableHeader>
-                <TableRow className="bg-muted/50 [&>th]:border-t-0">
-                  {["Student", "Status", "Factor", "Latest detected", "Plan"].map((h) => (
-                    <TableHead key={h} className="h-10 whitespace-nowrap">
-                      {h}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
               <TableBody>
                 {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                   <TableRow key={i}>
@@ -449,28 +441,18 @@ export function InterventionsListTable() {
           <>
             <div className="relative overflow-x-auto rounded-md border">
               <Table className="w-full table-fixed" aria-label="Intervention cases">
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
-                      {headerGroup.headers.map((header) => (
-                        <TableHead
-                          key={header.id}
-                          style={{ width: header.getSize() }}
-                          onClick={header.column.getToggleSortingHandler()}
-                          className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
+                <TableBody
+                  key={`${safePage}-${actionFilter}-${riskFilter}-${debouncedQuery}`}
+                  className={styles.cascadeRows}
+                >
                   {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
+                    table.getRowModel().rows.map((row, rowIndex) => (
+                      <TableRow
+                        key={row.id}
+                        style={{
+                          animationDelay: `${450 + Math.min(rowIndex, 11) * 140}ms`,
+                        }}
+                      >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell
                             key={cell.id}

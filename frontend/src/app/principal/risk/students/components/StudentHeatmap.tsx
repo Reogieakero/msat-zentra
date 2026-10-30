@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Grid3x3, Users } from "lucide-react";
 import {
   FACTOR_CHIP,
@@ -37,24 +36,12 @@ export function StudentHeatmap({
   selectedSection: string | null;
   onSelect: (section: string) => void;
 }) {
-  const maxByFactor = React.useMemo(() => {
-    const max: Record<RiskFactor, number> = { Academic: 0, Attendance: 0, Behavioral: 0 };
-    for (const row of heat?.sections ?? []) {
-      for (const f of FACTORS) {
-        const v = row.factors[f] ?? 0;
-        if (v > max[f]) max[f] = v;
-      }
-    }
-    return max;
-  }, [heat]);
-
   const sections = heat?.sections ?? [];
 
   return (
     <KanbanBoard
       title="Section Heatmap"
       icon={<Grid3x3 size={14} aria-hidden="true" />}
-      count={loading ? undefined : sections.length}
       description="Flag intensity for academic, attendance, and behavioral factors per section. Select a section to drill into its students."
       actions={
         <Pill tone="green" label="Data source">
@@ -89,6 +76,12 @@ export function StudentHeatmap({
         <div className={styles.grid} role="list" aria-label="Section risk heatmap">
           {sections.map((row) => {
             const isActive = row.section === selectedSection;
+            // Each card is its own scale: the bars share one denominator (the
+            // section's highest factor count) so a 3 never reads as long as a 4.
+            const rowMax = Math.max(
+              1,
+              ...FACTORS.map((f) => row.factors[f] ?? 0),
+            );
             return (
               <button
                 type="button"
@@ -109,10 +102,9 @@ export function StudentHeatmap({
                 <ul className={styles.factorList}>
                   {FACTORS.map((f) => {
                     const v = row.factors[f] ?? 0;
-                    const pct =
-                      v === 0 || maxByFactor[f] === 0
-                        ? 0
-                        : Math.max(8, (v / maxByFactor[f]) * 100);
+                    // Zero stays an empty track; anything flagged gets a
+                    // visible sliver but keeps its true share of the scale.
+                    const pct = v === 0 ? 0 : Math.max(8, (v / rowMax) * 100);
                     return (
                       <li key={f} className={styles.factorRow}>
                         <span

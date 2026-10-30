@@ -24,10 +24,8 @@ import { riskTone } from "@/lib/labels/status-tone";
 import { Input } from "@/components/ui/input";
 import {
   Table,
-  TableHeader,
   TableBody,
   TableRow,
-  TableHead,
   TableCell,
 } from "@/components/ui/table";
 import type { BackendStudent, RiskFactor } from "@/services/principal/riskStudents.types";
@@ -141,7 +139,7 @@ export function HighRiskStudentsTable() {
         minSize: 160,
         maxSize: 160,
         cell: ({ row }) => (
-          <Pill tone="neutral" label="Section">
+          <Pill tone="amber" label="Section">
             {row.original.section}
           </Pill>
         ),
@@ -206,7 +204,6 @@ export function HighRiskStudentsTable() {
     <KanbanBoard
       title="High Risk Students"
       icon={<ShieldCheck size={14} aria-hidden="true" />}
-      count={isPending ? undefined : total}
       description={
         <>
           Students flagged as high risk that need priority review —{" "}
@@ -221,7 +218,7 @@ export function HighRiskStudentsTable() {
           <div className={styles.searchWrap}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
-              className={styles.search}
+              className={`${styles.search} rounded-[16px]`}
               placeholder="Search name or LRN…"
               value={query}
               onChange={(e) => applySearch(e.target.value)}
@@ -257,24 +254,6 @@ export function HighRiskStudentsTable() {
         ) : (
         <div className="overflow-x-auto rounded-md border">
           <Table className="w-full table-fixed">
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      style={{ width: header.getSize() }}
-                      onClick={header.column.getToggleSortingHandler()}
-                      className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
             <TableBody>
               {isPending ? (
                 <SkeletonRows />
@@ -287,8 +266,12 @@ export function HighRiskStudentsTable() {
                   </TableCell>
                 </TableRow>
               ) : (
-                tableRows.map((row) => (
-                  <TableRow key={row.id}>
+                tableRows.map((row, index) => (
+                  <TableRow
+                    key={row.id}
+                    className={styles.rowIn}
+                    style={{ animationDelay: `${60 + Math.min(index, 11) * 45}ms` }}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}

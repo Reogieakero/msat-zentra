@@ -155,6 +155,7 @@ enum AdmFormType {
   CERTIFICATION
   MINUTES_OF_MEETING
   HV_FORM
+  PRINCIPAL_SIGNAGE
 }
 
 
@@ -269,6 +270,8 @@ model User {
   admModules          AdmModule[]
   admDevicesIssued    AdmDevice[]            @relation("DeviceIssuedBy")
   admFormsUploaded    AdmForm[]
+  advisoryModules     AdvisoryModule[]       @relation("AdvisoryModuleCreator")
+  advisoryModuleSubmissions AdvisoryModuleSubmission[] @relation("AdvisoryModuleRecorder")
   sf10Records         Sf10Record[]           @relation("Sf10VerifiedBy")
   sf10Validated       Sf10Record[]           @relation("Sf10ValidatedBy")
   sf10Versions        Sf10RecordVersion[]
@@ -323,6 +326,7 @@ model StudentProfile {
   riskSnapshots     RiskSnapshot[]
   sf10Records       Sf10Record[]
   gradeFlags        GradeFlag[]
+  advisoryModuleSubmissions AdvisoryModuleSubmission[]
 }
 
 model ParentProfile {
@@ -443,6 +447,7 @@ model Section {
   timetableEntries SectionTimetableEntry[]
   rosterEntries StudentRoster[]
   assessments Assessment[]
+  advisoryModules AdvisoryModule[]
   sf10AccessRequests AdviserSf10AccessRequest[]
   @@index([schoolYearId])
   @@index([gradeLevel])
@@ -475,6 +480,7 @@ model StudentRoster {
   finalGrades FinalGrade[]
   riskSnapshots RiskSnapshot[]
   interventions Intervention[]
+  advisoryModuleSubmissions AdvisoryModuleSubmission[]
   @@unique([lrn, schoolYearId])
   @@index([gradeLevel])
   @@index([sectionId])
@@ -1080,6 +1086,11 @@ model AdmLearnerProfile {
   preparedBy          String
   approvedBy          String?
   approvedAt          DateTime?
+  // Set when the Principal returns the case for revision; cleared when the
+  // coordinator re-certifies (or the case is signed again). Drives the
+  // "Returned" lane on the principal desk.
+  returnedAt          DateTime?
+  returnReason        String?
   certificationDetails Json?
   termId              String
   confidentialityLevel Confidentiality @default(restricted)
@@ -1168,7 +1179,15 @@ model AdmModule {
   dueDate             DateTime?
   submitted           Boolean          @default(false)
   submissionDate      DateTime?
+  // Adviser-pasted Google Drive (or any https) link to the uploaded module.
+  submissionUrl       String?
+  // Adviser-pasted link to the student's answered module (the submission).
+  studentSubmissionUrl String?
+  // Optional adviser note shown on the monitoring report.
+  remarks             String?
   recordedBy          String
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   admLearnerProfile   AdmLearnerProfile @relation(fields: [admLearnerProfileId], references: [id], onDelete: Cascade)
   recorder            User             @relation(fields: [recordedBy], references: [id])
 }
@@ -1204,6 +1223,80 @@ enum AdmFormStatus {
   pending
   submitted
   verified
+}
+
+// ---------------------------------------------------------------------------
+// 3.6b Advisory modules (class-wide, not tied to an ADM case)
+// ---------------------------------------------------------------------------
+// The adviser releases a module once for the whole advisory section (name +
+// Google Drive link + release/due dates) so learners can see where to get it.
+// Submissions are recorded per learner by the adviser: a StudentProfile account
+// (studentId) or a roster-only learner (rosterId) — exactly one is set, the same
+// dual-identity rule used by StudentGrade/AttendanceRecord/Referral.
+// What the module is for. `general` is a post-only announcement (no learner
+// tracking); `adm` is released to every ADM learner in the section and its
+// submissions are tracked.
+enum AdvisoryModuleKind {
+  general
+  adm
+}
+
+model AdvisoryModule {
+  id           String   @id @default(uuid())
+  sectionId    String
+  kind         AdvisoryModuleKind @default(general)
+  moduleName   String
+  // Adviser-pasted link to the uploaded module (Google Drive or any https URL).
+  moduleUrl    String?
+  description  String?
+  // Posting the link releases the module; the date is set automatically.
+  releaseDate  DateTime?
+  dueDate      DateTime?
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  section      Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  creator      User     @relation("AdvisoryModuleCreator", fields: [createdBy], references: [id])
+  submissions  AdvisoryModuleSubmission[]
+  @@index([sectionId])
+}
+
+// How the learner handed the answered module in. Physical = the paper/module
+// was passed to the adviser in person (no link, no file).
+enum AdvisorySubmissionKind {
+  link
+  file
+  physical
+}
+
+model AdvisoryModuleSubmission {
+  id            String   @id @default(uuid())
+  moduleId      String
+  studentId     String?
+  rosterId      String?
+  // Adviser-pasted link to the learner's answered module.
+  submissionUrl String?
+  submissionKind AdvisorySubmissionKind @default(link)
+  // Optional uploaded copy (PDF/Word) of the answered module.
+  fileUrl       String?
+  fileName      String?
+  fileMimeType  String?
+  fileSize      Int?
+  submitted     Boolean  @default(false)
+  submittedAt   DateTime?
+  remarks       String?
+  recordedBy    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  module        AdvisoryModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  student       StudentProfile? @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  roster        StudentRoster? @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+  recorder      User           @relation("AdvisoryModuleRecorder", fields: [recordedBy], references: [id])
+  @@unique([moduleId, studentId])
+  @@unique([moduleId, rosterId])
+  @@index([moduleId])
+  @@index([studentId])
+  @@index([rosterId])
 }
 
 

@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import type { RiskLevel } from "../../generated/prisma/client.js";
-import { computeRiskFactors, levelFromFlags, type GradeMode } from "../../services/risk.js";
+import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals, type GradeMode } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
@@ -83,6 +83,7 @@ export async function getRiskHeatmap(
   ]);
 
   const headcounts = await sectionHeadcounts(sectionIds);
+  const sectionTotals = await sectionAttendanceTotals(sectionIds, termId);
 
   type BulkRow = {
     lrn: string;
@@ -112,6 +113,7 @@ export async function getRiskHeatmap(
       const flags = computeRiskFactors({
         finalGrades: s.finalGrades,
         attendance: s.attendanceRecords,
+        attendanceTotal: sectionTotals.get(sec.id),
         anecdotalCount: s.anecdotalRecords.length,
         enrolled,
       });
@@ -179,6 +181,8 @@ export async function getSectionFactorStudents(
   const registeredLrns = new Set(students.map((s) => s.lrn));
   const headcounts = await sectionHeadcounts([sectionId]);
   const enrolled = headcounts.get(sectionId) ?? students.length + rosterEntries.length;
+  const sectionTotals = await sectionAttendanceTotals([sectionId], termId);
+  const attendanceTotal = sectionTotals.get(sectionId);
 
   type FactorStudent = {
     lrn: string;
@@ -192,6 +196,7 @@ export async function getSectionFactorStudents(
       const flags = computeRiskFactors({
         finalGrades: s.finalGrades,
         attendance: s.attendanceRecords,
+        attendanceTotal,
         anecdotalCount: s.anecdotalRecords.length,
         enrolled,
       });
@@ -208,6 +213,7 @@ export async function getSectionFactorStudents(
         const flags = computeRiskFactors({
           finalGrades: r.finalGrades,
           attendance: r.attendanceRecords,
+          attendanceTotal,
           anecdotalCount: r.anecdotalRecords.length,
           enrolled,
         });

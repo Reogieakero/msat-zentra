@@ -14,9 +14,9 @@ import {
 } from "@/components/ui/command";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
-import { SidebarToggleButton } from "@/components/nav/SidebarToggleButton";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { AdviserClaimGate } from "./components/AdviserClaimGate";
 import {
   useTeacherProfileSettings,
@@ -74,7 +74,7 @@ function TeacherChrome({
 
   const profile = useTeacherProfileSettings();
 
-  const { collapsed: sidebarCollapsed, toggle: handleSidebarToggle } =
+  const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.teacher.sidebar.collapsed");
 
   const handleLogout = () => {
@@ -91,15 +91,11 @@ function TeacherChrome({
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
-        {standalone ? null : (
-          <SidebarToggleButton
-            collapsed={sidebarCollapsed}
-            onToggle={handleSidebarToggle}
-          />
-        )}
         <Link href="/teacher/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
+
+        <AppBreadcrumbs role="Teacher" />
 
         <div className={styles.spacer} />
 

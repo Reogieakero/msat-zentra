@@ -30,7 +30,7 @@ function LoadingShell() {
 }
 export default function PrincipalSectionSchedulePage() {
   const params = useParams<{ sectionId: string }>();
-  const sectionId = params.sectionId;
+  const sectionRef = params.sectionId;
   const {
     sectionsQuery,
     configQuery,
@@ -50,7 +50,7 @@ export default function PrincipalSectionSchedulePage() {
     rejecting,
     approving,
     statusMeta,
-  } = usePrincipalScheduleSection(sectionId);
+  } = usePrincipalScheduleSection(sectionRef);
   if (sectionsQuery.isPending || configQuery.isPending) {
     return <LoadingShell />;
   }

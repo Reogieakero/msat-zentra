@@ -1,79 +1,322 @@
-.headTitle {
-  margin: 0;
-  font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.sectionDesc {
-  margin: 0.125rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-}
-
+/* Grade tabs: pill buttons centered in the board header */
 .tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0 0.125rem;
 }
 
-.tab {
-  min-width: 32px;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+.filterTab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
   cursor: pointer;
-  transition: border-color 150ms ease-out, background-color 150ms ease-out,
-    color 150ms ease-out;
+  border-radius: var(--radius-md);
+  transition: opacity 140ms ease;
 }
 
-.tab:hover {
-  color: var(--foreground);
+.filterTab:hover {
+  opacity: 0.82;
 }
 
-.tabActive {
-  background-color: color-mix(in oklch, var(--primary), transparent 85%);
-  border-color: color-mix(in oklch, var(--primary), transparent 55%);
-  color: var(--foreground);
+.filterTab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
-.cellMain {
+/* ---- Awardee grid: one mini kanban board per student ---- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+@media (max-width: 1600px) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem 0.875rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent);
+  transition:
+    border-color 160ms ease-out,
+    background-color 160ms ease-out;
+}
+
+.board:hover,
+.board:focus-visible {
+  outline: none;
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  background-color: color-mix(in oklch, var(--primary) 6%, var(--muted) 30%);
+}
+
+.boardHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  /* Bleed to the board edges so the divider has no gutter gap. */
+  margin: 0 -0.875rem;
+  padding: 0 0.875rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.boardIdentity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.boardName {
   margin: 0;
-  font-size: 0.8125rem;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--foreground);
-  white-space: nowrap;
+  color: var(--primary);
 }
 
-.cellSub {
-  margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 400;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  color: var(--muted-foreground);
-  white-space: nowrap;
+/* Compact LRN chip for the grid — truncates instead of overflowing. */
+.lrnPill {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.fail {
-  color: var(--destructive);
+.rank {
+  flex-shrink: 0;
+  align-self: flex-start;
+  font-size: 0.6875rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
 }
 
-.tierBadge {
-  white-space: nowrap;
+.boardPills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.boardFoot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.375rem;
+  margin-top: auto;
+  padding-top: 0.375rem;
+  border-top: 1px dashed var(--border);
+}
+
+.avgBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.avgLabel {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+
+.avgValue {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+
+.bandPill {
+  flex-shrink: 0;
   font-weight: 600;
 }
 
-.skeletonRow {
-  height: 2.5rem;
+.empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+/* Boards cascade in on mount — same entrance as the academics roster. */
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.grid > .board {
+  animation: board-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.grid > .board:nth-child(2) {
+  animation-delay: 0.035s;
+}
+
+.grid > .board:nth-child(3) {
+  animation-delay: 0.07s;
+}
+
+.grid > .board:nth-child(4) {
+  animation-delay: 0.105s;
+}
+
+.grid > .board:nth-child(5) {
+  animation-delay: 0.14s;
+}
+
+.grid > .board:nth-child(6) {
+  animation-delay: 0.175s;
+}
+
+.grid > .board:nth-child(7) {
+  animation-delay: 0.21s;
+}
+
+.grid > .board:nth-child(8) {
+  animation-delay: 0.245s;
+}
+
+/* ---- Hover card: subject breakdown behind the average ---- */
+.hoverContent {
+  padding: 0;
+}
+
+.hoverBoard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.625rem 0.75rem 0.75rem;
+}
+
+.hoverHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.hoverTitleBlock {
+  min-width: 0;
+}
+
+.hoverName {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.hoverLrn {
+  margin: 0.125rem 0 0;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.hoverMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3125rem;
+}
+
+.subjectList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.subjectRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.25rem 0.375rem;
   border-radius: var(--radius-sm);
-  background-color: color-mix(in oklch, var(--muted), transparent 60%);
+}
+
+.subjectRow:nth-child(odd) {
+  background-color: color-mix(in oklch, var(--muted) 35%, transparent);
+}
+
+.subjectName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: var(--foreground);
+}
+
+/* ---- Loading skeleton ---- */
+.skeletonCard {
+  height: 7.5rem;
+  border-radius: 0.75rem;
+  background-color: color-mix(in oklch, var(--muted), transparent 55%);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -88,7 +331,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeletonRow {
+  .board,
+  .grid > .board,
+  .skeletonCard {
     animation: none;
+    transition: none;
   }
 }

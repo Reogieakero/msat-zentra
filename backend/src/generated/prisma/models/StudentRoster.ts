@@ -281,6 +281,7 @@ export type StudentRosterWhereInput = {
   finalGrades?: Prisma.FinalGradeListRelationFilter
   riskSnapshots?: Prisma.RiskSnapshotListRelationFilter
   interventions?: Prisma.InterventionListRelationFilter
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionListRelationFilter
 }
 
 export type StudentRosterOrderByWithRelationInput = {
@@ -305,6 +306,7 @@ export type StudentRosterOrderByWithRelationInput = {
   finalGrades?: Prisma.FinalGradeOrderByRelationAggregateInput
   riskSnapshots?: Prisma.RiskSnapshotOrderByRelationAggregateInput
   interventions?: Prisma.InterventionOrderByRelationAggregateInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionOrderByRelationAggregateInput
 }
 
 export type StudentRosterWhereUniqueInput = Prisma.AtLeast<{
@@ -333,6 +335,7 @@ export type StudentRosterWhereUniqueInput = Prisma.AtLeast<{
   finalGrades?: Prisma.FinalGradeListRelationFilter
   riskSnapshots?: Prisma.RiskSnapshotListRelationFilter
   interventions?: Prisma.InterventionListRelationFilter
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionListRelationFilter
 }, "id" | "lrn_schoolYearId">
 
 export type StudentRosterOrderByWithAggregationInput = {
@@ -393,6 +396,7 @@ export type StudentRosterCreateInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateInput = {
@@ -415,6 +419,7 @@ export type StudentRosterUncheckedCreateInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUpdateInput = {
@@ -437,6 +442,7 @@ export type StudentRosterUpdateInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateInput = {
@@ -459,6 +465,7 @@ export type StudentRosterUncheckedUpdateInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateManyInput = {
@@ -757,6 +764,22 @@ export type StudentRosterUpdateOneWithoutInterventionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudentRosterUpdateToOneWithWhereWithoutInterventionsInput, Prisma.StudentRosterUpdateWithoutInterventionsInput>, Prisma.StudentRosterUncheckedUpdateWithoutInterventionsInput>
 }
 
+export type StudentRosterCreateNestedOneWithoutAdvisoryModuleSubmissionsInput = {
+  create?: Prisma.XOR<Prisma.StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  connectOrCreate?: Prisma.StudentRosterCreateOrConnectWithoutAdvisoryModuleSubmissionsInput
+  connect?: Prisma.StudentRosterWhereUniqueInput
+}
+
+export type StudentRosterUpdateOneWithoutAdvisoryModuleSubmissionsNestedInput = {
+  create?: Prisma.XOR<Prisma.StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  connectOrCreate?: Prisma.StudentRosterCreateOrConnectWithoutAdvisoryModuleSubmissionsInput
+  upsert?: Prisma.StudentRosterUpsertWithoutAdvisoryModuleSubmissionsInput
+  disconnect?: Prisma.StudentRosterWhereInput | boolean
+  delete?: Prisma.StudentRosterWhereInput | boolean
+  connect?: Prisma.StudentRosterWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StudentRosterUpdateToOneWithWhereWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUpdateWithoutAdvisoryModuleSubmissionsInput>, Prisma.StudentRosterUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+}
+
 export type StudentRosterCreateNestedOneWithoutRiskSnapshotsInput = {
   create?: Prisma.XOR<Prisma.StudentRosterCreateWithoutRiskSnapshotsInput, Prisma.StudentRosterUncheckedCreateWithoutRiskSnapshotsInput>
   connectOrCreate?: Prisma.StudentRosterCreateOrConnectWithoutRiskSnapshotsInput
@@ -792,6 +815,7 @@ export type StudentRosterCreateWithoutSchoolYearInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutSchoolYearInput = {
@@ -813,6 +837,7 @@ export type StudentRosterUncheckedCreateWithoutSchoolYearInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutSchoolYearInput = {
@@ -878,6 +903,7 @@ export type StudentRosterCreateWithoutSectionInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutSectionInput = {
@@ -899,6 +925,7 @@ export type StudentRosterUncheckedCreateWithoutSectionInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutSectionInput = {
@@ -946,6 +973,7 @@ export type StudentRosterCreateWithoutStudentGradesInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutStudentGradesInput = {
@@ -967,6 +995,7 @@ export type StudentRosterUncheckedCreateWithoutStudentGradesInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutStudentGradesInput = {
@@ -1004,6 +1033,7 @@ export type StudentRosterUpdateWithoutStudentGradesInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutStudentGradesInput = {
@@ -1025,6 +1055,7 @@ export type StudentRosterUncheckedUpdateWithoutStudentGradesInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutFinalGradesInput = {
@@ -1046,6 +1077,7 @@ export type StudentRosterCreateWithoutFinalGradesInput = {
   studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutFinalGradesInput = {
@@ -1067,6 +1099,7 @@ export type StudentRosterUncheckedCreateWithoutFinalGradesInput = {
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutFinalGradesInput = {
@@ -1104,6 +1137,7 @@ export type StudentRosterUpdateWithoutFinalGradesInput = {
   studentGrades?: Prisma.StudentGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutFinalGradesInput = {
@@ -1125,6 +1159,7 @@ export type StudentRosterUncheckedUpdateWithoutFinalGradesInput = {
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutAttendanceRecordsInput = {
@@ -1146,6 +1181,7 @@ export type StudentRosterCreateWithoutAttendanceRecordsInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutAttendanceRecordsInput = {
@@ -1167,6 +1203,7 @@ export type StudentRosterUncheckedCreateWithoutAttendanceRecordsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutAttendanceRecordsInput = {
@@ -1204,6 +1241,7 @@ export type StudentRosterUpdateWithoutAttendanceRecordsInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutAttendanceRecordsInput = {
@@ -1225,6 +1263,7 @@ export type StudentRosterUncheckedUpdateWithoutAttendanceRecordsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutAnecdotalRecordsInput = {
@@ -1246,6 +1285,7 @@ export type StudentRosterCreateWithoutAnecdotalRecordsInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutAnecdotalRecordsInput = {
@@ -1267,6 +1307,7 @@ export type StudentRosterUncheckedCreateWithoutAnecdotalRecordsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutAnecdotalRecordsInput = {
@@ -1304,6 +1345,7 @@ export type StudentRosterUpdateWithoutAnecdotalRecordsInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutAnecdotalRecordsInput = {
@@ -1325,6 +1367,7 @@ export type StudentRosterUncheckedUpdateWithoutAnecdotalRecordsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutReferralsInput = {
@@ -1346,6 +1389,7 @@ export type StudentRosterCreateWithoutReferralsInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutReferralsInput = {
@@ -1367,6 +1411,7 @@ export type StudentRosterUncheckedCreateWithoutReferralsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutReferralsInput = {
@@ -1404,6 +1449,7 @@ export type StudentRosterUpdateWithoutReferralsInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutReferralsInput = {
@@ -1425,6 +1471,7 @@ export type StudentRosterUncheckedUpdateWithoutReferralsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutInterventionsInput = {
@@ -1446,6 +1493,7 @@ export type StudentRosterCreateWithoutInterventionsInput = {
   studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutInterventionsInput = {
@@ -1467,6 +1515,7 @@ export type StudentRosterUncheckedCreateWithoutInterventionsInput = {
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutInterventionsInput = {
@@ -1504,6 +1553,7 @@ export type StudentRosterUpdateWithoutInterventionsInput = {
   studentGrades?: Prisma.StudentGradeUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutInterventionsInput = {
@@ -1525,6 +1575,111 @@ export type StudentRosterUncheckedUpdateWithoutInterventionsInput = {
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
+}
+
+export type StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: string
+  lrn: string
+  fullName: string
+  gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
+  referrals?: Prisma.ReferralCreateNestedManyWithoutRosterInput
+  studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutRosterInput
+  finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
+  riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+}
+
+export type StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: string
+  lrn: string
+  fullName: string
+  gradeLevel: $Enums.GradeLevel
+  sectionId: string
+  schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
+  referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
+  studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
+  finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
+  riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+}
+
+export type StudentRosterCreateOrConnectWithoutAdvisoryModuleSubmissionsInput = {
+  where: Prisma.StudentRosterWhereUniqueInput
+  create: Prisma.XOR<Prisma.StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+}
+
+export type StudentRosterUpsertWithoutAdvisoryModuleSubmissionsInput = {
+  update: Prisma.XOR<Prisma.StudentRosterUpdateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+  create: Prisma.XOR<Prisma.StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  where?: Prisma.StudentRosterWhereInput
+}
+
+export type StudentRosterUpdateToOneWithWhereWithoutAdvisoryModuleSubmissionsInput = {
+  where?: Prisma.StudentRosterWhereInput
+  data: Prisma.XOR<Prisma.StudentRosterUpdateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+}
+
+export type StudentRosterUpdateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  lrn?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
+  referrals?: Prisma.ReferralUpdateManyWithoutRosterNestedInput
+  studentGrades?: Prisma.StudentGradeUpdateManyWithoutRosterNestedInput
+  finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
+  riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+}
+
+export type StudentRosterUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  lrn?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
+  referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
+  studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
+  finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
+  riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutRiskSnapshotsInput = {
@@ -1546,6 +1701,7 @@ export type StudentRosterCreateWithoutRiskSnapshotsInput = {
   studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutRiskSnapshotsInput = {
@@ -1567,6 +1723,7 @@ export type StudentRosterUncheckedCreateWithoutRiskSnapshotsInput = {
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutRiskSnapshotsInput = {
@@ -1604,6 +1761,7 @@ export type StudentRosterUpdateWithoutRiskSnapshotsInput = {
   studentGrades?: Prisma.StudentGradeUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutRiskSnapshotsInput = {
@@ -1625,6 +1783,7 @@ export type StudentRosterUncheckedUpdateWithoutRiskSnapshotsInput = {
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateManySchoolYearInput = {
@@ -1660,6 +1819,7 @@ export type StudentRosterUpdateWithoutSchoolYearInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutSchoolYearInput = {
@@ -1681,6 +1841,7 @@ export type StudentRosterUncheckedUpdateWithoutSchoolYearInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateManyWithoutSchoolYearInput = {
@@ -1730,6 +1891,7 @@ export type StudentRosterUpdateWithoutSectionInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutSectionInput = {
@@ -1751,6 +1913,7 @@ export type StudentRosterUncheckedUpdateWithoutSectionInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateManyWithoutSectionInput = {
@@ -1780,6 +1943,7 @@ export type StudentRosterCountOutputType = {
   finalGrades: number
   riskSnapshots: number
   interventions: number
+  advisoryModuleSubmissions: number
 }
 
 export type StudentRosterCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1790,6 +1954,7 @@ export type StudentRosterCountOutputTypeSelect<ExtArgs extends runtime.Types.Ext
   finalGrades?: boolean | StudentRosterCountOutputTypeCountFinalGradesArgs
   riskSnapshots?: boolean | StudentRosterCountOutputTypeCountRiskSnapshotsArgs
   interventions?: boolean | StudentRosterCountOutputTypeCountInterventionsArgs
+  advisoryModuleSubmissions?: boolean | StudentRosterCountOutputTypeCountAdvisoryModuleSubmissionsArgs
 }
 
 /**
@@ -1851,6 +2016,13 @@ export type StudentRosterCountOutputTypeCountInterventionsArgs<ExtArgs extends r
   where?: Prisma.InterventionWhereInput
 }
 
+/**
+ * StudentRosterCountOutputType without action
+ */
+export type StudentRosterCountOutputTypeCountAdvisoryModuleSubmissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdvisoryModuleSubmissionWhereInput
+}
+
 
 export type StudentRosterSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1874,6 +2046,7 @@ export type StudentRosterSelect<ExtArgs extends runtime.Types.Extensions.Interna
   finalGrades?: boolean | Prisma.StudentRoster$finalGradesArgs<ExtArgs>
   riskSnapshots?: boolean | Prisma.StudentRoster$riskSnapshotsArgs<ExtArgs>
   interventions?: boolean | Prisma.StudentRoster$interventionsArgs<ExtArgs>
+  advisoryModuleSubmissions?: boolean | Prisma.StudentRoster$advisoryModuleSubmissionsArgs<ExtArgs>
   _count?: boolean | Prisma.StudentRosterCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studentRoster"]>
 
@@ -1937,6 +2110,7 @@ export type StudentRosterInclude<ExtArgs extends runtime.Types.Extensions.Intern
   finalGrades?: boolean | Prisma.StudentRoster$finalGradesArgs<ExtArgs>
   riskSnapshots?: boolean | Prisma.StudentRoster$riskSnapshotsArgs<ExtArgs>
   interventions?: boolean | Prisma.StudentRoster$interventionsArgs<ExtArgs>
+  advisoryModuleSubmissions?: boolean | Prisma.StudentRoster$advisoryModuleSubmissionsArgs<ExtArgs>
   _count?: boolean | Prisma.StudentRosterCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type StudentRosterIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1960,6 +2134,7 @@ export type $StudentRosterPayload<ExtArgs extends runtime.Types.Extensions.Inter
     finalGrades: Prisma.$FinalGradePayload<ExtArgs>[]
     riskSnapshots: Prisma.$RiskSnapshotPayload<ExtArgs>[]
     interventions: Prisma.$InterventionPayload<ExtArgs>[]
+    advisoryModuleSubmissions: Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2377,6 +2552,7 @@ export interface Prisma__StudentRosterClient<T, Null = never, ExtArgs extends ru
   finalGrades<T extends Prisma.StudentRoster$finalGradesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$finalGradesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FinalGradePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   riskSnapshots<T extends Prisma.StudentRoster$riskSnapshotsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$riskSnapshotsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RiskSnapshotPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   interventions<T extends Prisma.StudentRoster$interventionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$interventionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InterventionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  advisoryModuleSubmissions<T extends Prisma.StudentRoster$advisoryModuleSubmissionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$advisoryModuleSubmissionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2984,6 +3160,30 @@ export type StudentRoster$interventionsArgs<ExtArgs extends runtime.Types.Extens
   take?: number
   skip?: number
   distinct?: Prisma.InterventionScalarFieldEnum | Prisma.InterventionScalarFieldEnum[]
+}
+
+/**
+ * StudentRoster.advisoryModuleSubmissions
+ */
+export type StudentRoster$advisoryModuleSubmissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdvisoryModuleSubmission
+   */
+  select?: Prisma.AdvisoryModuleSubmissionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdvisoryModuleSubmission
+   */
+  omit?: Prisma.AdvisoryModuleSubmissionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdvisoryModuleSubmissionInclude<ExtArgs> | null
+  where?: Prisma.AdvisoryModuleSubmissionWhereInput
+  orderBy?: Prisma.AdvisoryModuleSubmissionOrderByWithRelationInput | Prisma.AdvisoryModuleSubmissionOrderByWithRelationInput[]
+  cursor?: Prisma.AdvisoryModuleSubmissionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdvisoryModuleSubmissionScalarFieldEnum | Prisma.AdvisoryModuleSubmissionScalarFieldEnum[]
 }
 
 /**

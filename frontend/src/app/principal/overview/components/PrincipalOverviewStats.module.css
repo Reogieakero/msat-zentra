@@ -24,6 +24,17 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+  /* Micro-motion only on hover — the board itself settles via `stat-in`. */
+  transition:
+    transform 170ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 170ms ease,
+    box-shadow 170ms ease;
+}
+
+.column:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, #f59e0b 32%, var(--border));
+  box-shadow: 0 8px 20px -16px color-mix(in oklch, #f59e0b 55%, transparent);
 }
 
 :global(.dark) .column {
@@ -37,6 +48,8 @@
 }
 
 .stat {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
@@ -46,6 +59,32 @@
   border-radius: var(--radius-lg);
   background-color: var(--card);
   box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
+}
+
+/* One light sweep across the value card as the strip settles — reads as the
+   board powering on, not a looping decoration. */
+.stat::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 28%,
+    color-mix(in oklch, #f59e0b 14%, transparent) 50%,
+    transparent 72%
+  );
+  transform: translateX(-140%);
+  animation: stat-sheen 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+}
+
+@keyframes stat-sheen {
+  from {
+    transform: translateX(-140%);
+  }
+  to {
+    transform: translateX(140%);
+  }
 }
 
 .statTop {
@@ -68,11 +107,26 @@
 }
 
 .statNumber {
+  display: inline-block;
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1;
   color: #b45309;
   font-variant-numeric: tabular-nums;
+  animation: stat-number-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.18s backwards;
+}
+
+@keyframes stat-number-in {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
 }
 
 :global(.dark) .statNumber {
@@ -177,8 +231,43 @@
   animation-delay: 0.3s;
 }
 
+/* Sheen trails each column's own entrance so the strip reads as a wave. */
+.grid > .column:nth-child(2) .stat::after {
+  animation-delay: 0.5s;
+}
+
+.grid > .column:nth-child(3) .stat::after {
+  animation-delay: 0.65s;
+}
+
+.grid > .column:nth-child(4) .stat::after {
+  animation-delay: 0.8s;
+}
+
+.grid > .column:nth-child(2) .statNumber {
+  animation-delay: 0.3s;
+}
+
+.grid > .column:nth-child(3) .statNumber {
+  animation-delay: 0.42s;
+}
+
+.grid > .column:nth-child(4) .statNumber {
+  animation-delay: 0.54s;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .grid > .column {
+  .grid > .column,
+  .grid > .column .stat::after,
+  .grid > .column .statNumber {
     animation: none;
+  }
+
+  .column {
+    transition: none;
+  }
+
+  .column:hover {
+    transform: none;
   }
 }

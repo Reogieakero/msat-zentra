@@ -149,7 +149,7 @@ export function RiskLevelDistribution() {
                 width={28}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
-              {LEVELS.map((level) => (
+              {LEVELS.map((level, index) => (
                 <Bar
                   key={level}
                   dataKey={level}
@@ -157,6 +157,10 @@ export function RiskLevelDistribution() {
                   fill={`var(--color-${level})`}
                   radius={[3, 3, 0, 0]}
                   maxBarSize={20}
+                  isAnimationActive
+                  animationBegin={index * 140}
+                  animationDuration={1100}
+                  animationEasing="ease-out"
                 />
               ))}
               <ChartLegend

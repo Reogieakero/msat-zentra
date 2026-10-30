@@ -3,7 +3,7 @@ import {
   remarksFromTransmuted,
   meetsAcademicExcellenceAward,
 } from "../../services/grading.js";
-import { computeRiskFactors, levelFromFlags } from "../../services/risk.js";
+import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../../services/risk.js";
 import { schoolDaysToDate } from "../../services/attendance.js";
 import { gradeLabel } from "../../lib/grades.js";
 
@@ -53,6 +53,8 @@ export interface SectionSummaryDTO {
   sectionId: string;
   section: string;
   grade: string;
+  /** Adviser has switched student-data sharing ON; metrics are hidden otherwise. */
+  shared: boolean;
   avgTransmuted: number;
   passPct: number;
   failPct: number;
@@ -123,6 +125,9 @@ export async function getAcademicsSummary(
   const sections = await prisma.section.findMany({
     where: resolvedYearId ? { schoolYearId: resolvedYearId } : undefined,
     include: {
+      adviser: {
+        select: { staffProfile: { select: { shareStudentData: true } } },
+      },
       students: {
         include: {
           user: { select: { fullName: true } },
@@ -184,10 +189,20 @@ export async function getAcademicsSummary(
   const passFailMap = new Map<string, { passed: number; failed: number }>();
   const honorRollPool: HonorRollCandidateDTO[] = [];
   const potentialPool: PotentialHonorCandidateDTO[] = [];
+  const sectionTotals = termId
+    ? await sectionAttendanceTotals(
+        sections.map((s) => s.id),
+        termId,
+      )
+    : new Map<string, number>();
 
   for (const section of sections) {
     const grade = gradeLabel(section.gradeLevel);
     const gradeAcc = passFailMap.get(grade) ?? { passed: 0, failed: 0 };
+    // The principal only reads student data the adviser has explicitly shared
+    // (Settings → share student data). Names/LRNs stay for the roster itself;
+    // averages, attendance, risk and honour-roll entries are withheld.
+    const shared = section.adviser?.staffProfile?.shareStudentData ?? false;
 
     const registeredLrns = new Set(section.students.map((s) => s.lrn));
     const enrolledStudents: {
@@ -232,6 +247,23 @@ export async function getAcademicsSummary(
 
     const students: StudentRowDTO[] = [];
     for (const student of enrolledStudents) {
+      if (!shared) {
+        // Roster identity only — no grades, attendance, risk or anecdotes.
+        students.push({
+          studentId: student.userId,
+          lrn: student.lrn,
+          name: student.fullName,
+          mascot: student.mascot,
+          riskLevel: "Low",
+          overallAverage: 0,
+          attendanceRatePct: 0,
+          presentAm: 0,
+          presentPm: 0,
+          schoolDays,
+          subjects: [],
+        });
+        continue;
+      }
       const finals = (student.finalGrades ?? [])
         .filter((f) => f.termId === termId)
         .filter((f) =>
@@ -273,6 +305,7 @@ export async function getAcademicsSummary(
             transmutedGrade: f.transmutedGrade,
           })),
           attendance: student.attendanceRecords,
+          attendanceTotal: sectionTotals.get(section.id),
           anecdotalCount: student.anecdotalCount,
           enrolled,
         })
@@ -361,6 +394,7 @@ export async function getAcademicsSummary(
       sectionId: section.id,
       section: section.name,
       grade,
+      shared,
       avgTransmuted,
       passPct,
       failPct,
@@ -429,6 +463,7 @@ export async function getStudentHoverStats(
           where: { id: rosterId! },
           select: {
             fullName: true,
+            sectionId: true,
             section: {
               select: {
                 adviser: {
@@ -441,6 +476,7 @@ export async function getStudentHoverStats(
       : prisma.studentProfile.findUnique({
           where: { userId: rawId },
           select: {
+            sectionId: true,
             user: { select: { fullName: true } },
             section: {
               select: {
@@ -460,6 +496,7 @@ export async function getStudentHoverStats(
   const connected =
     (student as { section?: { adviser?: { staffProfile?: { shareStudentData?: boolean } | null } | null } | null } | null)
       ?.section?.adviser?.staffProfile?.shareStudentData ?? false;
+  const sectionId = (student as { sectionId?: string | null } | null)?.sectionId ?? null;
 
   const termLabel = term ? `Term ${term.termNumber}` : "No active term";
   const schoolYear = term?.schoolYear.name ?? "No active school year";
@@ -479,7 +516,7 @@ export async function getStudentHoverStats(
   if (!connected || !term) return base;
 
   const owner = isRoster ? { rosterId } : { studentId: rawId };
-  const [grades, attendance, anecdoteCount] = await Promise.all([
+  const [grades, attendance, anecdoteCount, totals] = await Promise.all([
     prisma.finalGrade.findMany({
       where: { ...owner, termId: term.id, transmutedGrade: { not: null } },
       select: { transmutedGrade: true },
@@ -489,13 +526,22 @@ export async function getStudentHoverStats(
       select: { status: true },
     }),
     prisma.anecdotalRecord.count({ where: { ...owner, termId: term.id } }),
+    // The denominator is the whole section's term, anchored at the TERM START
+    // DATE — not at this learner's add date. A classmate added mid-term must
+    // read the same /N as everyone else (their pre-join meetups simply count
+    // as missed), otherwise two classmates show different totals for the same
+    // school days. Same helper the risk engine uses.
+    sectionId
+      ? sectionAttendanceTotals([sectionId], term.id)
+      : Promise.resolve(new Map<string, number>()),
   ]);
 
   const values = grades
     .map((g) => g.transmutedGrade)
     .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
   const present = attendance.filter((a) => a.status === "present").length;
-  const total = attendance.length;
+  // Never report fewer meetups than the learner actually has marks in.
+  const total = Math.max(sectionId ? totals.get(sectionId) ?? 0 : 0, attendance.length);
 
   return {
     ...base,

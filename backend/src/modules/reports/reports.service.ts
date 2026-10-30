@@ -1,7 +1,8 @@
 import { prisma } from "../../lib/prisma.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
-import { meetsAcademicExcellenceAward } from "../../services/grading.js";
 import { gradeLabel, gradeToNumber as gradeNum } from "../../lib/grades.js";
+import { pickCurrentTerm } from "../../lib/termScope.js";
+import { getLiveHonorRoll } from "../academics/honor-roll-live.service.js";
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
@@ -112,11 +113,14 @@ export async function getReports(params: {
     });
   }
   if (!activeTerm && params.schoolYearId) {
-    activeTerm = await prisma.term.findFirst({
-      where: { schoolYearId: params.schoolYearId },
-      orderBy: { termNumber: "asc" },
-      select: termSelect,
+    const year = await prisma.schoolYear.findUnique({
+      where: { id: params.schoolYearId },
+      select: { terms: { orderBy: { termNumber: "asc" }, select: termSelect } },
     });
+    // Prefer the term in session for that year (same rule the term-scope
+    // middleware uses); fall back to the first term when no dates overlap.
+    activeTerm =
+      (year ? pickCurrentTerm(year.terms) : null) ?? null;
   }
   if (!activeTerm) {
     activeTerm = await prisma.term.findFirst({
@@ -233,13 +237,9 @@ export async function getReports(params: {
 
   let transmutedSum = 0;
   let transmutedCount = 0;
-  let honorRoll = 0;
   const riskCounts = { High: 0, Moderate: 0, Low: 0 };
-  const honorRollByGradeMap = new Map<string, number>();
 
   for (const section of sections) {
-    const grade = gradeLabel(section.gradeLevel);
-
     const registeredLrns = new Set(section.students.map((s) => s.lrn));
     const cohort = [
       ...section.students,
@@ -278,25 +278,23 @@ export async function getReports(params: {
       const level: "High" | "Moderate" | "Low" =
         sCount >= 2 ? "High" : sCount === 1 ? "Moderate" : "Low";
       riskCounts[level] += 1;
-
-      const allLocked =
-        finals.length > 0 &&
-        finals.every(
-          (f) =>
-            f.lockStatus === "locked" ||
-            f.lockStatus === "adviser_approved" ||
-            f.finalizedAt != null
-        );
-      if (allLocked && level !== "High") {
-        const gGrades = finals.map((f) => f.transmutedGrade as number);
-        const avg = gGrades.reduce((s, g) => s + g, 0) / gGrades.length;
-        const lowest = gGrades.length > 0 ? Math.min(...gGrades) : 100;
-        if (meetsAcademicExcellenceAward(avg, lowest)) {
-          honorRoll += 1;
-          honorRollByGradeMap.set(grade, (honorRollByGradeMap.get(grade) ?? 0) + 1);
-        }
-      }
     }
+  }
+
+  // Keep the honor roll identical to /principal/honor-roll: reuse the live
+  // service (StudentGrade-based) instead of recomputing from FinalGrade rows,
+  // which only exist once finals are locked and therefore undercounted.
+  const liveHonorRoll = await getLiveHonorRoll({
+    schoolYearId,
+    termId,
+    gradeLevel: params.scope === "grade" ? params.gradeLevel : null,
+    sectionId: params.scope === "section" ? params.sectionId : null,
+  });
+  const honorRoll = liveHonorRoll.candidates.length;
+  const honorRollByGradeMap = new Map<string, number>();
+  for (const candidate of liveHonorRoll.candidates) {
+    const label = `Grade ${candidate.gradeLevel}`;
+    honorRollByGradeMap.set(label, (honorRollByGradeMap.get(label) ?? 0) + 1);
   }
 
   const avgTransmuted = transmutedCount > 0 ? round1(transmutedSum / transmutedCount) : 0;

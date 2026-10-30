@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus } from "lucide-react";
+import { Plus, SearchIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import {
@@ -9,7 +9,8 @@ import {
   humanizeCategory,
 } from "@/components/anecdotal/anecdotal-record-kanban-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import type { MyAnecdotalRecord } from "@/components/ocform01/folders";
 import styles from "./anecdotal-repo-folders.module.css";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
@@ -56,16 +57,10 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
   return (
     <>
       <div className={`${styles.panel} flex flex-1 flex-col`}>
-        <div className={styles.header}>
-          <div className={styles.headerText}>
-            <h2 className={styles.sectionTitle}>Advisory GCForm 01 records</h2>
-            <p className={styles.sectionDesc}>
-              Every anecdotal record filed for your advisory - {records.length} in all. Open a folder to read its GCForm-01.
-            </p>
-          </div>
-          <div className={styles.headerActions}>
-            <Input
-              className={`${styles.search} h-8 rounded-[16px]`}
+        <div className="flex w-full items-center justify-end gap-2 pt-1">
+          <InputGroup className="h-9 w-full max-w-56 shrink-0 rounded-full">
+            <InputGroupInput
+              className="h-full py-0 text-sm"
               placeholder="Search folders…"
               value={query}
               onChange={(e) => {
@@ -74,7 +69,10 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
               }}
               aria-label="Search folders"
             />
-          </div>
+            <InputGroupAddon>
+              <SearchIcon />
+            </InputGroupAddon>
+          </InputGroup>
         </div>
         <div className={styles.content}>
           <div className={styles.scrollArea}>
@@ -95,15 +93,18 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
                 New record
               </Button>
             </div>
+          ) : pageRows.length === 0 && needle ? (
+            <div className="flex w-full justify-center px-1 py-10">
+              <InsightCallout role="status" className="w-full max-w-xl text-left">
+                <strong>No folders match “{query}”.</strong> Try a different name,
+                LRN, or section — or clear the search to see every filed record.
+              </InsightCallout>
+            </div>
           ) : pageRows.length === 0 ? (
             <div className={styles.empty}>
-              <p className={styles.emptyTitle}>
-                {needle ? "No folders match" : "No filed records on this page"}
-              </p>
+              <p className={styles.emptyTitle}>No filed records on this page</p>
               <p className={styles.emptyBody}>
-                {needle
-                  ? `Nothing matches "${query}". Try a different name, LRN, or section.`
-                  : "File your first anecdotal record with Bama and it will land here."}
+                File your first anecdotal record with Bama and it will land here.
               </p>
             </div>
           ) : (

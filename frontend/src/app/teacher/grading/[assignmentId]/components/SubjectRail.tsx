@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTeacherOverviewGradebook } from "@/services/teacher/overview.service";
+import { gradebookSlug } from "@/lib/gradebookSlug";
 
 /**
  * Horizontal subject-gradebook switcher: one compact code card per subject
@@ -24,7 +26,9 @@ export function SubjectRail({ currentId }: { currentId: string }) {
     return null;
   }
 
-  const isActive = (id: string) => (pickedId ?? currentId) === id;
+  const target = pickedId ?? currentId;
+  const isActive = (row: { id: string; subject: string; section: string }) =>
+    row.id === target || gradebookSlug(row) === target;
 
   return (
     <div
@@ -37,12 +41,12 @@ export function SubjectRail({ currentId }: { currentId: string }) {
             <Skeleton key={i} className="h-[54px] w-40 shrink-0 rounded-lg" aria-hidden />
           ))
         : classes.map((c) => {
-            const active = isActive(c.id);
+            const active = isActive(c);
             const code = c.subjectCode?.trim() || c.subject;
             return (
               <Link
                 key={c.id}
-                href={`/teacher/grading/${c.id}`}
+                href={`/teacher/grading/${gradebookSlug(c)}`}
                 onClick={() => setPickedId(c.id)}
                 aria-current={active ? "page" : undefined}
                 aria-label={`${c.subject} — ${c.section}, ${c.gradeLevel}${active ? " (current)" : ""}`}
@@ -63,12 +67,12 @@ export function SubjectRail({ currentId }: { currentId: string }) {
                   {code}
                 </span>
                 <span className="flex min-w-0 items-center gap-1">
-                  <span className="inline-flex min-w-0 max-w-full items-center truncate rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-px text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                  <Pill tone="amber" label="Section" className="min-w-0 truncate">
                     {c.section}
-                  </span>
-                  <span className="inline-flex shrink-0 items-center rounded border border-border bg-secondary px-1.5 py-px text-[10px] font-medium text-secondary-foreground">
+                  </Pill>
+                  <Pill tone="neutral" label="Grade level">
                     {c.gradeLevel}
-                  </span>
+                  </Pill>
                 </span>
               </Link>
             );

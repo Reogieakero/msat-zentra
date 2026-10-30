@@ -9,6 +9,7 @@ import { Pill } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { SECTION_CARD_STATUS_META, sectionCardStatus } from "@/components/schedule/SectionScheduleCard";
 import { scheduleTone } from "@/lib/labels/status-tone";
+import { sectionPath } from "./section-path";
 import styles from "./schedule.module.css";
 
 export interface ScheduleEntry {
@@ -45,7 +46,9 @@ function teacherCount(entries: ScheduleEntry[]): number {
  * Schedule approval table — the shared KanbanBoard shell wrapped around a
  * data table, centered on the page. Grade-level filter chips are shared pills;
  * status chips use the same pill with the status-tone palette. Grades 11–12
- * stay listed even before they have sections or a master timetable.
+ * stay listed even before they have sections or a master timetable. The table
+ * has no header row — every cell is a labelled pill so the columns explain
+ * themselves.
  */
 export function ScheduleTable({
   sections,
@@ -66,6 +69,15 @@ export function ScheduleTable({
   );
 
   const visibleGrades = grade == null ? [...ALL_GRADES] : [grade];
+
+  // Rows cascade in on mount and whenever the grade filter changes — the
+  // tbody is keyed by the filter so it remounts and replays the stagger.
+  // 1s per row starting at 0.45s, 140ms apart, capped at 11 steps — the deepest
+  // row finishes at ~3s.
+  let rowIndex = 0;
+  const rowDelay = () => ({
+    animationDelay: `${450 + Math.min(rowIndex++, 11) * 140}ms`,
+  });
 
   const filter = (value: number | null, label: string) => {
     const active = grade === value;
@@ -91,7 +103,6 @@ export function ScheduleTable({
             <CalendarDays size={14} />
           </span>
         }
-        count={sections.length}
         description="Timetables sent by the master teacher appear here for review."
         ariaLabel="Schedule approval table"
         actions={
@@ -103,24 +114,12 @@ export function ScheduleTable({
       >
         <div className={styles.tableWrap}>
           <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">Section</th>
-                <th scope="col">Grade</th>
-                <th scope="col">Adviser</th>
-                <th scope="col">Teachers</th>
-                <th scope="col">Status</th>
-                <th scope="col" className={styles.actionCol}>
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+            <tbody key={grade ?? "all"}>
               {visibleGrades.map((g) => {
                 const rows = ordered.filter((s) => gradeNumber(s.gradeLevel) === g);
                 if (rows.length === 0) {
                   return (
-                    <tr key={`grade-${g}`}>
+                    <tr key={`grade-${g}`} style={rowDelay()}>
                       <td>
                         <span className={styles.sectionCell}>
                           <span className={styles.sectionName}>
@@ -131,11 +130,17 @@ export function ScheduleTable({
                           </span>
                         </span>
                       </td>
-                      <td className={styles.mutedCell}>Grade {g}</td>
+                      <td>
+                        <Pill tone="neutral" label="Grade">
+                          Grade {g}
+                        </Pill>
+                      </td>
                       <td className={styles.mutedCell}>—</td>
                       <td className={styles.mutedCell}>—</td>
                       <td>
-                        <Pill tone="neutral">Empty</Pill>
+                        <Pill tone="neutral" label="Status">
+                          Empty
+                        </Pill>
                       </td>
                       <td className={styles.actionCol} />
                     </tr>
@@ -144,9 +149,9 @@ export function ScheduleTable({
                 return rows.map((section) => {
                   const status = sectionCardStatus(section.timetableEntries);
                   const meta = SECTION_CARD_STATUS_META[status];
-                  const href = `/principal/academics/schedule/${section.id}`;
+                  const href = sectionPath(section);
                   return (
-                    <tr key={section.id}>
+                    <tr key={section.id} style={rowDelay()}>
                       <td>
                         <span className={styles.sectionCell}>
                           <StudentMascot
@@ -159,21 +164,31 @@ export function ScheduleTable({
                           </span>
                         </span>
                       </td>
-                      <td className={styles.mutedCell}>Grade {section.gradeLevel.replace("G", "")}</td>
-                      <td className={styles.mutedCell} title={section.adviser?.fullName}>
+                      <td>
+                        <Pill tone="neutral" label="Grade">
+                          Grade {section.gradeLevel.replace("G", "")}
+                        </Pill>
+                      </td>
+                      <td className={styles.mutedCell}>
                         {section.adviser?.fullName ? (
-                          <Pill tone="amber" className="max-w-[16rem] overflow-hidden">
+                          <Pill
+                            tone="amber"
+                            label="Adviser"
+                            className="max-w-[16rem] overflow-hidden"
+                          >
                             {section.adviser.fullName}
                           </Pill>
                         ) : (
-                          <Pill tone="neutral">
+                          <Pill tone="neutral" label="Adviser">
                             <span className={styles.teacherNone}>No adviser</span>
                           </Pill>
                         )}
                       </td>
                       <td className={styles.mutedCell}>{teacherCount(section.timetableEntries)}</td>
                       <td>
-                        <Pill tone={scheduleTone(status)}>{meta.label}</Pill>
+                        <Pill tone={scheduleTone(status)} label="Status">
+                          {meta.label}
+                        </Pill>
                       </td>
                       <td className={styles.actionCol}>
                         <span className="inline-flex items-center gap-1">

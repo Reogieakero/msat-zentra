@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CalendarDays,
   KeyRound,
   Palette,
   UserRound,
@@ -16,6 +17,7 @@ export interface SettingsSectionLink {
 export function principalSettingsSections(): SettingsSectionLink[] {
   return [
     { id: "section-profile", label: "Profile", Icon: UserRound },
+    { id: "section-term", label: "Term & school year", Icon: CalendarDays },
     { id: "section-appearance", label: "Appearance", Icon: Palette },
     { id: "section-password", label: "Password", Icon: KeyRound },
   ];

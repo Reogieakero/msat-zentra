@@ -6,18 +6,9 @@ import { KanbanBoardEmpty } from "@/components/ui/kanban-board";
 import type { ClassAssessment, ClassStudent } from "@/services/teacher/grading.types";
 import { ScoreCellInput, scoreOf } from "./score-input";
 import { assignUniqueMascots } from "./mascot-assignment";
+import { Pill } from "@/components/ui/pill";
+import { formatSurnameFirst } from "@/lib/names";
 import rowStyles from "@/components/ui/row-list.module.css";
-
-/* Same pill language as RowList rows: status left, live % right. */
-const PILL_BASE =
-  "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium";
-const STATUS_GREEN =
-  "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400";
-const STATUS_MUTED = "border-border bg-muted text-muted-foreground";
-const PCT_AMBER =
-  "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400";
-const LRN_PILL =
-  "inline-flex shrink-0 items-center rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground";
 
 export function PlainEncodeTable({ assessment, students, drafts, nameFilter, onDraftChange }: { assessment: ClassAssessment; students: ClassStudent[]; drafts: Record<string, string>; nameFilter: string; onDraftChange: (studentId: string, value: string) => void }) {
   const q = nameFilter.trim().toLowerCase();
@@ -50,11 +41,13 @@ export function PlainEncodeTable({ assessment, students, drafts, nameFilter, onD
             className={rowStyles.row}
             aria-label={`${scored ? "Scored" : "Missing"}: ${s.name}`}
           >
-            <span
-              className={`${PILL_BASE} w-fit max-w-full justify-center ${scored ? STATUS_GREEN : STATUS_MUTED}`}
+            <Pill
+              tone={scored ? "green" : "neutral"}
+              label="Score status"
+              className="w-fit max-w-full justify-center"
             >
               {scored ? "Scored" : "Missing"}
-            </span>
+            </Pill>
             <span className={rowStyles.sep} aria-hidden>
               |
             </span>
@@ -65,30 +58,30 @@ export function PlainEncodeTable({ assessment, students, drafts, nameFilter, onD
                 character={mascotById.get(s.id)}
                 size={28}
               />
-              <span className={rowStyles.title} title={s.name}>
-                {s.name}
+              <span className={rowStyles.title} title={formatSurnameFirst(s.name)}>
+                {formatSurnameFirst(s.name)}
               </span>
-              <span className={LRN_PILL} title={s.lrn}>
+              <Pill tone="neutral" label="LRN" className="min-w-0 max-w-full truncate" title={s.lrn}>
                 {s.lrn}
-              </span>
+              </Pill>
             </span>
             <span className={rowStyles.metaCell}>
               <ScoreCellInput
                 key={`${assessment.id}:${s.id}`}
                 cacheKey={`${assessment.id}:${s.id}`}
                 initial={drafts[s.id] ?? savedText}
-                studentName={s.name}
+                studentName={formatSurnameFirst(s.name)}
                 assessmentTitle={assessment.title}
                 onDraft={(value) => onDraftChange(s.id, value)}
               />
-              <span className={`${PILL_BASE} gap-1 ${PCT_AMBER}`}>
+              <Pill tone="amber" label="Percentage" className="gap-1">
                 <span
                   className={rowStyles.metaDot}
                   style={{ background: "#f59e0b" }}
                   aria-hidden
                 />
                 {pct !== null ? `${pct.toFixed(1)}%` : "—"}
-              </span>
+              </Pill>
             </span>
           </li>
         );

@@ -8,6 +8,33 @@
   background-color: var(--background);
 }
 
+/* Same board entrance as the risk board page: lift 16px, settle from 0.97
+   scale, one beat between the heatmap and the students table. */
+@keyframes page-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.page > * {
+  animation: page-card-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.page > *:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page > * {
+    animation: none;
+  }
+}
+
 .divider {
   margin: 0;
   border: none;

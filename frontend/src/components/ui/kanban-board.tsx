@@ -8,6 +8,7 @@ export function KanbanBoardHeader({
   count,
   actions,
   center,
+  toolbar,
   ariaLabel,
 }: {
   icon?: React.ReactNode;
@@ -16,6 +17,8 @@ export function KanbanBoardHeader({
   actions?: React.ReactNode;
   /** Slot centered in the title row (e.g. a status filter / view switcher). */
   center?: React.ReactNode;
+  /** Wide controls (search + filters) that share the title row and wrap. */
+  toolbar?: React.ReactNode;
   ariaLabel?: string;
 }) {
   return (
@@ -23,11 +26,19 @@ export function KanbanBoardHeader({
       className="-mx-2.5 relative flex items-center gap-2 border-b border-border px-3.5 pb-2"
       aria-label={ariaLabel}
     >
-      <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground">
+      <span
+        className={`inline-flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground ${
+          toolbar ? "shrink-0" : "flex-1"
+        }`}
+      >
         {icon}
         <span className="truncate">{title}</span>
       </span>
-      {center ? (
+      {toolbar ? (
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+          {toolbar}
+        </div>
+      ) : center ? (
         <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center">
           <div className="pointer-events-auto flex items-center">{center}</div>
         </div>
@@ -59,6 +70,8 @@ interface KanbanBoardProps {
   actions?: React.ReactNode;
   /** Centered in the title row — e.g. a status filter or view switcher. */
   headerCenter?: React.ReactNode;
+  /** Search/filter strip that shares the title row (wraps when narrow). */
+  headerToolbar?: React.ReactNode;
   description?: React.ReactNode;
   toolbar?: React.ReactNode;
   footer?: React.ReactNode;
@@ -78,6 +91,7 @@ export function KanbanBoard({
   count,
   actions,
   headerCenter,
+  headerToolbar,
   description,
   toolbar,
   footer,
@@ -101,6 +115,7 @@ export function KanbanBoard({
           count={count}
           actions={actions}
           center={headerCenter}
+          toolbar={headerToolbar}
           ariaLabel={
             typeof title === "string" && count !== undefined
               ? `${title}, ${String(count)}`

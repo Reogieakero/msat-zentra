@@ -208,6 +208,7 @@ export type SectionWhereInput = {
   timetableEntries?: Prisma.SectionTimetableEntryListRelationFilter
   rosterEntries?: Prisma.StudentRosterListRelationFilter
   assessments?: Prisma.AssessmentListRelationFilter
+  advisoryModules?: Prisma.AdvisoryModuleListRelationFilter
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestListRelationFilter
 }
 
@@ -229,6 +230,7 @@ export type SectionOrderByWithRelationInput = {
   timetableEntries?: Prisma.SectionTimetableEntryOrderByRelationAggregateInput
   rosterEntries?: Prisma.StudentRosterOrderByRelationAggregateInput
   assessments?: Prisma.AssessmentOrderByRelationAggregateInput
+  advisoryModules?: Prisma.AdvisoryModuleOrderByRelationAggregateInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestOrderByRelationAggregateInput
 }
 
@@ -253,6 +255,7 @@ export type SectionWhereUniqueInput = Prisma.AtLeast<{
   timetableEntries?: Prisma.SectionTimetableEntryListRelationFilter
   rosterEntries?: Prisma.StudentRosterListRelationFilter
   assessments?: Prisma.AssessmentListRelationFilter
+  advisoryModules?: Prisma.AdvisoryModuleListRelationFilter
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestListRelationFilter
 }, "id" | "adviserCode">
 
@@ -298,6 +301,7 @@ export type SectionCreateInput = {
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -317,6 +321,7 @@ export type SectionUncheckedCreateInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -336,6 +341,7 @@ export type SectionUpdateInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -355,6 +361,7 @@ export type SectionUncheckedUpdateInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -636,6 +643,20 @@ export type SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SectionUpdateToOneWithWhereWithoutAnecdotalRecordsInput, Prisma.SectionUpdateWithoutAnecdotalRecordsInput>, Prisma.SectionUncheckedUpdateWithoutAnecdotalRecordsInput>
 }
 
+export type SectionCreateNestedOneWithoutAdvisoryModulesInput = {
+  create?: Prisma.XOR<Prisma.SectionCreateWithoutAdvisoryModulesInput, Prisma.SectionUncheckedCreateWithoutAdvisoryModulesInput>
+  connectOrCreate?: Prisma.SectionCreateOrConnectWithoutAdvisoryModulesInput
+  connect?: Prisma.SectionWhereUniqueInput
+}
+
+export type SectionUpdateOneRequiredWithoutAdvisoryModulesNestedInput = {
+  create?: Prisma.XOR<Prisma.SectionCreateWithoutAdvisoryModulesInput, Prisma.SectionUncheckedCreateWithoutAdvisoryModulesInput>
+  connectOrCreate?: Prisma.SectionCreateOrConnectWithoutAdvisoryModulesInput
+  upsert?: Prisma.SectionUpsertWithoutAdvisoryModulesInput
+  connect?: Prisma.SectionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SectionUpdateToOneWithWhereWithoutAdvisoryModulesInput, Prisma.SectionUpdateWithoutAdvisoryModulesInput>, Prisma.SectionUncheckedUpdateWithoutAdvisoryModulesInput>
+}
+
 export type SectionCreateNestedOneWithoutSf10AccessRequestsInput = {
   create?: Prisma.XOR<Prisma.SectionCreateWithoutSf10AccessRequestsInput, Prisma.SectionUncheckedCreateWithoutSf10AccessRequestsInput>
   connectOrCreate?: Prisma.SectionCreateOrConnectWithoutSf10AccessRequestsInput
@@ -665,6 +686,7 @@ export type SectionCreateWithoutAdviserInput = {
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -683,6 +705,7 @@ export type SectionUncheckedCreateWithoutAdviserInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -740,6 +763,7 @@ export type SectionCreateWithoutStudentsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -758,6 +782,7 @@ export type SectionUncheckedCreateWithoutStudentsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -792,6 +817,7 @@ export type SectionUpdateWithoutStudentsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -810,6 +836,7 @@ export type SectionUncheckedUpdateWithoutStudentsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -828,6 +855,7 @@ export type SectionCreateWithoutSchoolYearInput = {
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -846,6 +874,7 @@ export type SectionUncheckedCreateWithoutSchoolYearInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -890,6 +919,7 @@ export type SectionCreateWithoutRosterEntriesInput = {
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -908,6 +938,7 @@ export type SectionUncheckedCreateWithoutRosterEntriesInput = {
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -942,6 +973,7 @@ export type SectionUpdateWithoutRosterEntriesInput = {
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -960,6 +992,7 @@ export type SectionUncheckedUpdateWithoutRosterEntriesInput = {
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -978,6 +1011,7 @@ export type SectionCreateWithoutTeacherAssignmentsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -996,6 +1030,7 @@ export type SectionUncheckedCreateWithoutTeacherAssignmentsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -1030,6 +1065,7 @@ export type SectionUpdateWithoutTeacherAssignmentsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -1048,6 +1084,7 @@ export type SectionUncheckedUpdateWithoutTeacherAssignmentsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -1066,6 +1103,7 @@ export type SectionCreateWithoutTimetableEntriesInput = {
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -1084,6 +1122,7 @@ export type SectionUncheckedCreateWithoutTimetableEntriesInput = {
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -1118,6 +1157,7 @@ export type SectionUpdateWithoutTimetableEntriesInput = {
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -1136,6 +1176,7 @@ export type SectionUncheckedUpdateWithoutTimetableEntriesInput = {
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -1154,6 +1195,7 @@ export type SectionCreateWithoutAssessmentsInput = {
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -1172,6 +1214,7 @@ export type SectionUncheckedCreateWithoutAssessmentsInput = {
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -1206,6 +1249,7 @@ export type SectionUpdateWithoutAssessmentsInput = {
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -1224,6 +1268,7 @@ export type SectionUncheckedUpdateWithoutAssessmentsInput = {
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -1242,6 +1287,7 @@ export type SectionCreateWithoutGradeFlagsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -1260,6 +1306,7 @@ export type SectionUncheckedCreateWithoutGradeFlagsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -1294,6 +1341,7 @@ export type SectionUpdateWithoutGradeFlagsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -1312,6 +1360,7 @@ export type SectionUncheckedUpdateWithoutGradeFlagsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -1330,6 +1379,7 @@ export type SectionCreateWithoutAttendanceRecordsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -1348,6 +1398,7 @@ export type SectionUncheckedCreateWithoutAttendanceRecordsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -1382,6 +1433,7 @@ export type SectionUpdateWithoutAttendanceRecordsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -1400,6 +1452,7 @@ export type SectionUncheckedUpdateWithoutAttendanceRecordsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -1418,6 +1471,7 @@ export type SectionCreateWithoutAnecdotalRecordsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -1436,6 +1490,7 @@ export type SectionUncheckedCreateWithoutAnecdotalRecordsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -1470,6 +1525,7 @@ export type SectionUpdateWithoutAnecdotalRecordsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -1483,6 +1539,99 @@ export type SectionUncheckedUpdateWithoutAnecdotalRecordsInput = {
   adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
+  rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
+  assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
+}
+
+export type SectionCreateWithoutAdvisoryModulesInput = {
+  id?: string
+  name: string
+  gradeLevel: $Enums.GradeLevel
+  adviserLabel?: string | null
+  adviserCode?: string | null
+  schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
+  adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
+  students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutSectionInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
+  timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
+  rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
+  assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
+}
+
+export type SectionUncheckedCreateWithoutAdvisoryModulesInput = {
+  id?: string
+  name: string
+  gradeLevel: $Enums.GradeLevel
+  schoolYearId: string
+  adviserId?: string | null
+  adviserLabel?: string | null
+  adviserCode?: string | null
+  students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
+  rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
+  assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
+}
+
+export type SectionCreateOrConnectWithoutAdvisoryModulesInput = {
+  where: Prisma.SectionWhereUniqueInput
+  create: Prisma.XOR<Prisma.SectionCreateWithoutAdvisoryModulesInput, Prisma.SectionUncheckedCreateWithoutAdvisoryModulesInput>
+}
+
+export type SectionUpsertWithoutAdvisoryModulesInput = {
+  update: Prisma.XOR<Prisma.SectionUpdateWithoutAdvisoryModulesInput, Prisma.SectionUncheckedUpdateWithoutAdvisoryModulesInput>
+  create: Prisma.XOR<Prisma.SectionCreateWithoutAdvisoryModulesInput, Prisma.SectionUncheckedCreateWithoutAdvisoryModulesInput>
+  where?: Prisma.SectionWhereInput
+}
+
+export type SectionUpdateToOneWithWhereWithoutAdvisoryModulesInput = {
+  where?: Prisma.SectionWhereInput
+  data: Prisma.XOR<Prisma.SectionUpdateWithoutAdvisoryModulesInput, Prisma.SectionUncheckedUpdateWithoutAdvisoryModulesInput>
+}
+
+export type SectionUpdateWithoutAdvisoryModulesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
+  adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
+  students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutSectionNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
+  rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
+  assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
+}
+
+export type SectionUncheckedUpdateWithoutAdvisoryModulesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
@@ -1507,6 +1656,7 @@ export type SectionCreateWithoutSf10AccessRequestsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutSectionInput
 }
 
 export type SectionUncheckedCreateWithoutSf10AccessRequestsInput = {
@@ -1525,6 +1675,7 @@ export type SectionUncheckedCreateWithoutSf10AccessRequestsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   assessments?: Prisma.AssessmentUncheckedCreateNestedManyWithoutSectionInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutSectionInput
 }
 
 export type SectionCreateOrConnectWithoutSf10AccessRequestsInput = {
@@ -1559,6 +1710,7 @@ export type SectionUpdateWithoutSf10AccessRequestsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
 }
 
 export type SectionUncheckedUpdateWithoutSf10AccessRequestsInput = {
@@ -1577,6 +1729,7 @@ export type SectionUncheckedUpdateWithoutSf10AccessRequestsInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
 }
 
 export type SectionCreateManyAdviserInput = {
@@ -1603,6 +1756,7 @@ export type SectionUpdateWithoutAdviserInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -1621,6 +1775,7 @@ export type SectionUncheckedUpdateWithoutAdviserInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -1657,6 +1812,7 @@ export type SectionUpdateWithoutSchoolYearInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -1675,6 +1831,7 @@ export type SectionUncheckedUpdateWithoutSchoolYearInput = {
   timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   assessments?: Prisma.AssessmentUncheckedUpdateManyWithoutSectionNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -1701,6 +1858,7 @@ export type SectionCountOutputType = {
   timetableEntries: number
   rosterEntries: number
   assessments: number
+  advisoryModules: number
   sf10AccessRequests: number
 }
 
@@ -1713,6 +1871,7 @@ export type SectionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   timetableEntries?: boolean | SectionCountOutputTypeCountTimetableEntriesArgs
   rosterEntries?: boolean | SectionCountOutputTypeCountRosterEntriesArgs
   assessments?: boolean | SectionCountOutputTypeCountAssessmentsArgs
+  advisoryModules?: boolean | SectionCountOutputTypeCountAdvisoryModulesArgs
   sf10AccessRequests?: boolean | SectionCountOutputTypeCountSf10AccessRequestsArgs
 }
 
@@ -1785,6 +1944,13 @@ export type SectionCountOutputTypeCountAssessmentsArgs<ExtArgs extends runtime.T
 /**
  * SectionCountOutputType without action
  */
+export type SectionCountOutputTypeCountAdvisoryModulesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdvisoryModuleWhereInput
+}
+
+/**
+ * SectionCountOutputType without action
+ */
 export type SectionCountOutputTypeCountSf10AccessRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AdviserSf10AccessRequestWhereInput
 }
@@ -1808,6 +1974,7 @@ export type SectionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   timetableEntries?: boolean | Prisma.Section$timetableEntriesArgs<ExtArgs>
   rosterEntries?: boolean | Prisma.Section$rosterEntriesArgs<ExtArgs>
   assessments?: boolean | Prisma.Section$assessmentsArgs<ExtArgs>
+  advisoryModules?: boolean | Prisma.Section$advisoryModulesArgs<ExtArgs>
   sf10AccessRequests?: boolean | Prisma.Section$sf10AccessRequestsArgs<ExtArgs>
   _count?: boolean | Prisma.SectionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["section"]>
@@ -1858,6 +2025,7 @@ export type SectionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   timetableEntries?: boolean | Prisma.Section$timetableEntriesArgs<ExtArgs>
   rosterEntries?: boolean | Prisma.Section$rosterEntriesArgs<ExtArgs>
   assessments?: boolean | Prisma.Section$assessmentsArgs<ExtArgs>
+  advisoryModules?: boolean | Prisma.Section$advisoryModulesArgs<ExtArgs>
   sf10AccessRequests?: boolean | Prisma.Section$sf10AccessRequestsArgs<ExtArgs>
   _count?: boolean | Prisma.SectionCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -1883,6 +2051,7 @@ export type $SectionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     timetableEntries: Prisma.$SectionTimetableEntryPayload<ExtArgs>[]
     rosterEntries: Prisma.$StudentRosterPayload<ExtArgs>[]
     assessments: Prisma.$AssessmentPayload<ExtArgs>[]
+    advisoryModules: Prisma.$AdvisoryModulePayload<ExtArgs>[]
     sf10AccessRequests: Prisma.$AdviserSf10AccessRequestPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -2297,6 +2466,7 @@ export interface Prisma__SectionClient<T, Null = never, ExtArgs extends runtime.
   timetableEntries<T extends Prisma.Section$timetableEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$timetableEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SectionTimetableEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   rosterEntries<T extends Prisma.Section$rosterEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$rosterEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StudentRosterPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   assessments<T extends Prisma.Section$assessmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$assessmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AssessmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  advisoryModules<T extends Prisma.Section$advisoryModulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$advisoryModulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdvisoryModulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sf10AccessRequests<T extends Prisma.Section$sf10AccessRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$sf10AccessRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdviserSf10AccessRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -2943,6 +3113,30 @@ export type Section$assessmentsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.AssessmentScalarFieldEnum | Prisma.AssessmentScalarFieldEnum[]
+}
+
+/**
+ * Section.advisoryModules
+ */
+export type Section$advisoryModulesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdvisoryModule
+   */
+  select?: Prisma.AdvisoryModuleSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdvisoryModule
+   */
+  omit?: Prisma.AdvisoryModuleOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdvisoryModuleInclude<ExtArgs> | null
+  where?: Prisma.AdvisoryModuleWhereInput
+  orderBy?: Prisma.AdvisoryModuleOrderByWithRelationInput | Prisma.AdvisoryModuleOrderByWithRelationInput[]
+  cursor?: Prisma.AdvisoryModuleWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdvisoryModuleScalarFieldEnum | Prisma.AdvisoryModuleScalarFieldEnum[]
 }
 
 /**

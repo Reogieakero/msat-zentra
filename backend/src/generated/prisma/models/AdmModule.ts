@@ -32,7 +32,12 @@ export type AdmModuleMinAggregateOutputType = {
   dueDate: Date | null
   submitted: boolean | null
   submissionDate: Date | null
+  submissionUrl: string | null
+  studentSubmissionUrl: string | null
+  remarks: string | null
   recordedBy: string | null
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type AdmModuleMaxAggregateOutputType = {
@@ -43,7 +48,12 @@ export type AdmModuleMaxAggregateOutputType = {
   dueDate: Date | null
   submitted: boolean | null
   submissionDate: Date | null
+  submissionUrl: string | null
+  studentSubmissionUrl: string | null
+  remarks: string | null
   recordedBy: string | null
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type AdmModuleCountAggregateOutputType = {
@@ -54,7 +64,12 @@ export type AdmModuleCountAggregateOutputType = {
   dueDate: number
   submitted: number
   submissionDate: number
+  submissionUrl: number
+  studentSubmissionUrl: number
+  remarks: number
   recordedBy: number
+  createdAt: number
+  updatedAt: number
   _all: number
 }
 
@@ -67,7 +82,12 @@ export type AdmModuleMinAggregateInputType = {
   dueDate?: true
   submitted?: true
   submissionDate?: true
+  submissionUrl?: true
+  studentSubmissionUrl?: true
+  remarks?: true
   recordedBy?: true
+  createdAt?: true
+  updatedAt?: true
 }
 
 export type AdmModuleMaxAggregateInputType = {
@@ -78,7 +98,12 @@ export type AdmModuleMaxAggregateInputType = {
   dueDate?: true
   submitted?: true
   submissionDate?: true
+  submissionUrl?: true
+  studentSubmissionUrl?: true
+  remarks?: true
   recordedBy?: true
+  createdAt?: true
+  updatedAt?: true
 }
 
 export type AdmModuleCountAggregateInputType = {
@@ -89,7 +114,12 @@ export type AdmModuleCountAggregateInputType = {
   dueDate?: true
   submitted?: true
   submissionDate?: true
+  submissionUrl?: true
+  studentSubmissionUrl?: true
+  remarks?: true
   recordedBy?: true
+  createdAt?: true
+  updatedAt?: true
   _all?: true
 }
 
@@ -173,7 +203,12 @@ export type AdmModuleGroupByOutputType = {
   dueDate: Date | null
   submitted: boolean
   submissionDate: Date | null
+  submissionUrl: string | null
+  studentSubmissionUrl: string | null
+  remarks: string | null
   recordedBy: string
+  createdAt: Date
+  updatedAt: Date
   _count: AdmModuleCountAggregateOutputType | null
   _min: AdmModuleMinAggregateOutputType | null
   _max: AdmModuleMaxAggregateOutputType | null
@@ -205,7 +240,12 @@ export type AdmModuleWhereInput = {
   dueDate?: Prisma.DateTimeNullableFilter<"AdmModule"> | Date | string | null
   submitted?: Prisma.BoolFilter<"AdmModule"> | boolean
   submissionDate?: Prisma.DateTimeNullableFilter<"AdmModule"> | Date | string | null
+  submissionUrl?: Prisma.StringNullableFilter<"AdmModule"> | string | null
+  studentSubmissionUrl?: Prisma.StringNullableFilter<"AdmModule"> | string | null
+  remarks?: Prisma.StringNullableFilter<"AdmModule"> | string | null
   recordedBy?: Prisma.StringFilter<"AdmModule"> | string
+  createdAt?: Prisma.DateTimeFilter<"AdmModule"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"AdmModule"> | Date | string
   admLearnerProfile?: Prisma.XOR<Prisma.AdmLearnerProfileScalarRelationFilter, Prisma.AdmLearnerProfileWhereInput>
   recorder?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }
@@ -218,7 +258,12 @@ export type AdmModuleOrderByWithRelationInput = {
   dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
   submitted?: Prisma.SortOrder
   submissionDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  submissionUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  studentSubmissionUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  remarks?: Prisma.SortOrderInput | Prisma.SortOrder
   recordedBy?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   admLearnerProfile?: Prisma.AdmLearnerProfileOrderByWithRelationInput
   recorder?: Prisma.UserOrderByWithRelationInput
 }
@@ -234,7 +279,12 @@ export type AdmModuleWhereUniqueInput = Prisma.AtLeast<{
   dueDate?: Prisma.DateTimeNullableFilter<"AdmModule"> | Date | string | null
   submitted?: Prisma.BoolFilter<"AdmModule"> | boolean
   submissionDate?: Prisma.DateTimeNullableFilter<"AdmModule"> | Date | string | null
+  submissionUrl?: Prisma.StringNullableFilter<"AdmModule"> | string | null
+  studentSubmissionUrl?: Prisma.StringNullableFilter<"AdmModule"> | string | null
+  remarks?: Prisma.StringNullableFilter<"AdmModule"> | string | null
   recordedBy?: Prisma.StringFilter<"AdmModule"> | string
+  createdAt?: Prisma.DateTimeFilter<"AdmModule"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"AdmModule"> | Date | string
   admLearnerProfile?: Prisma.XOR<Prisma.AdmLearnerProfileScalarRelationFilter, Prisma.AdmLearnerProfileWhereInput>
   recorder?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }, "id">
@@ -247,7 +297,12 @@ export type AdmModuleOrderByWithAggregationInput = {
   dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
   submitted?: Prisma.SortOrder
   submissionDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  submissionUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  studentSubmissionUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  remarks?: Prisma.SortOrderInput | Prisma.SortOrder
   recordedBy?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   _count?: Prisma.AdmModuleCountOrderByAggregateInput
   _max?: Prisma.AdmModuleMaxOrderByAggregateInput
   _min?: Prisma.AdmModuleMinOrderByAggregateInput
@@ -264,7 +319,12 @@ export type AdmModuleScalarWhereWithAggregatesInput = {
   dueDate?: Prisma.DateTimeNullableWithAggregatesFilter<"AdmModule"> | Date | string | null
   submitted?: Prisma.BoolWithAggregatesFilter<"AdmModule"> | boolean
   submissionDate?: Prisma.DateTimeNullableWithAggregatesFilter<"AdmModule"> | Date | string | null
+  submissionUrl?: Prisma.StringNullableWithAggregatesFilter<"AdmModule"> | string | null
+  studentSubmissionUrl?: Prisma.StringNullableWithAggregatesFilter<"AdmModule"> | string | null
+  remarks?: Prisma.StringNullableWithAggregatesFilter<"AdmModule"> | string | null
   recordedBy?: Prisma.StringWithAggregatesFilter<"AdmModule"> | string
+  createdAt?: Prisma.DateTimeWithAggregatesFilter<"AdmModule"> | Date | string
+  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"AdmModule"> | Date | string
 }
 
 export type AdmModuleCreateInput = {
@@ -274,6 +334,11 @@ export type AdmModuleCreateInput = {
   dueDate?: Date | string | null
   submitted?: boolean
   submissionDate?: Date | string | null
+  submissionUrl?: string | null
+  studentSubmissionUrl?: string | null
+  remarks?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
   admLearnerProfile: Prisma.AdmLearnerProfileCreateNestedOneWithoutModulesInput
   recorder: Prisma.UserCreateNestedOneWithoutAdmModulesInput
 }
@@ -286,7 +351,12 @@ export type AdmModuleUncheckedCreateInput = {
   dueDate?: Date | string | null
   submitted?: boolean
   submissionDate?: Date | string | null
+  submissionUrl?: string | null
+  studentSubmissionUrl?: string | null
+  remarks?: string | null
   recordedBy: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type AdmModuleUpdateInput = {
@@ -296,6 +366,11 @@ export type AdmModuleUpdateInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   submitted?: Prisma.BoolFieldUpdateOperationsInput | boolean
   submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  submissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  studentSubmissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   admLearnerProfile?: Prisma.AdmLearnerProfileUpdateOneRequiredWithoutModulesNestedInput
   recorder?: Prisma.UserUpdateOneRequiredWithoutAdmModulesNestedInput
 }
@@ -308,7 +383,12 @@ export type AdmModuleUncheckedUpdateInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   submitted?: Prisma.BoolFieldUpdateOperationsInput | boolean
   submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  submissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  studentSubmissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AdmModuleCreateManyInput = {
@@ -319,7 +399,12 @@ export type AdmModuleCreateManyInput = {
   dueDate?: Date | string | null
   submitted?: boolean
   submissionDate?: Date | string | null
+  submissionUrl?: string | null
+  studentSubmissionUrl?: string | null
+  remarks?: string | null
   recordedBy: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type AdmModuleUpdateManyMutationInput = {
@@ -329,6 +414,11 @@ export type AdmModuleUpdateManyMutationInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   submitted?: Prisma.BoolFieldUpdateOperationsInput | boolean
   submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  submissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  studentSubmissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AdmModuleUncheckedUpdateManyInput = {
@@ -339,7 +429,12 @@ export type AdmModuleUncheckedUpdateManyInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   submitted?: Prisma.BoolFieldUpdateOperationsInput | boolean
   submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  submissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  studentSubmissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AdmModuleListRelationFilter = {
@@ -360,7 +455,12 @@ export type AdmModuleCountOrderByAggregateInput = {
   dueDate?: Prisma.SortOrder
   submitted?: Prisma.SortOrder
   submissionDate?: Prisma.SortOrder
+  submissionUrl?: Prisma.SortOrder
+  studentSubmissionUrl?: Prisma.SortOrder
+  remarks?: Prisma.SortOrder
   recordedBy?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type AdmModuleMaxOrderByAggregateInput = {
@@ -371,7 +471,12 @@ export type AdmModuleMaxOrderByAggregateInput = {
   dueDate?: Prisma.SortOrder
   submitted?: Prisma.SortOrder
   submissionDate?: Prisma.SortOrder
+  submissionUrl?: Prisma.SortOrder
+  studentSubmissionUrl?: Prisma.SortOrder
+  remarks?: Prisma.SortOrder
   recordedBy?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type AdmModuleMinOrderByAggregateInput = {
@@ -382,7 +487,12 @@ export type AdmModuleMinOrderByAggregateInput = {
   dueDate?: Prisma.SortOrder
   submitted?: Prisma.SortOrder
   submissionDate?: Prisma.SortOrder
+  submissionUrl?: Prisma.SortOrder
+  studentSubmissionUrl?: Prisma.SortOrder
+  remarks?: Prisma.SortOrder
   recordedBy?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type AdmModuleCreateNestedManyWithoutRecorderInput = {
@@ -476,6 +586,11 @@ export type AdmModuleCreateWithoutRecorderInput = {
   dueDate?: Date | string | null
   submitted?: boolean
   submissionDate?: Date | string | null
+  submissionUrl?: string | null
+  studentSubmissionUrl?: string | null
+  remarks?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
   admLearnerProfile: Prisma.AdmLearnerProfileCreateNestedOneWithoutModulesInput
 }
 
@@ -487,6 +602,11 @@ export type AdmModuleUncheckedCreateWithoutRecorderInput = {
   dueDate?: Date | string | null
   submitted?: boolean
   submissionDate?: Date | string | null
+  submissionUrl?: string | null
+  studentSubmissionUrl?: string | null
+  remarks?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type AdmModuleCreateOrConnectWithoutRecorderInput = {
@@ -526,7 +646,12 @@ export type AdmModuleScalarWhereInput = {
   dueDate?: Prisma.DateTimeNullableFilter<"AdmModule"> | Date | string | null
   submitted?: Prisma.BoolFilter<"AdmModule"> | boolean
   submissionDate?: Prisma.DateTimeNullableFilter<"AdmModule"> | Date | string | null
+  submissionUrl?: Prisma.StringNullableFilter<"AdmModule"> | string | null
+  studentSubmissionUrl?: Prisma.StringNullableFilter<"AdmModule"> | string | null
+  remarks?: Prisma.StringNullableFilter<"AdmModule"> | string | null
   recordedBy?: Prisma.StringFilter<"AdmModule"> | string
+  createdAt?: Prisma.DateTimeFilter<"AdmModule"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"AdmModule"> | Date | string
 }
 
 export type AdmModuleCreateWithoutAdmLearnerProfileInput = {
@@ -536,6 +661,11 @@ export type AdmModuleCreateWithoutAdmLearnerProfileInput = {
   dueDate?: Date | string | null
   submitted?: boolean
   submissionDate?: Date | string | null
+  submissionUrl?: string | null
+  studentSubmissionUrl?: string | null
+  remarks?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
   recorder: Prisma.UserCreateNestedOneWithoutAdmModulesInput
 }
 
@@ -546,7 +676,12 @@ export type AdmModuleUncheckedCreateWithoutAdmLearnerProfileInput = {
   dueDate?: Date | string | null
   submitted?: boolean
   submissionDate?: Date | string | null
+  submissionUrl?: string | null
+  studentSubmissionUrl?: string | null
+  remarks?: string | null
   recordedBy: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type AdmModuleCreateOrConnectWithoutAdmLearnerProfileInput = {
@@ -583,6 +718,11 @@ export type AdmModuleCreateManyRecorderInput = {
   dueDate?: Date | string | null
   submitted?: boolean
   submissionDate?: Date | string | null
+  submissionUrl?: string | null
+  studentSubmissionUrl?: string | null
+  remarks?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type AdmModuleUpdateWithoutRecorderInput = {
@@ -592,6 +732,11 @@ export type AdmModuleUpdateWithoutRecorderInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   submitted?: Prisma.BoolFieldUpdateOperationsInput | boolean
   submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  submissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  studentSubmissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   admLearnerProfile?: Prisma.AdmLearnerProfileUpdateOneRequiredWithoutModulesNestedInput
 }
 
@@ -603,6 +748,11 @@ export type AdmModuleUncheckedUpdateWithoutRecorderInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   submitted?: Prisma.BoolFieldUpdateOperationsInput | boolean
   submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  submissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  studentSubmissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AdmModuleUncheckedUpdateManyWithoutRecorderInput = {
@@ -613,6 +763,11 @@ export type AdmModuleUncheckedUpdateManyWithoutRecorderInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   submitted?: Prisma.BoolFieldUpdateOperationsInput | boolean
   submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  submissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  studentSubmissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AdmModuleCreateManyAdmLearnerProfileInput = {
@@ -622,7 +777,12 @@ export type AdmModuleCreateManyAdmLearnerProfileInput = {
   dueDate?: Date | string | null
   submitted?: boolean
   submissionDate?: Date | string | null
+  submissionUrl?: string | null
+  studentSubmissionUrl?: string | null
+  remarks?: string | null
   recordedBy: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type AdmModuleUpdateWithoutAdmLearnerProfileInput = {
@@ -632,6 +792,11 @@ export type AdmModuleUpdateWithoutAdmLearnerProfileInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   submitted?: Prisma.BoolFieldUpdateOperationsInput | boolean
   submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  submissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  studentSubmissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   recorder?: Prisma.UserUpdateOneRequiredWithoutAdmModulesNestedInput
 }
 
@@ -642,7 +807,12 @@ export type AdmModuleUncheckedUpdateWithoutAdmLearnerProfileInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   submitted?: Prisma.BoolFieldUpdateOperationsInput | boolean
   submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  submissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  studentSubmissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AdmModuleUncheckedUpdateManyWithoutAdmLearnerProfileInput = {
@@ -652,7 +822,12 @@ export type AdmModuleUncheckedUpdateManyWithoutAdmLearnerProfileInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   submitted?: Prisma.BoolFieldUpdateOperationsInput | boolean
   submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  submissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  studentSubmissionUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -665,7 +840,12 @@ export type AdmModuleSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   dueDate?: boolean
   submitted?: boolean
   submissionDate?: boolean
+  submissionUrl?: boolean
+  studentSubmissionUrl?: boolean
+  remarks?: boolean
   recordedBy?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
   admLearnerProfile?: boolean | Prisma.AdmLearnerProfileDefaultArgs<ExtArgs>
   recorder?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["admModule"]>
@@ -678,7 +858,12 @@ export type AdmModuleSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   dueDate?: boolean
   submitted?: boolean
   submissionDate?: boolean
+  submissionUrl?: boolean
+  studentSubmissionUrl?: boolean
+  remarks?: boolean
   recordedBy?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
   admLearnerProfile?: boolean | Prisma.AdmLearnerProfileDefaultArgs<ExtArgs>
   recorder?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["admModule"]>
@@ -691,7 +876,12 @@ export type AdmModuleSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   dueDate?: boolean
   submitted?: boolean
   submissionDate?: boolean
+  submissionUrl?: boolean
+  studentSubmissionUrl?: boolean
+  remarks?: boolean
   recordedBy?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
   admLearnerProfile?: boolean | Prisma.AdmLearnerProfileDefaultArgs<ExtArgs>
   recorder?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["admModule"]>
@@ -704,10 +894,15 @@ export type AdmModuleSelectScalar = {
   dueDate?: boolean
   submitted?: boolean
   submissionDate?: boolean
+  submissionUrl?: boolean
+  studentSubmissionUrl?: boolean
+  remarks?: boolean
   recordedBy?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
 }
 
-export type AdmModuleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "admLearnerProfileId" | "moduleName" | "releaseDate" | "dueDate" | "submitted" | "submissionDate" | "recordedBy", ExtArgs["result"]["admModule"]>
+export type AdmModuleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "admLearnerProfileId" | "moduleName" | "releaseDate" | "dueDate" | "submitted" | "submissionDate" | "submissionUrl" | "studentSubmissionUrl" | "remarks" | "recordedBy" | "createdAt" | "updatedAt", ExtArgs["result"]["admModule"]>
 export type AdmModuleInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   admLearnerProfile?: boolean | Prisma.AdmLearnerProfileDefaultArgs<ExtArgs>
   recorder?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -735,7 +930,12 @@ export type $AdmModulePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     dueDate: Date | null
     submitted: boolean
     submissionDate: Date | null
+    submissionUrl: string | null
+    studentSubmissionUrl: string | null
+    remarks: string | null
     recordedBy: string
+    createdAt: Date
+    updatedAt: Date
   }, ExtArgs["result"]["admModule"]>
   composites: {}
 }
@@ -1168,7 +1368,12 @@ export interface AdmModuleFieldRefs {
   readonly dueDate: Prisma.FieldRef<"AdmModule", 'DateTime'>
   readonly submitted: Prisma.FieldRef<"AdmModule", 'Boolean'>
   readonly submissionDate: Prisma.FieldRef<"AdmModule", 'DateTime'>
+  readonly submissionUrl: Prisma.FieldRef<"AdmModule", 'String'>
+  readonly studentSubmissionUrl: Prisma.FieldRef<"AdmModule", 'String'>
+  readonly remarks: Prisma.FieldRef<"AdmModule", 'String'>
   readonly recordedBy: Prisma.FieldRef<"AdmModule", 'String'>
+  readonly createdAt: Prisma.FieldRef<"AdmModule", 'DateTime'>
+  readonly updatedAt: Prisma.FieldRef<"AdmModule", 'DateTime'>
 }
     
 

@@ -66,33 +66,35 @@ export function ReviewDialog({
       busy={reviewPending}
       headerActions={<Pill tone={scheduleTone(status)}>{meta.label}</Pill>}
       footer={
-        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
-          <Button
-            variant="destructive"
-            size="sm"
-            className="h-6 px-2 text-xs"
-            onClick={() => onReview("reject")}
-            disabled={reviewPending || submitted === 0}
-            aria-busy={rejecting || undefined}
-          >
-            {rejecting ? (
-              <Loader2 size={12} className="animate-spin" aria-hidden />
-            ) : null}
-            <span aria-live="polite">Reject</span>
-          </Button>
-          <Button
-            size="sm"
-            className="h-6 px-2 text-xs"
-            onClick={() => onReview("approve")}
-            disabled={reviewPending || submitted === 0}
-            aria-busy={approving || undefined}
-          >
-            {approving ? (
-              <Loader2 size={12} className="animate-spin" aria-hidden />
-            ) : null}
-            <span aria-live="polite">Approve</span>
-          </Button>
-        </div>
+        status === "approved" ? undefined : (
+          <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => onReview("reject")}
+              disabled={reviewPending || submitted === 0}
+              aria-busy={rejecting || undefined}
+            >
+              {rejecting ? (
+                <Loader2 size={12} className="animate-spin" aria-hidden />
+              ) : null}
+              <span aria-live="polite">Reject</span>
+            </Button>
+            <Button
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => onReview("approve")}
+              disabled={reviewPending || submitted === 0}
+              aria-busy={approving || undefined}
+            >
+              {approving ? (
+                <Loader2 size={12} className="animate-spin" aria-hidden />
+              ) : null}
+              <span aria-live="polite">Approve</span>
+            </Button>
+          </div>
+        )
       }
     >
       {submission ? (
@@ -108,20 +110,26 @@ export function ReviewDialog({
             <div className={styles.meta}>
               <p className={styles.row}>
                 <span className={styles.label}>Section</span>
-                <span className={styles.value}>{submission.name}</span>
+                <Pill tone="blue" label="Section">
+                  {submission.name}
+                </Pill>
               </p>
               <p className={styles.row}>
                 <span className={styles.label}>Grade level</span>
-                <Pill tone="neutral">Grade {submission.gradeLevel.replace("G", "")}</Pill>
+                <Pill tone="neutral" label="Grade level">
+                  Grade {submission.gradeLevel.replace("G", "")}
+                </Pill>
               </p>
               <p className={styles.row}>
                 <span className={styles.label}>Teacher</span>
                 {teacher ? (
-                  <Pill tone="amber" className="max-w-[16rem] overflow-hidden">
+                  <Pill tone="amber" label="Teacher" className="max-w-[16rem] overflow-hidden">
                     {teacher}
                   </Pill>
                 ) : (
-                  <Pill tone="neutral">No adviser</Pill>
+                  <Pill tone="neutral" label="Teacher">
+                    No adviser
+                  </Pill>
                 )}
               </p>
               <p className={styles.row}>

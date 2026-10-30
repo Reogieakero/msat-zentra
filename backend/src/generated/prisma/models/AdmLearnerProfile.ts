@@ -34,6 +34,8 @@ export type AdmLearnerProfileMinAggregateOutputType = {
   preparedBy: string | null
   approvedBy: string | null
   approvedAt: Date | null
+  returnedAt: Date | null
+  returnReason: string | null
   termId: string | null
   confidentialityLevel: $Enums.Confidentiality | null
 }
@@ -48,6 +50,8 @@ export type AdmLearnerProfileMaxAggregateOutputType = {
   preparedBy: string | null
   approvedBy: string | null
   approvedAt: Date | null
+  returnedAt: Date | null
+  returnReason: string | null
   termId: string | null
   confidentialityLevel: $Enums.Confidentiality | null
 }
@@ -62,6 +66,8 @@ export type AdmLearnerProfileCountAggregateOutputType = {
   preparedBy: number
   approvedBy: number
   approvedAt: number
+  returnedAt: number
+  returnReason: number
   certificationDetails: number
   termId: number
   confidentialityLevel: number
@@ -79,6 +85,8 @@ export type AdmLearnerProfileMinAggregateInputType = {
   preparedBy?: true
   approvedBy?: true
   approvedAt?: true
+  returnedAt?: true
+  returnReason?: true
   termId?: true
   confidentialityLevel?: true
 }
@@ -93,6 +101,8 @@ export type AdmLearnerProfileMaxAggregateInputType = {
   preparedBy?: true
   approvedBy?: true
   approvedAt?: true
+  returnedAt?: true
+  returnReason?: true
   termId?: true
   confidentialityLevel?: true
 }
@@ -107,6 +117,8 @@ export type AdmLearnerProfileCountAggregateInputType = {
   preparedBy?: true
   approvedBy?: true
   approvedAt?: true
+  returnedAt?: true
+  returnReason?: true
   certificationDetails?: true
   termId?: true
   confidentialityLevel?: true
@@ -195,6 +207,8 @@ export type AdmLearnerProfileGroupByOutputType = {
   preparedBy: string
   approvedBy: string | null
   approvedAt: Date | null
+  returnedAt: Date | null
+  returnReason: string | null
   certificationDetails: runtime.JsonValue | null
   termId: string
   confidentialityLevel: $Enums.Confidentiality
@@ -231,6 +245,8 @@ export type AdmLearnerProfileWhereInput = {
   preparedBy?: Prisma.StringFilter<"AdmLearnerProfile"> | string
   approvedBy?: Prisma.StringNullableFilter<"AdmLearnerProfile"> | string | null
   approvedAt?: Prisma.DateTimeNullableFilter<"AdmLearnerProfile"> | Date | string | null
+  returnedAt?: Prisma.DateTimeNullableFilter<"AdmLearnerProfile"> | Date | string | null
+  returnReason?: Prisma.StringNullableFilter<"AdmLearnerProfile"> | string | null
   certificationDetails?: Prisma.JsonNullableFilter<"AdmLearnerProfile">
   termId?: Prisma.StringFilter<"AdmLearnerProfile"> | string
   confidentialityLevel?: Prisma.EnumConfidentialityFilter<"AdmLearnerProfile"> | $Enums.Confidentiality
@@ -255,6 +271,8 @@ export type AdmLearnerProfileOrderByWithRelationInput = {
   preparedBy?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   approvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  returnedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  returnReason?: Prisma.SortOrderInput | Prisma.SortOrder
   certificationDetails?: Prisma.SortOrderInput | Prisma.SortOrder
   termId?: Prisma.SortOrder
   confidentialityLevel?: Prisma.SortOrder
@@ -282,6 +300,8 @@ export type AdmLearnerProfileWhereUniqueInput = Prisma.AtLeast<{
   preparedBy?: Prisma.StringFilter<"AdmLearnerProfile"> | string
   approvedBy?: Prisma.StringNullableFilter<"AdmLearnerProfile"> | string | null
   approvedAt?: Prisma.DateTimeNullableFilter<"AdmLearnerProfile"> | Date | string | null
+  returnedAt?: Prisma.DateTimeNullableFilter<"AdmLearnerProfile"> | Date | string | null
+  returnReason?: Prisma.StringNullableFilter<"AdmLearnerProfile"> | string | null
   certificationDetails?: Prisma.JsonNullableFilter<"AdmLearnerProfile">
   termId?: Prisma.StringFilter<"AdmLearnerProfile"> | string
   confidentialityLevel?: Prisma.EnumConfidentialityFilter<"AdmLearnerProfile"> | $Enums.Confidentiality
@@ -306,6 +326,8 @@ export type AdmLearnerProfileOrderByWithAggregationInput = {
   preparedBy?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   approvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  returnedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  returnReason?: Prisma.SortOrderInput | Prisma.SortOrder
   certificationDetails?: Prisma.SortOrderInput | Prisma.SortOrder
   termId?: Prisma.SortOrder
   confidentialityLevel?: Prisma.SortOrder
@@ -327,6 +349,8 @@ export type AdmLearnerProfileScalarWhereWithAggregatesInput = {
   preparedBy?: Prisma.StringWithAggregatesFilter<"AdmLearnerProfile"> | string
   approvedBy?: Prisma.StringNullableWithAggregatesFilter<"AdmLearnerProfile"> | string | null
   approvedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AdmLearnerProfile"> | Date | string | null
+  returnedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AdmLearnerProfile"> | Date | string | null
+  returnReason?: Prisma.StringNullableWithAggregatesFilter<"AdmLearnerProfile"> | string | null
   certificationDetails?: Prisma.JsonNullableWithAggregatesFilter<"AdmLearnerProfile">
   termId?: Prisma.StringWithAggregatesFilter<"AdmLearnerProfile"> | string
   confidentialityLevel?: Prisma.EnumConfidentialityWithAggregatesFilter<"AdmLearnerProfile"> | $Enums.Confidentiality
@@ -338,6 +362,8 @@ export type AdmLearnerProfileCreateInput = {
   eligibilityStatus?: $Enums.AdmEligibility
   stage?: $Enums.AdmStage
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   student: Prisma.StudentProfileCreateNestedOneWithoutAdmProfilesInput
@@ -361,6 +387,8 @@ export type AdmLearnerProfileUncheckedCreateInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -376,6 +404,8 @@ export type AdmLearnerProfileUpdateInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAdmProfilesNestedInput
@@ -399,6 +429,8 @@ export type AdmLearnerProfileUncheckedUpdateInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -418,6 +450,8 @@ export type AdmLearnerProfileCreateManyInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -429,6 +463,8 @@ export type AdmLearnerProfileUpdateManyMutationInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
 }
@@ -443,6 +479,8 @@ export type AdmLearnerProfileUncheckedUpdateManyInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -468,6 +506,8 @@ export type AdmLearnerProfileCountOrderByAggregateInput = {
   preparedBy?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrder
   approvedAt?: Prisma.SortOrder
+  returnedAt?: Prisma.SortOrder
+  returnReason?: Prisma.SortOrder
   certificationDetails?: Prisma.SortOrder
   termId?: Prisma.SortOrder
   confidentialityLevel?: Prisma.SortOrder
@@ -483,6 +523,8 @@ export type AdmLearnerProfileMaxOrderByAggregateInput = {
   preparedBy?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrder
   approvedAt?: Prisma.SortOrder
+  returnedAt?: Prisma.SortOrder
+  returnReason?: Prisma.SortOrder
   termId?: Prisma.SortOrder
   confidentialityLevel?: Prisma.SortOrder
 }
@@ -497,6 +539,8 @@ export type AdmLearnerProfileMinOrderByAggregateInput = {
   preparedBy?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrder
   approvedAt?: Prisma.SortOrder
+  returnedAt?: Prisma.SortOrder
+  returnReason?: Prisma.SortOrder
   termId?: Prisma.SortOrder
   confidentialityLevel?: Prisma.SortOrder
 }
@@ -793,6 +837,8 @@ export type AdmLearnerProfileCreateWithoutPreparedByUserInput = {
   eligibilityStatus?: $Enums.AdmEligibility
   stage?: $Enums.AdmStage
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   student: Prisma.StudentProfileCreateNestedOneWithoutAdmProfilesInput
@@ -814,6 +860,8 @@ export type AdmLearnerProfileUncheckedCreateWithoutPreparedByUserInput = {
   stage?: $Enums.AdmStage
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -839,6 +887,8 @@ export type AdmLearnerProfileCreateWithoutApprovedByUserInput = {
   eligibilityStatus?: $Enums.AdmEligibility
   stage?: $Enums.AdmStage
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   student: Prisma.StudentProfileCreateNestedOneWithoutAdmProfilesInput
@@ -860,6 +910,8 @@ export type AdmLearnerProfileUncheckedCreateWithoutApprovedByUserInput = {
   stage?: $Enums.AdmStage
   preparedBy: string
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -908,6 +960,8 @@ export type AdmLearnerProfileScalarWhereInput = {
   preparedBy?: Prisma.StringFilter<"AdmLearnerProfile"> | string
   approvedBy?: Prisma.StringNullableFilter<"AdmLearnerProfile"> | string | null
   approvedAt?: Prisma.DateTimeNullableFilter<"AdmLearnerProfile"> | Date | string | null
+  returnedAt?: Prisma.DateTimeNullableFilter<"AdmLearnerProfile"> | Date | string | null
+  returnReason?: Prisma.StringNullableFilter<"AdmLearnerProfile"> | string | null
   certificationDetails?: Prisma.JsonNullableFilter<"AdmLearnerProfile">
   termId?: Prisma.StringFilter<"AdmLearnerProfile"> | string
   confidentialityLevel?: Prisma.EnumConfidentialityFilter<"AdmLearnerProfile"> | $Enums.Confidentiality
@@ -935,6 +989,8 @@ export type AdmLearnerProfileCreateWithoutStudentInput = {
   eligibilityStatus?: $Enums.AdmEligibility
   stage?: $Enums.AdmStage
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   referral: Prisma.ReferralCreateNestedOneWithoutAdmProfilesInput
@@ -956,6 +1012,8 @@ export type AdmLearnerProfileUncheckedCreateWithoutStudentInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -997,6 +1055,8 @@ export type AdmLearnerProfileCreateWithoutTermInput = {
   eligibilityStatus?: $Enums.AdmEligibility
   stage?: $Enums.AdmStage
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   student: Prisma.StudentProfileCreateNestedOneWithoutAdmProfilesInput
@@ -1019,6 +1079,8 @@ export type AdmLearnerProfileUncheckedCreateWithoutTermInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   parentMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutAdmLearnerProfileInput
@@ -1059,6 +1121,8 @@ export type AdmLearnerProfileCreateWithoutReferralInput = {
   eligibilityStatus?: $Enums.AdmEligibility
   stage?: $Enums.AdmStage
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   student: Prisma.StudentProfileCreateNestedOneWithoutAdmProfilesInput
@@ -1080,6 +1144,8 @@ export type AdmLearnerProfileUncheckedCreateWithoutReferralInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -1121,6 +1187,8 @@ export type AdmLearnerProfileCreateWithoutParentMeetingsInput = {
   eligibilityStatus?: $Enums.AdmEligibility
   stage?: $Enums.AdmStage
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   student: Prisma.StudentProfileCreateNestedOneWithoutAdmProfilesInput
@@ -1143,6 +1211,8 @@ export type AdmLearnerProfileUncheckedCreateWithoutParentMeetingsInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -1173,6 +1243,8 @@ export type AdmLearnerProfileUpdateWithoutParentMeetingsInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAdmProfilesNestedInput
@@ -1195,6 +1267,8 @@ export type AdmLearnerProfileUncheckedUpdateWithoutParentMeetingsInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1209,6 +1283,8 @@ export type AdmLearnerProfileCreateWithoutModulesInput = {
   eligibilityStatus?: $Enums.AdmEligibility
   stage?: $Enums.AdmStage
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   student: Prisma.StudentProfileCreateNestedOneWithoutAdmProfilesInput
@@ -1231,6 +1307,8 @@ export type AdmLearnerProfileUncheckedCreateWithoutModulesInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -1261,6 +1339,8 @@ export type AdmLearnerProfileUpdateWithoutModulesInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAdmProfilesNestedInput
@@ -1283,6 +1363,8 @@ export type AdmLearnerProfileUncheckedUpdateWithoutModulesInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1297,6 +1379,8 @@ export type AdmLearnerProfileCreateWithoutDevicesInput = {
   eligibilityStatus?: $Enums.AdmEligibility
   stage?: $Enums.AdmStage
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   student: Prisma.StudentProfileCreateNestedOneWithoutAdmProfilesInput
@@ -1319,6 +1403,8 @@ export type AdmLearnerProfileUncheckedCreateWithoutDevicesInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -1349,6 +1435,8 @@ export type AdmLearnerProfileUpdateWithoutDevicesInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAdmProfilesNestedInput
@@ -1371,6 +1459,8 @@ export type AdmLearnerProfileUncheckedUpdateWithoutDevicesInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1385,6 +1475,8 @@ export type AdmLearnerProfileCreateWithoutFormsInput = {
   eligibilityStatus?: $Enums.AdmEligibility
   stage?: $Enums.AdmStage
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
   student: Prisma.StudentProfileCreateNestedOneWithoutAdmProfilesInput
@@ -1407,6 +1499,8 @@ export type AdmLearnerProfileUncheckedCreateWithoutFormsInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -1437,6 +1531,8 @@ export type AdmLearnerProfileUpdateWithoutFormsInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAdmProfilesNestedInput
@@ -1459,6 +1555,8 @@ export type AdmLearnerProfileUncheckedUpdateWithoutFormsInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1476,6 +1574,8 @@ export type AdmLearnerProfileCreateManyPreparedByUserInput = {
   stage?: $Enums.AdmStage
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -1490,6 +1590,8 @@ export type AdmLearnerProfileCreateManyApprovedByUserInput = {
   stage?: $Enums.AdmStage
   preparedBy: string
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -1501,6 +1603,8 @@ export type AdmLearnerProfileUpdateWithoutPreparedByUserInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAdmProfilesNestedInput
@@ -1522,6 +1626,8 @@ export type AdmLearnerProfileUncheckedUpdateWithoutPreparedByUserInput = {
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1540,6 +1646,8 @@ export type AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserInput = {
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1551,6 +1659,8 @@ export type AdmLearnerProfileUpdateWithoutApprovedByUserInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAdmProfilesNestedInput
@@ -1572,6 +1682,8 @@ export type AdmLearnerProfileUncheckedUpdateWithoutApprovedByUserInput = {
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1590,6 +1702,8 @@ export type AdmLearnerProfileUncheckedUpdateManyWithoutApprovedByUserInput = {
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1604,6 +1718,8 @@ export type AdmLearnerProfileCreateManyStudentInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -1615,6 +1731,8 @@ export type AdmLearnerProfileUpdateWithoutStudentInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   referral?: Prisma.ReferralUpdateOneRequiredWithoutAdmProfilesNestedInput
@@ -1636,6 +1754,8 @@ export type AdmLearnerProfileUncheckedUpdateWithoutStudentInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1654,6 +1774,8 @@ export type AdmLearnerProfileUncheckedUpdateManyWithoutStudentInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1669,6 +1791,8 @@ export type AdmLearnerProfileCreateManyTermInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: $Enums.Confidentiality
 }
@@ -1679,6 +1803,8 @@ export type AdmLearnerProfileUpdateWithoutTermInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAdmProfilesNestedInput
@@ -1701,6 +1827,8 @@ export type AdmLearnerProfileUncheckedUpdateWithoutTermInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   parentMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutAdmLearnerProfileNestedInput
@@ -1719,6 +1847,8 @@ export type AdmLearnerProfileUncheckedUpdateManyWithoutTermInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
 }
@@ -1732,6 +1862,8 @@ export type AdmLearnerProfileCreateManyReferralInput = {
   preparedBy: string
   approvedBy?: string | null
   approvedAt?: Date | string | null
+  returnedAt?: Date | string | null
+  returnReason?: string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId: string
   confidentialityLevel?: $Enums.Confidentiality
@@ -1743,6 +1875,8 @@ export type AdmLearnerProfileUpdateWithoutReferralInput = {
   eligibilityStatus?: Prisma.EnumAdmEligibilityFieldUpdateOperationsInput | $Enums.AdmEligibility
   stage?: Prisma.EnumAdmStageFieldUpdateOperationsInput | $Enums.AdmStage
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAdmProfilesNestedInput
@@ -1764,6 +1898,8 @@ export type AdmLearnerProfileUncheckedUpdateWithoutReferralInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1782,6 +1918,8 @@ export type AdmLearnerProfileUncheckedUpdateManyWithoutReferralInput = {
   preparedBy?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  returnReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certificationDetails?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
@@ -1855,6 +1993,8 @@ export type AdmLearnerProfileSelect<ExtArgs extends runtime.Types.Extensions.Int
   preparedBy?: boolean
   approvedBy?: boolean
   approvedAt?: boolean
+  returnedAt?: boolean
+  returnReason?: boolean
   certificationDetails?: boolean
   termId?: boolean
   confidentialityLevel?: boolean
@@ -1880,6 +2020,8 @@ export type AdmLearnerProfileSelectCreateManyAndReturn<ExtArgs extends runtime.T
   preparedBy?: boolean
   approvedBy?: boolean
   approvedAt?: boolean
+  returnedAt?: boolean
+  returnReason?: boolean
   certificationDetails?: boolean
   termId?: boolean
   confidentialityLevel?: boolean
@@ -1900,6 +2042,8 @@ export type AdmLearnerProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   preparedBy?: boolean
   approvedBy?: boolean
   approvedAt?: boolean
+  returnedAt?: boolean
+  returnReason?: boolean
   certificationDetails?: boolean
   termId?: boolean
   confidentialityLevel?: boolean
@@ -1920,12 +2064,14 @@ export type AdmLearnerProfileSelectScalar = {
   preparedBy?: boolean
   approvedBy?: boolean
   approvedAt?: boolean
+  returnedAt?: boolean
+  returnReason?: boolean
   certificationDetails?: boolean
   termId?: boolean
   confidentialityLevel?: boolean
 }
 
-export type AdmLearnerProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "referralId" | "createdAt" | "eligibilityStatus" | "stage" | "preparedBy" | "approvedBy" | "approvedAt" | "certificationDetails" | "termId" | "confidentialityLevel", ExtArgs["result"]["admLearnerProfile"]>
+export type AdmLearnerProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "referralId" | "createdAt" | "eligibilityStatus" | "stage" | "preparedBy" | "approvedBy" | "approvedAt" | "returnedAt" | "returnReason" | "certificationDetails" | "termId" | "confidentialityLevel", ExtArgs["result"]["admLearnerProfile"]>
 export type AdmLearnerProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
   referral?: boolean | Prisma.ReferralDefaultArgs<ExtArgs>
@@ -1976,6 +2122,8 @@ export type $AdmLearnerProfilePayload<ExtArgs extends runtime.Types.Extensions.I
     preparedBy: string
     approvedBy: string | null
     approvedAt: Date | null
+    returnedAt: Date | null
+    returnReason: string | null
     certificationDetails: runtime.JsonValue | null
     termId: string
     confidentialityLevel: $Enums.Confidentiality
@@ -2420,6 +2568,8 @@ export interface AdmLearnerProfileFieldRefs {
   readonly preparedBy: Prisma.FieldRef<"AdmLearnerProfile", 'String'>
   readonly approvedBy: Prisma.FieldRef<"AdmLearnerProfile", 'String'>
   readonly approvedAt: Prisma.FieldRef<"AdmLearnerProfile", 'DateTime'>
+  readonly returnedAt: Prisma.FieldRef<"AdmLearnerProfile", 'DateTime'>
+  readonly returnReason: Prisma.FieldRef<"AdmLearnerProfile", 'String'>
   readonly certificationDetails: Prisma.FieldRef<"AdmLearnerProfile", 'Json'>
   readonly termId: Prisma.FieldRef<"AdmLearnerProfile", 'String'>
   readonly confidentialityLevel: Prisma.FieldRef<"AdmLearnerProfile", 'Confidentiality'>

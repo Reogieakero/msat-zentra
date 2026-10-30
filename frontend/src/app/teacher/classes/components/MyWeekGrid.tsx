@@ -9,6 +9,7 @@ import {
   type DayConfig,
 } from "@/app/teacher/schedule/components/schedule-time";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import kanban from "@/app/teacher/overview/components/advisory-schedule-kanban.module.css";
 
 const DAYS = [1, 2, 3, 4, 5];
@@ -96,13 +97,13 @@ export function MyWeekGrid({
                       }`}
                     >
                       {isNow ? (
-                        <span className="inline-flex w-fit items-center gap-1 rounded-md border border-green-500/40 bg-green-500/10 px-1.5 py-0.5 text-[11px] font-medium text-green-700 dark:text-green-400">
+                        <Pill tone="green" label="Happening now">
                           <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
                             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
                           </span>
                           Now
-                        </span>
+                        </Pill>
                       ) : null}
                       <span className="flex items-start gap-1.5">
                         <BookOpenText
@@ -121,14 +122,16 @@ export function MyWeekGrid({
                         <span className="truncate">{range}</span>
                       </span>
                       <span className="flex flex-col gap-1.5">
-                        <span className="inline-flex w-fit items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                        <Pill tone="amber" label="Class duration" className="w-fit">
                           <Hourglass size={11} aria-hidden="true" />
                           {mins > 0 ? `${mins} min` : "—"}
-                        </span>
+                        </Pill>
                         <span className="flex justify-end">
-                          <span
-                            className="inline-flex max-w-full items-center gap-1 truncate rounded-md border border-input bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-foreground"
+                          <Pill
+                            tone="neutral"
+                            label="Section"
                             title={sectionLabel}
+                            className="min-w-0 max-w-full"
                           >
                             <Users
                               size={11}
@@ -136,7 +139,7 @@ export function MyWeekGrid({
                               aria-hidden="true"
                             />
                             <span className="truncate">{sectionLabel}</span>
-                          </span>
+                          </Pill>
                         </span>
                       </span>
                     </article>

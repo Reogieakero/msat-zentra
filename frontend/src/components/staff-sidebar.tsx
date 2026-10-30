@@ -9,7 +9,6 @@ import {
   ShieldAlert,
   FileSignature,
   Award,
-  FileBarChart,
   ShieldCheck,
 } from "lucide-react";
 
@@ -84,7 +83,6 @@ const NAV: NavGroup[] = [
   {
     label: "Reports & Admin",
     items: [
-      { title: "Reports", href: "/principal/reports", icon: FileBarChart },
       { title: "Audit Log", href: "/principal/audit", icon: ShieldCheck },
     ],
   },

@@ -153,6 +153,282 @@
   display: none;
 }
 
+/* ---- Flat section card grid --------------------------------------------- */
+/* Same mini-kanban card design as the principal academics board: bordered
+   shell, header row with a divider, inner metric panel. Cards flow
+   horizontally and wrap instead of stacking into section columns. */
+.sectionCardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(264px, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+  min-width: 0;
+  margin: 0;
+  /* Headroom for the hover lift — the reveal wrapper clips its content, so
+     without this the first card's top edge gets shaved off on hover. */
+  padding: 0.5rem 0 0;
+  list-style: none;
+}
+
+.sectionCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.625rem;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: var(--foreground);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent);
+  transition:
+    border-color 160ms ease-out,
+    background-color 160ms ease-out,
+    box-shadow 160ms ease-out,
+    transform 160ms ease-out;
+}
+
+.sectionCard:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  background-color: color-mix(in oklch, var(--primary) 6%, var(--muted) 30%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px -14px color-mix(in oklch, var(--primary) 60%, transparent);
+}
+
+.sectionCard:active {
+  transform: translateY(0);
+}
+
+.sectionCard:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ring, var(--primary));
+}
+
+.sectionCardActive {
+  border-color: color-mix(in oklch, var(--primary), transparent 40%);
+  background-color: color-mix(in oklch, var(--primary) 10%, transparent);
+}
+
+.sectionCardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0.125rem -0.625rem 0;
+  padding: 0 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sectionCardHeading {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3125rem;
+  min-width: 0;
+}
+
+.sectionCardName {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.sectionCardMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.sectionCardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.sectionCardPanel {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.625rem 0.5rem;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  background-color: var(--card);
+}
+
+.sectionCardStat {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3125rem;
+  min-width: 0;
+}
+
+.sectionCardStatIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+  color: #60a5fa;
+  background: color-mix(in srgb, #3b82f6 16%, transparent);
+  border: 1px solid color-mix(in srgb, #3b82f6 32%, transparent);
+}
+
+.sectionCardStatIcon svg {
+  width: 0.9375rem;
+  height: 0.9375rem;
+}
+
+.sectionCardStatValue {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionCardStatLabel {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+/* ---- Student card grid --------------------------------------------------- */
+/* Roster as a wall of mini boards, same responsive column count as the
+   principal academics student grid. */
+.studentCardGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .studentCardGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .studentCardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .studentCardGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.studentCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem 0.875rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent);
+  transition:
+    border-color 160ms ease-out,
+    background-color 160ms ease-out;
+}
+
+.studentCard:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  background-color: color-mix(in oklch, var(--primary) 6%, var(--muted) 30%);
+}
+
+.studentCardHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0 -0.875rem;
+  padding: 0 1rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.studentCardName {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.studentCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Compact LRN chip for the board grid — hug its content, truncate if needed. */
+.studentCardLrn {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.studentCardStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+.studentCardStatsTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.studentCardStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.375rem 0.25rem;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: color-mix(in oklch, var(--muted) 35%, transparent);
+}
+
+.studentCardStatLabel {
+  font-size: 0.625rem;
+  line-height: 1.3;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
 @media (max-width: 1024px) {
   .page,
   .pageRail {

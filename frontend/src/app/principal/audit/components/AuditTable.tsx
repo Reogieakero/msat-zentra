@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pill } from "@/components/ui/pill";
+import { roleTone } from "@/lib/labels/status-tone";
 import {
   ACTION_LABELS,
   ROLE_LABELS,
@@ -115,7 +116,7 @@ export function AuditTable({ entries }: { entries: AuditEntry[] }) {
         minSize: 170,
         maxSize: 170,
         cell: ({ row }) => (
-          <span className={styles.mono}>{formatTimestamp(row.original.timestamp)}</span>
+          <span className={styles.timestamp}>{formatTimestamp(row.original.timestamp)}</span>
         ),
       },
       {
@@ -134,7 +135,7 @@ export function AuditTable({ entries }: { entries: AuditEntry[] }) {
         minSize: 120,
         maxSize: 120,
         cell: ({ row }) => (
-          <Pill tone="neutral" label="Role" className={styles.roleBadge}>
+          <Pill tone={roleTone(row.original.actorRole)} label="Role" className={styles.roleBadge}>
             {ROLE_LABELS[row.original.actorRole]}
           </Pill>
         ),

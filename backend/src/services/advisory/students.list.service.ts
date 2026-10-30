@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { computeRiskFactors, levelFromFlags } from "../risk.js";
+import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../risk.js";
 import { ATTENDANCE_RISK_CUTOFF, subjectAverageAttendance } from "../attendance.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
@@ -14,7 +14,7 @@ export async function getStudents(ctx: AdvisoryContext) {
   }
 
   const sectionIds = sections.map((s) => s.id);
-  const [counts, advisees, rosterEntries, assignSubjects, entrySubjects, subjectAvgs] =
+  const [counts, advisees, rosterEntries, assignSubjects, entrySubjects, subjectAvgs, sectionTotals] =
     await Promise.all([
       prisma.studentProfile.groupBy({
         by: ["sectionId"],
@@ -66,6 +66,7 @@ export async function getStudents(ctx: AdvisoryContext) {
         distinct: ["subjectId"],
       }),
       subjectAverageAttendance(sectionIds, termId),
+      sectionAttendanceTotals(sectionIds, termId),
     ]);
   const registeredLrns = new Set(advisees.map((s) => s.lrn));
   const rosterOnly = rosterEntries.filter((r) => !registeredLrns.has(r.lrn));
@@ -220,13 +221,14 @@ export async function getStudents(ctx: AdvisoryContext) {
           finalGrades: s.finalGrades,
           rawAverages: rawAveragesFor(s.userId),
           attendance: s.attendanceRecords,
+          attendanceTotal: sectionTotals.get(s.sectionId ?? ""),
           anecdotalCount: s.anecdotalRecords.length,
           enrolled,
         }),
       );
       const activeFlags = toActiveFlags(factors);
       const present = s.attendanceRecords.filter((r) => r.status === "present").length;
-      const total = s.attendanceRecords.length;
+      const total = Math.max(sectionTotals.get(s.sectionId ?? "") ?? 0, s.attendanceRecords.length);
       const openFlags = s.gradeFlags.filter((g) => g.status !== "resolved").length;
       return {
         studentId: s.userId,
@@ -267,12 +269,14 @@ export async function getStudents(ctx: AdvisoryContext) {
           finalGrades: finals,
           rawAverages: rawAveragesFor(key),
           attendance: att,
+          attendanceTotal: sectionTotals.get(r.sectionId ?? ""),
           anecdotalCount: anec.length,
           enrolled,
         }),
       );
       const activeFlags = toActiveFlags(factors);
       const present = att.filter((a) => a.status === "present").length;
+      const ratedTotal = Math.max(sectionTotals.get(r.sectionId ?? "") ?? 0, att.length);
       return {
         studentId: key,
         name: r.fullName,
@@ -283,7 +287,7 @@ export async function getStudents(ctx: AdvisoryContext) {
         section: r.section.name,
         riskLevel: levelFromFlags(factors),
         flags: activeFlags,
-        attendanceRate: att.length === 0 ? 1 : present / att.length,
+        attendanceRate: ratedTotal === 0 ? 1 : present / ratedTotal,
         anecdotalCount: anec.length,
         confidentialityTiers: Array.from(new Set(anec.map((a) => a.confidentialityLevel))),
         hasOpenFlag: false,

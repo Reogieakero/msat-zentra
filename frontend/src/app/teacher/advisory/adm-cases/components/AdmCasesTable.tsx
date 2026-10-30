@@ -8,8 +8,10 @@ import { ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/share
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import ovStyles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
 import { Pagination } from "@/components/shared/pagination";
+import { Pill } from "@/components/ui/pill";
 import type { AdmCase } from "@/services/teacher/admCases.types";
 import { stageColor } from "@/services/teacher/admCases.labels";
+import { admStageTone } from "@/lib/labels/status-tone";
 import { AdmCaseCard } from "./AdmCaseCard";
 import { AdmStarterKanban } from "./AdmEmptyKanban";
 import { AdmStarterSidebar } from "./AdmStarterSidebar";
@@ -159,7 +161,6 @@ export function AdmCasesTable({
                       aria-label={`ADM case for ${c.studentName} prepared ${date}`}
                       style={{
                         borderColor: `color-mix(in srgb, ${dot} 40%, transparent)`,
-                        backgroundColor: `color-mix(in srgb, ${dot} 12%, transparent)`,
                       }}
                       className="flex min-w-0 flex-1 flex-col gap-2 rounded-xl border p-2.5 [font-family:var(--font-inter)]"
                     >
@@ -179,17 +180,14 @@ export function AdmCasesTable({
                             {date}
                           </span>
                         </span>
-                        <span
-                          className="inline-flex min-w-0 max-w-[50%] shrink-0 items-center truncate rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight"
-                          style={{
-                            color: dot,
-                            borderColor: `color-mix(in srgb, ${dot} 40%, transparent)`,
-                            backgroundColor: `color-mix(in srgb, ${dot} 12%, transparent)`,
-                          }}
+                        <Pill
+                          tone={admStageTone(c.stage)}
+                          label="ADM stage"
                           title={c.stageLabel}
+                          className="max-w-[55%] shrink whitespace-normal text-right leading-tight"
                         >
                           {c.stageLabel}
-                        </span>
+                        </Pill>
                       </div>
                       <div
                         id={highlighted ? `teacher-adm-case-${highlightId}` : undefined}

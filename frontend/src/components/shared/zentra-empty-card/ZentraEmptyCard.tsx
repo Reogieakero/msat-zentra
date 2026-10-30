@@ -12,6 +12,11 @@ export type ZentraEmptyCardProps = {
   action?: React.ReactNode;
   centered?: boolean;
   /**
+   * Accent for the icon chip. `neutral` (default) is the quiet grey chip;
+   * `amber` marks a desk-accent empty state (e.g. a chart with no data yet).
+   */
+  tone?: "neutral" | "amber";
+  /**
    * "viewport" (default): centered wrapper sizes itself to the viewport.
    * "fit": centered wrapper has no min-height — the parent provides the
    * height (use with a fit-to-viewport page section so empty pages never
@@ -20,10 +25,19 @@ export type ZentraEmptyCardProps = {
   layout?: "viewport" | "fit";
 };
 
-export function ZentraEmptyState({ icon: Icon, title, hint, action }: ZentraEmptyCardProps) {
+export function ZentraEmptyState({
+  icon: Icon,
+  title,
+  hint,
+  action,
+  tone = "neutral",
+}: ZentraEmptyCardProps) {
   return (
     <div className={`${styles.emptyBlock} relative`}>
-      <span className={styles.emptyIcon} aria-hidden="true">
+      <span
+        className={`${styles.emptyIcon} ${tone === "amber" ? styles.emptyIconAmber : ""}`}
+        aria-hidden="true"
+      >
         <Icon />
       </span>
       <p className={styles.emptyTitle}>{title}</p>
@@ -33,7 +47,7 @@ export function ZentraEmptyState({ icon: Icon, title, hint, action }: ZentraEmpt
   );
 }
 
-export function ZentraEmptyCard({ icon: Icon, title, hint, label, action, centered, layout }: ZentraEmptyCardProps) {
+export function ZentraEmptyCard({ icon, title, hint, label, action, centered, tone, layout }: ZentraEmptyCardProps) {
   if (centered) {
     return (
       <div className={layout === "fit" ? styles.emptyFit : styles.emptyWrap}>
@@ -41,7 +55,7 @@ export function ZentraEmptyCard({ icon: Icon, title, hint, label, action, center
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />
           </span>
-          <ZentraEmptyState icon={Icon} title={title} hint={hint} action={action} />
+          <ZentraEmptyState icon={icon} title={title} hint={hint} action={action} tone={tone} />
         </section>
       </div>
     );
@@ -51,7 +65,7 @@ export function ZentraEmptyCard({ icon: Icon, title, hint, label, action, center
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <ZentraEmptyState icon={Icon} title={title} hint={hint} action={action} />
+      <ZentraEmptyState icon={icon} title={title} hint={hint} action={action} tone={tone} />
     </section>
   );
 }

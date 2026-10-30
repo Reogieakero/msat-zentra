@@ -32,9 +32,6 @@ export function ConfirmActionDialog({
       description={description}
       footer={
         <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
-          <Button variant="outline" size="sm" className={OVERLAY_BTN} onClick={onCancel}>
-            Cancel
-          </Button>
           <Button
             size="sm"
             className={

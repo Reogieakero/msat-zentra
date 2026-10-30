@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { BookOpen, GraduationCap, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { useTeacherProfileSettings } from "@/services/settings/profile-settings";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
@@ -81,9 +81,10 @@ export function TeacherOverviewHeader({
           }
         />
       </span>
-      <Badge
-        variant="secondary"
-        className={`${assign.gradeBadge} ${assign.gradeFloat}`}
+      <Pill
+        tone="neutral"
+        label="Role"
+        className={`${assign.gradeBadge} ${assign.gradeFloat} border-transparent`}
         style={
           grad
             ? {
@@ -99,7 +100,7 @@ export function TeacherOverviewHeader({
         }
       >
         {isAdviser ? "Adviser" : "Teacher"}
-      </Badge>
+      </Pill>
       <div className="relative flex flex-col gap-1">
         <div className={assign.cardHead}>
           {mascot ? (

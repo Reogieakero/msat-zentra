@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { lockFinalGrade, lockErrorMessage, useRefreshAcademic } from "@/services/teacher/grading.service";
 import type { ClassStudent } from "@/services/teacher/grading.types";
 import { sileo } from "@/components/ui/sonner";
+import { formatSurnameFirst } from "@/lib/names";
 import styles from "./FinalsCard.module.css";
 
 type Props = {
@@ -88,7 +89,7 @@ export function FinalsCard({ assignmentId, students, onChanged }: Props) {
               return (
                 <tr key={s.id}>
                   <th className={styles.stickyCol} scope="row">
-                    {s.name}
+                    {formatSurnameFirst(s.name)}
                   </th>
                   <td>{f?.computedAverage != null ? f.computedAverage.toFixed(2) : "—"}</td>
                   <td>{f?.transmutedGrade != null ? f.transmutedGrade.toFixed(0) : "—"}</td>
@@ -102,7 +103,7 @@ export function FinalsCard({ assignmentId, students, onChanged }: Props) {
                           variant="outline"
                           disabled={!lockable || !!lockingIds[f.id]}
                           aria-busy={!!lockingIds[f.id] || undefined}
-                          onClick={() => void handleLock(f.id, s.name)}
+                          onClick={() => void handleLock(f.id, formatSurnameFirst(s.name))}
                         >
                           {lockingIds[f.id] ? (
                             <>

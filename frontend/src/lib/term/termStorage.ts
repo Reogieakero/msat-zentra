@@ -45,6 +45,18 @@ export function writeStoredTerm(userId: string | null | undefined, term: StoredT
   }
 }
 
+/**
+ * Forgets one user's term pick (keeps the prompt flag). Used by the principal
+ * Settings picker's "follow the school default" reset.
+ */
+export function clearStoredTerm(userId: string | null | undefined): void {
+  if (typeof window === "undefined" || !userId) return;
+  try {
+    window.localStorage.removeItem(keyForUser(userId));
+  } catch {
+  }
+}
+
 export function readTermPrompt(): boolean {
   if (typeof window === "undefined") return false;
   try {

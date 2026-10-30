@@ -1,7 +1,9 @@
 import { prisma } from "../../lib/prisma.js";
+import type { GradeLevel } from "../../generated/prisma/client.js";
 import { meetsAcademicExcellenceAward } from "../../services/grading.js";
-import { computeRiskFactors, levelFromFlags } from "../../services/risk.js";
+import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import { mascotFor } from "../../services/mascot.js";
 import { gradeToNumber as gradeNumber } from "../../lib/grades.js";
 
 function round1(n: number): number {
@@ -22,6 +24,8 @@ export interface LiveHonorCandidateDTO {
   gradeLevel: number;
   generalAverage: number;
   lowestSubject: number;
+  /** Stored profile/roster mascot, or the canonical hash pick. */
+  mascot: string | null;
   subjects: LiveHonorSubjectDTO[];
 }
 
@@ -34,6 +38,8 @@ export interface LiveHonorRoll {
 export async function getLiveHonorRoll(scope?: {
   schoolYearId?: string | null;
   termId?: string | null;
+  gradeLevel?: string | null;
+  sectionId?: string | null;
 }): Promise<LiveHonorRoll> {
   let activeTerm: {
     id: string;
@@ -75,30 +81,50 @@ export async function getLiveHonorRoll(scope?: {
   }
 
   const sections = await prisma.section.findMany({
-    where: resolvedYearId ? { schoolYearId: resolvedYearId } : undefined,
+    where: {
+      ...(resolvedYearId ? { schoolYearId: resolvedYearId } : {}),
+      ...(scope?.sectionId ? { id: scope.sectionId } : {}),
+      ...(scope?.gradeLevel ? { gradeLevel: scope.gradeLevel as GradeLevel } : {}),
+    },
     select: {
       id: true,
       name: true,
       gradeLevel: true,
+      // The principal only reads student data the adviser has explicitly shared
+      // (Settings → share student data), same gate as the academics summary.
+      adviser: {
+        select: { staffProfile: { select: { shareStudentData: true } } },
+      },
       students: {
-        select: { userId: true, lrn: true, user: { select: { fullName: true } } },
+        select: {
+          userId: true,
+          lrn: true,
+          mascot: true,
+          user: { select: { fullName: true } },
+        },
       },
       rosterEntries: {
-        select: { id: true, lrn: true, fullName: true },
+        select: { id: true, lrn: true, fullName: true, mascot: true },
       },
     },
   });
-  const sectionIds = sections.map((s) => s.id);
+
+  // Unshared sections are omitted entirely: an honor-roll entry is a student's
+  // live average, and that number must not leak past the adviser's sharing gate.
+  const sharedSections = sections.filter(
+    (s) => s.adviser?.staffProfile?.shareStudentData === true,
+  );
+  const sectionIds = sharedSections.map((s) => s.id);
 
   const registeredLrns = new Set(
-    sections.flatMap((s) => s.students.map((st) => st.lrn)),
+    sharedSections.flatMap((s) => s.students.map((st) => st.lrn)),
   );
-  const profileIds = sections.flatMap((s) => s.students.map((st) => st.userId));
-  const rosterIds = sections.flatMap((s) =>
+  const profileIds = sharedSections.flatMap((s) => s.students.map((st) => st.userId));
+  const rosterIds = sharedSections.flatMap((s) =>
     s.rosterEntries.filter((r) => !registeredLrns.has(r.lrn)).map((r) => r.id),
   );
 
-  const [gradeRows, attendanceRows, anecdotalRows, headcounts] = await Promise.all([
+  const [gradeRows, attendanceRows, anecdotalRows, headcounts, sectionTotals] = await Promise.all([
     profileIds.length + rosterIds.length > 0
       ? prisma.studentGrade.findMany({
           where: {
@@ -143,6 +169,7 @@ export async function getLiveHonorRoll(scope?: {
       select: { studentId: true, rosterId: true },
     }),
     sectionHeadcounts(sectionIds),
+    sectionAttendanceTotals(sectionIds, termId),
   ]);
 
   const liveByKey = new Map<
@@ -182,18 +209,25 @@ export async function getLiveHonorRoll(scope?: {
     string,
     { sectionId: string; section: string; gradeLevel: number }
   >();
-  const nameOf = new Map<string, { name: string; lrn: string }>();
-  for (const s of sections) {
+  const nameOf = new Map<
+    string,
+    { name: string; lrn: string; mascot: string | null }
+  >();
+  for (const s of sharedSections) {
     const meta = { sectionId: s.id, section: s.name, gradeLevel: gradeNumber(s.gradeLevel) };
     for (const st of s.students) {
       sectionOf.set(st.userId, meta);
-      nameOf.set(st.userId, { name: st.user.fullName, lrn: st.lrn });
+      nameOf.set(st.userId, {
+        name: st.user.fullName,
+        lrn: st.lrn,
+        mascot: st.mascot,
+      });
     }
     for (const r of s.rosterEntries) {
       if (registeredLrns.has(r.lrn)) continue;
       const key = `roster:${r.id}`;
       sectionOf.set(key, meta);
-      nameOf.set(key, { name: r.fullName, lrn: r.lrn });
+      nameOf.set(key, { name: r.fullName, lrn: r.lrn, mascot: r.mascot });
     }
   }
 
@@ -225,6 +259,7 @@ export async function getLiveHonorRoll(scope?: {
         finalGrades: [],
         rawAverages: subjects.map((s) => s.average),
         attendance: attendanceByKey.get(key) ?? [],
+        attendanceTotal: sectionTotals.get(meta.sectionId),
         anecdotalCount: anecdotalByKey.get(key) ?? 0,
         enrolled: headcounts.get(meta.sectionId) ?? 0,
       }),
@@ -239,6 +274,7 @@ export async function getLiveHonorRoll(scope?: {
       gradeLevel: meta.gradeLevel,
       generalAverage,
       lowestSubject,
+      mascot: identity.mascot ?? mascotFor(identity.name, identity.lrn),
       subjects,
     });
   }

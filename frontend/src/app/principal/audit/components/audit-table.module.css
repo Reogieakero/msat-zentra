@@ -9,8 +9,11 @@
   transform: rotate(90deg);
 }
 
-.mono {
-  font-family: var(--font-mono, ui-monospace, monospace);
+/* Timestamps stay Inter like the rest of the page — tabular numerals keep the
+   column aligned without falling back to a monospace face. */
+.timestamp {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: 12.5px;
 }
 

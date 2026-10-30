@@ -22,6 +22,17 @@ export const KNOWN_ROLES: Role[] = [...STAFF_ROLES, "student", "parent"];
 
 export const TEACHER_ROLES: Role[] = ["subject_teacher", "adviser"];
 
+/**
+ * Roles allowed to steer the term scope of their own requests. Teachers pick
+ * per-desk; the principal picks once in Settings and every principal page
+ * follows it (see `termScope.ts`).
+ */
+export const TERM_STEERING_ROLES: Role[] = [...TEACHER_ROLES, "principal"];
+
+export function canSteerTerm(role?: string | null): boolean {
+  return role != null && (TERM_STEERING_ROLES as string[]).includes(role);
+}
+
 export function bandForGrade(grade: GradeLevel): GradeBand {
   return GRADE_BAND_7_10.includes(grade) ? "7-10" : "11-12";
 }

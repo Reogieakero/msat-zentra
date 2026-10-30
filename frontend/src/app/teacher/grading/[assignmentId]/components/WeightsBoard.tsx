@@ -4,7 +4,7 @@ import * as React from "react";
 import { Loader2, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
-import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
 import {
   COMPONENT_ORDER,
   gradeLabel,
@@ -80,8 +80,8 @@ export function WeightsBoard({ detail, onCancel, onSaved }: Props) {
       }
       actions={
         <span className="flex items-center gap-1.5">
-          <AmberRectPill>{assignment.sectionName}</AmberRectPill>
-          <AmberRectPill>Grade {gradeLabel(assignment.gradeLevel)}</AmberRectPill>
+          <Pill tone="amber" label="Section">{assignment.sectionName}</Pill>
+          <Pill tone="amber" label="Grade level">Grade {gradeLabel(assignment.gradeLevel)}</Pill>
         </span>
       }
       footer={

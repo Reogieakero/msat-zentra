@@ -71,6 +71,8 @@ const TYPE_MAP: Record<string, string> = {
   "student_grades:score_self": "score_saved_self",
   "student_roster:create": "roster_enlisted",
   "student_roster:create_self": "roster_enlisted_self",
+  "student_roster:update": "roster_updated",
+  "student_roster:update_self": "roster_updated_self",
   "adviser_archived_students:create": "roster_archived",
   "adviser_archived_students:create_self": "roster_archived_self",
   "adviser_archived_students:delete": "roster_restored",
@@ -98,6 +100,7 @@ const TYPE_MAP: Record<string, string> = {
   "grade_flags:open_self": "grade_flag_opened_self",
   "grade_flags:resolve": "grade_flag_resolved",
   "grade_flags:resolve_self": "grade_flag_resolved_self",
+  "advisory_module_submissions:submit": "module_submitted",
 };
 
 export function deriveNotifType(sourceTable: string, action: string): string {

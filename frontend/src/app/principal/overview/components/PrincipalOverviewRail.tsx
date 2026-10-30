@@ -9,6 +9,7 @@ import {
   CalendarX,
   FileSignature,
   ShieldAlert,
+  TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ import {
 import { useTerm } from "@/lib/term/TermContext";
 import { fetchOverview } from "@/services/principal/overview.service";
 import type { OverviewData } from "@/services/principal/overview.types";
+import { fetchRiskBoard } from "@/services/principal/risk.service";
+import type { RiskBoardData } from "@/services/principal/risk.types";
 import styles from "./PrincipalOverviewRail.module.css";
 
 // Flyout panel — same look as the teacher / registry icon rails: solid
@@ -30,7 +33,7 @@ import styles from "./PrincipalOverviewRail.module.css";
 const MENU_PANEL =
   "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
 
-type RailKey = "risk" | "adm" | "attendance" | "honor";
+type RailKey = "attention" | "risk" | "adm" | "attendance" | "honor";
 
 interface RailItem {
   key: RailKey;
@@ -43,7 +46,7 @@ interface RailItem {
   cta: string;
   description: string;
   count: number;
-  extra: { label: string; value: number }[];
+  extra: { label: string; value: React.ReactNode }[];
 }
 
 function GutterIconButton({
@@ -80,8 +83,25 @@ function GutterIconButton({
   );
 }
 
-function buildItems(data: OverviewData | undefined): RailItem[] {
+function buildItems(
+  data: OverviewData | undefined,
+  sections: RiskBoardData["bySection"],
+): RailItem[] {
   return [
+    {
+      key: "attention",
+      icon: TriangleAlert,
+      title: "Who needs attention first",
+      hint: "Sections carrying the most high-risk learners",
+      href: "/principal/risk/students",
+      cta: "View at-risk students",
+      description: "Sections carrying the most high-risk learners — open the roster to act.",
+      count: sections.length,
+      extra: sections.map((s) => ({
+        label: `${s.section} · ${s.gradeLevel}`,
+        value: `${s.High} high / ${s.Moderate} mod`,
+      })),
+    },
     {
       key: "risk",
       icon: ShieldAlert,
@@ -151,6 +171,27 @@ export function PrincipalOverviewRail() {
     refetchOnWindowFocus: false,
   });
 
+  // Same board data as /principal/adm's attention rail — the sections that
+  // carry the most high-risk learners this term.
+  const { data: riskBoard } = useQuery({
+    queryKey: [
+      "risk-board",
+      activeTerm?.termId ?? null,
+      activeTerm?.schoolYearId ?? null,
+    ],
+    queryFn: () => fetchRiskBoard(),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const attentionSections = React.useMemo(() => {
+    const rows = riskBoard?.bySection ?? [];
+    return [...rows]
+      .filter((s) => s.High + s.Moderate > 0)
+      .sort((a, b) => b.High - a.High || b.Moderate - a.Moderate)
+      .slice(0, 5);
+  }, [riskBoard]);
+
   React.useEffect(() => {
     if (!openKey) return;
     const onPointerDown = (e: PointerEvent) => {
@@ -185,7 +226,7 @@ export function PrincipalOverviewRail() {
       openKey === key ? styles.menuOpen : styles.menuClosed
     }`;
 
-  const items = buildItems(data);
+  const items = buildItems(data, attentionSections);
 
   return (
     <TooltipProvider delayDuration={100}>
@@ -272,7 +313,11 @@ export function PrincipalOverviewRail() {
                         ))}
                       </ul>
                     ) : (
-                      <p className={styles.hintText}>{a.hint}</p>
+                      <p className={styles.hintText}>
+                        {a.key === "attention"
+                          ? "No section currently carries a high or moderate risk case."
+                          : a.hint}
+                      </p>
                     )}
                   </KanbanBoard>
                 </div>

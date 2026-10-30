@@ -42,6 +42,16 @@ export function isTeacherRole(role: string | null | undefined): boolean {
   return role === "subject_teacher" || role === "adviser";
 }
 
+/**
+ * Roles whose requests may carry a client-selected term. Teachers steer their
+ * own desk; the principal selects one term/school year in Settings and every
+ * principal page follows it. Keep in sync with the backend
+ * `TERM_STEERING_ROLES` (`backend/src/lib/roles.ts`).
+ */
+export function canSteerTermRole(role: string | null | undefined): boolean {
+  return isTeacherRole(role) || role === "principal";
+}
+
 export interface TokenIdentity {
   sub: string;
   role: string;

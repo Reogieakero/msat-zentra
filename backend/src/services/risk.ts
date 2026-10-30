@@ -15,6 +15,8 @@ function flagsFromParts(args: {
   grades: RiskGrade[];
   mode?: GradeMode;
   attendance: { status: string; subjectId: string | null }[];
+  /** Section-wide term meetups — see `sectionAttendanceTotals`. */
+  attendanceTotal?: number;
   anecdotalCount: number;
   enrolled: number;
 }): { academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean; result: RiskResult } {
@@ -32,13 +34,16 @@ function flagsFromParts(args: {
     (finalAvg != null && finalAvg < 75) || (rawAvg != null && rawAvg < 75);
 
   const attPresent = args.attendance.filter((a) => a.status === "present").length;
-  // No attendance rows means no attendance signal at all — never treat an
-  // empty record set as 0% attendance.
+  // Denominator: the section's meetups for the whole term when supplied, so a
+  // learner added mid-term is rated from the term's first meetup (their
+  // pre-enrolment days count as missed) instead of from their first mark.
+  const attTotal = Math.max(args.attendanceTotal ?? 0, args.attendance.length);
+  // No attendance signal at all — never treat an empty record set as 0%.
   const attendanceFlag =
-    args.attendance.length === 0
+    attTotal === 0
       ? false
       : args.attendance.some((a) => a.subjectId !== null)
-        ? attPresent / args.attendance.length < 0.8
+        ? attPresent / attTotal < 0.8
         : args.enrolled > 0
           ? attPresent / args.enrolled < 0.8
           : false;
@@ -49,6 +54,92 @@ function flagsFromParts(args: {
   const riskLevel: RiskLevel = riskCount >= 2 ? "High" : riskCount === 1 ? "Moderate" : "Low";
 
   return { academicFlag, attendanceFlag, behavioralFlag, result: { riskCount, riskLevel } };
+}
+
+/**
+ * Elapsed class meetups per section for a term, anchored at the TERM START
+ * DATE — not at the date a learner was added. The risk engine and the
+ * principal hover card share this denominator so classmates always read the
+ * same /N.
+ *
+ * Meetups come from the published timetable (one per scheduled subject/day
+ * from term start up to today or term end). Sections without a published
+ * timetable fall back to the distinct attendance sheets actually recorded,
+ * and we never report fewer meetups than were recorded.
+ */
+export async function sectionAttendanceTotals(
+  sectionIds: string[],
+  termId: string,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const ids = Array.from(new Set(sectionIds.filter((id): id is string => !!id)));
+  if (ids.length === 0) return out;
+
+  const [term, entries, sheets] = await Promise.all([
+    prisma.term.findUnique({
+      where: { id: termId },
+      select: { startDate: true, endDate: true },
+    }),
+    prisma.sectionTimetableEntry.findMany({
+      where: {
+        sectionId: { in: ids },
+        termId,
+        status: { in: ["APPROVED", "SUBMITTED"] },
+      },
+      select: { sectionId: true, subjectId: true, day: true },
+    }),
+    prisma.attendanceRecord.findMany({
+      where: { sectionId: { in: ids }, termId },
+      select: { sectionId: true, date: true, subjectId: true, slot: true, session: true },
+    }),
+  ]);
+
+  // Recorded sheets per section act as a floor: one meetup is one
+  // subject-slot sheet, or a legacy AM/PM session.
+  const recordedBySection = new Map<string, Set<string>>();
+  for (const s of sheets) {
+    const day = s.date.toISOString().slice(0, 10);
+    const key = s.subjectId ? `${day}|${s.subjectId}|${s.slot}` : `${day}|legacy|${s.session}`;
+    const set = recordedBySection.get(s.sectionId) ?? new Set<string>();
+    set.add(key);
+    recordedBySection.set(s.sectionId, set);
+  }
+
+  const daysBySectionSubject = new Map<string, Set<number>>();
+  for (const e of entries) {
+    const key = `${e.sectionId}|${e.subjectId}`;
+    const set = daysBySectionSubject.get(key) ?? new Set<number>();
+    set.add(e.day);
+    daysBySectionSubject.set(key, set);
+  }
+
+  const startStr = term?.startDate?.toISOString().slice(0, 10) ?? null;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const endStr = (() => {
+    if (!term?.endDate) return todayStr;
+    const termEnd = term.endDate.toISOString().slice(0, 10);
+    return termEnd < todayStr ? termEnd : todayStr;
+  })();
+
+  for (const sectionId of ids) {
+    let meetups = 0;
+    if (startStr && startStr <= endStr) {
+      for (const [key, days] of daysBySectionSubject) {
+        if (!key.startsWith(`${sectionId}|`)) continue;
+        for (
+          let d = new Date(`${startStr}T00:00:00Z`);
+          d.toISOString().slice(0, 10) <= endStr;
+          d = new Date(d.getTime() + 86_400_000)
+        ) {
+          const dow = d.getUTCDay();
+          const day = dow === 0 ? 7 : dow;
+          if (days.has(day)) meetups += 1;
+        }
+      }
+    }
+    out.set(sectionId, Math.max(meetups, recordedBySection.get(sectionId)?.size ?? 0));
+  }
+  return out;
 }
 
 export async function evaluateRisk(
@@ -68,13 +159,21 @@ export async function evaluateRisk(
     prisma.anecdotalRecord.count({ where: { studentId, termId } }),
     prisma.studentProfile.findUnique({
       where: { userId: studentId },
-      select: { section: { select: { _count: { select: { students: true } } } } },
+      select: {
+        sectionId: true,
+        section: { select: { _count: { select: { students: true } } } },
+      },
     }),
   ]);
+  const sectionId = profile?.sectionId ?? null;
+  const totals = sectionId
+    ? await sectionAttendanceTotals([sectionId], termId)
+    : new Map<string, number>();
 
   return flagsFromParts({
     grades: finalGrades,
     attendance,
+    attendanceTotal: sectionId ? totals.get(sectionId) : undefined,
     anecdotalCount: anecdotals,
     enrolled: profile?.section?._count.students ?? 0,
   });
@@ -103,12 +202,20 @@ export async function evaluateBothRisk(
     prisma.anecdotalRecord.count({ where: { studentId, termId } }),
     prisma.studentProfile.findUnique({
       where: { userId: studentId },
-      select: { section: { select: { _count: { select: { students: true } } } } },
+      select: {
+        sectionId: true,
+        section: { select: { _count: { select: { students: true } } } },
+      },
     }),
   ]);
+  const sectionId = profile?.sectionId ?? null;
+  const totals = sectionId
+    ? await sectionAttendanceTotals([sectionId], termId)
+    : new Map<string, number>();
   const parts = {
     grades: finalGrades,
     attendance,
+    attendanceTotal: sectionId ? totals.get(sectionId) : undefined,
     anecdotalCount: anecdotals,
     enrolled: profile?.section?._count.students ?? 0,
   };
@@ -153,6 +260,15 @@ export interface FactorInputs {
   gradeMode?: GradeMode;
 
   attendance: { status: string; subjectId?: string | null }[];
+
+  /**
+   * Section meetups for the whole term (term start → now). When supplied it
+   * replaces the learner's own mark count as the attendance denominator, so
+   * classmates — including anyone added mid-term — all read the same /N.
+   * Build it with `sectionAttendanceTotals`.
+   */
+  attendanceTotal?: number;
+
   anecdotalCount: number;
 
   enrolled: number;
@@ -178,13 +294,16 @@ export function computeRiskFactors(inputs: FactorInputs): RiskFactors {
     (rawAvg != null && rawAvg < 75);
   const attPresent = attendance.filter((a) => a.status === "present").length;
 
-  // No attendance rows means no attendance signal at all — never treat an
-  // empty record set as 0% attendance (that auto-flagged every fresh learner).
+  // Denominator: the section's term-wide meetups when the caller supplied
+  // them (a late enrollee then starts at the term's first meetup), otherwise
+  // the learner's own marks. No marks at all still means no signal.
+  const attTotal = Math.max(inputs.attendanceTotal ?? 0, attendance.length);
+  const subjectEra = attendance.some((a) => a.subjectId != null) || attendance.length === 0;
   const attendanceFlag =
-    attendance.length === 0
+    attTotal === 0
       ? false
-      : attendance.some((a) => a.subjectId != null)
-        ? attPresent / attendance.length < 0.8
+      : subjectEra
+        ? attPresent / attTotal < 0.8
         : enrolled > 0
           ? attPresent / enrolled < 0.8
           : false;
@@ -228,10 +347,14 @@ export async function evaluateRosterRisk(
   const enrolled = roster
     ? ((await sectionHeadcounts([roster.sectionId])).get(roster.sectionId) ?? 0)
     : 0;
+  const totals = roster
+    ? await sectionAttendanceTotals([roster.sectionId], termId)
+    : new Map<string, number>();
 
   return flagsFromParts({
     grades: finalGrades,
     attendance,
+    attendanceTotal: roster ? totals.get(roster.sectionId) : undefined,
     anecdotalCount: anecdotals,
     enrolled,
   });
@@ -259,7 +382,16 @@ export async function evaluateBothRosterRisk(
   const enrolled = roster
     ? ((await sectionHeadcounts([roster.sectionId])).get(roster.sectionId) ?? 0)
     : 0;
-  const parts = { grades: finalGrades, attendance, anecdotalCount: anecdotals, enrolled };
+  const totals = roster
+    ? await sectionAttendanceTotals([roster.sectionId], termId)
+    : new Map<string, number>();
+  const parts = {
+    grades: finalGrades,
+    attendance,
+    attendanceTotal: roster ? totals.get(roster.sectionId) : undefined,
+    anecdotalCount: anecdotals,
+    enrolled,
+  };
   const rawFull = flagsFromParts({ ...parts });
   const finalFull = flagsFromParts({ ...parts });
   return {
@@ -311,7 +443,34 @@ export async function isAdviserDataConnected(args: {
 
 export async function recomputeRisk(studentId: string, termId: string) {
   const dual = await evaluateBothRisk(studentId, termId);
-  const result = dual.final;  await prisma.$transaction([
+  const result = dual.final;
+
+  // Real-time engine contract: only react when a factor actually changed.
+  // Recomputing on every write must not re-snapshot or re-detect an unchanged
+  // learner (that produced duplicate snapshots and repeat detections).
+  const current = await prisma.studentProfile.findUnique({
+    where: { userId: studentId },
+    select: {
+      academicFlag: true,
+      attendanceFlag: true,
+      behavioralFlag: true,
+    },
+  });
+  const flagsChanged =
+    !current ||
+    current.academicFlag !== dual.finalFlags.academicFlag ||
+    current.attendanceFlag !== dual.finalFlags.attendanceFlag ||
+    current.behavioralFlag !== dual.finalFlags.behavioralFlag;
+  // A NEW factor = a flag that was false (or unknown) and is now true.
+  const newFactor =
+    !current ||
+    (dual.finalFlags.academicFlag && !current.academicFlag) ||
+    (dual.finalFlags.attendanceFlag && !current.attendanceFlag) ||
+    (dual.finalFlags.behavioralFlag && !current.behavioralFlag);
+
+  if (!flagsChanged) return result;
+
+  await prisma.$transaction([
     prisma.studentProfile.update({
       where: { userId: studentId },
       data: {
@@ -341,7 +500,7 @@ export async function recomputeRisk(studentId: string, termId: string) {
   ]);
 
   const atRisk = result.riskLevel === "High" || result.riskLevel === "Moderate";
-  if (atRisk && (await isAdviserDataConnected({ studentId }))) {
+  if (atRisk && newFactor && (await isAdviserDataConnected({ studentId }))) {
     const open = await prisma.intervention.findFirst({
       where: { studentId, termId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
       select: { id: true },
@@ -379,6 +538,30 @@ export async function recomputeRisk(studentId: string, termId: string) {
 export async function recomputeRosterRisk(rosterId: string, termId: string) {
   const dual = await evaluateBothRosterRisk(rosterId, termId);
   const result = dual.final;
+
+  // Same contract as `recomputeRisk`: an unchanged learner is not re-snapshotted
+  // and not re-detected. Only a newly-triggered factor raises an intervention.
+  const current = await prisma.studentRoster.findUnique({
+    where: { id: rosterId },
+    select: {
+      academicFlag: true,
+      attendanceFlag: true,
+      behavioralFlag: true,
+    },
+  });
+  const flagsChanged =
+    !current ||
+    current.academicFlag !== dual.finalFlags.academicFlag ||
+    current.attendanceFlag !== dual.finalFlags.attendanceFlag ||
+    current.behavioralFlag !== dual.finalFlags.behavioralFlag;
+  const newFactor =
+    !current ||
+    (dual.finalFlags.academicFlag && !current.academicFlag) ||
+    (dual.finalFlags.attendanceFlag && !current.attendanceFlag) ||
+    (dual.finalFlags.behavioralFlag && !current.behavioralFlag);
+
+  if (!flagsChanged) return result;
+
   await prisma.$transaction([
     prisma.studentRoster.update({
       where: { id: rosterId },
@@ -410,7 +593,7 @@ export async function recomputeRosterRisk(rosterId: string, termId: string) {
   ]);
 
   const atRisk = result.riskLevel === "High" || result.riskLevel === "Moderate";
-  if (atRisk && (await isAdviserDataConnected({ rosterId }))) {
+  if (atRisk && newFactor && (await isAdviserDataConnected({ rosterId }))) {
     const open = await prisma.intervention.findFirst({
       where: { rosterId, termId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
       select: { id: true },

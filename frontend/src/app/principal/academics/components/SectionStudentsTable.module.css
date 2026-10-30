@@ -1,5 +1,5 @@
-/* Section roster — one mini kanban board per student, five per row.
-   No parent board wrapper: the toolbar and pagination sit on the page. */
+/* Section roster — one mini kanban board per student. The section identity
+   (name / grade / count / data-source pill) lives on the page toolbar. */
 
 .wrap {
   display: flex;
@@ -8,39 +8,6 @@
   min-width: 0;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.toolbarTitle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--muted-foreground);
-}
-
-.toolbarName {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 700;
-  color: var(--foreground);
-}
-
-.toolbarCount {
-  flex-shrink: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted-foreground);
-}
 
 .grid {
   display: grid;
@@ -148,32 +115,44 @@
 @keyframes board-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(10px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .grid > .board {
-  animation: board-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation: board-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 .grid > .board:nth-child(2) {
-  animation-delay: 0.03s;
+  animation-delay: 0.035s;
 }
 
 .grid > .board:nth-child(3) {
-  animation-delay: 0.06s;
+  animation-delay: 0.07s;
 }
 
 .grid > .board:nth-child(4) {
-  animation-delay: 0.09s;
+  animation-delay: 0.105s;
 }
 
 .grid > .board:nth-child(5) {
-  animation-delay: 0.12s;
+  animation-delay: 0.14s;
+}
+
+.grid > .board:nth-child(6) {
+  animation-delay: 0.175s;
+}
+
+.grid > .board:nth-child(7) {
+  animation-delay: 0.21s;
+}
+
+.grid > .board:nth-child(8) {
+  animation-delay: 0.245s;
 }
 
 /* ── Hover card: live stats board ─────────────────────────────────────── */

@@ -17,6 +17,7 @@ import {
 import { BookOpen, Loader2, SearchIcon, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
   Select,
@@ -38,6 +39,7 @@ import { Pagination } from "@/components/shared/pagination";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useAdvisoryRoster } from "@/services/teacher/advisory.service";
 import type { AdviseeRow } from "@/services/teacher/advisory.types";
+import { compareSurnameFirst, formatSurnameFirst } from "@/lib/names";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import listStyles from "../list/components/advisory-list.module.css";
 import {
@@ -84,16 +86,9 @@ export default function TeacherAdvisoryStudentsPage() {
             const sec = sections.find((x) => x.id === sectionId);
             return !sec || s.section === sec.name;
           });
-    // Lowest general average first so at-risk students surface at the top.
-    return [...inSection].sort((a, b) => {
-      const av = generalAverageOf(a, subjects);
-      const bv = generalAverageOf(b, subjects);
-      if (av === null && bv === null) return a.name.localeCompare(b.name);
-      if (av === null) return 1;
-      if (bv === null) return -1;
-      return av - bv;
-    });
-  }, [students, sections, sectionId, subjects]);
+    // Alphabetical by surname so the roster reads like the class record.
+    return [...inSection].sort((a, b) => compareSurnameFirst(a.name, b.name));
+  }, [students, sections, sectionId]);
 
   // Keep a valid selection as the roster loads / changes.
   React.useEffect(() => {
@@ -120,7 +115,7 @@ export default function TeacherAdvisoryStudentsPage() {
     () => [
       {
         id: "name",
-        accessorFn: (row) => `${row.name} ${row.lrn}`,
+        accessorFn: (row) => `${formatSurnameFirst(row.name)} ${row.lrn}`,
         header: "Student",
         size: 170,
         minSize: 150,
@@ -134,8 +129,11 @@ export default function TeacherAdvisoryStudentsPage() {
               size={32}
             />
             <div className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-semibold text-primary">
-                {row.original.name}
+              <span
+                className="block truncate text-[13px] font-semibold text-primary"
+                title={row.original.name}
+              >
+                {formatSurnameFirst(row.original.name)}
               </span>
               <span
                 className="mt-1 inline-flex max-w-full shrink-0 items-center truncate rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground"
@@ -314,9 +312,6 @@ export default function TeacherAdvisoryStudentsPage() {
                 <header className={listStyles.laneHead}>
                   <span className={listStyles.laneDot} style={{ background: "#f59e0b" }} aria-hidden />
                   <h3 className={listStyles.laneTitle}>Advisory list</h3>
-                  <span className={listStyles.laneCount}>
-                    {table.getFilteredRowModel().rows.length}
-                  </span>
                 </header>
                 <div className={listStyles.toolbar}>
                   <InputGroup className="w-32 min-w-0 flex-1 rounded-[16px]">
@@ -413,9 +408,14 @@ export default function TeacherAdvisoryStudentsPage() {
                           );
                         })
                       ) : (
-                        <TableRow>
-                          <TableCell colSpan={columns.length} className="h-24 text-center">
-                            No students match your search.
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={columns.length} className="h-40 whitespace-normal">
+                            <div className="flex w-full justify-center">
+                              <InsightCallout role="status" className="w-full max-w-xl text-left">
+                                <strong>No students match your search.</strong> Try a different
+                                name or LRN — or clear the filter to see every advisee.
+                              </InsightCallout>
+                            </div>
                           </TableCell>
                         </TableRow>
                       )}

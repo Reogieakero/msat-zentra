@@ -2,7 +2,7 @@
 
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { ProgressDock } from "@/components/ui/progress-dock";
-import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
 import styles from "./ScoreSaveDock.module.css";
 
 export type ScoreSavePhase = "saving" | "saved" | "error";
@@ -65,7 +65,9 @@ export function ScoreSaveDock({
       {assessmentTitle || assessmentPills.length > 0 ? (
         <div className="flex min-w-0 flex-wrap items-center justify-center gap-1" aria-label={assessmentTitle ?? undefined}>
           {assessmentPills.map((pill) => (
-            <AmberRectPill key={pill}>{pill}</AmberRectPill>
+            <Pill key={pill} tone="amber" label="Assessment">
+              {pill}
+            </Pill>
           ))}
         </div>
       ) : null}

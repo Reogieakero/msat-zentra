@@ -86,3 +86,9 @@ export function admMeetingObjectPath(meetingId: string, originalName: string): s
   const ext = (originalName.split(".").pop() ?? "jpg").replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
   return `adm-meetings/${meetingId}-${Date.now()}.${ext}`;
 }
+
+/** Answered-module upload (PDF/Word) for the advisory modules desk. */
+export function advisorySubmissionObjectPath(moduleId: string, originalName: string): string {
+  const ext = (originalName.split(".").pop() ?? "pdf").replace(/[^a-z0-9]/gi, "").toLowerCase() || "pdf";
+  return `advisory-submissions/${moduleId}-${Date.now()}.${ext}`;
+}

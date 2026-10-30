@@ -6,6 +6,7 @@ import type { AdmStage } from "../../services/adm.js";
 import {
   advanceSchema,
   certificationSchema,
+  principalReturnSchema,
   profileSchema,
 } from "./adm.schemas.js";
 import {
@@ -66,9 +67,8 @@ router.post(
         { userId: req.user!.id, role: req.user!.role, termId: req.termScope?.termId ?? null },
         String(req.params.id),
       );
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       res.json(updated);
-
-      void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
     } catch (e) {
       next(e);
     }
@@ -79,15 +79,18 @@ router.post(
   "/:id/principal-return",
   requireAuth,
   requireRole("principal"),
+  validate("body", principalReturnSchema),
   async (req, res, next) => {
     try {
       const updated = await principalReturn(
         { userId: req.user!.id, role: req.user!.role, termId: req.termScope?.termId ?? null },
         String(req.params.id),
+        (req.body as { reason: string }).reason,
       );
+      // Invalidate before responding so the board's immediate refetch does not
+      // read the pre-write cached list (the returned case used to linger).
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       res.json(updated);
-
-      void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
     } catch (e) {
       next(e);
     }

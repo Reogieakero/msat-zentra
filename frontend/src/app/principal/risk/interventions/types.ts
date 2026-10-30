@@ -47,6 +47,8 @@ export interface RiskSnapshotStudent {
   factors: RiskFactors;
   subjectGrades: SubjectGrade[];
   intervention: InterventionLink | null;
+  /** Learner's own profile mascot — the character the adviser's list shows. */
+  mascot?: string | null;
 }
 
 export interface InterventionStudentsResult {

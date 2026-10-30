@@ -1,22 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { SearchIcon, Users } from "lucide-react";
-import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Users } from "lucide-react";
 import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
-import { Pill } from "@/components/ui/pill";
 import { StudentCard } from "./StudentCard";
 import type { SectionSummary } from "@/services/principal/academics";
 import styles from "./SectionStudentsTable.module.css";
 
 interface SectionStudentsTableProps {
   section: SectionSummary;
+  /** Filter text owned by the page toolbar, so the search sits with the header. */
+  query: string;
 }
 
 /** Plain roster for one section — each student is its own small kanban board. */
-export function SectionStudentsTable({ section }: SectionStudentsTableProps) {
-  const [query, setQuery] = React.useState("");
-
+export function SectionStudentsTable({ section, query }: SectionStudentsTableProps) {
   const students = section.students ?? [];
 
   const filtered = React.useMemo(() => {
@@ -42,28 +40,6 @@ export function SectionStudentsTable({ section }: SectionStudentsTableProps) {
 
   return (
     <section className={styles.wrap} aria-label={`Students of ${section.section}`}>
-      <div className={styles.toolbar}>
-        <span className={styles.toolbarTitle}>
-          <Users size={14} aria-hidden="true" />
-          <span className={styles.toolbarName}>{section.section}</span>
-          <Pill tone="amber" label="Grade level">
-            {section.grade}
-          </Pill>
-          <span className={styles.toolbarCount}>{students.length}</span>
-        </span>
-        <InputGroup className="max-w-40 shrink-0">
-          <InputGroupInput
-            placeholder="Filter students..."
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label="Filter students"
-          />
-          <InputGroupAddon>
-            <SearchIcon />
-          </InputGroupAddon>
-        </InputGroup>
-      </div>
-
       {filtered.length > 0 ? (
         <div className={styles.grid}>
           {filtered.map((st) => (

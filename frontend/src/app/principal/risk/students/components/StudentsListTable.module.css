@@ -59,6 +59,35 @@
   gap: 0.375rem;
 }
 
+/* Risk filter — shared pill tabs, centered in the board header. */
+.filterRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.filterButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+/* 24px tall tabs — the shared Pill is shorter (22px) at its default padding. */
+.filterPill {
+  height: 1.5rem;
+  padding-block: 0;
+  padding-inline: 0.625rem;
+}
+
+.filterButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 .filterActive {
   border-color: var(--ring);
 }
@@ -87,6 +116,14 @@
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  /* A board, not a scroll region — no horizontal scrollbar chrome, but the
+     overflow stays so narrow viewports can still pan. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tableWrap::-webkit-scrollbar {
+  display: none;
 }
 
 /* Roomier rows — more breathing space between students. */
@@ -129,7 +166,44 @@
   min-width: 0;
 }
 
+/* Name on top, LRN pill underneath — identity stacked in one cell. */
+.studentMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.lrnPill {
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rows cascade in for each page/section — opacity/transform only. */
+.rowIn {
+  animation: row-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rowIn {
+    animation: none;
+  }
+}
+
 .studentName {
+  max-width: 100%;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--foreground);

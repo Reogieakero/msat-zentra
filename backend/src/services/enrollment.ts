@@ -61,6 +61,47 @@ export async function sectionHeadcounts(
   return counts;
 }
 
+/**
+ * Per-section learner count that matches the principal's section student list:
+ * registered profiles in the section + roster entries whose LRN is not already
+ * registered *in that same section*. `sectionHeadcounts` de-dupes LRNs school-
+ * wide, which hides a roster learner whenever an unrelated profile elsewhere
+ * happens to carry the same LRN (seed/data-entry artifacts), so a section with
+ * 4 listed learners could report 1.
+ */
+export async function sectionEnrollmentCounts(
+  sectionIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>(sectionIds.map((id) => [id, 0]));
+  if (sectionIds.length === 0) return counts;
+
+  const [profiles, rosters] = await Promise.all([
+    prisma.studentProfile.findMany({
+      where: { sectionId: { in: sectionIds } },
+      select: { sectionId: true, lrn: true },
+    }),
+    prisma.studentRoster.findMany({
+      where: { sectionId: { in: sectionIds } },
+      select: { sectionId: true, lrn: true },
+    }),
+  ]);
+
+  const registeredBySection = new Map<string, Set<string>>();
+  for (const p of profiles) {
+    if (!p.sectionId) continue;
+    const set = registeredBySection.get(p.sectionId) ?? new Set<string>();
+    set.add(p.lrn);
+    registeredBySection.set(p.sectionId, set);
+    counts.set(p.sectionId, (counts.get(p.sectionId) ?? 0) + 1);
+  }
+  for (const r of rosters) {
+    if (!r.sectionId) continue;
+    if (registeredBySection.get(r.sectionId)?.has(r.lrn)) continue;
+    counts.set(r.sectionId, (counts.get(r.sectionId) ?? 0) + 1);
+  }
+  return counts;
+}
+
 export async function rosterCountsByGrade(
   grades: GradeLevel[],
   schoolYearId?: string | null,

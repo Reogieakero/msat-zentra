@@ -162,16 +162,6 @@
   color: var(--foreground);
 }
 
-/* ---- Interpretation ---- */
-.chartInterpretation {
-  margin: 0;
-  font-size: 0.75rem;
-  line-height: 1.55;
-  color: var(--muted-foreground);
-  padding-left: 0.625rem;
-  border-left: 2px solid color-mix(in oklch, #f59e0b, transparent 40%);
-}
-
 /* ---- Skeletons ---- */
 .groupSkelWrap {
   display: grid;
@@ -236,4 +226,118 @@
   text-align: center;
   font-size: 0.8125rem;
   color: var(--muted-foreground);
+}
+
+/* ---- Entrance choreography ---------------------------------------------- */
+/* Grade lanes fan in left-to-right, each donut's total scales into place, and
+   the section legend ticks down the list. Opacity/transform only. */
+@keyframes pop-group-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pop-center-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pop-row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.group {
+  transition:
+    transform 170ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 170ms ease,
+    box-shadow 170ms ease;
+  animation: pop-group-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.group:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, #f59e0b 30%, var(--border));
+  box-shadow: 0 8px 20px -16px color-mix(in oklch, #f59e0b 50%, transparent);
+}
+
+.groups > .group:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.groups > .group:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.groups > .group:nth-child(4) {
+  animation-delay: 0.24s;
+}
+
+.groups > .group:nth-child(5) {
+  animation-delay: 0.32s;
+}
+
+.groups > .group:nth-child(6) {
+  animation-delay: 0.4s;
+}
+
+.donutCenter {
+  animation: pop-center-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.3s backwards;
+}
+
+.sectionRow {
+  animation: pop-row-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.35s backwards;
+}
+
+.sectionRow:nth-child(2) {
+  animation-delay: 0.41s;
+}
+
+.sectionRow:nth-child(3) {
+  animation-delay: 0.47s;
+}
+
+.sectionRow:nth-child(4) {
+  animation-delay: 0.53s;
+}
+
+.sectionRow:nth-child(5) {
+  animation-delay: 0.59s;
+}
+
+.sectionRow:nth-child(6) {
+  animation-delay: 0.65s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group,
+  .donutCenter,
+  .sectionRow {
+    animation: none;
+  }
+
+  .group {
+    transition: none;
+  }
+
+  .group:hover {
+    transform: none;
+  }
 }

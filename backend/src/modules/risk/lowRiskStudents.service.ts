@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { computeRiskFactors, levelFromFlags, resolveActiveTermId } from "../../services/risk.js";
+import { computeRiskFactors, levelFromFlags, resolveActiveTermId, sectionAttendanceTotals } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
@@ -110,12 +110,16 @@ export async function getLowRiskStudents(
     ]),
   );
   const headcounts = await sectionHeadcounts(sectionIds);
+  const sectionTotals = termId
+    ? await sectionAttendanceTotals(sectionIds, termId)
+    : new Map<string, number>();
 
   const lows: LowRiskStudent[] = [];
   for (const p of profiles) {
     const flags = computeRiskFactors({
       finalGrades: p.finalGrades,
       attendance: p.attendanceRecords,
+      attendanceTotal: sectionTotals.get(p.section?.id ?? ""),
       anecdotalCount: p.anecdotalRecords.length,
       enrolled: headcounts.get(p.section?.id ?? "") ?? 0,
     });
@@ -126,6 +130,7 @@ export async function getLowRiskStudents(
     const flags = computeRiskFactors({
       finalGrades: r.finalGrades,
       attendance: r.attendanceRecords,
+      attendanceTotal: sectionTotals.get(r.sectionId),
       anecdotalCount: r.anecdotalRecords.length,
       enrolled: headcounts.get(r.sectionId) ?? 0,
     });

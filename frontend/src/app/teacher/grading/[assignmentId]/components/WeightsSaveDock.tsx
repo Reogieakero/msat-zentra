@@ -2,7 +2,7 @@
 
 import { Scale } from "lucide-react";
 import { ProgressDock } from "@/components/ui/progress-dock";
-import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
 
 export type WeightsSavePhase = "saving" | "saved" | "error";
 
@@ -42,7 +42,9 @@ export function WeightsSaveDock({ phase, message, pills, onDismiss }: Props) {
                 </span>
                 <span className="flex min-w-0 flex-wrap items-center gap-1">
                   {pills.map((pill) => (
-                    <AmberRectPill key={pill}>{pill}</AmberRectPill>
+                    <Pill key={pill} tone="amber" label="Category weight">
+                      {pill}
+                    </Pill>
                   ))}
                 </span>
               </span>

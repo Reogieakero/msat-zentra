@@ -51,6 +51,7 @@ const WIDTHS = {
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-3xl",
+  "2xl": "max-w-5xl",
 } as const;
 
 interface KanbanOverlayProps {
@@ -154,7 +155,9 @@ export function KanbanOverlay({
           }
         >
           {scrollBody ? (
-            <div className={`max-h-[65vh] overflow-y-auto pr-0.5 ${styles.scrollBody}`}>
+            <div
+              className={`max-h-[65vh] overflow-y-auto px-0.5 [scrollbar-gutter:stable_both-edges] ${styles.scrollBody}`}
+            >
               {children}
             </div>
           ) : (

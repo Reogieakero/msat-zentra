@@ -19,17 +19,42 @@ export async function referRecord(
 ) {
   const record = await prisma.anecdotalRecord.findUnique({
     where: { id: recordId },
-    select: { id: true, studentId: true, rosterId: true, sectionId: true },
+    select: {
+      id: true,
+      studentId: true,
+      rosterId: true,
+      sectionId: true,
+      student: { select: { sectionId: true } },
+      roster: { select: { sectionId: true } },
+    },
   });
   if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
-  const section = await prisma.section.findUnique({
-    where: { id: record.sectionId },
-    select: { adviserId: true, teacherAssignments: { select: { teacherId: true } } },
+  // A teacher's advisory scope wins over the JWT role: advisory sections are
+  // claimed in settings, so the role can still read `subject_teacher`.
+  const advised = await prisma.section.findMany({
+    where: { adviserId: ctx.userId },
+    select: { id: true },
   });
-  const isAdviser = section?.adviserId === ctx.userId;
-  const isSubjectTeacher = section?.teacherAssignments.some((a) => a.teacherId === ctx.userId);
-  if (!isAdviser && !isSubjectTeacher) {
-    throw new AppError(403, "FORBIDDEN", "Only the observer or a teacher in this section may refer from this record");
+  if (advised.length > 0) {
+    // The advisory desk can only refer its own advisees. Resolve the learner's
+    // section rather than the record's, so a subject class the teacher happens
+    // to handle outside their advisory cannot be referred from here.
+    const advisedIds = new Set(advised.map((s) => s.id));
+    const studentSectionId =
+      record.student?.sectionId ?? record.roster?.sectionId ?? null;
+    if (!studentSectionId || !advisedIds.has(studentSectionId)) {
+      throw new AppError(403, "FORBIDDEN", "Advisers can only refer their own advisees");
+    }
+  } else {
+    const section = await prisma.section.findUnique({
+      where: { id: record.sectionId },
+      select: { adviserId: true, teacherAssignments: { select: { teacherId: true } } },
+    });
+    const isAdviser = section?.adviserId === ctx.userId;
+    const isSubjectTeacher = section?.teacherAssignments.some((a) => a.teacherId === ctx.userId);
+    if (!isAdviser && !isSubjectTeacher) {
+      throw new AppError(403, "FORBIDDEN", "Only the observer or a teacher in this section may refer from this record");
+    }
   }
   if (!termId) {
     throw new AppError(409, "NO_ACTIVE_TERM", "No active term");

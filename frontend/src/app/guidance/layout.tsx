@@ -14,9 +14,9 @@ import {
 } from "@/components/ui/command";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
-import { SidebarToggleButton } from "@/components/nav/SidebarToggleButton";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { useGuidanceRealtime } from "@/lib/realtime/guidanceChannel";
 import { GuidanceNotificationsBell } from "./components/GuidanceNotificationsBell";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
@@ -35,7 +35,7 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
   useGuidanceRealtime(allowed);
   const profile = useGuidanceProfileSettings();
   const [query, setQuery] = React.useState("");
-  const { collapsed: sidebarCollapsed, toggle: toggleSidebar } =
+  const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.guidance.sidebar.collapsed");
 
   const handleLogout = () => {
@@ -62,14 +62,11 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
-        <SidebarToggleButton
-          collapsed={sidebarCollapsed}
-          onToggle={toggleSidebar}
-        />
-
         <Link href="/guidance/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
+
+        <AppBreadcrumbs role="Guidance Counselor" />
 
         <div className={styles.spacer} />
 

@@ -68,7 +68,9 @@
   align-items: center;
   gap: 0.5rem;
   height: 3rem;
-  padding-inline: 0.75rem;
+  /* 16px side gutters so the right icon cluster (bell + avatar) sits exactly
+     16px off the navbar edge. */
+  padding-inline: 1rem;
   border-bottom: 1px solid var(--border);
   background-color: var(--background);
 }
@@ -217,6 +219,9 @@
   border: none;
   background: transparent;
   box-shadow: none;
+  /* Keeps the search bar beside (not touching) the right icon cluster:
+     8px topbar gap + 8px here = 16px breathing room. */
+  margin-right: 0.5rem;
 }
 
 .searchCommand {

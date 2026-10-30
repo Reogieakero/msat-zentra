@@ -1,20 +1,21 @@
-import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
+import { ZentraPageHeaderSkeleton, KanbanBoardSkeleton, IconRailSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 
 export default function PrincipalSettingsLoading() {
   return (
     <section
-      className="mx-auto flex w-full max-w-3xl flex-col gap-5"
+      className="mx-auto flex w-full max-w-3xl flex-col gap-3"
       aria-label="Loading settings"
       aria-busy="true"
     >
-      <PageHeaderSkeleton />
-      <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]" aria-hidden="true">
-        <div className="h-48 rounded-md border bg-card p-4" />
-        <div className="flex min-w-0 flex-col gap-5">
-          <div className="h-56 rounded-md border bg-card p-4" />
-          <div className="h-40 rounded-md border bg-card p-4" />
-          <div className="h-64 rounded-md border bg-card p-4" />
+      <ZentraPageHeaderSkeleton />
+      <div className="flex w-full min-w-0 flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_2.75rem] lg:items-start lg:gap-5" aria-hidden="true">
+        <div className="flex w-full min-w-0 flex-col gap-3">
+          <KanbanBoardSkeleton rows={2} titleWidth="7rem" showDescription />
+          <KanbanBoardSkeleton rows={2} titleWidth="6rem" showDescription />
+          <KanbanBoardSkeleton rows={3} titleWidth="6rem" />
+          <KanbanBoardSkeleton rows={3} titleWidth="6rem" />
         </div>
+        <IconRailSkeleton count={4} />
       </div>
     </section>
   );

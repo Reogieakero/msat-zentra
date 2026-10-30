@@ -127,7 +127,10 @@ export async function claimSection(ctx: AdvisoryContext, input: ClaimInput, year
       adviserId: null,
       ...(row.adviserCode ? { adviserCode: row.adviserCode } : {}),
     },
-    data: { adviserId: teacherId, adviserCode: null },
+    // The code is kept after claiming so the principal's assign board can
+    // still show which code claimed the seat. It cannot be re-used: a claim
+    // only targets sections whose adviserId is still null.
+    data: { adviserId: teacherId },
   });
   if (claimed.count === 0) {
     throw new AppError(

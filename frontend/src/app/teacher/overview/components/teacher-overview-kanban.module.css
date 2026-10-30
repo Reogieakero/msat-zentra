@@ -370,20 +370,6 @@
   white-space: nowrap;
 }
 
-.profileRole {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding: 0.125rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.625rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background-color: var(--primary);
-  color: var(--primary-foreground);
-}
-
 .profileAdvisory {
   display: flex;
   align-items: center;
@@ -419,21 +405,6 @@
   align-items: center;
   gap: 0.125rem;
   text-align: center;
-}
-
-.profileStatValue {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.5rem;
-  padding: 0.1875rem 0.625rem;
-  border-width: 1px;
-  border-style: solid;
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
 }
 
 .profileStatLabel {

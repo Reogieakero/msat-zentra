@@ -96,6 +96,19 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
       ]
     : undefined;
 
+  // The principal desk also keeps cases it returned for revision, even though
+  // they now sit at the coordinator's certification desk — the "Returned" lane
+  // needs them until re-certification clears the marker.
+  const principalReturnedWhere: Prisma.AdmLearnerProfileWhereInput | null =
+    ctx.role === "principal" && stageFilter === "principal_approval"
+      ? {
+          OR: [
+            { stage: { in: ["principal_approval", ...ENROLLED_STAGES] } },
+            { stage: "certification", returnedAt: { not: null } },
+          ],
+        }
+      : null;
+
   const where: Prisma.AdmLearnerProfileWhereInput = coordinatorIntake
     ? {
         stage: coordinatorStageWhere,
@@ -104,11 +117,13 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
         ...(qProfileWhere ? { OR: qProfileWhere } : {}),
       }
     : {
-        ...(stageFilter && stageFilter !== "consultation"
-          ? { stage: effectiveStageFilter }
-          : stageFilter === ""
-            ? { OR: [{ stage: { in: REFERRAL_STAGES } }, recentApprovalWhere] }
-            : { OR: [recentApprovalWhere] }),
+        ...(principalReturnedWhere
+          ? { AND: [principalReturnedWhere] }
+          : stageFilter && stageFilter !== "consultation"
+            ? { stage: effectiveStageFilter }
+            : stageFilter === ""
+              ? { OR: [{ stage: { in: REFERRAL_STAGES } }, recentApprovalWhere] }
+              : { OR: [recentApprovalWhere] }),
         ...(eligibilityFilter ? { eligibilityStatus: eligibilityFilter } : {}),
         ...(qProfileWhere ? { OR: qProfileWhere } : {}),
       };
@@ -163,7 +178,15 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
           },
         },
 
-        referral: { select: { anecdotalRecordId: true, status: true, consultReviewer: true } },
+        referral: {
+          select: {
+            anecdotalRecordId: true,
+            status: true,
+            consultReviewer: true,
+            // Category drives the anecdotal folder colour in the forms overlay.
+            anecdotalRecord: { select: { category: true } },
+          },
+        },
         preparedByUser: { select: { fullName: true } },
         forms: { orderBy: { uploadedAt: "desc" }, take: 8 },
 
@@ -209,7 +232,7 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
               },
             },
             referredByUser: { select: { fullName: true } },
-            anecdotalRecord: { select: { observationDatetime: true } },
+            anecdotalRecord: { select: { observationDatetime: true, category: true } },
           },
           orderBy: { id: "desc" },
         })
@@ -235,6 +258,7 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
       grade: GRADE_LABEL[p.student.gradeLevel] ?? p.student.gradeLevel,
       section: p.student.section?.name ?? "",
       anecdotalRecordId: p.referral?.anecdotalRecordId ?? null,
+      anecdotalCategory: p.referral?.anecdotalRecord?.category ?? null,
       stage,
       eligibilityStatus:
         p.eligibilityStatus === "eligible"
@@ -246,6 +270,8 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
       datePrepared: p.createdAt ? p.createdAt.toISOString().slice(0, 10) : null,
       approvedBy: p.approvedBy ? "Principal" : null,
       approvalDate: p.approvedAt ? p.approvedAt.toISOString().slice(0, 10) : null,
+      returnedAt: p.returnedAt ? p.returnedAt.toISOString().slice(0, 10) : null,
+      returnReason: p.returnReason ?? null,
 
       referralStatus: p.referral?.status ?? null,
 
@@ -255,6 +281,10 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
         formType: f.formType,
         title: f.title,
         status: f.status,
+        // Principal signage stores the drawn signature as a PNG data URL.
+        fileUrl: f.fileUrl ?? null,
+        notes: f.notes ?? null,
+        uploadedAt: f.uploadedAt ? f.uploadedAt.toISOString() : null,
       })),
       meeting: latestMeeting
         ? {
@@ -318,6 +348,7 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
       grade: GRADE_LABEL[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
       section: r.student?.section?.name ?? r.roster?.section?.name ?? "",
       anecdotalRecordId: r.anecdotalRecordId ?? null,
+      anecdotalCategory: r.anecdotalRecord.category ?? null,
       stage: "consultation" as const,
       eligibilityStatus: "pending" as const,
       preparedBy: r.referredByUser.fullName,

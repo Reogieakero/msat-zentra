@@ -2,9 +2,8 @@
 import * as React from "react";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
-import { DropdownSelect } from "./DropdownSelect";
+import { Pill } from "@/components/ui/pill";
 import { AdvisoryEntryRow, type AdvisoryRowEntry } from "./advisory-entry-row";
 import type {
   AdvisoryEntryInput,
@@ -48,6 +47,15 @@ export function AssignAdviserDialog({
     },
   ]);
   const [error, setError] = React.useState<string | null>(null);
+  // Rows animate out before they unmount — React removes on click otherwise.
+  const [exitingKeys, setExitingKeys] = React.useState<number[]>([]);
+  const exitTimers = React.useRef<number[]>([]);
+  React.useEffect(
+    () => () => {
+      exitTimers.current.forEach((t) => window.clearTimeout(t));
+    },
+    [],
+  );
   const gradeSections = React.useMemo(
     () => (grade == null ? [] : sections.filter((s) => s.gradeLevel === grade)),
     [sections, grade],
@@ -64,8 +72,14 @@ export function AssignAdviserDialog({
     setError(null);
   };
   const removeEntry = (key: number) => {
-    setEntries((prev) => (prev.length > 1 ? prev.filter((e) => e.key !== key) : prev));
     setError(null);
+    if (entries.length <= 1) return;
+    setExitingKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+    const timer = window.setTimeout(() => {
+      setEntries((prev) => (prev.length > 1 ? prev.filter((e) => e.key !== key) : prev));
+      setExitingKeys((prev) => prev.filter((k) => k !== key));
+    }, 150);
+    exitTimers.current.push(timer);
   };
   const handleAssign = () => {
     if (submittingRef.current || isAssigning) return;
@@ -129,15 +143,6 @@ export function AssignAdviserDialog({
       footer={
         <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
           <Button
-            variant="outline"
-            size="sm"
-            className="h-6 px-3 text-xs"
-            onClick={onClose}
-            disabled={isAssigning}
-          >
-            Cancel
-          </Button>
-          <Button
             size="sm"
             className="h-6 px-3 text-xs"
             onClick={handleAssign}
@@ -161,52 +166,80 @@ export function AssignAdviserDialog({
       }
     >
       <div className={styles.form}>
-        <div className={styles.field}>
-          <Label className={styles.label} htmlFor="adviser-dialog-grade">
-            Grade Level <span className={styles.required}>*</span>
-          </Label>
-          <DropdownSelect
-            id="adviser-dialog-grade"
-            ariaLabel="Grade level"
-            value={grade != null ? String(grade) : ""}
-            onValueChange={(v) => {
-              setGrade(Number(v) as GradeLevel);
-              setError(null);
-            }}
-            options={GRADES.map((g) => ({ value: String(g), label: `Grade ${g}` }))}
-            placeholder="Select grade"
-          />
+        {/* Grade scope card: pill-tab strip + the add-row action top-right so
+            the section cards below stay the only full-width blocks. */}
+        <div className={styles.gradeCard}>
+          <div className={styles.labelRow}>
+            <span className={styles.label} id="adviser-dialog-grade-label">
+              Grade Level <span className={styles.required}>*</span>
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              className={styles.addSectionPill}
+              onClick={addEntry}
+              disabled={isAssigning}
+              aria-label="Add another section"
+            >
+              <Plus aria-hidden />
+              Add section
+            </Button>
+          </div>
+          <div
+            className={styles.gradeTabs}
+            role="tablist"
+            aria-label="Grade level"
+            aria-labelledby="adviser-dialog-grade-label"
+          >
+            {GRADES.map((g) => {
+              const active = grade === g;
+              return (
+                <button
+                  key={g}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={styles.gradeTab}
+                  disabled={isAssigning}
+                  onClick={() => {
+                    setGrade(g);
+                    setError(null);
+                  }}
+                >
+                  <Pill tone={active ? "blue" : "neutral"} className={styles.gradeTabPill}>
+                    Grade {g}
+                  </Pill>
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className={styles.rowsList}>
-          {entries.map((entry, i) => (
-            <AdvisoryEntryRow
-              key={entry.key}
-              index={i}
-              entry={entry}
-              gradeSections={gradeSections}
-              teachers={teachers}
-              gradeSelected={grade != null}
-              removable={entries.length > 1}
-              disableRemove={isAssigning}
-              onSectionName={(key, value) => setEntry(key, { sectionName: value })}
-              onPickSection={handlePickSection}
-              onAdviserName={(key, value) => setEntry(key, { adviserName: value })}
-              onPickTeacher={(key, teacher) => setEntry(key, { adviserName: teacher.name })}
-              onRemove={removeEntry}
-            />
-          ))}
+          {entries.map((entry, i) => {
+            const exiting = exitingKeys.includes(entry.key);
+            return (
+              <div
+                key={entry.key}
+                className={`${styles.entryCard} ${exiting ? styles.entryCardExit : ""}`}
+              >
+                <AdvisoryEntryRow
+                  index={i}
+                  entry={entry}
+                  gradeSections={gradeSections}
+                  teachers={teachers}
+                  gradeSelected={grade != null}
+                  removable={entries.length > 1}
+                  disableRemove={isAssigning || exiting}
+                  onSectionName={(key, value) => setEntry(key, { sectionName: value })}
+                  onPickSection={handlePickSection}
+                  onAdviserName={(key, value) => setEntry(key, { adviserName: value })}
+                  onPickTeacher={(key, teacher) => setEntry(key, { adviserName: teacher.name })}
+                  onRemove={removeEntry}
+                />
+              </div>
+            );
+          })}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          className={styles.addRowBtn}
-          onClick={addEntry}
-          disabled={isAssigning}
-          aria-label="Add another section"
-        >
-          <Plus aria-hidden />
-          Add section
-        </Button>
         {error ? (
           <p className={styles.errorText} role="alert">
             {error}

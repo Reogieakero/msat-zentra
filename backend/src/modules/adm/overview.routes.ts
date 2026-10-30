@@ -16,9 +16,9 @@ router.get(
   requireRole("adm_coordinator", "principal"),
   cache({ tags: [CACHE_TAGS.adm, CACHE_TAGS.overview], ttl: CACHE_TTLS.dashboard }),
   etag(),
-  async (_req, res, next) => {
+  async (req, res, next) => {
     try {
-      res.json(await getDashboard());
+      res.json(await getDashboard(req.user!.role));
     } catch (e) {
       next(e);
     }

@@ -5,6 +5,7 @@ import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { AmberRectPill } from "../../classes/components/UnlinkCodeDialog";
+import { gradebookSlug } from "@/lib/gradebookSlug";
 import type {
   ClassAverageRow,
   SubjectAssessmentRow,
@@ -28,7 +29,11 @@ export function GradebookCards({ classes, assessments, standings }: Props) {
   }
 
   return (
-    <div className={`grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3 ${styles.gridEnter}`} role="group" aria-label="Gradebook subjects">
+    <div
+      className={`grid items-stretch gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 ${styles.gridEnter}`}
+      role="group"
+      aria-label="Gradebook subjects"
+    >
       {classes.map((c, i) => {
         // Class ids are `${subjectId}|${sectionId}` in gradebook scope —
         // match added assessments by IDs when present so shared-subject
@@ -101,7 +106,7 @@ export function GradebookCards({ classes, assessments, standings }: Props) {
                   size="sm"
                   className="h-6 rounded-lg bg-black px-3 text-xs text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
                 >
-                  <Link href={`/teacher/grading/${c.id}`}>Open gradebook</Link>
+                  <Link href={`/teacher/grading/${gradebookSlug(c)}`}>Open gradebook</Link>
                 </Button>
               </div>
             }

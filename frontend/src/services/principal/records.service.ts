@@ -55,6 +55,7 @@ type RawBackendRecord = {
 type RawBackendStudent = {
   lrn: string;
   name: string;
+  mascot?: string | null;
   status: string;
   gradeLevel: string;
   section: string;
@@ -109,6 +110,7 @@ export function normalizeRecords(raw: {
       const normalized: RecordStudent = {
         lrn: st.lrn,
         name: st.name,
+        mascot: st.mascot ?? null,
         status: normalizeStatus(st.status),
         gradeLevel: st.gradeLevel,
         section: st.section,

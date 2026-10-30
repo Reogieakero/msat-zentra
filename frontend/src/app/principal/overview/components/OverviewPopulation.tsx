@@ -6,12 +6,15 @@ import { Pie, PieChart, Cell } from "recharts";
 import { Users } from "lucide-react";
 import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import { useTerm } from "@/lib/term/TermContext";
 import { fetchOverview } from "@/services/principal/overview.service";
 import type { OverviewSectionRow } from "@/services/principal/overview.types";
 import { FriendlyTooltip } from "./overview-chart-tip";
+import { CountUpNumber } from "./CountUpNumber";
 import styles from "./OverviewPopulation.module.css";
 
 const chartConfig = {
@@ -114,8 +117,8 @@ export function OverviewPopulation() {
   ) : populationEmpty ? (
     <PrincipalEmptyState
       icon={Users}
-      title="No sections on file"
-      hint="No sections on file for the active school year. Sections will appear here once created."
+      title="No adviser-shared sections"
+      hint="No sections with adviser-shared learners were found for the active school year."
     />
   ) : (
     <>
@@ -124,7 +127,9 @@ export function OverviewPopulation() {
           <div key={g.grade} className={styles.group}>
             <div className={styles.groupHead}>
               <h4 className={styles.groupTitle}>{g.grade}</h4>
-              <span className={styles.groupTotal}>{g.total} students</span>
+              <span className={styles.groupTotal}>
+                <CountUpNumber value={g.total} /> students
+              </span>
             </div>
             <div className={styles.groupBody}>
               <div className={styles.donutWrap}>
@@ -144,6 +149,9 @@ export function OverviewPopulation() {
                       outerRadius={42}
                       paddingAngle={2}
                       strokeWidth={0}
+                      animationDuration={800}
+                      animationBegin={100}
+                      animationEasing="ease-out"
                     >
                       {g.rows.map((r, i) => (
                         <Cell key={r.section} style={{ fill: colorFor(i) }} />
@@ -152,7 +160,7 @@ export function OverviewPopulation() {
                   </PieChart>
                 </ChartContainer>
                 <div className={styles.donutCenter}>
-                  <span className={styles.donutTotal}>{g.total}</span>
+                  <CountUpNumber className={styles.donutTotal} value={g.total} />
                   <span className={styles.donutLabel}>students</span>
                 </div>
               </div>
@@ -174,7 +182,7 @@ export function OverviewPopulation() {
         ))}
       </div>
       {interpretation ? (
-        <p className={styles.chartInterpretation}>{interpretation}</p>
+        <InsightCallout className="mt-auto">{interpretation}</InsightCallout>
       ) : null}
     </>
   );
@@ -187,8 +195,12 @@ export function OverviewPopulation() {
           <Users size={14} />
         </span>
       }
-      count={isPending || populationEmpty ? undefined : totalEnrolled}
-      description="Enrolled students per section for the active school year."
+      description="Enrolled students per adviser-shared section for the active school year."
+      actions={
+        <Pill tone="green" label="Data source">
+          Adviser-shared
+        </Pill>
+      }
     >
       <div className={styles.boardBody}>{body}</div>
     </KanbanBoard>

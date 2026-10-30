@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Cell, RadialBar, RadialBarChart } from "recharts";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { useTeacherProfileSettings } from "@/services/settings/profile-settings";
 import type { AdvisorySectionInfo } from "@/services/teacher/overview.types";
@@ -298,7 +299,13 @@ export function TeacherOverviewKanban({
             <div className="min-w-0 flex-1">
               <p className={styles.profileName} title={teacherName}>{teacherName}</p>
             </div>
-            <span className={styles.profileRole}>{isAdviser ? "Adviser" : "Teacher"}</span>
+            <Pill
+              tone={isAdviser ? "green" : "blue"}
+              label="Role"
+              className="uppercase tracking-wide"
+            >
+              {isAdviser ? "Adviser" : "Teacher"}
+            </Pill>
           </div>
           {isAdviser && advisorySection ? (
             <p className={styles.profileAdvisory}>
@@ -311,11 +318,23 @@ export function TeacherOverviewKanban({
           )}
           <div className={styles.profileStats}>
             <span className={styles.profileStat}>
-              <span className={`${styles.profileStatValue} border-blue-500/40 bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400`}>{classCount}</span>
+              <Pill
+                tone="blue"
+                label="Classes"
+                className="min-w-10 justify-center text-sm font-bold tabular-nums"
+              >
+                {classCount}
+              </Pill>
               <span className={styles.profileStatLabel}>Classes</span>
             </span>
             <span className={styles.profileStat}>
-              <span className={`${styles.profileStatValue} border-green-500/40 bg-green-500/15 text-green-700 dark:bg-green-500/20 dark:text-green-400`}>{studentCount}</span>
+              <Pill
+                tone="green"
+                label={populationLabel}
+                className="min-w-10 justify-center text-sm font-bold tabular-nums"
+              >
+                {studentCount}
+              </Pill>
               <span className={styles.profileStatLabel}>{populationLabel}</span>
             </span>
           </div>

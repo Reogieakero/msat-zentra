@@ -14,13 +14,13 @@ import {
 } from "@/components/ui/command";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
-import { SidebarToggleButton } from "@/components/nav/SidebarToggleButton";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { useCoordinatorRealtime } from "@/lib/realtime/coordinatorChannel";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import { CoordinatorNotificationsBell } from "./components/coordinator-notifications-bell";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import {
   CoordinatorPaletteGate,
   useCoordinatorProfileSettings,
@@ -35,7 +35,7 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
   useCoordinatorRealtime(allowed);
   const [query, setQuery] = React.useState("");
   const profile = useCoordinatorProfileSettings();
-  const { collapsed: sidebarCollapsed, toggle: toggleSidebar } =
+  const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.coordinator.sidebar.collapsed");
 
   const handleLogout = () => {
@@ -62,14 +62,11 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
-        <SidebarToggleButton
-          collapsed={sidebarCollapsed}
-          onToggle={toggleSidebar}
-        />
-
         <Link href="/coordinator/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
+
+        <AppBreadcrumbs role="ADM Coordinator" />
 
         <div className={styles.spacer} />
 

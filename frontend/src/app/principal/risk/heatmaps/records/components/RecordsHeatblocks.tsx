@@ -7,7 +7,6 @@ import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { KanbanBoard } from "@/components/ui/kanban-board";
-import { Pill, type PillTone } from "@/components/ui/pill";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import {
   AnecdotalRecordKanbanCard,
@@ -15,14 +14,9 @@ import {
 } from "@/components/anecdotal/anecdotal-record-kanban-card";
 import styles from "./RecordsHeatblocks.module.css";
 import { CATEGORY_META, fetchRecords } from "@/services/principal/records.service";
-import type { BehavioralRecord } from "../types";
-import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { Pagination } from "@/components/shared/pagination";
 
-function severityTone(severity: BehavioralRecord["severity"]): PillTone {
-  if (severity === "High") return "red";
-  if (severity === "Moderate") return "amber";
-  return "neutral";
-}
+const RECORDS_PAGE_SIZE = 16;
 
 export function RecordsHeatblocks() {
   const [query, setQuery] = React.useState("");
@@ -50,11 +44,11 @@ export function RecordsHeatblocks() {
       );
   }, [sections, query]);
 
-  const totalPages = Math.max(1, Math.ceil(shownReports.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(shownReports.length / RECORDS_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pagedReports = shownReports.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE
+    (safePage - 1) * RECORDS_PAGE_SIZE,
+    safePage * RECORDS_PAGE_SIZE
   );
 
   return (
@@ -62,8 +56,6 @@ export function RecordsHeatblocks() {
       <KanbanBoard
         title="Anecdotal Records"
         icon={<FileText size={14} aria-hidden="true" />}
-        count={isPending ? undefined : shownReports.length}
-        description="Per-student anecdotal records filed during the active term — open a folder to read the report."
         actions={
           <div className={styles.search}>
             <Search className={styles.searchIcon} aria-hidden />
@@ -76,7 +68,8 @@ export function RecordsHeatblocks() {
                 setPage(1);
               }}
               aria-label="Search students"
-              className={styles.searchInput}
+              className={`${styles.searchInput} rounded-[16px]`}
+              style={{ height: "2rem" }}
             />
           </div>
         }
@@ -118,7 +111,7 @@ export function RecordsHeatblocks() {
                   key={rec.id}
                   role="listitem"
                   className={styles.cardSlot}
-                  style={{ animationDelay: `${Math.min(i, 24) * 18}ms` }}
+                  style={{ animationDelay: `${Math.min(i, 24) * 55}ms` }}
                 >
                   <AnecdotalRecordKanbanCard
                     category={rec.category}
@@ -126,21 +119,14 @@ export function RecordsHeatblocks() {
                     studentName={s.name}
                     plainName
                     mascotSeed={s.lrn}
+                    mascotCharacter={s.mascot ?? undefined}
                     lrn={s.lrn}
                     metaText={s.section}
                     metaLabel="Section"
                     metaTone="amber"
+                    layout="folder-left"
                     fileName={rec.date}
                     fileTag={`${humanizeCategory(rec.category)} • ${rec.severity}`}
-                    headerRight={
-                      <Pill
-                        tone={severityTone(rec.severity)}
-                        label="Severity"
-                        className="shrink-0"
-                      >
-                        {rec.severity}
-                      </Pill>
-                    }
                     openLabel={`${s.name}, LRN ${s.lrn}, ${CATEGORY_META[rec.category].label} report from ${rec.date}`}
                     onOpen={() => setPrivacyFor(s.name)}
                   />
@@ -151,7 +137,7 @@ export function RecordsHeatblocks() {
               <Pagination
                 currentPage={safePage}
                 totalItems={shownReports.length}
-                pageSize={PAGE_SIZE}
+                pageSize={RECORDS_PAGE_SIZE}
                 onPageChange={setPage}
               />
             ) : null}

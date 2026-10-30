@@ -80,12 +80,12 @@ export type PrismaVersion = {
 }
 
 /**
- * Prisma Client JS version: 7.10.0
- * Query Engine version: 0edf323efd1d98336f3f0a68684b56f689b900d3
+ * Prisma Client JS version: 7.10.1
+ * Query Engine version: d1b3f377ca835d73fd50954a5e22128b9ebdd6b8
  */
 export const prismaVersion: PrismaVersion = {
-  client: "7.10.0",
-  engine: "0edf323efd1d98336f3f0a68684b56f689b900d3"
+  client: "7.10.1",
+  engine: "d1b3f377ca835d73fd50954a5e22128b9ebdd6b8"
 }
 
 /**
@@ -436,6 +436,8 @@ export const ModelName = {
   AdmModule: 'AdmModule',
   AdmDevice: 'AdmDevice',
   AdmForm: 'AdmForm',
+  AdvisoryModule: 'AdvisoryModule',
+  AdvisoryModuleSubmission: 'AdvisoryModuleSubmission',
   Sf10Record: 'Sf10Record',
   Sf10RecordVersion: 'Sf10RecordVersion',
   AuditLog: 'AuditLog',
@@ -459,7 +461,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "scheduleConfig" | "sectionTimetableEntry" | "teacherName" | "teacherTermGrant" | "adviserArchivedStudent" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "attendanceRecordLegacy" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admMeetingInvitee" | "admMeetingAttachment" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
+    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "scheduleConfig" | "sectionTimetableEntry" | "teacherName" | "teacherTermGrant" | "adviserArchivedStudent" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "attendanceRecordLegacy" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admMeetingInvitee" | "admMeetingAttachment" | "admModule" | "admDevice" | "admForm" | "advisoryModule" | "advisoryModuleSubmission" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3349,6 +3351,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    AdvisoryModule: {
+      payload: Prisma.$AdvisoryModulePayload<ExtArgs>
+      fields: Prisma.AdvisoryModuleFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AdvisoryModuleFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AdvisoryModuleFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload>
+        }
+        findFirst: {
+          args: Prisma.AdvisoryModuleFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AdvisoryModuleFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload>
+        }
+        findMany: {
+          args: Prisma.AdvisoryModuleFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload>[]
+        }
+        create: {
+          args: Prisma.AdvisoryModuleCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload>
+        }
+        createMany: {
+          args: Prisma.AdvisoryModuleCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AdvisoryModuleCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload>[]
+        }
+        delete: {
+          args: Prisma.AdvisoryModuleDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload>
+        }
+        update: {
+          args: Prisma.AdvisoryModuleUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload>
+        }
+        deleteMany: {
+          args: Prisma.AdvisoryModuleDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AdvisoryModuleUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AdvisoryModuleUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload>[]
+        }
+        upsert: {
+          args: Prisma.AdvisoryModuleUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModulePayload>
+        }
+        aggregate: {
+          args: Prisma.AdvisoryModuleAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAdvisoryModule>
+        }
+        groupBy: {
+          args: Prisma.AdvisoryModuleGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdvisoryModuleGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AdvisoryModuleCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdvisoryModuleCountAggregateOutputType> | number
+        }
+      }
+    }
+    AdvisoryModuleSubmission: {
+      payload: Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>
+      fields: Prisma.AdvisoryModuleSubmissionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AdvisoryModuleSubmissionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AdvisoryModuleSubmissionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload>
+        }
+        findFirst: {
+          args: Prisma.AdvisoryModuleSubmissionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AdvisoryModuleSubmissionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload>
+        }
+        findMany: {
+          args: Prisma.AdvisoryModuleSubmissionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload>[]
+        }
+        create: {
+          args: Prisma.AdvisoryModuleSubmissionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload>
+        }
+        createMany: {
+          args: Prisma.AdvisoryModuleSubmissionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AdvisoryModuleSubmissionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload>[]
+        }
+        delete: {
+          args: Prisma.AdvisoryModuleSubmissionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload>
+        }
+        update: {
+          args: Prisma.AdvisoryModuleSubmissionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload>
+        }
+        deleteMany: {
+          args: Prisma.AdvisoryModuleSubmissionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AdvisoryModuleSubmissionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AdvisoryModuleSubmissionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload>[]
+        }
+        upsert: {
+          args: Prisma.AdvisoryModuleSubmissionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdvisoryModuleSubmissionPayload>
+        }
+        aggregate: {
+          args: Prisma.AdvisoryModuleSubmissionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAdvisoryModuleSubmission>
+        }
+        groupBy: {
+          args: Prisma.AdvisoryModuleSubmissionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdvisoryModuleSubmissionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AdvisoryModuleSubmissionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdvisoryModuleSubmissionCountAggregateOutputType> | number
+        }
+      }
+    }
     Sf10Record: {
       payload: Prisma.$Sf10RecordPayload<ExtArgs>
       fields: Prisma.Sf10RecordFieldRefs
@@ -4490,6 +4640,8 @@ export const AdmLearnerProfileScalarFieldEnum = {
   preparedBy: 'preparedBy',
   approvedBy: 'approvedBy',
   approvedAt: 'approvedAt',
+  returnedAt: 'returnedAt',
+  returnReason: 'returnReason',
   certificationDetails: 'certificationDetails',
   termId: 'termId',
   confidentialityLevel: 'confidentialityLevel'
@@ -4547,7 +4699,12 @@ export const AdmModuleScalarFieldEnum = {
   dueDate: 'dueDate',
   submitted: 'submitted',
   submissionDate: 'submissionDate',
-  recordedBy: 'recordedBy'
+  submissionUrl: 'submissionUrl',
+  studentSubmissionUrl: 'studentSubmissionUrl',
+  remarks: 'remarks',
+  recordedBy: 'recordedBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type AdmModuleScalarFieldEnum = (typeof AdmModuleScalarFieldEnum)[keyof typeof AdmModuleScalarFieldEnum]
@@ -4580,6 +4737,45 @@ export const AdmFormScalarFieldEnum = {
 } as const
 
 export type AdmFormScalarFieldEnum = (typeof AdmFormScalarFieldEnum)[keyof typeof AdmFormScalarFieldEnum]
+
+
+export const AdvisoryModuleScalarFieldEnum = {
+  id: 'id',
+  sectionId: 'sectionId',
+  kind: 'kind',
+  moduleName: 'moduleName',
+  moduleUrl: 'moduleUrl',
+  description: 'description',
+  releaseDate: 'releaseDate',
+  dueDate: 'dueDate',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AdvisoryModuleScalarFieldEnum = (typeof AdvisoryModuleScalarFieldEnum)[keyof typeof AdvisoryModuleScalarFieldEnum]
+
+
+export const AdvisoryModuleSubmissionScalarFieldEnum = {
+  id: 'id',
+  moduleId: 'moduleId',
+  studentId: 'studentId',
+  rosterId: 'rosterId',
+  submissionUrl: 'submissionUrl',
+  submissionKind: 'submissionKind',
+  fileUrl: 'fileUrl',
+  fileName: 'fileName',
+  fileMimeType: 'fileMimeType',
+  fileSize: 'fileSize',
+  submitted: 'submitted',
+  submittedAt: 'submittedAt',
+  remarks: 'remarks',
+  recordedBy: 'recordedBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AdvisoryModuleSubmissionScalarFieldEnum = (typeof AdvisoryModuleSubmissionScalarFieldEnum)[keyof typeof AdvisoryModuleSubmissionScalarFieldEnum]
 
 
 export const Sf10RecordScalarFieldEnum = {
@@ -5171,6 +5367,34 @@ export type ListEnumAdmFormStatusFieldRefInput<$PrismaModel> = FieldRefInputType
 
 
 /**
+ * Reference to a field of type 'AdvisoryModuleKind'
+ */
+export type EnumAdvisoryModuleKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AdvisoryModuleKind'>
+    
+
+
+/**
+ * Reference to a field of type 'AdvisoryModuleKind[]'
+ */
+export type ListEnumAdvisoryModuleKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AdvisoryModuleKind[]'>
+    
+
+
+/**
+ * Reference to a field of type 'AdvisorySubmissionKind'
+ */
+export type EnumAdvisorySubmissionKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AdvisorySubmissionKind'>
+    
+
+
+/**
+ * Reference to a field of type 'AdvisorySubmissionKind[]'
+ */
+export type ListEnumAdvisorySubmissionKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AdvisorySubmissionKind[]'>
+    
+
+
+/**
  * Reference to a field of type 'Sf10Desk'
  */
 export type EnumSf10DeskFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Sf10Desk'>
@@ -5443,6 +5667,8 @@ export type GlobalOmitConfig = {
   admModule?: Prisma.AdmModuleOmit
   admDevice?: Prisma.AdmDeviceOmit
   admForm?: Prisma.AdmFormOmit
+  advisoryModule?: Prisma.AdvisoryModuleOmit
+  advisoryModuleSubmission?: Prisma.AdvisoryModuleSubmissionOmit
   sf10Record?: Prisma.Sf10RecordOmit
   sf10RecordVersion?: Prisma.Sf10RecordVersionOmit
   auditLog?: Prisma.AuditLogOmit

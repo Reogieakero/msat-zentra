@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import {
+  sectionEnrollmentCounts,
   sectionHeadcounts,
   totalRosterHeadcount,
 } from "../../services/enrollment.js";
@@ -11,6 +12,7 @@ import {
   isAtRisk,
   levelFromFlags,
   resolveActiveTermId,
+  sectionAttendanceTotals,
 } from "../../services/risk.js";
 import { meetsAcademicExcellenceAward } from "../../services/grading.js";
 import { GRADE_LABELS, GRADE_ORDER } from "../../lib/grades.js";
@@ -36,6 +38,19 @@ router.get(
 
       const termId = req.termScope?.termId ?? (await resolveActiveTermId(req));
 
+      // Adviser data gate (same rule as /api/risk/board): the principal only
+      // sees learners in sections whose adviser has claimed the section and
+      // switched student-data sharing ON.
+      const connectedSectionIds = (
+        await prisma.section.findMany({
+          where: {
+            ...(schoolYearId ? { schoolYearId } : {}),
+            adviser: { staffProfile: { shareStudentData: true } },
+          },
+          select: { id: true },
+        })
+      ).map((s) => s.id);
+
       const [profiles, rosterExtra, activeSections, teachers, anecdotals, students, rosterCohort, admPipeline, admReferrals, accountApprovals, sectionPopulations] =
         await Promise.all([
           prisma.studentProfile.count(),
@@ -45,7 +60,10 @@ router.get(
           prisma.staffProfile.count(),
           prisma.anecdotalRecord.count(termId ? { where: { termId } } : undefined),
           prisma.studentProfile.findMany({
-            where: schoolYearId ? { section: { schoolYearId } } : undefined,
+            where: {
+              sectionId: { in: connectedSectionIds },
+              ...(schoolYearId ? { section: { schoolYearId } } : {}),
+            },
             select: {
               lrn: true,
               gradeLevel: true,
@@ -63,7 +81,10 @@ router.get(
           }),
 
           prisma.studentRoster.findMany({
-            where: schoolYearId ? { schoolYearId } : undefined,
+            where: {
+              sectionId: { in: connectedSectionIds },
+              ...(schoolYearId ? { schoolYearId } : {}),
+            },
             select: {
               lrn: true,
               gradeLevel: true,
@@ -92,7 +113,10 @@ router.get(
           }),
           prisma.user.count({ where: { status: "pending" } }),
           prisma.section.findMany({
-            where: schoolYearId ? { schoolYearId } : undefined,
+            where: {
+              id: { in: connectedSectionIds },
+              ...(schoolYearId ? { schoolYearId } : {}),
+            },
             select: { id: true, name: true, gradeLevel: true, _count: { select: { students: true } } },
             orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
           }),
@@ -102,6 +126,15 @@ router.get(
       const enrollment = profiles + rosterExtra;
 
       const headcounts = await sectionHeadcounts(sectionPopulations.map((s) => s.id));
+      // Section populations must match the section's own student list, which
+      // de-dupes LRNs per section rather than across the whole school year.
+      const enrollmentCounts = await sectionEnrollmentCounts(sectionPopulations.map((s) => s.id));
+      const sectionTotals = termId
+        ? await sectionAttendanceTotals(
+            sectionPopulations.map((s) => s.id),
+            termId,
+          )
+        : new Map<string, number>();
 
       const registeredLrns = new Set(students.map((s) => s.lrn));
       const riskCohort: {
@@ -148,6 +181,7 @@ router.get(
         const flags = computeRiskFactors({
           finalGrades: s.finalGrades,
           attendance: s.attendanceRecords,
+          attendanceTotal: sectionTotals.get(s.sectionId),
           anecdotalCount: s.anecdotalCount,
           enrolled: headcounts.get(s.sectionId) ?? s.enrolledFallback,
         });
@@ -191,7 +225,7 @@ router.get(
       const sectionPopulationRows = sectionPopulations.map((s) => ({
         grade: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
         section: s.name,
-        count: headcounts.get(s.id) ?? s._count.students,
+        count: enrollmentCounts.get(s.id) ?? s._count.students,
       }));
 
       const attendanceSections = schoolYearId
@@ -214,6 +248,9 @@ router.get(
       res.json({
         kpis: { enrollment, activeSections, teachers, anecdotals },
         atRisk,
+        // Learners the principal can see (adviser-shared sections only) — the
+        // denominator the risk boards describe.
+        sharedEnrollment: riskCohort.length,
         riskByLevel,
         riskByGrade: riskByGradeRows,
         sections: sectionPopulationRows,

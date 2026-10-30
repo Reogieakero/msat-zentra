@@ -4,8 +4,13 @@ import * as React from "react";
 import { Loader2, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import type { LinkedName } from "./timetable-sidebar";
 
+/**
+ * Legacy bordered amber chip still consumed by the grading/attendance desks.
+ * New desks should use the shared `<Pill tone="amber" label=…>` instead.
+ */
 export function AmberRectPill({ children }: { children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[12px] font-medium leading-4 text-amber-700 dark:text-amber-400">
@@ -68,8 +73,14 @@ export function UnlinkCodeDialog({
           className="bg-card shadow-xl"
         >
           <div className="flex flex-wrap items-center gap-1.5 px-1">
-            <AmberRectPill>{linked.name}</AmberRectPill>
-            {linked.code ? <AmberRectPill>{linked.code}</AmberRectPill> : null}
+            <Pill tone="amber" label="Linked teacher">
+              {linked.name}
+            </Pill>
+            {linked.code ? (
+              <Pill tone="amber" label="Teacher code">
+                {linked.code}
+              </Pill>
+            ) : null}
           </div>
           <p className="px-1 text-xs leading-5 text-muted-foreground">
             This unlinks your code from your login — your classes, grading, and

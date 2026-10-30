@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Calendar, type LucideIcon } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import { Pill, type PillTone } from "./pill";
 import styles from "./row-list.module.css";
 
 export type RowTone = "red" | "amber" | "green" | "blue" | "muted";
@@ -58,20 +59,12 @@ export interface RowListItem {
   ariaLabel?: string;
 }
 
-const STATUS_TONE: Record<RowTone, string> = {
-  red: "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400",
-  amber: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  green: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400",
-  blue: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  muted: "border-border bg-muted text-muted-foreground",
-};
-
-const META_TONE: Record<RowTone, string> = {
-  red: "border-red-500/40 bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400",
-  amber: "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
-  green: "border-green-500/40 bg-green-500/15 text-green-700 dark:bg-green-500/20 dark:text-green-400",
-  blue: "border-blue-500/40 bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400",
-  muted: "border-border bg-secondary text-secondary-foreground",
+const STATUS_TONE: Record<RowTone, PillTone> = {
+  red: "red",
+  amber: "amber",
+  green: "green",
+  blue: "blue",
+  muted: "neutral",
 };
 
 const META_DOT: Record<RowTone, string> = {
@@ -81,11 +74,6 @@ const META_DOT: Record<RowTone, string> = {
   blue: "#3b82f6",
   muted: "#9ca3af",
 };
-
-/* Single shared pill metric — status and factor pills render identical
-   padding/height. */
-const PILL_BASE =
-  "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -97,9 +85,13 @@ function initialsOf(name: string): string {
 
 function StatusPill({ label, tone }: { label: string; tone: RowTone }) {
   return (
-    <span className={`w-fit max-w-full justify-center ${PILL_BASE} ${STATUS_TONE[tone]}`}>
+    <Pill
+      tone={STATUS_TONE[tone]}
+      label="Risk status"
+      className="w-fit max-w-full justify-center"
+    >
       {label}
-    </span>
+    </Pill>
   );
 }
 
@@ -136,11 +128,13 @@ function RowListRow({
     >
       {hasLead ? (
         item.leadPill ? (
-          <span
-            className={`w-fit max-w-full justify-center ${PILL_BASE} ${META_TONE[item.leadPill.tone ?? "amber"]}`}
+          <Pill
+            tone={STATUS_TONE[item.leadPill.tone ?? "amber"]}
+            label="Term"
+            className="w-fit max-w-full justify-center"
           >
             {item.leadPill.label}
-          </span>
+          </Pill>
         ) : (
           <span aria-hidden />
         )
@@ -162,22 +156,24 @@ function RowListRow({
           {item.title}
         </span>
         {item.idLabel ? (
-          <span
-            className={`inline-flex shrink-0 items-center rounded-md border border-border bg-secondary px-1.5 py-0.5 text-secondary-foreground ${
-              item.idLabelClassName ?? "text-[11px] font-medium"
-            }`}
+          <Pill
+            tone="neutral"
+            label="LRN"
             title={item.idLabel}
+            className={item.idLabelClassName ?? "text-[11px] font-medium"}
           >
             {item.idLabel}
-          </span>
+          </Pill>
         ) : null}
       </span>
       <span className={styles.metaCell}>
         {(item.meta ?? []).map((pill, i) => (
-          <span
+          <Pill
             key={`${pill.label}-${i}`}
+            tone={STATUS_TONE[pill.tone ?? "muted"]}
+            label={pill.title ?? pill.label}
             title={pill.title ?? pill.label}
-            className={`${PILL_BASE} gap-1 ${META_TONE[pill.tone ?? "muted"]}`}
+            className="gap-1"
           >
             {pill.icon ? (
               <pill.icon size={11} aria-hidden />
@@ -185,16 +181,18 @@ function RowListRow({
               <span className={styles.metaDot} style={{ background: META_DOT[pill.tone ?? "muted"] }} aria-hidden />
             )}
             {pill.labelNode ?? pill.label}
-          </span>
+          </Pill>
         ))}
         {item.detectedLabel ? (
-          <span
+          <Pill
+            tone="amber"
+            label="Detected"
             title={item.detectedTitle ?? item.detectedLabel}
-            className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
+            className="gap-1"
           >
             <Calendar size={11} aria-hidden />
             {item.detectedLabel}
-          </span>
+          </Pill>
         ) : null}
         {item.avatarMascot ? null : (
           <span

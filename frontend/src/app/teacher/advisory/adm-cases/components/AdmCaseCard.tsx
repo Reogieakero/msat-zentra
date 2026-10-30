@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Pill } from "@/components/ui/pill";
 import type { AdmCase } from "@/services/teacher/admCases.types";
 import { StudentMascot } from "../../referrals/components/StudentMascot";
 
@@ -24,25 +25,23 @@ export function AdmCaseCard({ caseData, onDetails }: AdmCaseCardProps) {
       <button
         type="button"
         onClick={onDetails}
-        aria-label={`Track ADM case for ${caseData.studentName}`}
+        aria-label={`Monitor ADM case for ${caseData.studentName}`}
         className="w-full cursor-pointer truncate text-center text-sm font-semibold text-foreground"
         title={caseData.studentName}
       >
         {caseData.studentName}
       </button>
-      <span
-        className="inline-flex max-w-full items-center truncate rounded-md border border-border bg-secondary px-2 py-0.5 text-xs font-medium leading-tight text-secondary-foreground"
-        title={`LRN ${caseData.lrn}`}
-      >
+      <Pill tone="neutral" label="LRN" className="max-w-full whitespace-normal text-center leading-tight">
         {caseData.lrn}
-      </span>
+      </Pill>
       <div className="flex w-full justify-end">
         <Button
           type="button"
           onClick={onDetails}
+          aria-label={`Monitor ADM case for ${caseData.studentName}`}
           className="h-6 text-xs"
         >
-          Track case
+          Monitor
         </Button>
       </div>
     </article>

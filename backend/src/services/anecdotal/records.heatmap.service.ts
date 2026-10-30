@@ -18,10 +18,16 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
         id: true,
         name: true,
         gradeLevel: true,
+        // Principal gate: anecdotal records only surface for sections whose
+        // adviser turned student-data sharing ON (Settings → Share data).
+        adviser: {
+          select: { staffProfile: { select: { shareStudentData: true } } },
+        },
         students: {
           select: {
             userId: true,
             lrn: true,
+            mascot: true,
             user: { select: { fullName: true, status: true } },
           },
         },
@@ -30,7 +36,7 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
 
     prisma.studentRoster.findMany({
       where: schoolYearId ? { schoolYearId } : {},
-      select: { id: true, lrn: true, fullName: true, sectionId: true },
+      select: { id: true, lrn: true, fullName: true, sectionId: true, mascot: true },
     }),
     prisma.anecdotalRecord.findMany({
       where,
@@ -110,6 +116,7 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
 
   const dataSections = sections
     .map((section) => {
+      if (!section.adviser?.staffProfile?.shareStudentData) return null;
       const profileRows = section.students
         .map((st) => {
           const recs = recordByStudent.get(st.userId);
@@ -117,6 +124,7 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
           return {
             lrn: st.lrn,
             name: st.user.fullName,
+            mascot: st.mascot ?? null,
             status: st.user.status,
             gradeLevel: section.gradeLevel,
             section: section.name,
@@ -133,6 +141,7 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
           return {
             lrn: st.lrn,
             name: st.fullName,
+            mascot: st.mascot ?? null,
             status: "Enlisted",
             gradeLevel: section.gradeLevel,
             section: section.name,
@@ -178,6 +187,7 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
           select: {
             userId: true,
             lrn: true,
+            mascot: true,
             gradeLevel: true,
             user: { select: { fullName: true, status: true } },
             section: { select: { id: true, name: true } },
@@ -187,7 +197,7 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
     orphanRosterIds.length > 0
       ? prisma.studentRoster.findMany({
           where: { id: { in: orphanRosterIds } },
-          select: { id: true, lrn: true, fullName: true, gradeLevel: true, sectionId: true },
+          select: { id: true, lrn: true, fullName: true, gradeLevel: true, sectionId: true, mascot: true },
         })
       : [],
   ]);
@@ -195,10 +205,18 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
   const profileById = new Map(orphanProfiles.map((p) => [p.userId, p]));
   const rosterById = new Map(orphanRosterRows.map((r) => [r.id, r]));
   const sectionById = new Map(sections.map((s) => [s.id, s]));
+  // Same gate for records that no longer match a roster slot: keep them only
+  // when their section's adviser shares student data.
+  const sharedSectionIds = new Set(
+    sections
+      .filter((s) => s.adviser?.staffProfile?.shareStudentData)
+      .map((s) => s.id)
+  );
 
   type OrphanStudent = {
     lrn: string;
     name: string;
+    mascot: string | null;
     status: string;
     gradeLevel: string;
     section: string;
@@ -219,37 +237,44 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
     const recSection = sectionById.get(recs[0].sectionId);
     if (key.startsWith("roster:")) {
       const r = rosterById.get(key.slice("roster:".length));
+      const sectionId = r?.sectionId ?? recs[0].sectionId ?? "unassigned";
+      if (!sharedSectionIds.has(sectionId)) continue;
       const grade = String(r?.gradeLevel ?? recSection?.gradeLevel ?? "Unassigned");
       pushOrphan(grade, {
         lrn: r?.lrn || "N/A",
         name: r?.fullName ?? "Unknown student",
+        mascot: r?.mascot ?? null,
         status: "Enlisted",
         gradeLevel: grade,
         section: sectionById.get(r?.sectionId ?? "")?.name ?? recSection?.name ?? "Unassigned",
-        sectionId: r?.sectionId ?? recs[0].sectionId ?? "unassigned",
+        sectionId,
         behavioral,
       });
     } else {
       const p = profileById.get(key);
+      const sectionId = p?.section?.id ?? recs[0].sectionId ?? "unassigned";
+      if (!sharedSectionIds.has(sectionId)) continue;
       const grade = String(p?.gradeLevel ?? recSection?.gradeLevel ?? "Unassigned");
       pushOrphan(grade, {
         lrn: p?.lrn || "N/A",
         name: p?.user.fullName ?? "Unknown student",
+        mascot: p?.mascot ?? null,
         status: p?.user.status ?? "inactive",
         gradeLevel: grade,
         section: p?.section?.name ?? recSection?.name ?? "Unassigned",
-        sectionId: p?.section?.id ?? recs[0].sectionId ?? "unassigned",
+        sectionId,
         behavioral,
       });
     }
   }
 
-  if (nullKeyRecs.length > 0) {
+  if (nullKeyRecs.length > 0 && sharedSectionIds.has(nullKeyRecs[0].sectionId)) {
     const recSection = sectionById.get(nullKeyRecs[0].sectionId);
     const grade = String(recSection?.gradeLevel ?? "Unassigned");
     pushOrphan(grade, {
       lrn: "N/A",
       name: "Unknown student",
+      mascot: null,
       status: "inactive",
       gradeLevel: grade,
       section: recSection?.name ?? "Unassigned",

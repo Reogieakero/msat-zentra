@@ -41,6 +41,7 @@ export function deriveHonorRoll(payload: LiveHonorPayload): {
       gradeLevel: c.gradeLevel,
       overallAverage: c.generalAverage,
       band: descriptorBand(c.generalAverage),
+      mascot: c.mascot ?? null,
       status: "awarded" as AwardStatus,
       subjects: [...c.subjects]
         .map((s) => ({

@@ -3,7 +3,9 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1.5rem 0.25rem 0.25rem;
+  /* The shell's .main already provides the 16px gutter + 16px navbar gap;
+     adding padding here would push the boards off that rhythm. */
+  padding: 0;
   min-height: 100%;
   background-color: var(--background);
 }
@@ -29,5 +31,56 @@
 @media (max-width: 767px) {
   .topSummary {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- Board entrance ------------------------------------------------------ */
+/* The risk boards cascade in exactly like the academics section cards: lift
+   16px, settle from 0.97 scale, opacity only otherwise, 60ms apart. */
+@keyframes risk-board-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.page > * {
+  animation: risk-board-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.page > *:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.page > *:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+.page > *:nth-child(4) {
+  animation-delay: 0.18s;
+}
+
+.page > *:nth-child(5) {
+  animation-delay: 0.24s;
+}
+
+/* The two summary cards split the first row — they land together, the
+   breakdown a beat after the donut. */
+.topSummary > * {
+  animation: risk-board-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.topSummary > *:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page > *,
+  .topSummary > * {
+    animation: none;
   }
 }

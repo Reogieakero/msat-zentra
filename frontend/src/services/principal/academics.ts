@@ -28,6 +28,8 @@ export interface SectionSummary {
   sectionId: string;
   section: string;
   grade: string;
+  /** Adviser shares student data; metrics are withheld when false. */
+  shared?: boolean;
   avgTransmuted: number;
   passPct: number;
   failPct: number;

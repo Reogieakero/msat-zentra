@@ -17,7 +17,6 @@ import {
   Inbox,
   FileSignature,
   Award,
-  FileBarChart,
   ShieldCheck,
   Settings,
   type LucideIcon,
@@ -105,7 +104,6 @@ const NAV: NavGroup[] = [
     label: "Insights",
     items: [
       { title: "Honor Roll", href: "/principal/honor-roll", icon: Award },
-      { title: "Reports", href: "/principal/reports", icon: FileBarChart },
       { title: "Audit Log", href: "/principal/audit", icon: ShieldCheck },
     ],
   },

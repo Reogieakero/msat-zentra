@@ -18,9 +18,9 @@ import {
 } from "@/components/ui/command";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
-import { SidebarToggleButton } from "@/components/nav/SidebarToggleButton";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { RegistrarNotificationsBell } from "./components/RegistrarNotificationsBell";
 import { useRegistrarRealtime } from "@/lib/realtime/registrarChannel";
 import styles from "./registrar.module.css";
@@ -30,7 +30,7 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [query, setQuery] = React.useState("");
   const profile = useRegistrarProfileSettings();
-  const { collapsed: sidebarCollapsed, toggle: toggleSidebar } =
+  const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.registrar.sidebar.collapsed");
 
   useRegistrarRealtime();
@@ -50,14 +50,11 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
     <div className={styles.wrapper}>
       <RegistrarPaletteGate />
       <header className={styles.topbar}>
-        <SidebarToggleButton
-          collapsed={sidebarCollapsed}
-          onToggle={toggleSidebar}
-        />
-
         <Link href="/registrar/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
+
+        <AppBreadcrumbs role="Registrar" />
 
         <div className={styles.spacer} />
 

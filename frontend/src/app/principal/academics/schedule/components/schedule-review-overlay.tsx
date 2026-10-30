@@ -136,25 +136,27 @@ export function ScheduleReviewOverlay({
       description="Approve the timetable or send it back to the master teacher with a revision note."
       headerActions={<Pill tone={scheduleTone(status)}>{meta.label}</Pill>}
       footer={
-        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
-          <Button
-            variant="destructive"
-            size="sm"
-            className="h-6 px-2 text-xs"
-            onClick={() => submit("reject")}
-            disabled={submitted === 0}
-          >
-            <span aria-live="polite">Reject</span>
-          </Button>
-          <Button
-            size="sm"
-            className="h-6 px-2 text-xs"
-            onClick={() => submit("approve")}
-            disabled={submitted === 0}
-          >
-            <span aria-live="polite">Approve</span>
-          </Button>
-        </div>
+        status === "approved" ? undefined : (
+          <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => submit("reject")}
+              disabled={submitted === 0}
+            >
+              <span aria-live="polite">Reject</span>
+            </Button>
+            <Button
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => submit("approve")}
+              disabled={submitted === 0}
+            >
+              <span aria-live="polite">Approve</span>
+            </Button>
+          </div>
+        )
       }
     >
       {section ? (
@@ -170,20 +172,30 @@ export function ScheduleReviewOverlay({
             <div className={styles.reviewMeta}>
               <p className={styles.reviewRow}>
                 <span className={styles.reviewLabel}>Section</span>
-                <span className={styles.reviewValue}>{section.name}</span>
+                <Pill tone="blue" label="Section">
+                  {section.name}
+                </Pill>
               </p>
               <p className={styles.reviewRow}>
                 <span className={styles.reviewLabel}>Grade level</span>
-                <Pill tone="neutral">Grade {section.gradeLevel.replace("G", "")}</Pill>
+                <Pill tone="neutral" label="Grade level">
+                  Grade {section.gradeLevel.replace("G", "")}
+                </Pill>
               </p>
               <p className={styles.reviewRow}>
                 <span className={styles.reviewLabel}>Teacher</span>
                 {section.adviser?.fullName ? (
-                  <Pill tone="amber" className="max-w-[16rem] overflow-hidden">
+                  <Pill
+                    tone="amber"
+                    label="Teacher"
+                    className="max-w-[16rem] overflow-hidden"
+                  >
                     {section.adviser.fullName}
                   </Pill>
                 ) : (
-                  <Pill tone="neutral">No adviser</Pill>
+                  <Pill tone="neutral" label="Teacher">
+                    No adviser
+                  </Pill>
                 )}
               </p>
               <p className={styles.reviewRow}>

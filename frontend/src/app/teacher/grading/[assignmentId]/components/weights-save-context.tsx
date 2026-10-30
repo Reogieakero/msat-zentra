@@ -4,7 +4,7 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   applyWeightPreset,
-  saveComponentWeight,
+  saveComponentWeights,
   useRefreshAcademic,
 } from "@/services/teacher/grading.service";
 import type {
@@ -97,6 +97,21 @@ function patchWeights(
   );
 }
 
+/** Snapshot current weights so an optimistic patch can be rolled back. */
+function snapshotWeights(
+  queryClient: ReturnType<typeof useQueryClient>,
+  assignmentId: string,
+): { type: ComponentType; value: number }[] | null {
+  for (const [, detail] of queryClient.getQueriesData<ClassDetail>({
+    queryKey: ["teacher-grading-class"],
+  })) {
+    if (detail?.assignment.id === assignmentId) {
+      return detail.components.map((c) => ({ type: c.type, value: c.weight ?? 0 }));
+    }
+  }
+  return null;
+}
+
 // Weights saves now report into the single shared Dock.
 export function WeightsSaveProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
@@ -157,17 +172,24 @@ export function WeightsSaveProvider({ children }: { children: React.ReactNode })
   const saveWeights = React.useCallback(
     async (assignmentId: string, input: WeightsSaveInput): Promise<WeightsResult> => {
       const pills = pillsFor(input.weights);
+      // Optimistic: reflect the new weights immediately; roll back on failure.
+      const previous = snapshotWeights(queryClient, assignmentId);
+      patchWeights(queryClient, assignmentId, input.weights);
       const result = await runWeights("Applying weights…", pills, async () => {
-        const results = await Promise.allSettled(
-          input.weights.map((w) =>
-            saveComponentWeight(assignmentId, { componentType: w.type, weightPercentage: w.value }),
-          ),
+        await saveComponentWeights(
+          assignmentId,
+          input.weights.map((w) => ({
+            componentType: w.type,
+            weightPercentage: w.value,
+          })),
         );
-        if (results.some((r) => r.status === "rejected")) throw new Error("weights-failed");
-        patchWeights(queryClient, assignmentId, input.weights);
-        queryClient.invalidateQueries({ queryKey: ["teacher-grading-class"] });
+        // Background refresh — derivative grades/risk were recomputed server-side.
+        void queryClient.invalidateQueries({ queryKey: ["teacher-grading-class"] });
         refreshAcademic();
       });
+      if (!result.ok && previous) {
+        patchWeights(queryClient, assignmentId, previous);
+      }
       return result;
     },
     [queryClient, refreshAcademic, runWeights],

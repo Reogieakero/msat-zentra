@@ -250,6 +250,8 @@ export type UserWhereInput = {
   admModules?: Prisma.AdmModuleListRelationFilter
   admDevicesIssued?: Prisma.AdmDeviceListRelationFilter
   admFormsUploaded?: Prisma.AdmFormListRelationFilter
+  advisoryModules?: Prisma.AdvisoryModuleListRelationFilter
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionListRelationFilter
   sf10Records?: Prisma.Sf10RecordListRelationFilter
   sf10Validated?: Prisma.Sf10RecordListRelationFilter
   sf10Versions?: Prisma.Sf10RecordVersionListRelationFilter
@@ -302,6 +304,8 @@ export type UserOrderByWithRelationInput = {
   admModules?: Prisma.AdmModuleOrderByRelationAggregateInput
   admDevicesIssued?: Prisma.AdmDeviceOrderByRelationAggregateInput
   admFormsUploaded?: Prisma.AdmFormOrderByRelationAggregateInput
+  advisoryModules?: Prisma.AdvisoryModuleOrderByRelationAggregateInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionOrderByRelationAggregateInput
   sf10Records?: Prisma.Sf10RecordOrderByRelationAggregateInput
   sf10Validated?: Prisma.Sf10RecordOrderByRelationAggregateInput
   sf10Versions?: Prisma.Sf10RecordVersionOrderByRelationAggregateInput
@@ -357,6 +361,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   admModules?: Prisma.AdmModuleListRelationFilter
   admDevicesIssued?: Prisma.AdmDeviceListRelationFilter
   admFormsUploaded?: Prisma.AdmFormListRelationFilter
+  advisoryModules?: Prisma.AdvisoryModuleListRelationFilter
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionListRelationFilter
   sf10Records?: Prisma.Sf10RecordListRelationFilter
   sf10Validated?: Prisma.Sf10RecordListRelationFilter
   sf10Versions?: Prisma.Sf10RecordVersionListRelationFilter
@@ -443,6 +449,8 @@ export type UserCreateInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -495,6 +503,8 @@ export type UserUncheckedCreateInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -547,6 +557,8 @@ export type UserUpdateInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -599,6 +611,8 @@ export type UserUncheckedUpdateInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -1173,6 +1187,34 @@ export type UserUpdateOneRequiredWithoutAdmFormsUploadedNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAdmFormsUploadedInput, Prisma.UserUpdateWithoutAdmFormsUploadedInput>, Prisma.UserUncheckedUpdateWithoutAdmFormsUploadedInput>
 }
 
+export type UserCreateNestedOneWithoutAdvisoryModulesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdvisoryModulesInput, Prisma.UserUncheckedCreateWithoutAdvisoryModulesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdvisoryModulesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutAdvisoryModulesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdvisoryModulesInput, Prisma.UserUncheckedCreateWithoutAdvisoryModulesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdvisoryModulesInput
+  upsert?: Prisma.UserUpsertWithoutAdvisoryModulesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAdvisoryModulesInput, Prisma.UserUpdateWithoutAdvisoryModulesInput>, Prisma.UserUncheckedUpdateWithoutAdvisoryModulesInput>
+}
+
+export type UserCreateNestedOneWithoutAdvisoryModuleSubmissionsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.UserUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdvisoryModuleSubmissionsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutAdvisoryModuleSubmissionsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.UserUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdvisoryModuleSubmissionsInput
+  upsert?: Prisma.UserUpsertWithoutAdvisoryModuleSubmissionsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAdvisoryModuleSubmissionsInput, Prisma.UserUpdateWithoutAdvisoryModuleSubmissionsInput>, Prisma.UserUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+}
+
 export type UserCreateNestedOneWithoutSf10RecordsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutSf10RecordsInput, Prisma.UserUncheckedCreateWithoutSf10RecordsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutSf10RecordsInput
@@ -1322,6 +1364,8 @@ export type UserCreateWithoutStudentProfileInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -1373,6 +1417,8 @@ export type UserUncheckedCreateWithoutStudentProfileInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -1440,6 +1486,8 @@ export type UserUpdateWithoutStudentProfileInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -1491,6 +1539,8 @@ export type UserUncheckedUpdateWithoutStudentProfileInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -1542,6 +1592,8 @@ export type UserCreateWithoutParentProfileInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -1593,6 +1645,8 @@ export type UserUncheckedCreateWithoutParentProfileInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -1660,6 +1714,8 @@ export type UserUpdateWithoutParentProfileInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -1711,6 +1767,8 @@ export type UserUncheckedUpdateWithoutParentProfileInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -1762,6 +1820,8 @@ export type UserCreateWithoutStaffProfileInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -1813,6 +1873,8 @@ export type UserUncheckedCreateWithoutStaffProfileInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -1880,6 +1942,8 @@ export type UserUpdateWithoutStaffProfileInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -1931,6 +1995,8 @@ export type UserUncheckedUpdateWithoutStaffProfileInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -1983,6 +2049,8 @@ export type UserCreateWithoutSectionsAdvisedInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -2034,6 +2102,8 @@ export type UserUncheckedCreateWithoutSectionsAdvisedInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -2101,6 +2171,8 @@ export type UserUpdateWithoutSectionsAdvisedInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -2152,6 +2224,8 @@ export type UserUncheckedUpdateWithoutSectionsAdvisedInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -2203,6 +2277,8 @@ export type UserCreateWithoutTeacherAssignmentsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -2254,6 +2330,8 @@ export type UserUncheckedCreateWithoutTeacherAssignmentsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -2321,6 +2399,8 @@ export type UserUpdateWithoutTeacherAssignmentsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -2372,6 +2452,8 @@ export type UserUncheckedUpdateWithoutTeacherAssignmentsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -2423,6 +2505,8 @@ export type UserCreateWithoutSubmittedTimetablesInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -2474,6 +2558,8 @@ export type UserUncheckedCreateWithoutSubmittedTimetablesInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -2530,6 +2616,8 @@ export type UserCreateWithoutReviewedTimetablesInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -2581,6 +2669,8 @@ export type UserUncheckedCreateWithoutReviewedTimetablesInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -2648,6 +2738,8 @@ export type UserUpdateWithoutSubmittedTimetablesInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -2699,6 +2791,8 @@ export type UserUncheckedUpdateWithoutSubmittedTimetablesInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -2761,6 +2855,8 @@ export type UserUpdateWithoutReviewedTimetablesInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -2812,6 +2908,8 @@ export type UserUncheckedUpdateWithoutReviewedTimetablesInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -2863,6 +2961,8 @@ export type UserCreateWithoutTeacherNameInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -2914,6 +3014,8 @@ export type UserUncheckedCreateWithoutTeacherNameInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -2981,6 +3083,8 @@ export type UserUpdateWithoutTeacherNameInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -3032,6 +3136,8 @@ export type UserUncheckedUpdateWithoutTeacherNameInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -3083,6 +3189,8 @@ export type UserCreateWithoutTermGrantsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -3134,6 +3242,8 @@ export type UserUncheckedCreateWithoutTermGrantsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -3201,6 +3311,8 @@ export type UserUpdateWithoutTermGrantsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -3252,6 +3364,8 @@ export type UserUncheckedUpdateWithoutTermGrantsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -3303,6 +3417,8 @@ export type UserCreateWithoutArchivedAdviseesInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -3354,6 +3470,8 @@ export type UserUncheckedCreateWithoutArchivedAdviseesInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -3421,6 +3539,8 @@ export type UserUpdateWithoutArchivedAdviseesInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -3472,6 +3592,8 @@ export type UserUncheckedUpdateWithoutArchivedAdviseesInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -3523,6 +3645,8 @@ export type UserCreateWithoutGradeFlagsRaisedInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -3574,6 +3698,8 @@ export type UserUncheckedCreateWithoutGradeFlagsRaisedInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -3630,6 +3756,8 @@ export type UserCreateWithoutGradeFlagsOwnedInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -3681,6 +3809,8 @@ export type UserUncheckedCreateWithoutGradeFlagsOwnedInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -3737,6 +3867,8 @@ export type UserCreateWithoutGradeFlagsResolvedInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -3788,6 +3920,8 @@ export type UserUncheckedCreateWithoutGradeFlagsResolvedInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -3855,6 +3989,8 @@ export type UserUpdateWithoutGradeFlagsRaisedInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -3906,6 +4042,8 @@ export type UserUncheckedUpdateWithoutGradeFlagsRaisedInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -3968,6 +4106,8 @@ export type UserUpdateWithoutGradeFlagsOwnedInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -4019,6 +4159,8 @@ export type UserUncheckedUpdateWithoutGradeFlagsOwnedInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -4081,6 +4223,8 @@ export type UserUpdateWithoutGradeFlagsResolvedInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -4132,6 +4276,8 @@ export type UserUncheckedUpdateWithoutGradeFlagsResolvedInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -4182,6 +4328,8 @@ export type UserCreateWithoutAnecdotalRecordsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -4233,6 +4381,8 @@ export type UserUncheckedCreateWithoutAnecdotalRecordsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -4300,6 +4450,8 @@ export type UserUpdateWithoutAnecdotalRecordsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -4351,6 +4503,8 @@ export type UserUncheckedUpdateWithoutAnecdotalRecordsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -4402,6 +4556,8 @@ export type UserCreateWithoutAnecdotalFoldersInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -4453,6 +4609,8 @@ export type UserUncheckedCreateWithoutAnecdotalFoldersInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -4520,6 +4678,8 @@ export type UserUpdateWithoutAnecdotalFoldersInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -4571,6 +4731,8 @@ export type UserUncheckedUpdateWithoutAnecdotalFoldersInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -4622,6 +4784,8 @@ export type UserCreateWithoutAnecdotalFollowupsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -4673,6 +4837,8 @@ export type UserUncheckedCreateWithoutAnecdotalFollowupsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -4740,6 +4906,8 @@ export type UserUpdateWithoutAnecdotalFollowupsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -4791,6 +4959,8 @@ export type UserUncheckedUpdateWithoutAnecdotalFollowupsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -4842,6 +5012,8 @@ export type UserCreateWithoutReferralsMadeInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -4893,6 +5065,8 @@ export type UserUncheckedCreateWithoutReferralsMadeInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -4960,6 +5134,8 @@ export type UserUpdateWithoutReferralsMadeInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -5011,6 +5187,8 @@ export type UserUncheckedUpdateWithoutReferralsMadeInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -5062,6 +5240,8 @@ export type UserCreateWithoutSessionsCreatedInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -5113,6 +5293,8 @@ export type UserUncheckedCreateWithoutSessionsCreatedInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -5180,6 +5362,8 @@ export type UserUpdateWithoutSessionsCreatedInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -5231,6 +5415,8 @@ export type UserUncheckedUpdateWithoutSessionsCreatedInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -5282,6 +5468,8 @@ export type UserCreateWithoutSessionAttachmentsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -5333,6 +5521,8 @@ export type UserUncheckedCreateWithoutSessionAttachmentsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -5400,6 +5590,8 @@ export type UserUpdateWithoutSessionAttachmentsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -5451,6 +5643,8 @@ export type UserUncheckedUpdateWithoutSessionAttachmentsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -5502,6 +5696,8 @@ export type UserCreateWithoutAssignedInterventionsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -5553,6 +5749,8 @@ export type UserUncheckedCreateWithoutAssignedInterventionsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -5620,6 +5818,8 @@ export type UserUpdateWithoutAssignedInterventionsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -5671,6 +5871,8 @@ export type UserUncheckedUpdateWithoutAssignedInterventionsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -5722,6 +5924,8 @@ export type UserCreateWithoutHealthRecordsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -5773,6 +5977,8 @@ export type UserUncheckedCreateWithoutHealthRecordsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -5840,6 +6046,8 @@ export type UserUpdateWithoutHealthRecordsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -5891,6 +6099,8 @@ export type UserUncheckedUpdateWithoutHealthRecordsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -5942,6 +6152,8 @@ export type UserCreateWithoutHomeVisitationsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -5993,6 +6205,8 @@ export type UserUncheckedCreateWithoutHomeVisitationsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -6060,6 +6274,8 @@ export type UserUpdateWithoutHomeVisitationsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -6111,6 +6327,8 @@ export type UserUncheckedUpdateWithoutHomeVisitationsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -6162,6 +6380,8 @@ export type UserCreateWithoutAdmProfilesPreparedInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -6213,6 +6433,8 @@ export type UserUncheckedCreateWithoutAdmProfilesPreparedInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -6269,6 +6491,8 @@ export type UserCreateWithoutAdmProfilesApprovedInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -6320,6 +6544,8 @@ export type UserUncheckedCreateWithoutAdmProfilesApprovedInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -6387,6 +6613,8 @@ export type UserUpdateWithoutAdmProfilesPreparedInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -6438,6 +6666,8 @@ export type UserUncheckedUpdateWithoutAdmProfilesPreparedInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -6500,6 +6730,8 @@ export type UserUpdateWithoutAdmProfilesApprovedInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -6551,6 +6783,8 @@ export type UserUncheckedUpdateWithoutAdmProfilesApprovedInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -6602,6 +6836,8 @@ export type UserCreateWithoutAdmMeetingsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -6653,6 +6889,8 @@ export type UserUncheckedCreateWithoutAdmMeetingsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -6720,6 +6958,8 @@ export type UserUpdateWithoutAdmMeetingsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -6771,6 +7011,8 @@ export type UserUncheckedUpdateWithoutAdmMeetingsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -6822,6 +7064,8 @@ export type UserCreateWithoutAdmMeetingInvitesInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -6873,6 +7117,8 @@ export type UserUncheckedCreateWithoutAdmMeetingInvitesInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -6940,6 +7186,8 @@ export type UserUpdateWithoutAdmMeetingInvitesInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -6991,6 +7239,8 @@ export type UserUncheckedUpdateWithoutAdmMeetingInvitesInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -7042,6 +7292,8 @@ export type UserCreateWithoutAdmMeetingAttachmentsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -7093,6 +7345,8 @@ export type UserUncheckedCreateWithoutAdmMeetingAttachmentsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -7160,6 +7414,8 @@ export type UserUpdateWithoutAdmMeetingAttachmentsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -7211,6 +7467,8 @@ export type UserUncheckedUpdateWithoutAdmMeetingAttachmentsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -7262,6 +7520,8 @@ export type UserCreateWithoutAdmModulesInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutUploaderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -7313,6 +7573,8 @@ export type UserUncheckedCreateWithoutAdmModulesInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -7380,6 +7642,8 @@ export type UserUpdateWithoutAdmModulesInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutUploaderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -7431,6 +7695,8 @@ export type UserUncheckedUpdateWithoutAdmModulesInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -7482,6 +7748,8 @@ export type UserCreateWithoutAdmDevicesIssuedInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutUploaderInput
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -7533,6 +7801,8 @@ export type UserUncheckedCreateWithoutAdmDevicesIssuedInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -7600,6 +7870,8 @@ export type UserUpdateWithoutAdmDevicesIssuedInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutUploaderNestedInput
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -7651,6 +7923,8 @@ export type UserUncheckedUpdateWithoutAdmDevicesIssuedInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -7702,6 +7976,8 @@ export type UserCreateWithoutAdmFormsUploadedInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutUploaderInput
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -7753,6 +8029,8 @@ export type UserUncheckedCreateWithoutAdmFormsUploadedInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -7820,6 +8098,8 @@ export type UserUpdateWithoutAdmFormsUploadedInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutUploaderNestedInput
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -7871,6 +8151,464 @@ export type UserUncheckedUpdateWithoutAdmFormsUploadedInput = {
   admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
+  sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserCreateWithoutAdvisoryModulesInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutRecorderInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeCreateNestedManyWithoutUserInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutUploaderInput
+  admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
+  sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserUncheckedCreateWithoutAdvisoryModulesInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutRecorderInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUncheckedCreateNestedManyWithoutUserInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutUploaderInput
+  admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
+  sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserCreateOrConnectWithoutAdvisoryModulesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdvisoryModulesInput, Prisma.UserUncheckedCreateWithoutAdvisoryModulesInput>
+}
+
+export type UserUpsertWithoutAdvisoryModulesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAdvisoryModulesInput, Prisma.UserUncheckedUpdateWithoutAdvisoryModulesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdvisoryModulesInput, Prisma.UserUncheckedCreateWithoutAdvisoryModulesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAdvisoryModulesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAdvisoryModulesInput, Prisma.UserUncheckedUpdateWithoutAdvisoryModulesInput>
+}
+
+export type UserUpdateWithoutAdvisoryModulesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutRecorderNestedInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUpdateManyWithoutUserNestedInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutUploaderNestedInput
+  admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
+  sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAdvisoryModulesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutRecorderNestedInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUncheckedUpdateManyWithoutUserNestedInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
+  sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserCreateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutRecorderInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeCreateNestedManyWithoutUserInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutUploaderInput
+  admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserUncheckedCreateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutRecorderInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUncheckedCreateNestedManyWithoutUserInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutUploaderInput
+  admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserCreateOrConnectWithoutAdvisoryModuleSubmissionsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.UserUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+}
+
+export type UserUpsertWithoutAdvisoryModuleSubmissionsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAdvisoryModuleSubmissionsInput, Prisma.UserUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.UserUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAdvisoryModuleSubmissionsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAdvisoryModuleSubmissionsInput, Prisma.UserUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+}
+
+export type UserUpdateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutRecorderNestedInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUpdateManyWithoutUserNestedInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutUploaderNestedInput
+  admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutRecorderNestedInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUncheckedUpdateManyWithoutUserNestedInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -7923,6 +8661,8 @@ export type UserCreateWithoutSf10RecordsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
@@ -7974,6 +8714,8 @@ export type UserUncheckedCreateWithoutSf10RecordsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
@@ -8030,6 +8772,8 @@ export type UserCreateWithoutSf10ValidatedInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
@@ -8081,6 +8825,8 @@ export type UserUncheckedCreateWithoutSf10ValidatedInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
@@ -8148,6 +8894,8 @@ export type UserUpdateWithoutSf10RecordsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
@@ -8199,6 +8947,8 @@ export type UserUncheckedUpdateWithoutSf10RecordsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
@@ -8261,6 +9011,8 @@ export type UserUpdateWithoutSf10ValidatedInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
@@ -8312,6 +9064,8 @@ export type UserUncheckedUpdateWithoutSf10ValidatedInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
@@ -8363,6 +9117,8 @@ export type UserCreateWithoutSf10VersionsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
@@ -8414,6 +9170,8 @@ export type UserUncheckedCreateWithoutSf10VersionsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
@@ -8481,6 +9239,8 @@ export type UserUpdateWithoutSf10VersionsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
@@ -8532,6 +9292,8 @@ export type UserUncheckedUpdateWithoutSf10VersionsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
@@ -8583,6 +9345,8 @@ export type UserCreateWithoutAuditLogsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -8634,6 +9398,8 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -8701,6 +9467,8 @@ export type UserUpdateWithoutAuditLogsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -8752,6 +9520,8 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -8803,6 +9573,8 @@ export type UserCreateWithoutSf10AccessRequestsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -8854,6 +9626,8 @@ export type UserUncheckedCreateWithoutSf10AccessRequestsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -8910,6 +9684,8 @@ export type UserCreateWithoutSf10AccessDecidedInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -8961,6 +9737,8 @@ export type UserUncheckedCreateWithoutSf10AccessDecidedInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -9028,6 +9806,8 @@ export type UserUpdateWithoutSf10AccessRequestsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -9079,6 +9859,8 @@ export type UserUncheckedUpdateWithoutSf10AccessRequestsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -9141,6 +9923,8 @@ export type UserUpdateWithoutSf10AccessDecidedInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -9192,6 +9976,8 @@ export type UserUncheckedUpdateWithoutSf10AccessDecidedInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -9243,6 +10029,8 @@ export type UserCreateWithoutNotificationsInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -9294,6 +10082,8 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -9361,6 +10151,8 @@ export type UserUpdateWithoutNotificationsInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -9412,6 +10204,8 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -9463,6 +10257,8 @@ export type UserCreateWithoutRefreshTokensInput = {
   admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
@@ -9514,6 +10310,8 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
   admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
   sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
@@ -9581,6 +10379,8 @@ export type UserUpdateWithoutRefreshTokensInput = {
   admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
@@ -9632,6 +10432,8 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
   admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
   admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
   sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
@@ -9674,6 +10476,8 @@ export type UserCountOutputType = {
   admModules: number
   admDevicesIssued: number
   admFormsUploaded: number
+  advisoryModules: number
+  advisoryModuleSubmissions: number
   sf10Records: number
   sf10Validated: number
   sf10Versions: number
@@ -9711,6 +10515,8 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   admModules?: boolean | UserCountOutputTypeCountAdmModulesArgs
   admDevicesIssued?: boolean | UserCountOutputTypeCountAdmDevicesIssuedArgs
   admFormsUploaded?: boolean | UserCountOutputTypeCountAdmFormsUploadedArgs
+  advisoryModules?: boolean | UserCountOutputTypeCountAdvisoryModulesArgs
+  advisoryModuleSubmissions?: boolean | UserCountOutputTypeCountAdvisoryModuleSubmissionsArgs
   sf10Records?: boolean | UserCountOutputTypeCountSf10RecordsArgs
   sf10Validated?: boolean | UserCountOutputTypeCountSf10ValidatedArgs
   sf10Versions?: boolean | UserCountOutputTypeCountSf10VersionsArgs
@@ -9857,6 +10663,20 @@ export type UserCountOutputTypeCountAdmDevicesIssuedArgs<ExtArgs extends runtime
  */
 export type UserCountOutputTypeCountAdmFormsUploadedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AdmFormWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAdvisoryModulesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdvisoryModuleWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAdvisoryModuleSubmissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdvisoryModuleSubmissionWhereInput
 }
 
 /**
@@ -10011,6 +10831,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   admModules?: boolean | Prisma.User$admModulesArgs<ExtArgs>
   admDevicesIssued?: boolean | Prisma.User$admDevicesIssuedArgs<ExtArgs>
   admFormsUploaded?: boolean | Prisma.User$admFormsUploadedArgs<ExtArgs>
+  advisoryModules?: boolean | Prisma.User$advisoryModulesArgs<ExtArgs>
+  advisoryModuleSubmissions?: boolean | Prisma.User$advisoryModuleSubmissionsArgs<ExtArgs>
   sf10Records?: boolean | Prisma.User$sf10RecordsArgs<ExtArgs>
   sf10Validated?: boolean | Prisma.User$sf10ValidatedArgs<ExtArgs>
   sf10Versions?: boolean | Prisma.User$sf10VersionsArgs<ExtArgs>
@@ -10096,6 +10918,8 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   admModules?: boolean | Prisma.User$admModulesArgs<ExtArgs>
   admDevicesIssued?: boolean | Prisma.User$admDevicesIssuedArgs<ExtArgs>
   admFormsUploaded?: boolean | Prisma.User$admFormsUploadedArgs<ExtArgs>
+  advisoryModules?: boolean | Prisma.User$advisoryModulesArgs<ExtArgs>
+  advisoryModuleSubmissions?: boolean | Prisma.User$advisoryModuleSubmissionsArgs<ExtArgs>
   sf10Records?: boolean | Prisma.User$sf10RecordsArgs<ExtArgs>
   sf10Validated?: boolean | Prisma.User$sf10ValidatedArgs<ExtArgs>
   sf10Versions?: boolean | Prisma.User$sf10VersionsArgs<ExtArgs>
@@ -10142,6 +10966,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     admModules: Prisma.$AdmModulePayload<ExtArgs>[]
     admDevicesIssued: Prisma.$AdmDevicePayload<ExtArgs>[]
     admFormsUploaded: Prisma.$AdmFormPayload<ExtArgs>[]
+    advisoryModules: Prisma.$AdvisoryModulePayload<ExtArgs>[]
+    advisoryModuleSubmissions: Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>[]
     sf10Records: Prisma.$Sf10RecordPayload<ExtArgs>[]
     sf10Validated: Prisma.$Sf10RecordPayload<ExtArgs>[]
     sf10Versions: Prisma.$Sf10RecordVersionPayload<ExtArgs>[]
@@ -10587,6 +11413,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   admModules<T extends Prisma.User$admModulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$admModulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdmModulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   admDevicesIssued<T extends Prisma.User$admDevicesIssuedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$admDevicesIssuedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdmDevicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   admFormsUploaded<T extends Prisma.User$admFormsUploadedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$admFormsUploadedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdmFormPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  advisoryModules<T extends Prisma.User$advisoryModulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$advisoryModulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdvisoryModulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  advisoryModuleSubmissions<T extends Prisma.User$advisoryModuleSubmissionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$advisoryModuleSubmissionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sf10Records<T extends Prisma.User$sf10RecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sf10RecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$Sf10RecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sf10Validated<T extends Prisma.User$sf10ValidatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sf10ValidatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$Sf10RecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sf10Versions<T extends Prisma.User$sf10VersionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sf10VersionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$Sf10RecordVersionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -11500,6 +12328,54 @@ export type User$admFormsUploadedArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.AdmFormScalarFieldEnum | Prisma.AdmFormScalarFieldEnum[]
+}
+
+/**
+ * User.advisoryModules
+ */
+export type User$advisoryModulesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdvisoryModule
+   */
+  select?: Prisma.AdvisoryModuleSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdvisoryModule
+   */
+  omit?: Prisma.AdvisoryModuleOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdvisoryModuleInclude<ExtArgs> | null
+  where?: Prisma.AdvisoryModuleWhereInput
+  orderBy?: Prisma.AdvisoryModuleOrderByWithRelationInput | Prisma.AdvisoryModuleOrderByWithRelationInput[]
+  cursor?: Prisma.AdvisoryModuleWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdvisoryModuleScalarFieldEnum | Prisma.AdvisoryModuleScalarFieldEnum[]
+}
+
+/**
+ * User.advisoryModuleSubmissions
+ */
+export type User$advisoryModuleSubmissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdvisoryModuleSubmission
+   */
+  select?: Prisma.AdvisoryModuleSubmissionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdvisoryModuleSubmission
+   */
+  omit?: Prisma.AdvisoryModuleSubmissionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdvisoryModuleSubmissionInclude<ExtArgs> | null
+  where?: Prisma.AdvisoryModuleSubmissionWhereInput
+  orderBy?: Prisma.AdvisoryModuleSubmissionOrderByWithRelationInput | Prisma.AdvisoryModuleSubmissionOrderByWithRelationInput[]
+  cursor?: Prisma.AdvisoryModuleSubmissionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdvisoryModuleSubmissionScalarFieldEnum | Prisma.AdvisoryModuleSubmissionScalarFieldEnum[]
 }
 
 /**

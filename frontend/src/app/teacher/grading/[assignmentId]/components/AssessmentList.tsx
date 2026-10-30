@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { Badge } from "@/components/ui/badge";
 import { ClipboardList, FileText, Loader2, PenLine, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
-import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import { Pill } from "@/components/ui/pill";
 import { format } from "date-fns";
 import { COMPONENT_LABELS, COMPONENT_NAMES } from "@/services/teacher/grading.compute";
 import { useDeleteAssessmentSave } from "./delete-assessment-save-context";
@@ -108,9 +108,11 @@ export function AssessmentList({ students, components, query, onSelect, onDelete
     <>
     <div className="min-w-0 flex-1" aria-label="Select assessment">
       {total === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">
-          No assessments match &quot;{query.trim()}&quot;.
-        </p>
+        <div className="mx-auto mt-2 w-full max-w-md">
+          <InsightCallout className="text-center">
+            No assessments match &quot;{query.trim()}&quot;.
+          </InsightCallout>
+        </div>
       ) : null}
       <div className="mt-2 min-w-0">
       <div className="flex flex-col gap-4">
@@ -125,9 +127,6 @@ export function AssessmentList({ students, components, query, onSelect, onDelete
             <div className="flex items-center gap-2 px-1 pb-1.5">
               <span className={`h-2 w-2 shrink-0 rounded-full ${DOT[g.type]}`} aria-hidden />
               <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{COMPONENT_NAMES[g.type]}</h2>
-              <Badge variant="secondary" className="ml-auto">
-                {g.assessments.length}
-              </Badge>
             </div>
             <ul className={`${styles.row} flex min-w-0 flex-row gap-2 overflow-x-auto pb-2`}>
               {g.assessments.map((a, cardIdx) => {
@@ -161,10 +160,10 @@ export function AssessmentList({ students, components, query, onSelect, onDelete
                       }}
                       description={
                         <span className="flex flex-wrap items-center gap-1">
-                          <AmberRectPill>Added {a.createdAt}</AmberRectPill>
-                          <AmberRectPill>
+                          <Pill tone="amber" label="Date added">Added {a.createdAt}</Pill>
+                          <Pill tone="amber" label="Encoding progress">
                             {scored}/{students.length} scored
-                          </AmberRectPill>
+                          </Pill>
                         </span>
                       }
                       footer={

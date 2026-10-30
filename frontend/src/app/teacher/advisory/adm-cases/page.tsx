@@ -4,16 +4,13 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FolderOpen } from "lucide-react";
-import { AdmCaseTrackDialog } from "./components/AdmCaseTrackDialog";
 import { AdmCasesTable } from "./components/AdmCasesTable";
 import { AdmEmptyKanban } from "./components/AdmEmptyKanban";
 import { fetchMyAdmCases } from "@/services/teacher/admCases.service";
-import type {
-  AdmCase,
-  MyAdmCasesPage,
-} from "@/services/teacher/admCases.types";
+import type { MyAdmCasesPage } from "@/services/teacher/admCases.types";
 import { useTerm } from "@/lib/term/TermContext";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { toSlug } from "@/lib/slug";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import refStyles from "../referrals/components/referrals.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
@@ -29,7 +26,6 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   const page = pager.page;
   const setPage = pager.setPage;
   const [takeover, setTakeover] = useState(false);
-  const [detailCase, setDetailCase] = useState<AdmCase | null>(null);
   // Filter text mirrors the referrals page: typed instantly, synced to ?q
   // (debounced) so refresh/back-forward keep the filter and page resets.
   const [queryInput, setQueryInput] = useState(pager.search);
@@ -143,14 +139,12 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
                   isFetching: casesQuery.isFetching,
                   refetch: () => void casesQuery.refetch(),
                 }}
-                onDetails={(c) => setDetailCase(c)}
+                onDetails={(c) =>
+                  router.push(`/teacher/advisory/adm-cases/${toSlug(c.studentName)}`)
+                }
                 onReferAdm={handleReferAdm}
                 currentPage={safePage}
                 onPageChange={(p) => goToPage(p)}
-              />
-              <AdmCaseTrackDialog
-                caseData={detailCase}
-                onClose={() => setDetailCase(null)}
               />
             </div>
           )}

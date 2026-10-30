@@ -23,6 +23,16 @@
   width: 1.25rem;
   height: 1.25rem;
 }
+
+/* Desk-accent empty state — amber chip instead of the quiet grey one. */
+.emptyIconAmber {
+  background-color: color-mix(in srgb, #f59e0b 16%, transparent);
+  color: #b45309;
+}
+
+:global(.dark) .emptyIconAmber {
+  color: #f59e0b;
+}
 .emptyTitle {
   margin: 0;
   font-size: 0.9375rem;

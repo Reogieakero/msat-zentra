@@ -4,42 +4,43 @@ import * as React from "react";
 import {
   Check,
   Copy,
-  GraduationCap,
   Inbox,
   Loader2,
-  Lock,
   Plus,
   RefreshCw,
+  Share2,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import type { GradeLevel, Section } from "@/services/principal/assign.types";
-import { DropdownSelect } from "./DropdownSelect";
-import { STATUS_META } from "./status-dots";
 import styles from "./sections-kanban.module.css";
 
 export const GRADES: GradeLevel[] = [7, 8, 9, 10, 11, 12];
-
-const AWAITING_COLOR = "#d97706";
 
 /** Card action buttons are a uniform 24px tall (h-6) with 11px labels. */
 const CARD_BTN = "h-6 px-2 text-[11px]";
 const CARD_ICON_BTN = "size-6";
 
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  const first = parts[0]?.[0] ?? "?";
-  const second = parts.length > 1 ? (parts[1]?.[0] ?? "") : (parts[0]?.[1] ?? "");
-  return `${first}${second}`.toUpperCase();
+const CLAIMED_AT_FORMAT = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+function formatClaimedAt(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : CLAIMED_AT_FORMAT.format(date);
 }
 
 interface SectionsKanbanProps {
   sections: Section[];
   grade: GradeLevel | null;
   onGradeChange: (grade: GradeLevel | null) => void;
-  schoolYearName: string;
   pendingIds: ReadonlySet<string>;
   /** Any board-wide mutation in flight — disables every card action. */
   busy: boolean;
@@ -56,7 +57,6 @@ export function SectionsKanban({
   sections,
   grade,
   onGradeChange,
-  schoolYearName,
   pendingIds,
   busy,
   copiedCode,
@@ -67,258 +67,274 @@ export function SectionsKanban({
   onDelete,
   onCreate,
 }: SectionsKanbanProps) {
-  const byGrade = React.useMemo(() => {
-    const map = new Map<GradeLevel, Section[]>();
-    for (const g of GRADES) map.set(g, []);
-    for (const section of sections) {
-      const lane = map.get(section.gradeLevel);
-      if (lane) lane.push(section);
-      else map.set(section.gradeLevel, [section]);
-    }
-    for (const lane of map.values()) lane.sort((a, b) => a.name.localeCompare(b.name));
-    return map;
-  }, [sections]);
-
-  const assignedCount = React.useMemo(
-    () => sections.filter((s) => s.adviserId || s.adviserName).length,
-    [sections],
-  );
-
-  const lanes = grade == null ? GRADES : [grade];
+  // Flat, grade-sorted grid — no per-grade parent boards, no vertical lanes.
+  const visibleSections = React.useMemo(() => {
+    const rows = grade == null ? sections : sections.filter((s) => s.gradeLevel === grade);
+    return [...rows].sort((a, b) => {
+      if (a.gradeLevel !== b.gradeLevel) return a.gradeLevel - b.gradeLevel;
+      return a.name.localeCompare(b.name);
+    });
+  }, [sections, grade]);
 
   return (
-    <div className={styles.board}>
-      <KanbanBoard
-        title="Section advisers"
-        icon={
-          <span className="text-primary" aria-hidden>
-            <Users size={14} />
-          </span>
-        }
-        count={sections.length}
-        description={`School-wide (Grades 7–12) · ${schoolYearName || "active school year"} — ${assignedCount} of ${sections.length} sections with an adviser.`}
-        ariaLabel="Section advisers board"
-        actions={
-          <div className="flex shrink-0 items-center gap-1.5">
-            <DropdownSelect
-              ariaLabel="Filter by grade level"
-              value={grade != null ? String(grade) : "all"}
-              onValueChange={(v) => onGradeChange(v === "all" ? null : (Number(v) as GradeLevel))}
-              options={[
-                { value: "all", label: "All grades" },
-                ...GRADES.map((g) => ({ value: String(g), label: `Grade ${g}` })),
-              ]}
-              placeholder="All grades"
-            />
-            <Button size="xs" onClick={onCreate} disabled={busy}>
-              <Plus size={13} aria-hidden />
-              Assign Advisory
-            </Button>
+    <section className={styles.board} aria-label="Section advisers">
+      <header className={styles.toolbar}>
+        <div className={styles.toolbarText}>
+          <div className={styles.titleRow}>
+            <span className={styles.titleIcon} aria-hidden>
+              <Users size={15} />
+            </span>
+            <h2 className={styles.title}>Section advisers</h2>
+            <Pill tone="neutral" label="Sections">
+              {sections.length}
+            </Pill>
           </div>
-        }
-      >
-        <div className={styles.lanes}>
-          {lanes.map((g, laneIndex) => {
-            const rows = byGrade.get(g) ?? [];
+        </div>
+        <div className={styles.tabs} role="tablist" aria-label="Filter by grade level">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={grade == null}
+            className={styles.tab}
+            onClick={() => onGradeChange(null)}
+          >
+            <Pill tone={grade == null ? "blue" : "neutral"} className={styles.tabPill}>
+              All grades
+            </Pill>
+          </button>
+          {GRADES.map((g) => {
+            const active = grade === g;
             return (
-              <div
+              <button
                 key={g}
-                className={styles.lane}
-                style={{ animationDelay: `${Math.min(laneIndex, 6) * 40}ms` }}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={styles.tab}
+                onClick={() => onGradeChange(g)}
               >
-                <KanbanBoard
-                  title={`Grade ${g}`}
-                  icon={
-                    <span className="text-primary" aria-hidden>
-                      <GraduationCap size={14} />
-                    </span>
-                  }
-                  count={rows.length}
-                  ariaLabel={`Grade ${g} sections`}
-                  boardLabel={`Grade ${g} lane`}
-                  className="h-full bg-muted/60 dark:bg-muted/20"
-                >
-                  {rows.length === 0 ? (
-                    <KanbanBoardEmpty>
-                      <span className="flex flex-col items-center gap-1.5">
-                        <Inbox size={16} aria-hidden />
-                        No Grade {g} sections yet.
-                      </span>
-                    </KanbanBoardEmpty>
-                  ) : (
-                    <ul className={styles.laneBody} aria-label={`Grade ${g} sections`}>
-                      {rows.map((s) => {
-                        const pending = pendingIds.has(s.id);
-                        const claimed = !!s.adviserId;
-                        const awaitingClaim = !claimed && !!s.adviserName;
-                        const code = s.adviserCode ?? "";
-                        const rowBusy = pending || busy;
-
-                        // A section that already carries learners or records
-                        // cannot be changed, cleared, or deleted.
-                        const linkedStudents = s.studentCount ?? 0;
-                        const linkedRecords = s.recordCount ?? 0;
-                        const hasLinks = linkedStudents + linkedRecords > 0;
-                        const linkParts = [
-                          linkedStudents > 0
-                            ? `${linkedStudents} student${linkedStudents === 1 ? "" : "s"}`
-                            : null,
-                          linkedRecords > 0
-                            ? `${linkedRecords} record${linkedRecords === 1 ? "" : "s"}`
-                            : null,
-                        ].filter(Boolean);
-                        const linkSummary = linkParts.join(" · ");
-                        const lockedHint = `Has ${linkSummary} — clear them first`;
-
-                        return (
-                          <li key={s.id} className={styles.card} aria-busy={pending || undefined}>
-                            <div className={styles.cardTop}>
-                              <span className={styles.avatar} aria-hidden>
-                                {initialsOf(s.name)}
-                              </span>
-                              <div className={styles.cardId}>
-                                <span className={styles.sectionName} title={s.name}>
-                                  {s.name}
-                                </span>
-                                <span className={styles.teacher} title={s.adviserName || undefined}>
-                                  {pending ? (
-                                    <span className={styles.pendingWrap}>
-                                      <Loader2 className={styles.pendingSpin} aria-hidden />
-                                      {s.adviserName || "Assigning…"}
-                                    </span>
-                                  ) : s.adviserName ? (
-                                    s.adviserName
-                                  ) : (
-                                    <span className={styles.teacherNone}>No adviser</span>
-                                  )}
-                                </span>
-                              </div>
-                              {claimed ? (
-                                <span className={styles.claimMark}>
-                                  <span
-                                    className={styles.statusDot}
-                                    style={{ backgroundColor: STATUS_META.progress.color }}
-                                    aria-hidden
-                                  />
-                                  <span className={styles.claimLabel}>Claimed</span>
-                                </span>
-                              ) : awaitingClaim ? (
-                                <span className={styles.claimMark}>
-                                  <span
-                                    className={styles.statusDot}
-                                    style={{ backgroundColor: AWAITING_COLOR }}
-                                    aria-hidden
-                                  />
-                                  <span className={styles.claimLabel}>Awaiting</span>
-                                </span>
-                              ) : null}
-                            </div>
-
-                            {awaitingClaim && code ? (
-                              <>
-                                <div className={styles.codeRow}>
-                                  <code className={styles.code} title={code}>
-                                    {code}
-                                  </code>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-xs"
-                                    className={CARD_ICON_BTN}
-                                    aria-label={`Copy advisory code for ${s.name}`}
-                                    title="Copy advisory code"
-                                    disabled={rowBusy}
-                                    onClick={() => onCopyCode(code)}
-                                  >
-                                    {copiedCode === code ? (
-                                      <Check size={12} aria-hidden />
-                                    ) : (
-                                      <Copy size={12} aria-hidden />
-                                    )}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-xs"
-                                    className={CARD_ICON_BTN}
-                                    aria-label={`Regenerate advisory code for ${s.name}`}
-                                    title="Mint a replacement code — the old one stops working"
-                                    disabled={rowBusy}
-                                    onClick={() => onRegenerate(s.id)}
-                                  >
-                                    <RefreshCw size={12} aria-hidden />
-                                  </Button>
-                                </div>
-                                <span className={styles.codeHint}>
-                                  Share with {s.adviserName} so they can claim the seat.
-                                </span>
-                              </>
-                            ) : null}
-
-                            {hasLinks ? (
-                              <span className={styles.links}>
-                                <Lock size={10} aria-hidden />
-                                {linkSummary}
-                              </span>
-                            ) : null}
-
-                            <div className={styles.cardActions}>
-                              <Button
-                                size="xs"
-                                className={CARD_BTN}
-                                aria-label={`Assign adviser for ${s.name}`}
-                                title={
-                                  claimed
-                                    ? "Claimed by a teacher — locked"
-                                    : hasLinks && s.adviserName
-                                      ? lockedHint
-                                      : undefined
-                                }
-                                disabled={rowBusy || claimed || (hasLinks && !!s.adviserName)}
-                                onClick={() => onAssign(s)}
-                              >
-                                {s.adviserName ? "Change" : "Assign"}
-                              </Button>
-                              {awaitingClaim ? (
-                                <Button
-                                  variant="ghost"
-                                  size="xs"
-                                  className={CARD_BTN}
-                                  aria-label={`Clear adviser for ${s.name}`}
-                                  title={hasLinks ? lockedHint : "Clear the listed adviser and code"}
-                                  disabled={rowBusy || hasLinks}
-                                  onClick={() => onClear(s.id)}
-                                >
-                                  Clear
-                                </Button>
-                              ) : null}
-                              <Button
-                                variant="ghost"
-                                size="xs"
-                                className={`${CARD_BTN} ${styles.deleteButton}`}
-                                aria-label={`Delete ${s.name} section`}
-                                title={
-                                  claimed
-                                    ? "Claimed by a teacher — locked"
-                                    : hasLinks
-                                      ? lockedHint
-                                      : undefined
-                                }
-                                disabled={rowBusy || claimed || hasLinks}
-                                onClick={() => onDelete(s)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </KanbanBoard>
-              </div>
+                <Pill tone={active ? "blue" : "neutral"} className={styles.tabPill}>
+                  Grade {g}
+                </Pill>
+              </button>
             );
           })}
         </div>
-      </KanbanBoard>
-    </div>
+        <div className={styles.toolbarEnd}>
+          <Button size="xs" onClick={onCreate} disabled={busy}>
+            <Plus size={13} aria-hidden />
+            Assign Advisory
+          </Button>
+        </div>
+      </header>
+
+      {visibleSections.length === 0 ? (
+        <div className={styles.emptyCard}>
+          <Inbox size={18} aria-hidden />
+          <span>
+            {grade == null
+              ? "No sections yet for this school year."
+              : `No Grade ${grade} sections yet.`}
+          </span>
+        </div>
+      ) : (
+        <div className={styles.grid} aria-label="Sections" key={grade ?? "all"}>
+          {visibleSections.map((s, index) => {
+            const pending = pendingIds.has(s.id);
+            const claimed = !!s.adviserId;
+            const awaitingClaim = !claimed && !!s.adviserName;
+            const code = s.adviserCode ?? "";
+            const rowBusy = pending || busy;
+
+            // A section that already carries learners or records cannot be
+            // changed, cleared, or deleted. The counts stay backend-only.
+            const hasLinks = (s.studentCount ?? 0) + (s.recordCount ?? 0) > 0;
+            const lockedHint = "Has linked learners or records — clear them first";
+
+            const adviserLabel = claimed ? s.adviserName : awaitingClaim ? s.adviserName : "";
+            const claimedAtLabel = claimed ? formatClaimedAt(s.adviserClaimedAt) : null;
+
+            return (
+              <article
+                key={s.id}
+                className={styles.card}
+                aria-busy={pending || undefined}
+                aria-label={`${s.name} section adviser`}
+                style={{ animationDelay: `${Math.min(index, 11) * 40}ms` }}
+              >
+                <header className={styles.cardHead}>
+                  <StudentMascot
+                    name={adviserLabel || s.name}
+                    seed={s.adviserId || s.id}
+                    size={38}
+                  />
+                  <div className={styles.cardId}>
+                    <span className={styles.sectionName} title={s.name}>
+                      {s.name}
+                    </span>
+                    <span className={styles.teacher} title={s.adviserName || undefined}>
+                      {pending ? (
+                        <span className={styles.pendingWrap}>
+                          <Loader2 className={styles.pendingSpin} aria-hidden />
+                          {s.adviserName || "Assigning…"}
+                        </span>
+                      ) : s.adviserName ? (
+                        s.adviserName
+                      ) : (
+                        <span className={styles.teacherNone}>No adviser</span>
+                      )}
+                    </span>
+                  </div>
+                  <Pill tone="neutral" label="Grade level" className={styles.gradePill}>
+                    {`Grade ${s.gradeLevel}`}
+                  </Pill>
+                </header>
+
+                <div className={styles.metaRow}>
+                  {claimed ? (
+                    <>
+                      <Pill tone="green" label="Adviser status">
+                        <Check size={11} aria-hidden />
+                        Claimed
+                      </Pill>
+
+                      {/* The code stays visible for reference once claimed,
+                          with copy only — no change/regenerate action. */}
+                      {code ? (
+                        <div className={styles.codeRow}>
+                          <Pill tone="blue" label="Advisory code" className={styles.codePill}>
+                            {code}
+                          </Pill>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className={CARD_ICON_BTN}
+                            aria-label={`Copy advisory code for ${s.name}`}
+                            title="Copy advisory code"
+                            disabled={rowBusy}
+                            onClick={() => onCopyCode(code)}
+                          >
+                            {copiedCode === code ? (
+                              <Check size={12} aria-hidden />
+                            ) : (
+                              <Copy size={12} aria-hidden />
+                            )}
+                          </Button>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      {awaitingClaim ? (
+                        <Pill tone="amber" label="Adviser status">
+                          Awaiting claim
+                        </Pill>
+                      ) : (
+                        <Pill tone="neutral" label="Adviser status">
+                          Unassigned
+                        </Pill>
+                      )}
+
+                      {/* Code + actions ride the same row as the status pill. */}
+                      {awaitingClaim && code ? (
+                        <div className={styles.codeRow}>
+                          <Pill tone="blue" label="Advisory code" className={styles.codePill}>
+                            {code}
+                          </Pill>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className={CARD_ICON_BTN}
+                            aria-label={`Copy advisory code for ${s.name}`}
+                            title="Copy advisory code"
+                            disabled={rowBusy}
+                            onClick={() => onCopyCode(code)}
+                          >
+                            {copiedCode === code ? (
+                              <Check size={12} aria-hidden />
+                            ) : (
+                              <Copy size={12} aria-hidden />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className={CARD_ICON_BTN}
+                            aria-label={`Regenerate advisory code for ${s.name}`}
+                            title="Mint a replacement code — the old one stops working"
+                            disabled={rowBusy}
+                            onClick={() => onRegenerate(s.id)}
+                          >
+                            <RefreshCw size={12} aria-hidden />
+                          </Button>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+
+                {claimed ? (
+                  <p className={`${styles.notice} ${styles.claimedNotice}`}>
+                    <Check size={11} aria-hidden />
+                    <span>
+                      Claimed by <strong>{s.adviserName}</strong>
+                      {claimedAtLabel ? <> on {claimedAtLabel}</> : null}.
+                    </span>
+                  </p>
+                ) : awaitingClaim && code ? (
+                  <p className={`${styles.notice} ${styles.claimNotice}`}>
+                    <Share2 size={11} aria-hidden />
+                    <span>
+                      Share with <strong>{s.adviserName}</strong> so they can claim the seat.
+                    </span>
+                  </p>
+                ) : null}
+
+                {/* Claimed sections are locked — hide every action instead of
+                    rendering disabled buttons. */}
+                {!claimed ? (
+                  <div className={styles.cardActions}>
+                    <Button
+                      size="xs"
+                      className={CARD_BTN}
+                      aria-label={`Assign adviser for ${s.name}`}
+                      title={hasLinks && s.adviserName ? lockedHint : undefined}
+                      disabled={rowBusy || (hasLinks && !!s.adviserName)}
+                      onClick={() => onAssign(s)}
+                    >
+                      {s.adviserName ? "Change" : "Assign"}
+                    </Button>
+                    {awaitingClaim ? (
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className={CARD_BTN}
+                        aria-label={`Clear adviser for ${s.name}`}
+                        title={hasLinks ? lockedHint : "Clear the listed adviser and code"}
+                        disabled={rowBusy || hasLinks}
+                        onClick={() => onClear(s.id)}
+                      >
+                        Clear
+                      </Button>
+                    ) : null}
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className={`${CARD_BTN} ${styles.deleteButton}`}
+                      aria-label={`Delete ${s.name} section`}
+                      title={hasLinks ? lockedHint : undefined}
+                      disabled={rowBusy || hasLinks}
+                      onClick={() => onDelete(s)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }

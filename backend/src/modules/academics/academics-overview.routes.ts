@@ -31,7 +31,7 @@ router.get(
   "/honor-roll-live",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["academics", "principal"], ttl: 120 }),
+  cache({ tags: ["academics", "principal"], ttl: 15 }),
   async (req, res, next) => {
     try {
       const scope = req.termScope;

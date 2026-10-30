@@ -5,7 +5,8 @@ import { ClipboardList, FileText, Loader2, PenLine, SearchIcon } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
-import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
+import { formatSurnameFirst } from "@/lib/names";
 import { CardModal } from "@/components/ui/CardModal";
 import { COMPONENT_NAMES } from "@/services/teacher/grading.compute";
 import { useQueryClient } from "@tanstack/react-query";
@@ -124,7 +125,9 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
     const dockPills = [COMPONENT_NAMES[category], `Max ${effectiveMax}`, sectionName];
     const dockRows: ScoreSaveRow[] = dirty.map((j) => ({
       id: j.studentId,
-      name: students.find((s) => s.id === j.studentId)?.name ?? j.studentId,
+      name: formatSurnameFirst(
+        students.find((s) => s.id === j.studentId)?.name ?? j.studentId,
+      ),
       meta: `${j.raw} / ${effectiveMax}`,
       state: "saving" as const,
     }));
@@ -278,9 +281,9 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
         selected ? (
           <span className="flex items-center justify-between gap-2">
             <span className="flex flex-wrap items-center gap-1">
-              <AmberRectPill>{COMPONENT_NAMES[category]}</AmberRectPill>
-              <AmberRectPill>Max {selected.maxScore}</AmberRectPill>
-              <AmberRectPill>{sectionName}</AmberRectPill>
+              <Pill tone="amber" label="Assessment category">{COMPONENT_NAMES[category]}</Pill>
+              <Pill tone="amber" label="Maximum score">Max {selected.maxScore}</Pill>
+              <Pill tone="amber" label="Section">{sectionName}</Pill>
             </span>
             <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
               <InputGroupInput

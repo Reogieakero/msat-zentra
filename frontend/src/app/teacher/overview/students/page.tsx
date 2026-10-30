@@ -38,11 +38,7 @@ export default function TeacherStudentListPage() {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading student list">
         <div className={styles.mainCol}>
-          <div className={styles.heading} aria-hidden>
-            <Skeleton className="h-[1.625rem] w-36" />
-            <Skeleton className="mt-1 h-4 w-72" />
-          </div>
-          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-hidden>
+          <div className={styles.sectionCardGrid} aria-hidden>
             {[0, 1].map((i) => (
               <div
                 key={i}
@@ -82,10 +78,6 @@ export default function TeacherStudentListPage() {
   if (!roster.data) {
     return (
       <section className={styles.page}>
-        <div className={styles.heading}>
-          <h1>Student List</h1>
-          <p>Your handled subjects with their students, attendance, and grades.</p>
-        </div>
         <p role="alert" className={styles.empty}>
           Could not load your student list.
         </p>
@@ -145,15 +137,7 @@ export default function TeacherStudentListPage() {
   return (
     <section className={styles.page}>
       <div className={styles.mainCol}>
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className={styles.heading}>
-            <h1>Student List</h1>
-            <p>
-              {cardsVisible
-                ? "Select an advisory or subject card to see its students with attendance and grades."
-                : "Showing students for the selected card."}
-            </p>
-          </div>
+        <div className="flex min-w-0 items-start justify-end gap-3">
           <div className="flex shrink-0 justify-end pt-1">
             {!cardsVisible && activePick ? (
               <div
@@ -223,6 +207,7 @@ export default function TeacherStudentListPage() {
                 rosterPending={roster.isPending}
                 rosterError={roster.isError}
                 emptySectionName={emptyName}
+                showAnecdotal={roster.data?.anecdotalVisible ?? false}
               />
             </div>
           </div>

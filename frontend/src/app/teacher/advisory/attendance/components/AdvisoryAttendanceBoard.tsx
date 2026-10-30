@@ -1,6 +1,7 @@
 "use client";
 
 import { BookOpen, CalendarClock, KanbanSquare } from "lucide-react";
+import { Pill } from "@/components/ui/pill";
 import boardStyles from "../../list/components/advisory-insight-board.module.css";
 
 export interface AttendanceMatrixSubject {
@@ -50,13 +51,11 @@ function attendanceDot(rate: number): string {
   return "#ef4444";
 }
 
-function subjectPillClass(rate: number | null): string {
-  if (rate === null) return boardStyles.kPill;
-  if (rate >= 0.9) return `${boardStyles.kPill} ${boardStyles.kPillGreen}`;
-  if (rate < 0.75) return `${boardStyles.kPill} ${boardStyles.kPillRed}`;
-  return boardStyles.kPill;
-}
-
+/**
+ * Right-side attendance board. Same kanban look as the advisory list's
+ * Student insight board: amber header pills, a plain section with an
+ * uppercase lane head, and a 4-per-row card grid of subject lanes.
+ */
 export function AdvisoryAttendanceBoard({
   student,
   subjects,
@@ -105,21 +104,18 @@ export function AdvisoryAttendanceBoard({
         <div className="min-w-0 flex-1">
           <h2 className={boardStyles.boardTitle}>Student attendance</h2>
           <span className="mt-1 flex max-w-full flex-wrap items-center gap-1">
-            <span className={boardStyles.headPill}>
+            <Pill tone="amber" label="Overall present rate">
               {hasMarks ? `${overallPct}% overall` : "No marks yet"}
-            </span>
-            <span className={boardStyles.headPill}>
+            </Pill>
+            <Pill tone="amber" label="Subjects measured">
               {`${subjects.length} subject${subjects.length === 1 ? "" : "s"}`}
-            </span>
-            <span
-              className={
-                atRisk
-                  ? `${boardStyles.kPill} ${boardStyles.kPillRed}`
-                  : boardStyles.kPill
-              }
+            </Pill>
+            <Pill
+              tone={!hasMarks ? "neutral" : atRisk ? "red" : "green"}
+              label="Attendance status"
             >
               {!hasMarks ? "No data" : atRisk ? "At risk" : "On track"}
-            </span>
+            </Pill>
           </span>
         </div>
       </header>
@@ -132,7 +128,6 @@ export function AdvisoryAttendanceBoard({
             aria-hidden
           />
           <h3 className={boardStyles.laneTitle}>Present rate per subject</h3>
-          <span className={boardStyles.laneCount}>{subjects.length}</span>
         </header>
         {subjects.length === 0 ? (
           <p className={boardStyles.empty}>No subjects linked to this section yet.</p>
@@ -142,58 +137,76 @@ export function AdvisoryAttendanceBoard({
               const rate = student.rates[subject.id] ?? null;
               const pct = rate === null ? null : Math.round(rate * 100);
               return (
-                <li
-                  key={subject.id}
-                  className={boardStyles.kCard}
-                  aria-label={
-                    pct === null
-                      ? `${subject.name} has no attendance marks yet`
-                      : `${subject.name} present rate ${pct} percent`
-                  }
-                >
-                  <div className={boardStyles.kTop}>
-                    <span className={subjectPillClass(rate)} title={subject.name}>
-                      {subject.code}
-                    </span>
-                    <span className={boardStyles.kCircle} aria-hidden>
-                      <BookOpen size={14} />
-                    </span>
-                  </div>
-                  <p className={boardStyles.kLabel}>Present rate</p>
-                  <div className={boardStyles.kBottom}>
-                    <p className={boardStyles.kTitle} title={subject.name}>
-                      {subject.name}
-                    </p>
-                    <p
-                      className={`${boardStyles.kBig} ${attendanceRateClass(rate)}`}
-                    >
-                      {pct === null ? (
-                        "—"
-                      ) : (
-                        <>
-                          {pct}
-                          <span className={boardStyles.kUnit}>%</span>
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  {rate === null ? (
-                    <p className={boardStyles.cardMeta}>No marks yet</p>
-                  ) : (
-                    <div
-                      className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
-                      role="progressbar"
-                      aria-valuenow={pct ?? 0}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label={`${subject.name} present average`}
-                    >
-                      <div
-                        className={`h-full rounded-full ${attendanceBarClass(rate)}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  )}
+                <li key={subject.id} className="min-w-0">
+                  <section
+                    className={boardStyles.lane}
+                    aria-label={`${subject.name} attendance lane`}
+                  >
+                    <header className={boardStyles.colHead}>
+                      <span className={boardStyles.colIcon} aria-hidden>
+                        <BookOpen size={18} />
+                      </span>
+                      <h4 className={boardStyles.colTitle} title={subject.name}>
+                        {subject.name}
+                      </h4>
+                      <Pill
+                        tone={
+                          rate === null
+                            ? "neutral"
+                            : rate >= 0.9
+                              ? "green"
+                              : rate < 0.75
+                                ? "red"
+                                : "amber"
+                        }
+                        label="Subject code"
+                      >
+                        {subject.code}
+                      </Pill>
+                    </header>
+                    <ul className={boardStyles.laneBody}>
+                      <li
+                        className={boardStyles.kCard}
+                        aria-label={
+                          pct === null
+                            ? `${subject.name} has no attendance marks yet`
+                            : `${subject.name} present rate ${pct} percent`
+                        }
+                      >
+                        <p className={boardStyles.kLabel}>Present rate</p>
+                        <div className={boardStyles.kBottom}>
+                          <p className={boardStyles.kTitle}>
+                            {pct === null ? "No marks yet" : "Overall for this subject"}
+                          </p>
+                          <p className={`${boardStyles.kBig} ${attendanceRateClass(rate)}`}>
+                            {pct === null ? (
+                              "—"
+                            ) : (
+                              <>
+                                {pct}
+                                <span className={boardStyles.kUnit}>%</span>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                        {rate === null ? null : (
+                          <div
+                            className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                            role="progressbar"
+                            aria-valuenow={pct ?? 0}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`${subject.name} present average`}
+                          >
+                            <div
+                              className={`h-full rounded-full ${attendanceBarClass(rate)}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        )}
+                      </li>
+                    </ul>
+                  </section>
                 </li>
               );
             })}

@@ -20,6 +20,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
       advisorySections: [],
       class: null,
       advisorySection: null,
+      anecdotalVisible: false,
       students: [],
     };
   }
@@ -76,6 +77,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
       advisorySections: [],
       class: null,
       advisorySection: null,
+      anecdotalVisible: false,
       students: [],
     };
   }
@@ -188,6 +190,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
       advisorySections,
       class: null,
       advisorySection: null,
+      anecdotalVisible: false,
       students: [],
     };
   }
@@ -198,6 +201,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
       advisorySections,
       class: null,
       advisorySection: advisorySections.find((s) => s.id === advisoryId) ?? null,
+      anecdotalVisible: true,
       students: roster.students,
     };
   }
@@ -211,8 +215,11 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
   const rosterOnly = rosterEntries.filter((r) => !registeredLrns.has(r.lrn));
   const profileIds = profiles.map((p) => p.userId);
   const rosterIds = rosterOnly.map((r) => r.id);
+  // A subject teacher who is not this section's adviser only sees the data they
+  // own (their subject's grades + attendance). Anecdotal records are adviser-only.
+  const isAdviserOfSection = advisedIds.has(sectionId);
 
-  const [profileFinals, rosterFinals, attendance, entries, term] = await Promise.all([
+  const [profileFinals, rosterFinals, attendance, entries, term, anecdoteRows] = await Promise.all([
     profileIds.length > 0
       ? prisma.finalGrade.findMany({
           where: { subjectId, termId, studentId: { in: profileIds } },
@@ -251,7 +258,27 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
       where: { id: termId },
       select: { startDate: true, endDate: true },
     }),
+    isAdviserOfSection && (profileIds.length > 0 || rosterIds.length > 0)
+      ? prisma.anecdotalRecord.findMany({
+          where: {
+            termId,
+            sectionId,
+            OR: [
+              ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
+              ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
+            ],
+          },
+          select: { studentId: true, rosterId: true },
+        })
+      : Promise.resolve([] as { studentId: string | null; rosterId: string | null }[]),
   ]);
+
+  const anecdoteCountByKey = new Map<string, number>();
+  for (const a of anecdoteRows) {
+    const key = a.studentId ?? (a.rosterId ? `roster:${a.rosterId}` : null);
+    if (!key) continue;
+    anecdoteCountByKey.set(key, (anecdoteCountByKey.get(key) ?? 0) + 1);
+  }
 
   const finalByKey = new Map<
     string,
@@ -341,6 +368,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
           elapsed.size > 0 ? Math.round((present / elapsed.size) * 1000) / 10 : null,
         computedAverage: final?.computedAverage ?? null,
         academicGrade: final?.transmutedGrade ?? null,
+        anecdotalCount: anecdoteCountByKey.get(s.studentId) ?? 0,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -358,6 +386,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
       gradeLevel: GRADE_LABELS[section.gradeLevel] ?? section.gradeLevel,
     },
     advisorySection: null,
+    anecdotalVisible: isAdviserOfSection,
     students,
   };
 }

@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
 import { fetchOverview } from "@/services/principal/overview.service";
-import { OverviewAction } from "./components/OverviewAction";
 import { OverviewRisk } from "./components/OverviewRisk";
 import { OverviewPopulation } from "./components/OverviewPopulation";
 import { PrincipalOverviewStats } from "./components/PrincipalOverviewStats";
@@ -29,8 +28,6 @@ export default function PrincipalOverviewPage() {
           <OverviewRisk />
 
           <OverviewPopulation />
-
-          <OverviewAction />
         </div>
 
         <PrincipalOverviewRail />

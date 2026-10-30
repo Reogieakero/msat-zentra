@@ -9,9 +9,44 @@
   background-color: var(--background);
 }
 
+/* Ambient desk glow behind the boards — fades in once so the page reads as
+   switched on rather than painted. Pointer-events off, sits under the stack. */
+.page::before {
+  content: "";
+  position: absolute;
+  inset: -8% -4% auto;
+  height: 360px;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      58% 100% at 18% 0%,
+      color-mix(in oklch, #f59e0b 9%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      48% 100% at 88% 0%,
+      color-mix(in oklch, #f59e0b 5%, transparent),
+      transparent 72%
+    );
+  opacity: 0;
+  animation: page-bloom 1.6s ease-out forwards;
+}
+
+@keyframes page-bloom {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Kanban board layout — main stack plus the icon-only follow-up rail on the
    right, same interaction as the registry desk overviews. */
 .layout {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 2.75rem;
   gap: 1rem;
@@ -43,16 +78,16 @@
 @keyframes overview-in {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(18px) scale(0.996);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .stack > * {
-  animation: overview-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation: overview-in 0.95s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .stack > *:nth-child(2) {
@@ -68,12 +103,17 @@
 }
 
 .layout > aside {
-  animation: overview-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.48s backwards;
+  animation: overview-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.42s backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .stack > *,
   .layout > aside {
     animation: none;
+  }
+
+  .page::before {
+    animation: none;
+    opacity: 1;
   }
 }

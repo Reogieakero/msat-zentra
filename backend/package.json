@@ -26,6 +26,8 @@
     "prisma:schedule-scientists": "tsx prisma/seed-scientist-schedule.ts",
     "prisma:timetable-names": "tsx prisma/seed-scientist-timetable-names.ts",
     "prisma:seed:adm-coordinator": "tsx prisma/seed-adm-coordinator-data.ts",
+    "prisma:seed:reogie-adm": "tsx prisma/seed-reogie-adm-3.ts",
+    "prisma:seed:honor-roll-5": "tsx prisma/seed-honor-roll-5.ts",
     "prisma:seed:guidance-session-docs": "tsx prisma/seed-guidance-session-docs.ts",
     "prisma:seed:wipe": "tsx prisma/seed/wipe.ts",
     "test": "vitest run --testTimeout=15000",

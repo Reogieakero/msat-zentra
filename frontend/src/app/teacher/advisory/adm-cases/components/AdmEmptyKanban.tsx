@@ -231,10 +231,10 @@ export function AdmEmptyKanban({ onReferAdm }: { onReferAdm?: () => void }) {
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
         <div>
           <h2 id="adm-empty-board" className="m-0 text-[0.9375rem] font-bold tracking-[-0.01em] text-foreground">
-            No ADM cases yet
+            No students yet enrolled to the ADM cases
           </h2>
           <p className="m-0 text-[0.8125rem] leading-[1.45] text-muted-foreground">
-            Cases you refer through the ADM track will appear here once endorsed. Pick a starting point below.
+            Once guidance opens an ADM case for a learner, they will appear here for module tracking. Pick a starting point below.
           </p>
         </div>
         <AdmStarterKanban onReferAdm={onReferAdm} />

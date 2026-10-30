@@ -2,6 +2,7 @@
 import * as React from "react";
 import { RowList, type RowListItem } from "@/components/ui/row-list";
 import { KanbanBoardEmpty } from "@/components/ui/kanban-board";
+import { formatSurnameFirst } from "@/lib/names";
 import type { ClassAssessment, ClassStudent } from "@/services/teacher/grading.types";
 import { scoreOf } from "./score-input";
 import { assignUniqueMascots } from "./mascot-assignment";
@@ -29,7 +30,7 @@ export function ScoreDataTable({ assessment, students, drafts, nameFilter }: { a
         num !== null
           ? { label: "Scored", tone: "green" as const }
           : { label: "Missing", tone: "muted" as const },
-      title: s.name,
+      title: formatSurnameFirst(s.name),
       idLabel: s.lrn,
       avatarMascot: {
         name: s.name,

@@ -3,6 +3,7 @@ import { sectionHeadcounts } from "../enrollment.js";
 import {
   computeRiskFactors,
   levelFromFlags,
+  sectionAttendanceTotals,
 } from "../risk.js";
 import {
   ADM_LABEL,
@@ -260,7 +261,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
           ...(userIds.length ? [{ studentId: { in: userIds } }] : []),
           ...(rosterIds.length ? [{ rosterId: { in: rosterIds } }] : []),
         ];
-        const [grades, attendance, anecdStudents, anecdRosters, headcounts] =
+        const [grades, attendance, anecdStudents, anecdRosters, headcounts, sectionTotals] =
           await Promise.all([
             idOr.length
               ? prisma.finalGrade.findMany({
@@ -303,6 +304,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
                 })
               : [],
             sectionHeadcounts(sectionIds),
+            sectionAttendanceTotals(sectionIds, termId),
           ]);
         const gradesByKey = new Map<string, { computedAverage: number | null; transmutedGrade: number | null }[]>();
         // Sharing filter: guidance respects Connect/Sync OFF. Resolve owners
@@ -371,6 +373,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
           const flags = computeRiskFactors({
             finalGrades: gradesByKey.get(key) ?? [],
             attendance: attendanceByKey.get(key) ?? [],
+            attendanceTotal: sectionTotals.get(sectionId),
             anecdotalCount: anecdByKey.get(key) ?? 0,
             enrolled: headcounts.get(sectionId) ?? 0,
           });

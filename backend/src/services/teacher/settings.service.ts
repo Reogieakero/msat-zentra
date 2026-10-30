@@ -2,6 +2,8 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
+import { invalidateTags } from "../../lib/cache.js";
+import { CACHE_TAGS } from "../../lib/cacheTags.js";
 import { gradeToNumber } from "../../modules/teacher/teacher.repository.js";
 import { isMascotCharacter } from "../mascot.js";
 import type { TeacherContext } from "./teacher.types.js";
@@ -348,6 +350,10 @@ export async function setDataSharing(ctx: TeacherContext, share: boolean) {
     // advisees can be auto-detected without waiting for the hourly sweep.
     if (ctx.termId) void recomputeAdvisedRisk(teacherId, ctx.termId);
   }
+  // The principal's overview/risk boards are adviser-share gated — drop the
+  // cached overview so the toggle is reflected on the next load. The academics
+  // summary (section cards + roster) is gated the same way.
+  await invalidateTags([CACHE_TAGS.overview, CACHE_TAGS.academics]);
   return readDataSharing(teacherId, ctx.termId);
 }
 

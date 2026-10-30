@@ -399,13 +399,6 @@ export function ReferForm({
       {!referablesQuery.isPending && !referablesQuery.isError && students.length > 0 ? (
         <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
           <Button
-            onClick={onDone}
-            disabled={pending}
-            className="h-6 px-2.5 text-xs bg-red-600 text-white hover:bg-red-700 dark:hover:bg-red-500"
-          >
-            Cancel
-          </Button>
-          <Button
             onClick={handleSubmit}
             disabled={!canSubmit}
             aria-busy={pending || undefined}

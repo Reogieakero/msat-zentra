@@ -10,6 +10,11 @@ export interface AdmStageCount {
   count: number;
 }
 
+export interface AdmSectionCount {
+  section: string;
+  count: number;
+}
+
 export interface AdmFormRef {
   id: string;
   formType: string;
@@ -26,14 +31,26 @@ export interface AdmLatestReferred {
   stage: "consultation" | "meeting_parents" | "home_visitation" | "certification" | "principal_approval";
   eligibilityStatus: string;
   preparedBy: string;
+  datePrepared: string | null;
   approvedBy: string | null;
   forms: AdmFormRef[];
+}
+
+export interface AdmDashboardTrendWeek {
+  week: string;
+  label: string;
+  count: number;
 }
 
 export interface AdmDashboard {
   kpis: AdmDashboardKpis;
   stageBreakdown: AdmStageCount[];
+  sectionBreakdown: AdmSectionCount[];
   latestReferred: AdmLatestReferred[];
+  trend: AdmDashboardTrendWeek[];
+  totalReferred: number;
+  needsRevision: number;
+  deviceSummary: { issued: number; returned: number };
 }
 
 export interface AdmReferralForm {
@@ -53,12 +70,17 @@ export interface AdmReferralRow {
   grade: string;
   section: string;
   anecdotalRecordId: string | null;
+  /** Anecdotal record category — colours the anecdotal folder in the forms overlay. */
+  anecdotalCategory: string | null;
   stage: "consultation" | "meeting_parents" | "home_visitation" | "certification" | "principal_approval";
   eligibilityStatus: "pending" | "eligible" | "ineligible";
   preparedBy: string;
   datePrepared: string;
   approvedBy: string | null;
   approvalDate: string | null;
+  /** Set when the Principal returned the case; cleared once re-certified. */
+  returnedAt: string | null;
+  returnReason: string | null;
   forms: AdmReferralForm[];
 }
 

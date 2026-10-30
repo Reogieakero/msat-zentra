@@ -16,12 +16,16 @@ export function AdmTrackingTimeline({
   input,
   reader = "teacher",
   variant = "timeline",
+  showDescription = true,
 }: {
   input: TrackerCaseInput;
   reader?: "teacher" | "coordinator";
   /** "cards" renders one compact kanban card per step (label + owner
       pill + state pill) instead of the rail timeline. */
   variant?: "timeline" | "cards";
+  /** The rail timeline can drop the per-step explainer sentence when the
+      card is already narrow. */
+  showDescription?: boolean;
 }) {
   const steps = buildAdmTrackSteps({
     stage: input.stage ?? null,
@@ -169,7 +173,7 @@ export function AdmTrackingTimeline({
               </div>
               <p className={styles.detail}>{step.detail}</p>
               <p className={styles.owner}>Owner: {step.owner}</p>
-              <p className={styles.desc}>{step.description}</p>
+              {showDescription ? <p className={styles.desc}>{step.description}</p> : null}
               {latest ? (
                 <p className={styles.latestAction}>
                   <span className={styles.latestLabel}>Latest action</span>

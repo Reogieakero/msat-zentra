@@ -30,7 +30,6 @@ export function SectionCard({
           <GraduationCap size={14} />
         </span>
       }
-      count={submission.timetableEntries.length}
       ariaLabel={`${submission.name} section`}
       actions={<Pill tone={scheduleTone(statusTitle.toLowerCase())}>{statusTitle}</Pill>}
     >
@@ -41,24 +40,31 @@ export function SectionCard({
         <div className={styles.body}>
           <p className={styles.section}>
             <span className={styles.label}>Section</span>
-            <span className={styles.value} title={submission.name}>
+            <Pill tone="blue" label="Section" className={styles.sectionPill} title={submission.name}>
               {submission.name}
-            </span>
+            </Pill>
           </p>
           <p className={styles.line}>
             <span className={styles.label}>Grade level</span>
-            <Pill tone="neutral">Grade {submission.gradeLevel.replace("G", "")}</Pill>
+            <Pill tone="neutral" label="Grade level">
+              Grade {submission.gradeLevel.replace("G", "")}
+            </Pill>
           </p>
           <p className={styles.line}>
             <span className={styles.label}>Teacher</span>
             {teacher ? (
-              <Pill tone="amber" className="max-w-[18rem] overflow-hidden" title={teacher}>
+              <Pill
+                tone="amber"
+                label="Teacher"
+                className="max-w-[18rem] overflow-hidden"
+                title={teacher}
+              >
                 {teacher}
               </Pill>
             ) : (
-              <span className={styles.value}>
+              <Pill tone="neutral" label="Teacher">
                 <span className={styles.none}>No adviser assigned</span>
-              </span>
+              </Pill>
             )}
           </p>
         </div>

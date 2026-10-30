@@ -18,6 +18,7 @@ import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
   Select,
@@ -37,6 +38,7 @@ import {
 import { Pagination } from "@/components/shared/pagination";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useAdvisoryRoster } from "@/services/teacher/advisory.service";
+import { compareSurnameFirst, formatSurnameFirst } from "@/lib/names";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import listStyles from "../list/components/advisory-list.module.css";
 import {
@@ -99,7 +101,7 @@ export default function AdvisoryAttendancePage() {
     [matrixQuery.data, sections],
   );
 
-  // Lowest present rate first so at-risk students surface at the top.
+  // Alphabetical by surname so the roster reads like the class record.
   const rows = React.useMemo<AttendanceRow[]>(
     () =>
       students
@@ -107,7 +109,7 @@ export default function AdvisoryAttendancePage() {
           student,
           avg: attendanceOverall(student.rates, subjects.length),
         }))
-        .sort((a, b) => a.avg - b.avg),
+        .sort((a, b) => compareSurnameFirst(a.student.name, b.student.name)),
     [students, subjects.length],
   );
 
@@ -137,7 +139,7 @@ export default function AdvisoryAttendancePage() {
     () => [
       {
         id: "name",
-        accessorFn: (row) => `${row.student.name} ${row.student.lrn}`,
+        accessorFn: (row) => `${formatSurnameFirst(row.student.name)} ${row.student.lrn}`,
         header: "Student",
         size: 170,
         minSize: 150,
@@ -151,8 +153,11 @@ export default function AdvisoryAttendancePage() {
               size={32}
             />
             <div className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-semibold text-primary">
-                {row.original.student.name}
+              <span
+                className="block truncate text-[13px] font-semibold text-primary"
+                title={row.original.student.name}
+              >
+                {formatSurnameFirst(row.original.student.name)}
               </span>
               <span
                 className="mt-1 inline-flex max-w-full shrink-0 items-center truncate rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground"
@@ -337,9 +342,6 @@ export default function AdvisoryAttendancePage() {
                 <header className={listStyles.laneHead}>
                   <span className={listStyles.laneDot} style={{ background: "#f59e0b" }} aria-hidden />
                   <h3 className={listStyles.laneTitle}>Advisory list</h3>
-                  <span className={listStyles.laneCount}>
-                    {table.getFilteredRowModel().rows.length}
-                  </span>
                 </header>
                 <div className={listStyles.toolbar}>
                   <InputGroup className="w-32 min-w-0 flex-1 rounded-[16px]">
@@ -431,9 +433,14 @@ export default function AdvisoryAttendancePage() {
                           );
                         })
                       ) : (
-                        <TableRow>
-                          <TableCell colSpan={columns.length} className="h-24 text-center">
-                            No students match your search.
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={columns.length} className="h-40 whitespace-normal">
+                            <div className="flex w-full justify-center">
+                              <InsightCallout role="status" className="w-full max-w-xl text-left">
+                                <strong>No students match your search.</strong> Try a different
+                                name or LRN — or clear the filter to see every advisee.
+                              </InsightCallout>
+                            </div>
                           </TableCell>
                         </TableRow>
                       )}

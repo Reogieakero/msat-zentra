@@ -14,7 +14,8 @@ import styles from "./WeightsDialog.module.css";
 
 type Props = {
   detail: ClassDetail;
-  onCancel: () => void;
+  /** Called as soon as the user confirms — closes the flyout immediately. */
+  onConfirm?: () => void;
   onSaved: () => void;
 };
 
@@ -24,7 +25,7 @@ type Props = {
  * add-assessment form. Editing happens directly in the cards, same as the
  * first-time weights setup.
  */
-export function WeightsEditor({ detail, onCancel, onSaved }: Props) {
+export function WeightsEditor({ detail, onConfirm, onSaved }: Props) {
   const { assignment } = detail;
   const { saveWeights } = useWeightsSave();
   const [editing, setEditing] = React.useState(false);
@@ -58,6 +59,9 @@ export function WeightsEditor({ detail, onCancel, onSaved }: Props) {
     }
     setError(null);
     setSaving(true);
+    // The weights are patched optimistically, so the flyout can close on
+    // confirm; the shared dock reports the outcome and the save keeps running.
+    onConfirm?.();
     const result = await saveWeights(assignment.id, { weights: parsed });
     setSaving(false);
     if (!result.ok) {
@@ -67,7 +71,6 @@ export function WeightsEditor({ detail, onCancel, onSaved }: Props) {
     onSaved();
   };
 
-  const busy = saving;
   return (
     <>
       <div className={`${styles.form} px-1`}>
@@ -90,14 +93,6 @@ export function WeightsEditor({ detail, onCancel, onSaved }: Props) {
       {error ? <p className={`${styles.errorText} px-1`}>{error}</p> : null}
 
       <div className="flex justify-end gap-2 px-1 pb-1">
-        <Button
-          size="sm"
-          className="h-6 bg-red-500 px-3 text-xs text-white hover:bg-red-600"
-          onClick={onCancel}
-          disabled={busy}
-        >
-          Cancel
-        </Button>
         {editing ? (
           <Button
             size="sm"

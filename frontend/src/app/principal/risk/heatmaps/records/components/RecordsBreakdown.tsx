@@ -6,8 +6,6 @@ import { Pie, PieChart, Cell, Tooltip } from "recharts";
 import { FileText, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
-import { usePrincipalProfileSettings } from "@/services/settings/profile-settings";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import {
   CATEGORY_KEYS,
@@ -19,6 +17,10 @@ import styles from "./RecordsOverview.module.css";
 const chartConfig = {
   value: { label: "Records", color: "var(--chart-1)" },
 } satisfies ChartConfig;
+
+/* Amber ramp — the records desk accent, darkest last so the biggest slice
+   (sorted first) reads brightest. */
+const AMBER_SLICES = ["#fbbf24", "#f59e0b", "#d97706", "#b45309", "#92400e"];
 
 interface Kpi {
   icon: React.ComponentType<{ className?: string; size?: number }>;
@@ -114,12 +116,8 @@ export function RecordsBreakdownContent() {
 
   const categoryTotal = categoryRows.reduce((s, r) => s + r.value, 0);
 
-  const profile = usePrincipalProfileSettings();
-  const scale = usePrimaryScale(
-    Math.max(categoryRows.length, 1),
-    profile.data?.primaryColor
-  );
-  const sliceColor = (i: number) => scale[i % scale.length] ?? "#888888";
+  const sliceColor = (i: number) =>
+    AMBER_SLICES[i % AMBER_SLICES.length] ?? AMBER_SLICES[0];
 
   const kpis: Kpi[] = [
     {
@@ -177,6 +175,7 @@ export function RecordsBreakdownContent() {
         <ChartContainer config={chartConfig} className={styles.donut}>
           <PieChart>
             <Tooltip
+              wrapperStyle={{ zIndex: 90 }}
               content={
                 <DonutTooltip
                   total={categoryTotal}

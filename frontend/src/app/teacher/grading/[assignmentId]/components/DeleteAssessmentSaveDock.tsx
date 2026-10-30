@@ -2,7 +2,7 @@
 
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { ProgressDock } from "@/components/ui/progress-dock";
-import { AmberRectPill } from "../../../classes/components/UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
 
 export type DeleteAssessmentSavePhase = "deleting" | "deleted" | "error";
 
@@ -69,7 +69,9 @@ export function DeleteAssessmentSaveDock({
                   aria-label={assessmentPills.join(", ")}
                 >
                   {assessmentPills.map((pill) => (
-                    <AmberRectPill key={pill}>{pill}</AmberRectPill>
+                    <Pill key={pill} tone="amber" label="Assessment">
+                      {pill}
+                    </Pill>
                   ))}
                 </span>
               ) : null}

@@ -230,6 +230,71 @@ export async function upsertComponent(
   };
 }
 
+export interface UpsertComponentsInput {
+  weights: UpsertComponentInput[];
+}
+
+/**
+ * Batch variant of `upsertComponent`: one transaction, one audit row, one
+ * finals/risk refresh and one cache invalidation for all category weights.
+ */
+export async function upsertComponents(
+  ctx: GradingContext,
+  assignmentId: string,
+  input: UpsertComponentsInput,
+) {
+  const teacherId = ctx.userId;
+  const termId = ctx.resolvedTermId;
+  if (!termId) {
+    throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
+  }
+  const a = await assertAssignment(teacherId, assignmentId, termId);
+
+  const saved = await prisma.$transaction(
+    input.weights.map(({ componentType, weightPercentage }) =>
+      prisma.gradeComponent.upsert({
+        where: {
+          subjectId_termId_componentType: {
+            subjectId: a.subjectId,
+            termId: a.termId,
+            componentType,
+          },
+        },
+        create: {
+          subjectId: a.subjectId,
+          termId: a.termId,
+          componentType,
+          weightPercentage,
+        },
+        update: { weightPercentage },
+      }),
+    ),
+  );
+
+  const summary = saved
+    .map((c) => `${COMPONENT_LABELS[c.componentType] ?? c.componentType} ${c.weightPercentage}`)
+    .join(" · ");
+
+  await writeAudit({
+    userId: teacherId,
+    actionType: "update",
+    sourceTable: "grade_components",
+    sourceId: a.subjectId,
+    reason: `Set category weights ${summary} for ${a.subject.name}`,
+  });
+
+  await refreshFinals(a.subjectId, a.termId);
+
+  return {
+    components: saved.map((c) => ({
+      id: c.id,
+      type: c.componentType,
+      label: COMPONENT_LABELS[c.componentType] ?? c.componentType,
+      weight: c.weightPercentage,
+    })),
+  };
+}
+
 export async function applyPreset(
   ctx: GradingContext,
   assignmentId: string,

@@ -11,7 +11,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { riskDotColor } from "@/lib/risk/status";
 import type {
@@ -136,9 +136,6 @@ export function AdvisoryInsightBoard({
     () => anecdotalQuery.data?.records ?? [],
     [anecdotalQuery.data],
   );
-  const anecdotalCount = isRoster
-    ? (student?.anecdotalCount ?? 0)
-    : (anecdotalQuery.data?.records.length ?? student?.anecdotalCount ?? 0);
 
   if (!student) {
     return (
@@ -179,9 +176,15 @@ export function AdvisoryInsightBoard({
         <div className="min-w-0 flex-1">
           <h2 className={styles.boardTitle}>Student insight</h2>
           <span className="mt-1 flex max-w-full flex-wrap items-center gap-1">
-            <span className={styles.headPill}>Attendance</span>
-            <span className={styles.headPill}>Grades</span>
-            <span className={styles.headPill}>Anecdotal</span>
+            <Pill tone="amber" label="Insight section">
+              Attendance
+            </Pill>
+            <Pill tone="amber" label="Insight section">
+              Grades
+            </Pill>
+            <Pill tone="amber" label="Insight section">
+              Anecdotal
+            </Pill>
           </span>
         </div>
       </header>
@@ -201,7 +204,6 @@ export function AdvisoryInsightBoard({
               aria-hidden
             />
             <h3 className={styles.laneTitle}>Risk &amp; records</h3>
-            <span className={styles.laneCount}>4</span>
           </header>
           <ul className={styles.cardGrid} key={student.studentId}>
             <li className="min-w-0">
@@ -211,17 +213,18 @@ export function AdvisoryInsightBoard({
                     <ShieldAlert size={18} />
                   </span>
                   <h4 className={styles.colTitle}>Risk factors</h4>
-                  <span
-                    className={`${styles.kPill} ${
+                  <Pill
+                    tone={
                       student.riskLevel === "High"
-                        ? styles.kPillRed
+                        ? "red"
                         : student.riskLevel === "Low"
-                          ? styles.kPillGreen
-                          : ""
-                    }`}
+                          ? "green"
+                          : "neutral"
+                    }
+                    label="Risk level"
                   >
                     {student.riskLevel}
-                  </span>
+                  </Pill>
                 </header>
                 {activeFlags.length === 0 ? (
                   <p className={styles.empty}>All clear — no active factors.</p>
@@ -234,9 +237,9 @@ export function AdvisoryInsightBoard({
                       <p className={styles.kLabel}>Active factors</p>
                       <span className="flex flex-wrap items-center gap-1">
                         {activeFlags.map((f) => (
-                          <Badge key={f} variant={FACTOR_BADGE[f].variant}>
+                          <Pill key={f} tone={FACTOR_BADGE[f].variant} label="Risk factor">
                             {FACTOR_BADGE[f].label}
-                          </Badge>
+                          </Pill>
                         ))}
                       </span>
                     </li>
@@ -252,23 +255,17 @@ export function AdvisoryInsightBoard({
                     <CalendarClock size={18} />
                   </span>
                   <h4 className={styles.colTitle}>Attendance</h4>
-                  <span
-                    className={
-                      attRisk
-                        ? `${styles.kPill} ${styles.kPillRed}`
-                        : styles.kPill
-                    }
+                  <Pill
+                    tone={attRisk ? "red" : "neutral"}
+                    label="Attendance status"
                   >
                     {attRisk ? "At risk" : "On track"}
-                  </span>
+                  </Pill>
                   {attendanceQuery.isFetching ? (
-                    <span
-                      className="inline-flex shrink-0 items-center gap-1 rounded-[16px] border border-border bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground"
-                      aria-live="polite"
-                    >
+                    <Pill tone="neutral" label="Live update" aria-live="polite">
                       <Loader2 size={12} className="animate-spin" aria-hidden />
                       Updating
-                    </span>
+                    </Pill>
                   ) : null}
                 </header>
                 <ul className={styles.laneBody}>
@@ -307,7 +304,6 @@ export function AdvisoryInsightBoard({
                     <BookOpen size={18} />
                   </span>
                   <h4 className={styles.colTitle}>Live academics</h4>
-                  <span className={styles.colCount}>{liveGrades.length}</span>
                 </header>
                 {hiddenGrades > 0 ? (
                   <p className={styles.cardMeta}>
@@ -325,7 +321,9 @@ export function AdvisoryInsightBoard({
                         aria-label={`${g.subject} live average ${g.average.toFixed(1)}`}
                       >
                         <div className={styles.kTop}>
-                          <span className={styles.kPill}>{g.code}</span>
+                          <Pill tone="blue" label="Subject code">
+                            {g.code}
+                          </Pill>
                           <span className={styles.kCircle} aria-hidden>
                             <BookOpen size={14} />
                           </span>
@@ -359,7 +357,6 @@ export function AdvisoryInsightBoard({
                     <FilePenLine size={18} />
                   </span>
                   <h4 className={styles.colTitle}>Anecdotal</h4>
-                  <span className={styles.colCount}>{anecdotalCount}</span>
                 </header>
                 {isRoster || anecdotalRecords.length === 0 ? (
                   <p className={styles.empty}>
@@ -382,7 +379,9 @@ export function AdvisoryInsightBoard({
                             aria-label={`${c} anecdotal records for ${student.name}`}
                           >
                             <div className={styles.kTop}>
-                              <span className={styles.kPill}>{c}</span>
+                              <Pill tone="amber" label="Anecdotal category">
+                                {c}
+                              </Pill>
                               <span className={styles.kCircle} aria-hidden>
                                 <FilePenLine size={14} />
                               </span>

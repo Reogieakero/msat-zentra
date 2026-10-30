@@ -10,6 +10,8 @@ export type BackendSubjectGrade = {
 export type BackendStudentRow = {
   studentId: string;
   name: string;
+  lrn: string;
+  mascot?: string | null;
   overallAverage: number;
   subjects: BackendSubjectGrade[];
 };
@@ -18,6 +20,8 @@ export type BackendSectionRow = {
   sectionId: string;
   section: string;
   grade: string;
+  /** Adviser has shared student data for this section (principal gate). */
+  shared?: boolean;
   avgTransmuted: number;
   students: BackendStudentRow[];
 };
@@ -32,6 +36,16 @@ export type CellData = {
   avg: number;
   graded: number;
   below: number;
+};
+
+/** Adviser-shared learner with no grade record yet (roster identity only). */
+export type UngradedStudent = {
+  studentId: string;
+  name: string;
+  lrn: string;
+  mascot?: string | null;
+  section: string;
+  grade: string;
 };
 
 export type AttentionItem = {
