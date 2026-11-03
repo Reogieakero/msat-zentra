@@ -260,7 +260,14 @@ export async function getSectionFactorCounts(sectionId: string, termId: string) 
       where: { studentId: { in: ids }, termId },
       select: { studentId: true, computedAverage: true, transmutedGrade: true },
     }),
-    prisma.attendanceRecord.findMany({ where: { sectionId, termId }, select: { studentId: true, status: true } }),
+    // Per-(student,status) tallies instead of one row per attendance take: a
+    // section-term holds tens of thousands of rows and pulling them all over
+    // the pooler was among the largest Supabase egress sources.
+    prisma.attendanceRecord.groupBy({
+      by: ["studentId", "status"],
+      where: { sectionId, termId },
+      _count: { _all: true },
+    }),
   ]);
   const factors = { attendance: 0, grades: 0, behavior: 0, wellbeing: 0 };
 
@@ -275,14 +282,12 @@ export async function getSectionFactorCounts(sectionId: string, termId: string) 
   factors.grades = lowGradeStudents.size;
 
   const enrolled = students.length;
-  const attByStudent = new Map<string, { present: number }>();
+  const presentByStudent = new Map<string, number>();
   for (const a of attendance) {
-
     if (!a.studentId) continue;
-    const cur = attByStudent.get(a.studentId) ?? { present: 0 };
-    if (a.status === "present") cur.present++;
-    attByStudent.set(a.studentId, cur);
+    const cur = presentByStudent.get(a.studentId) ?? 0;
+    presentByStudent.set(a.studentId, cur + (a.status === "present" ? a._count._all : 0));
   }
-  for (const [, v] of attByStudent) if (enrolled > 0 && v.present / enrolled < 0.8) factors.attendance++;
+  for (const present of presentByStudent.values()) if (enrolled > 0 && present / enrolled < 0.8) factors.attendance++;
   return { sectionId, termId, factors };
 }

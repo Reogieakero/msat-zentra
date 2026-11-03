@@ -20,7 +20,7 @@ export async function writeEntry(ctx: TeacherContext, input: WriteEntryInput) {
     throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
   }
   const { sectionId, subjectId, teacherNameId, day, period } = input;
-  await resolveScheduleTarget(sectionId, subjectId);
+  await resolveScheduleTarget(sectionId, subjectId, teacherId);
   const teacherName = await prisma.teacherName.findUnique({ where: { id: teacherNameId } });
   if (!teacherName) {
     throw new AppError(404, "TEACHER_NOT_FOUND", "Teacher name not found");

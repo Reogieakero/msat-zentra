@@ -65,7 +65,10 @@ export function useTeacherOverview() {
     queryKey: teacherOverviewKey(teacherId, termKey),
     queryFn: async () => {
       const payload = await fetchTeacherOverview();
-      writeCachedMasterTeacher(teacherId, payload.isMasterTeacher);
+      writeCachedMasterTeacher(
+        teacherId,
+        payload.isMasterTeacher || payload.isMasterTeacherSenior,
+      );
       writeCachedAdviser(teacherId, payload.isAdviser);
       return payload;
     },

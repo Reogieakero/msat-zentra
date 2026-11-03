@@ -322,8 +322,29 @@ export async function getAttendanceSheet(ctx: AdvisoryContext, query: Attendance
         : { session: session as "AM" | "PM" }),
       date: { gte: dayStart, lt: nextDay },
     },
-    select: { studentId: true, rosterId: true, status: true, subjectId: true, slot: true },
+    select: {
+      studentId: true,
+      rosterId: true,
+      status: true,
+      subjectId: true,
+      slot: true,
+      recordedBy: true,
+    },
   });
+  // A meetup belongs to the teacher who submitted it. Surface the owner so the
+  // sheet can go read-only for anyone else (the API also refuses overwrites).
+  const owners = Array.from(
+    new Set(records.map((r) => r.recordedBy).filter((id) => id !== "system:auto-absent")),
+  );
+  const foreignOwners = owners.filter((id) => id !== teacherId);
+  const ownerRows =
+    foreignOwners.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: foreignOwners } },
+          select: { id: true, fullName: true },
+        })
+      : [];
+  const ownerName = new Map(ownerRows.map((u) => [u.id, u.fullName]));
   return {
     date: dayKey,
     ...(subjectId ? { subjectId, slot } : { session }),
@@ -331,5 +352,9 @@ export async function getAttendanceSheet(ctx: AdvisoryContext, query: Attendance
       studentId: r.rosterId ? `roster:${r.rosterId}` : (r.studentId as string),
       status: r.status,
     })),
+    mine: foreignOwners.length === 0,
+    submittedBy: foreignOwners.length > 0
+      ? { userId: foreignOwners[0]!, name: ownerName.get(foreignOwners[0]!) ?? "another teacher" }
+      : null,
   };
 }

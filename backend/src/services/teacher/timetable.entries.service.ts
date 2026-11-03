@@ -12,7 +12,7 @@ export async function unlockSection(ctx: TeacherContext, sectionId: string) {
   if (!termId) {
     throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
   }
-  const section = await resolveScheduleTarget(sectionId, null);
+  const section = await resolveScheduleTarget(sectionId, null, teacherId);
   const unlocked = await prisma.sectionTimetableEntry.updateMany({
     where: { sectionId, termId, status: "APPROVED" },
     data: {
@@ -51,7 +51,7 @@ export async function submitTimetable(ctx: TeacherContext, sectionId?: string) {
   }
   let sectionName: string | null = null;
   if (sectionId) {
-    const section = await resolveScheduleTarget(sectionId, null);
+    const section = await resolveScheduleTarget(sectionId, null, teacherId);
     sectionName = section.name;
   }
   const scope = sectionId ? { sectionId, termId } : { termId };
@@ -173,7 +173,7 @@ export async function clearSection(ctx: TeacherContext, sectionId: string) {
   if (!sectionId) {
     throw new AppError(400, "INVALID_SECTION", "sectionId is required");
   }
-  await resolveScheduleTarget(sectionId, null);
+  await resolveScheduleTarget(sectionId, null, teacherId);
 
   const lockedCount = await prisma.sectionTimetableEntry.count({
     where: { sectionId, termId, status: "APPROVED" },

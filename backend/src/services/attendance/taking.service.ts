@@ -386,6 +386,33 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
     },
   });
 
+  // One teacher owns a meetup (section + subject + day + period slot). A
+  // second linked teacher (co-teaching, adviser cover) must not silently
+  // overwrite marks that already exist for that meetup — checked against the
+  // whole meetup, not just this payload's students, so a partial sheet cannot
+  // slip past the guard.
+  const foreignOwner = await prisma.attendanceRecord.findFirst({
+    where: {
+      sectionId,
+      subjectId,
+      slot,
+      date: { gte: dayStart, lt: dayEnd },
+      recordedBy: { notIn: [teacherId, "system:auto-absent"] },
+    },
+    select: { recordedBy: true },
+  });
+  if (foreignOwner) {
+    const owner = await prisma.user.findUnique({
+      where: { id: foreignOwner.recordedBy },
+      select: { fullName: true },
+    });
+    throw new AppError(
+      409,
+      "MEETUP_TAKEN",
+      `This meetup (${subjectLabel}, ${recordDay} period ${slot}) was already submitted by ${owner?.fullName ?? "another teacher"} — one teacher per meetup.`
+    );
+  }
+
   const studentIds = Array.from(new Set(records.map((r) => r.studentId)));
   const rosterIds = studentIds
     .filter((id) => id.startsWith("roster:"))

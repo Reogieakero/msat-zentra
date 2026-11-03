@@ -21,6 +21,8 @@ const GRADES = [
   { key: "G8", label: "Grade 8" },
   { key: "G9", label: "Grade 9" },
   { key: "G10", label: "Grade 10" },
+  { key: "G11", label: "Grade 11" },
+  { key: "G12", label: "Grade 12" },
 ] as const;
 
 function categoryLabel(category: string): string {

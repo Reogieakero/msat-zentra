@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, ChevronDown, Gauge } from "lucide-react";
 import { useTerm } from "@/lib/term/TermContext";
@@ -11,41 +11,43 @@ import { apiErrorMessage } from "@/lib/api/errors";
 import { useSession } from "@/lib/auth/useSession";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
-import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
+import { useTeacherInvalidate } from "../../../components/use-teacher-invalidate";
 import { Button } from "@/components/ui/button";
+import { Pill } from "@/components/ui/pill";
 import { toast } from "@/components/ui/sonner";
-import { TeacherPageHeader } from "../../components/TeacherPageHeader";
-import { TemplateCatalogBoards } from "../components/TemplateCatalogBoards";
-import { SubjectCatalogKanban } from "../components/subject-catalog-kanban";
-import { TeacherCatalogKanban } from "../components/teacher-catalog-kanban";
-import { TEACHER_CREATE_STEPS, TeacherCreateDockRows } from "../components/teacher-add-kanban";
-import type { TeacherCreateProgress } from "../components/use-add-teachers";
-import { TEACHER_DELETE_STEPS, TeacherDeleteDockRows } from "../components/teacher-delete-kanban";
-import type { TeacherDeleteProgress } from "../components/teacher-delete-kanban";
-import { TemplateConfigBoards } from "../components/TemplateConfigBoards";
+import { TeacherPageHeader } from "../../../components/TeacherPageHeader";
+import { TemplateCatalogBoards } from "../../components/TemplateCatalogBoards";
+import { SubjectCatalogKanban } from "../../components/subject-catalog-kanban";
+import { TeacherCatalogKanban } from "../../components/teacher-catalog-kanban";
+import { TEACHER_CREATE_STEPS, TeacherCreateDockRows } from "../../components/teacher-add-kanban";
+import type { TeacherCreateProgress } from "../../components/use-add-teachers";
+import { TEACHER_DELETE_STEPS, TeacherDeleteDockRows } from "../../components/teacher-delete-kanban";
+import type { TeacherDeleteProgress } from "../../components/teacher-delete-kanban";
+import { TemplateConfigBoards } from "../../components/TemplateConfigBoards";
 import { DropdownSelect } from "@/app/principal/academics/assign/components/DropdownSelect";
 import dropdownStyles from "@/app/principal/academics/assign/components/dropdown-select.module.css";
-import stepperStyles from "../components/template-stepper.module.css";
+import stepperStyles from "../../components/template-stepper.module.css";
 import {
   CONFIG_SAVE_STEPS,
   ConfigDockRows,
   describeConfig,
   ScheduleConfigKanban,
   type ConfigSaveProgress,
-} from "../components/schedule-config-kanban";
-import { SUBMIT_STEPS, SendToPrincipalKanban, SubmitDockRows, type SubmitProgress } from "../components/schedule-submit-kanban";
-import { buildTimetable, workloadOf, type DayConfig } from "../components/schedule-time";
-import { useScheduleCatalog } from "../components/use-schedule-catalog";
-import { cellKey, useScheduleCells } from "../components/use-schedule-cells";
-import { ScheduleTemplateGrid } from "../components/ScheduleTemplateGrid";
-import { useScheduleConflicts } from "../components/use-schedule-conflicts";
-import { useTemplateWorkload } from "../components/use-template-workload";
-import { ProgressDock } from "@/components/ui/progress-dock";
-import { ConflictsDock } from "../components/conflicts-dock";
-import type { SubjectCreateProgress } from "../components/use-add-subjects";
-import { DELETE_STEPS, DeleteDockRows, type SubjectDeleteProgress } from "../components/subject-delete-kanban";
-import kanbanStyles from "../components/subject-kanban.module.css";
-import type { ScheduleSection } from "../page";
+} from "../../components/schedule-config-kanban";
+import { SUBMIT_STEPS, SendToPrincipalKanban, SubmitDockRows, type SubmitProgress } from "../../components/schedule-submit-kanban";
+import { buildTimetable, workloadOf, type DayConfig } from "../../components/schedule-time";
+import { matchSectionSlug, sectionSlug } from "@/lib/sectionSlug";
+import { useScheduleCatalog } from "../../components/use-schedule-catalog";
+import { cellKey, useScheduleCells } from "../../components/use-schedule-cells";
+import { ScheduleTemplateGrid } from "../../components/ScheduleTemplateGrid";
+import { useScheduleConflicts } from "../../components/use-schedule-conflicts";
+import { useTemplateWorkload } from "../../components/use-template-workload";
+import { useDockProgressTask, type DockSnapshot } from "../../components/use-dock-progress";
+import { ConflictsDock } from "../../components/conflicts-dock";
+import type { SubjectCreateProgress } from "../../components/use-add-subjects";
+import { DELETE_STEPS, DeleteDockRows, type SubjectDeleteProgress } from "../../components/subject-delete-kanban";
+import kanbanStyles from "../../components/subject-kanban.module.css";
+import type { ScheduleSection } from "../../page";
 
 const STEPS = [
   { label: "Teachers & subjects", target: 0 },
@@ -62,8 +64,50 @@ function sectionLabel(name: string, gradeLevel: string) {
   );
 }
 
+/**
+ * Collapses a page-local progress state into the one shape the shared Dock
+ * understands, so every confirmed action reports it the same way.
+ */
+function dockSnapshotOf(input: {
+  active: boolean;
+  total: number;
+  settled: number;
+  failed: number;
+  activeTitle: string;
+  activeDescription: string;
+  doneTitle: string;
+  failedTitle: string;
+  doneDescription: string;
+}): DockSnapshot {
+  const total = input.total > 0 ? input.total : undefined;
+  if (input.active) {
+    return {
+      active: true,
+      title: input.activeTitle,
+      description: input.activeDescription,
+      total,
+    };
+  }
+  const failed = input.failed > 0;
+  return {
+    active: false,
+    failed,
+    title: failed ? input.failedTitle : input.doneTitle,
+    description: failed
+      ? `${input.failed} of ${input.total} failed — please try again.`
+      : input.doneDescription,
+    total,
+  };
+}
+
 function TemplateInner() {
   const searchParams = useSearchParams();
+  const params = useParams<{ section?: string | string[] }>();
+  const router = useRouter();
+  // Pretty route: /teacher/schedule/template/<section-name-slug>. The legacy
+  // ?sectionId= deep link (notifications) still works.
+  const routeSegment = Array.isArray(params?.section) ? (params.section[0] ?? "") : (params?.section ?? "");
+  const slugSegment = routeSegment ? decodeURIComponent(String(routeSegment)) : "";
   const initialSectionId = searchParams.get("sectionId") ?? "";
   const viewParam = searchParams.get("view") ?? "";
   const [sectionId, setSectionId] = useState(initialSectionId);
@@ -84,7 +128,7 @@ function TemplateInner() {
   const [teacherKanbanAddOpen, setTeacherKanbanAddOpen] = useState(viewParam === "add-teacher");
   const [teacherAddOnly, setTeacherAddOnly] = useState(viewParam === "add-teacher");
   const [step, setStep] = useState(
-    viewParam === "send" ? 3 : viewParam === "config" ? 1 : initialSectionId ? 2 : 0,
+    viewParam === "send" ? 3 : viewParam === "config" ? 1 : initialSectionId || slugSegment ? 2 : 0,
   );
   // Deep-link sync (?sectionId=… / ?view=…): runs once per param change, not per render.
   /* eslint-disable react-hooks/set-state-in-effect -- deep-link landing sync */
@@ -238,7 +282,10 @@ function TemplateInner() {
   const session = useSession();
   const overview = useTeacherOverview();
   const cachedMaster = useCachedMasterTeacher(session?.sub);
-  const isMasterTeacher = overview.data?.isMasterTeacher ?? cachedMaster;
+  const isMasterTeacher =
+    overview.data?.isMasterTeacher ||
+    overview.data?.isMasterTeacherSenior ||
+    cachedMaster;
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const invalidateTeacher = useTeacherInvalidate();
@@ -264,6 +311,30 @@ function TemplateInner() {
   const sections = useMemo(() => sectionsQuery.data?.sections ?? [], [sectionsQuery.data]);
   const section = sections.find((s) => s.id === sectionId) ?? null;
 
+  // Resolve /template/<section-slug> once the section list lands.
+  const [slugResolved, setSlugResolved] = useState(false);
+  /* eslint-disable react-hooks/set-state-in-effect -- one-shot slug → id resolution */
+  useEffect(() => {
+    if (slugResolved || !slugSegment || sections.length === 0) return;
+    const hit = matchSectionSlug(slugSegment, sections);
+    if (hit) {
+      setSectionId(hit.id);
+      if (!viewParam) setStep(2);
+    }
+    setSlugResolved(true);
+  }, [slugSegment, sections, slugResolved, viewParam]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Picking a section keeps the URL shareable: /template/<slug> (+ ?view=…).
+  const handleSectionChange = (id: string) => {
+    setSectionId(id);
+    const picked = sections.find((s) => s.id === id);
+    if (!picked) return;
+    const slug = sectionSlug(picked.name, picked.gradeLevel, sections);
+    const qs = viewParam ? `?view=${encodeURIComponent(viewParam)}` : "";
+    router.replace(`/teacher/schedule/template/${encodeURIComponent(slug)}${qs}`, { scroll: false });
+  };
+
   const cellsHook = useScheduleCells(
     section ?? { id: "__template__", name: "", gradeLevel: "G7", timetableEntries: [] } as unknown as ScheduleSection,
     { subjectById: catalog.subjectById, teacherById: catalog.teacherById },
@@ -273,6 +344,120 @@ function TemplateInner() {
     () => new Set(cellsHook.pendingSlots.map((p) => p.key)),
     [cellsHook.pendingSlots],
   );
+
+  // Every confirmed action on this page reports to the one shared Dock
+  // (`components/dock`), never its own floating panel.
+  const subjectDeleteDock = useMemo<DockSnapshot | null>(() => {
+    if (!deleteProgress) return null;
+    const rows = deleteProgress.rows;
+    const total = rows.length;
+    const settled = rows.filter((r) => r.status !== "deleting").length;
+    const failed = rows.filter((r) => r.status === "failed").length;
+    return dockSnapshotOf({
+      active: deleteProgress.active,
+      total,
+      settled,
+      failed,
+      activeTitle: `Deleting ${rows[0]?.name ?? "subject"}…`,
+      activeDescription: `${settled}/${total} settled — ${rows[0]?.code ?? "catalog"}`,
+      doneTitle: `Deleted ${total} subject${total === 1 ? "" : "s"}`,
+      failedTitle: "Delete incomplete",
+      doneDescription: `${total} removed from the catalog`,
+    });
+  }, [deleteProgress]);
+
+  const submitDock = useMemo<DockSnapshot | null>(() => {
+    if (!submitProgress) return null;
+    const rows = submitProgress.rows;
+    const total = submitProgress.total;
+    const settled = rows.filter((r) => r.status !== "submitting").length;
+    const failed = rows.filter((r) => r.status === "failed").length;
+    return dockSnapshotOf({
+      active: submitProgress.active,
+      total,
+      settled,
+      failed,
+      activeTitle: `Sending ${total} slot${total === 1 ? "" : "s"} for review…`,
+      activeDescription: `${settled}/${total} slot${total === 1 ? "" : "s"} sent`,
+      doneTitle: `Sent ${total} slot${total === 1 ? "" : "s"}`,
+      failedTitle: "Send incomplete",
+      doneDescription: `${rows.length} section${rows.length === 1 ? "" : "s"} · awaiting principal approval`,
+    });
+  }, [submitProgress]);
+
+  const configDock = useMemo<DockSnapshot | null>(() => {
+    if (!configProgress) return null;
+    if (configProgress.active) {
+      return { active: true, title: "Saving school day…", description: configProgress.summary };
+    }
+    return configProgress.status === "failed"
+      ? {
+          active: false,
+          failed: true,
+          title: "Save failed",
+          description: configProgress.message ?? "The school day was not saved.",
+        }
+      : { active: false, title: "School day saved", description: configProgress.summary };
+  }, [configProgress]);
+
+  const teacherCreateDock = useMemo<DockSnapshot | null>(() => {
+    if (!teacherCreateProgress) return null;
+    const rows = teacherCreateProgress.rows;
+    const total = rows.length;
+    const settled = rows.filter((r) => r.status !== "creating").length;
+    const failed = rows.filter((r) => r.status === "failed").length;
+    return dockSnapshotOf({
+      active: teacherCreateProgress.active,
+      total,
+      settled,
+      failed,
+      activeTitle:
+        total > 0 ? `Creating ${total} teacher${total === 1 ? "" : "s"}…` : "Creating teacher names…",
+      activeDescription: total > 0 ? `${settled}/${total} saved` : "Saving to server",
+      doneTitle: `Added ${total} teacher${total === 1 ? "" : "s"}`,
+      failedTitle: "Creation incomplete",
+      doneDescription: `${total} name${total === 1 ? "" : "s"} now pickable in timetable slots`,
+    });
+  }, [teacherCreateProgress]);
+
+  const teacherDeleteDock = useMemo<DockSnapshot | null>(() => {
+    if (!teacherDeleteProgress) return null;
+    const rows = teacherDeleteProgress.rows;
+    const total = rows.length;
+    const settled = rows.filter((r) => r.status !== "deleting").length;
+    const failed = rows.filter((r) => r.status === "failed").length;
+    return dockSnapshotOf({
+      active: teacherDeleteProgress.active,
+      total,
+      settled,
+      failed,
+      activeTitle: `${total} teacher${total === 1 ? "" : "s"} · deleting…`,
+      activeDescription: `${settled}/${total} removed`,
+      doneTitle: `Deleted ${total} teacher${total === 1 ? "" : "s"}`,
+      failedTitle: "Delete incomplete",
+      doneDescription: `${total} removed from the catalog`,
+    });
+  }, [teacherDeleteProgress]);
+
+  // Subject creation reports no settle flag (its progress clears on finish),
+  // so the Dock settles it when the state goes away.
+  const subjectCreateDock = useMemo<DockSnapshot | null>(() => {
+    if (!createProgress) return null;
+    const n = createProgress.count;
+    return {
+      active: true,
+      title: `Creating ${n} subject${n === 1 ? "" : "s"}…`,
+      description: `${createProgress.gradeLabel} · ${createProgress.categoryLabel}`,
+      total: n,
+    };
+  }, [createProgress]);
+
+  useDockProgressTask(subjectDeleteDock);
+  useDockProgressTask(submitDock);
+  useDockProgressTask(configDock);
+  useDockProgressTask(teacherCreateDock);
+  useDockProgressTask(teacherDeleteDock);
+  useDockProgressTask(subjectCreateDock);
 
   const configMutation = useMutation({
     mutationFn: async (next: DayConfig) => {
@@ -310,7 +495,10 @@ function TemplateInner() {
   // catalog queries land — they never wait for the full sections payload or
   // the workspace-wide conflict scan. The grid and send views keep the old
   // gate and fetch those on demand.
-  const masterKnown = overview.data?.isMasterTeacher !== undefined || cachedMaster;
+  const masterKnown =
+    overview.data?.isMasterTeacher !== undefined ||
+    overview.data?.isMasterTeacherSenior !== undefined ||
+    cachedMaster;
   if (!masterKnown) {
     return (
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-5" aria-busy="true" aria-label="Loading template">
@@ -494,7 +682,7 @@ function TemplateInner() {
             <div className="flex items-center gap-2">
               <DropdownSelect
                 value={sectionId}
-                onValueChange={setSectionId}
+                onValueChange={handleSectionChange}
                 options={sections.map((s) => ({
                   value: s.id,
                   label: sectionLabel(s.name, s.gradeLevel),
@@ -528,7 +716,7 @@ function TemplateInner() {
             <div className="flex items-center gap-2">
               <DropdownSelect
                 value={sectionId}
-                onValueChange={setSectionId}
+                onValueChange={handleSectionChange}
                 options={sections.map((s) => ({
                   value: s.id,
                   label: sectionLabel(s.name, s.gradeLevel),
@@ -571,7 +759,7 @@ function TemplateInner() {
               <span className="inline-flex w-48 max-w-full">
                 <DropdownSelect
                   value={sectionId}
-                  onValueChange={setSectionId}
+                  onValueChange={handleSectionChange}
                   options={sections.map((s) => ({
                     value: s.id,
                     label: sectionLabel(s.name, s.gradeLevel),
@@ -622,15 +810,15 @@ function TemplateInner() {
             </span>
             {conflicts.data ? (
               <span className="flex items-center gap-1.5" role="status">
-                <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-sans text-xs font-medium text-amber-700 dark:text-amber-400">
+                <Pill tone="amber" label="Double-book warnings">
                   <AlertTriangle size={12} aria-hidden className="text-amber-500" />
                   {conflicts.data.conflicts.length} double-book warning{conflicts.data.conflicts.length === 1 ? "" : "s"}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-sans text-xs font-medium text-amber-700 dark:text-amber-400">
+                </Pill>
+                <Pill tone="amber" label="Workload warnings">
                   <Gauge size={12} aria-hidden className="text-amber-500" />
                   {conflicts.data.workload.overDaily.length + conflicts.data.workload.overWeekly.length} overload warning
                   {conflicts.data.workload.overDaily.length + conflicts.data.workload.overWeekly.length === 1 ? "" : "s"}
-                </span>
+                </Pill>
               </span>
             ) : null}
           </div>
@@ -674,144 +862,6 @@ function TemplateInner() {
             </div>
           ) : null}
         </div>
-      ) : null}
-      {deleteProgress ? (
-        <ProgressDock
-          title={
-            deleteProgress.active
-              ? `Deleting ${deleteProgress.rows[0]?.name ?? "subject"}…`
-              : deleteProgress.rows.some((r) => r.status === "failed")
-                ? "Delete failed"
-                : `Deleted ${deleteProgress.rows.length} subject${deleteProgress.rows.length === 1 ? "" : "s"}`
-          }
-          working={deleteProgress.active}
-          steps={deleteProgress.active ? DELETE_STEPS.slice(0, 2) : DELETE_STEPS}
-          label={
-            deleteProgress.rows[0]
-              ? `Deleting ${deleteProgress.rows[0].name} (${deleteProgress.rows[0].code})…`
-              : "Deleting subject…"
-          }
-          doneLabel="Delete complete"
-          summary={
-            deleteProgress.rows[0]
-              ? `${deleteProgress.rows[0].code} · Grade ${deleteProgress.rows[0].gradeLevel.replace("G", "")}`
-              : undefined
-          }
-          onDismiss={() => setDeleteProgress(null)}
-        >
-          <DeleteDockRows rows={deleteProgress.rows} />
-        </ProgressDock>
-      ) : null}
-      {submitProgress ? (
-        <ProgressDock
-          title={
-            submitProgress.active
-              ? `Sending ${submitProgress.total} slot${submitProgress.total === 1 ? "" : "s"}…`
-              : submitProgress.rows.some((r) => r.status === "failed")
-                ? "Send incomplete"
-                : `Sent ${submitProgress.total} slot${submitProgress.total === 1 ? "" : "s"}`
-          }
-          working={submitProgress.active}
-          steps={submitProgress.active ? SUBMIT_STEPS.slice(0, 2) : SUBMIT_STEPS}
-          label={
-            submitProgress.total > 0
-              ? `Sending ${submitProgress.total} slot${submitProgress.total === 1 ? "" : "s"} for review…`
-              : "Sending for review…"
-          }
-          doneLabel="Sent to principal"
-          summary={
-            submitProgress.rows.length > 0
-              ? `${submitProgress.rows.length} section${submitProgress.rows.length === 1 ? "" : "s"} · awaiting principal approval`
-              : undefined
-          }
-          onDismiss={() => setSubmitProgress(null)}
-        >
-          <SubmitDockRows rows={submitProgress.rows} />
-        </ProgressDock>
-      ) : null}
-      {configProgress ? (
-        <ProgressDock
-          title={
-            configProgress.active
-              ? "Saving school day…"
-              : configProgress.status === "failed"
-                ? "Save failed"
-                : "School day saved"
-          }
-          working={configProgress.active}
-          steps={configProgress.active ? CONFIG_SAVE_STEPS.slice(0, 2) : CONFIG_SAVE_STEPS}
-          label="Saving school-day shape…"
-          doneLabel="School day saved"
-          summary={configProgress.summary}
-          onDismiss={() => setConfigProgress(null)}
-        >
-          <ConfigDockRows items={configProgress.items} status={configProgress.status} />
-        </ProgressDock>
-      ) : null}
-      {teacherDeleteProgress ? (
-        <ProgressDock
-          title={
-            teacherDeleteProgress.active
-              ? `Deleting ${teacherDeleteProgress.rows.length} teacher${teacherDeleteProgress.rows.length === 1 ? "" : "s"}…`
-              : teacherDeleteProgress.rows.some((r) => r.status === "failed")
-                ? "Delete incomplete"
-                : `Deleted ${teacherDeleteProgress.rows.length} teacher${teacherDeleteProgress.rows.length === 1 ? "" : "s"}`
-          }
-          working={teacherDeleteProgress.active}
-          steps={teacherDeleteProgress.active ? TEACHER_DELETE_STEPS.slice(0, 2) : TEACHER_DELETE_STEPS}
-          label={
-            teacherDeleteProgress.rows.length > 0
-              ? `Deleting ${teacherDeleteProgress.rows.length} teacher${teacherDeleteProgress.rows.length === 1 ? "" : "s"}…`
-              : "Deleting teachers…"
-          }
-          doneLabel="Delete complete"
-          summary={
-            teacherDeleteProgress.rows.length > 0
-              ? `${teacherDeleteProgress.rows.filter((r) => r.status !== "failed").length} deleted · ${teacherDeleteProgress.rows.filter((r) => r.status === "failed").length} failed of ${teacherDeleteProgress.rows.length}`
-              : undefined
-          }
-          onDismiss={() => setTeacherDeleteProgress(null)}
-        >
-          <TeacherDeleteDockRows rows={teacherDeleteProgress.rows} />
-        </ProgressDock>
-      ) : null}
-      {teacherCreateProgress ? (
-        <ProgressDock
-          title={
-            teacherCreateProgress.active
-              ? `Creating ${teacherCreateProgress.rows.length} teacher${teacherCreateProgress.rows.length === 1 ? "" : "s"}…`
-              : teacherCreateProgress.rows.some((r) => r.status === "failed")
-                ? "Creation incomplete"
-                : `Added ${teacherCreateProgress.rows.length} teacher${teacherCreateProgress.rows.length === 1 ? "" : "s"}`
-          }
-          working={teacherCreateProgress.active}
-          steps={teacherCreateProgress.active ? TEACHER_CREATE_STEPS.slice(0, 2) : TEACHER_CREATE_STEPS}
-          label={
-            teacherCreateProgress.rows.length > 0
-              ? `Creating ${teacherCreateProgress.rows.length} teacher${teacherCreateProgress.rows.length === 1 ? "" : "s"}…`
-              : "Creating teachers…"
-          }
-          doneLabel="Creation complete"
-          summary={
-            teacherCreateProgress.rows.length > 0
-              ? `${teacherCreateProgress.rows.filter((r) => r.status !== "failed").length} added · ${teacherCreateProgress.rows.filter((r) => r.status === "failed").length} failed of ${teacherCreateProgress.rows.length}`
-              : undefined
-          }
-          onDismiss={() => setTeacherCreateProgress(null)}
-        >
-          <TeacherCreateDockRows rows={teacherCreateProgress.rows} />
-        </ProgressDock>
-      ) : null}
-      {createProgress ? (
-        <ProgressDock
-          title={`Creating ${createProgress.count} subject${createProgress.count === 1 ? "" : "s"}`}
-          working
-          steps={["Preparing subjects", "Saving to server", "Confirming catalog"].slice(0, 2)}
-          label={`Creating ${createProgress.count} subject${createProgress.count === 1 ? "" : "s"} · ${createProgress.gradeLabel} · ${createProgress.categoryLabel}…`}
-          doneLabel="Subjects created"
-          summary={`${createProgress.gradeLabel} · ${createProgress.categoryLabel}`}
-          onDismiss={() => setCreateProgress(null)}
-        />
       ) : null}
     </section>
   );

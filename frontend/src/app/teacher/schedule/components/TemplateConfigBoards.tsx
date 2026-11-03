@@ -2,6 +2,7 @@
 import { CalendarDays, Clock, Gauge, SlidersHorizontal, Timer, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import type { DayConfig } from "./schedule-time";
 
 interface Props {
@@ -13,12 +14,12 @@ interface Props {
 
 function DayPill({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-sans text-xs font-medium text-amber-700 dark:text-amber-400">
+    <Pill tone="amber">
       <span className="text-amber-500" aria-hidden>
         {icon}
       </span>
       {children}
-    </span>
+    </Pill>
   );
 }
 

@@ -183,6 +183,7 @@ export const StaffProfileScalarFieldEnum = {
   department: 'department',
   isAdviser: 'isAdviser',
   isMasterTeacher: 'isMasterTeacher',
+  isMasterTeacherSenior: 'isMasterTeacherSenior',
   handledGradeLevels: 'handledGradeLevels',
   signatureImageUrl: 'signatureImageUrl',
   photoUrl: 'photoUrl',

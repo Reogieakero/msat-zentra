@@ -36,11 +36,11 @@
   }
 }
 
-/* Section gutter + sheet layout: icon-only right rail (same as the
-   grading workspace gutter), the session toolbar and sheet take the rest. */
+/* Sheet layout: the section tabs + tools row sits above the sheet, so the
+   main column spans the full width. */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
   min-width: 0;

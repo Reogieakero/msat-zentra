@@ -90,7 +90,10 @@ export function TeacherSidebar({
   const overview = useTeacherOverview();
 
   const cachedMaster = useCachedMasterTeacher(session?.sub);
-  const isMasterTeacher = overview.data?.isMasterTeacher ?? cachedMaster;
+  const isMasterTeacher =
+    overview.data?.isMasterTeacher ||
+    overview.data?.isMasterTeacherSenior ||
+    cachedMaster;
   const cachedAdviser = useCachedAdviser(session?.sub);
   const isAdviser = overview.data?.isAdviser ?? cachedAdviser ?? true;
   const nav = buildNav(isMasterTeacher, isAdviser);

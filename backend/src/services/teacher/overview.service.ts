@@ -95,10 +95,20 @@ export async function getOverview(
     return EMPTY_RESPONSE;
   }
 
-  const [user, assignments, advisorySections, masterHolder] = await Promise.all([
+  const [user, assignments, advisorySections, masterHolders] = await Promise.all([
     prisma.user.findUnique({
       where: { id: teacherId },
-      select: { fullName: true, staffProfile: { select: { isMasterTeacher: true, shareStudentData: true, shareUpdatedAt: true } } },
+      select: {
+        fullName: true,
+        staffProfile: {
+          select: {
+            isMasterTeacher: true,
+            isMasterTeacherSenior: true,
+            shareStudentData: true,
+            shareUpdatedAt: true,
+          },
+        },
+      },
     }),
     prisma.teacherSubjectAssignment.findMany({
       where: { teacherId, termId },
@@ -109,15 +119,25 @@ export async function getOverview(
       select: { id: true, name: true, gradeLevel: true },
     }),
 
-    prisma.user.findFirst({
+    prisma.user.findMany({
       where: {
         id: { not: teacherId },
         status: "active",
-        staffProfile: { isMasterTeacher: true },
+        OR: [
+          { staffProfile: { isMasterTeacher: true } },
+          { staffProfile: { isMasterTeacherSenior: true } },
+        ],
       },
-      select: { fullName: true },
+      select: {
+        fullName: true,
+        staffProfile: { select: { isMasterTeacher: true, isMasterTeacherSenior: true } },
+      },
     }),
   ]);
+  const juniorHolder =
+    masterHolders.find((m) => m.staffProfile?.isMasterTeacher) ?? null;
+  const seniorHolder =
+    masterHolders.find((m) => m.staffProfile?.isMasterTeacherSenior) ?? null;
 
   const isAdviser = advisorySections.length > 0;
   const advisorySection = advisorySections[0] ?? null;
@@ -126,8 +146,10 @@ export async function getOverview(
     ...assignments.map((a) => a.section.gradeLevel),
     ...advisorySections.map((s) => s.gradeLevel),
   ];
-  const masterTeacherEligible = isMasterTeacherEligible(scopeGrades);
+  const masterTeacherEligible = isMasterTeacherEligible(scopeGrades, "7-10");
+  const masterTeacherSeniorEligible = isMasterTeacherEligible(scopeGrades, "11-12");
   const isMasterTeacher = user?.staffProfile?.isMasterTeacher ?? false;
+  const isMasterTeacherSenior = user?.staffProfile?.isMasterTeacherSenior ?? false;
 
   const linkedSlots = await prisma.sectionTimetableEntry.findMany({
     where: {
@@ -923,12 +945,16 @@ export async function getOverview(
     teacherName: user?.fullName ?? "",
     isAdviser,
     isMasterTeacher,
+    isMasterTeacherSenior,
     masterTeacherEligible,
+    masterTeacherSeniorEligible,
     shareStudentData: user?.staffProfile?.shareStudentData ?? false,
     shareUpdatedAt: user?.staffProfile?.shareUpdatedAt ?? null,
 
-    masterTeacherTaken: !isMasterTeacher && masterHolder !== null,
-    masterTeacherHolderName: masterHolder?.fullName ?? null,
+    masterTeacherTaken: !isMasterTeacher && juniorHolder !== null,
+    masterTeacherHolderName: juniorHolder?.fullName ?? null,
+    masterTeacherSeniorTaken: !isMasterTeacherSenior && seniorHolder !== null,
+    masterTeacherSeniorHolderName: seniorHolder?.fullName ?? null,
     advisorySection: advisorySection
       ? {
           id: advisorySection.id,

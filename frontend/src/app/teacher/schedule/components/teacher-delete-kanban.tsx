@@ -7,6 +7,7 @@ import { CheckCircle2, Loader2, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { ScrollList } from "@/components/ui/scroll-list";
+import { Pill } from "@/components/ui/pill";
 import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
@@ -36,11 +37,7 @@ const TEACHER_DELETE_STEPS = ["Resolving names", "Removing timetable links", "Co
  * both modes (dark: amber-400, light: amber-700).
  */
 export function TeacherCodePill({ code }: { code: string | null }) {
-  return (
-    <span className="shrink-0 rounded border border-amber-600/45 bg-amber-500/10 px-1.5 font-sans text-[12px] font-medium text-amber-700 dark:border-amber-500/45 dark:text-amber-400">
-      {code ?? "—"}
-    </span>
-  );
+  return <Pill tone="amber">{code ?? "—"}</Pill>;
 }
 
 /**

@@ -17,9 +17,12 @@ import menuStyles from "@/app/teacher/classes/components/timetable-menu.module.c
 import type { SlotCard } from "./use-slot-cards";
 
 // Flyout panel — same look as the grading workspace gutter: solid surface,
-// shadow + ring, smooth open/close. Anchored left of the gutter icon.
-const MENU_PANEL =
-  "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
+// shadow + ring, smooth open/close. Anchored left of the gutter icon when the
+// tools live on the right rail, or below-right when they sit in the top bar.
+const MENU_PANEL_BASE =
+  "z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
+const MENU_PANEL_RAIL = "absolute top-0 right-12";
+const MENU_PANEL_TOP = "absolute top-full right-0 mt-2";
 
 function GutterIconButton({
   label,
@@ -78,6 +81,7 @@ export function AttendanceSidebar({
   onSelect,
   blocksMode,
   onToggleBlocks,
+  placement = "rail",
 }: {
   date: string;
   onDateChange: (date: string) => void;
@@ -90,6 +94,8 @@ export function AttendanceSidebar({
   onSelect: (card: SlotCard) => void;
   blocksMode: boolean;
   onToggleBlocks: () => void;
+  /** "rail" = sticky icon column on the right; "top" = inline button row. */
+  placement?: "rail" | "top";
 }) {
   const [openKey, setOpenKey] = React.useState<MenuKey | null>(null);
   const railRef = React.useRef<HTMLDivElement>(null);
@@ -122,7 +128,8 @@ export function AttendanceSidebar({
 
   const toggle = (key: MenuKey) => setOpenKey((prev) => (prev === key ? null : key));
   const panel = (key: MenuKey) =>
-    `${MENU_PANEL} ${menuStyles.menu} ${openKey === key ? menuStyles.menuOpen : menuStyles.menuClosed}`;
+    `${MENU_PANEL_BASE} ${placement === "top" ? MENU_PANEL_TOP : MENU_PANEL_RAIL} ${menuStyles.menu} ${openKey === key ? menuStyles.menuOpen : menuStyles.menuClosed}`;
+  const tipSide = placement === "top" ? "bottom" : "left";
 
   const groups = useMemo(() => {
     const bySection = new Map<string, SlotCard[]>();
@@ -141,9 +148,23 @@ export function AttendanceSidebar({
   let rowIndex = 0;
 
   return (
-    <aside className="self-start lg:sticky lg:top-16" aria-label="Attendance tools">
+    <aside
+      className={
+        placement === "top"
+          ? "relative self-start"
+          : "self-start lg:sticky lg:top-16"
+      }
+      aria-label="Attendance tools"
+    >
       <TooltipProvider delayDuration={100}>
-        <div ref={railRef} className="flex flex-row justify-end gap-2 lg:flex-col lg:items-end">
+        <div
+          ref={railRef}
+          className={
+            placement === "top"
+              ? "relative flex flex-row items-center justify-end gap-2"
+              : "flex flex-row justify-end gap-2 lg:flex-col lg:items-end"
+          }
+        >
           <div className="relative">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -157,7 +178,7 @@ export function AttendanceSidebar({
                   </span>
                 </GutterIconButton>
               </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={10}>
+              <TooltipContent side={tipSide} sideOffset={10}>
                 <GutterTip title="Sheet date" hint={date} />
               </TooltipContent>
             </Tooltip>
@@ -200,7 +221,7 @@ export function AttendanceSidebar({
                   ) : null}
                 </GutterIconButton>
               </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={10}>
+              <TooltipContent side={tipSide} sideOffset={10}>
                 <GutterTip
                   title="Subjects"
                   hint={slotCards.length > 0 ? `${slotCards.length} to pick from` : "No scheduled subjects"}
@@ -327,7 +348,7 @@ export function AttendanceSidebar({
                   ) : null}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={10}>
+              <TooltipContent side={tipSide} sideOffset={10}>
                 <GutterTip title="Meetup blocks" hint={blocksMode ? "On — click to turn off" : "Off — click to turn on"} />
               </TooltipContent>
             </Tooltip>

@@ -4,7 +4,13 @@ import { fanoutNotification } from "../../lib/notify.js";
 export async function notifyMastersScheduleChanged(reason: string, excludeUserId?: string) {
   try {
     const masters = await prisma.user.findMany({
-      where: { status: "active", staffProfile: { isMasterTeacher: true } },
+      where: {
+        status: "active",
+        OR: [
+          { staffProfile: { isMasterTeacher: true } },
+          { staffProfile: { isMasterTeacherSenior: true } },
+        ],
+      },
       select: { id: true },
     });
     await Promise.all(
@@ -74,7 +80,13 @@ export async function notifyMastersTeacherLinkChanged(
 ) {
   try {
     const masters = await prisma.user.findMany({
-      where: { status: "active", staffProfile: { isMasterTeacher: true } },
+      where: {
+        status: "active",
+        OR: [
+          { staffProfile: { isMasterTeacher: true } },
+          { staffProfile: { isMasterTeacherSenior: true } },
+        ],
+      },
       select: { id: true },
     });
     const message =

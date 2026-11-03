@@ -2,7 +2,7 @@ import { randomInt } from "crypto";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
-import { notifyMastersScheduleChanged, requireMasterTeacher, toScheduleConfig } from "../../modules/teacher/teacher.repository.js";
+import { gradeBandOf, masterTeacherBands, notifyMastersScheduleChanged, requireMasterTeacher, resolveScheduleTarget, toScheduleConfig } from "../../modules/teacher/teacher.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 export interface ScheduleConfigInput {
@@ -64,25 +64,14 @@ export async function updateScheduleConfig(ctx: TeacherContext, body: ScheduleCo
 
 export async function assignSubject(ctx: TeacherContext, subjectId: string, sectionId: string) {
   const teacherId = ctx.userId;
-  const profile = await prisma.staffProfile.findUnique({ where: { userId: teacherId } });
-  if (!profile?.isMasterTeacher) {
-    throw new AppError(403, "MASTER_TEACHER_REQUIRED", "Only Master Teachers can schedule subjects");
-  }
+  await requireMasterTeacher(teacherId, "schedule subjects");
   const termId = ctx.termId;
   if (!termId) {
     throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
   }
-  const section = await prisma.section.findUnique({ where: { id: sectionId } });
-  if (!section || !["G7", "G8", "G9", "G10"].includes(section.gradeLevel as string)) {
-    throw new AppError(403, "GRADE_BAND_NOT_ALLOWED", "Schedule subject is only available for grades 7–10");
-  }
-  const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
-  if (!subject) {
-    throw new AppError(404, "SUBJECT_NOT_FOUND", "Subject not found");
-  }
-  if (subject.gradeLevel !== section.gradeLevel) {
-    throw new AppError(403, "GRADE_MISMATCH", "The subject must belong to the section's grade level");
-  }
+  // Resolves the section + subject and enforces both the grade band the
+  // teacher holds and the section/subject grade match.
+  await resolveScheduleTarget(sectionId, subjectId, teacherId);
   const existing = await prisma.teacherSubjectAssignment.findFirst({
     where: { teacherId, subjectId, sectionId, termId },
   });
@@ -230,7 +219,7 @@ export async function deleteTeacherName(ctx: TeacherContext, teacherNameId: stri
 export interface CreateSubjectInput {
   name: string;
   code: string;
-  gradeLevel: "G7" | "G8" | "G9" | "G10";
+  gradeLevel: "G7" | "G8" | "G9" | "G10" | "G11" | "G12";
   category: "CORE" | "ELECTIVE";
 }
 
@@ -239,11 +228,20 @@ export async function createSubject(ctx: TeacherContext, input: CreateSubjectInp
   await requireMasterTeacher(teacherId, "create subjects");
   const { name, code, gradeLevel, category } = input;
   const normalizedCode = code.trim().toUpperCase();
+  const bands = await masterTeacherBands(teacherId);
+  const band = gradeBandOf(gradeLevel);
+  if (!band || !bands.includes(band)) {
+    throw new AppError(
+      403,
+      "GRADE_BAND_NOT_ALLOWED",
+      `You can only add subjects for the grade band you hold`
+    );
+  }
   const existing = await prisma.subject.findUnique({
     where: {
       code_gradeLevel: {
         code: normalizedCode,
-        gradeLevel: gradeLevel as "G7" | "G8" | "G9" | "G10",
+        gradeLevel,
       },
     },
   });
@@ -277,6 +275,15 @@ export async function deleteSubject(ctx: TeacherContext, subjectId: string) {
   });
   if (!subject) {
     throw new AppError(404, "SUBJECT_NOT_FOUND", "Subject not found");
+  }
+  const bands = await masterTeacherBands(teacherId);
+  const band = gradeBandOf(subject.gradeLevel as string);
+  if (!band || !bands.includes(band)) {
+    throw new AppError(
+      403,
+      "GRADE_BAND_NOT_ALLOWED",
+      "You can only delete subjects for the grade band you hold"
+    );
   }
   // Never silently wipe grading history — block when the subject is
   // referenced outside the template (gradebook, flags, attendance).

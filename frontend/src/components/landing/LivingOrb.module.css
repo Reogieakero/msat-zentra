@@ -1,0 +1,23 @@
+.wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  mask-image: radial-gradient(ellipse 82% 85% at 63% 48%, #000 52%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 82% 85% at 63% 48%, #000 52%, transparent 100%);
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 899px) {
+  .wrap {
+    mask-image: radial-gradient(ellipse 85% 60% at 50% 58%, #000 45%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 85% 60% at 50% 58%, #000 45%, transparent 100%);
+    opacity: 0.85;
+  }
+}

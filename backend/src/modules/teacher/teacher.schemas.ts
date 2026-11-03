@@ -2,7 +2,11 @@ import { z } from "zod";
 import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../lib/pagination.js";
 import { MASCOT_CHARACTERS } from "../../services/mascot.js";
 
-export const masterTeacherSchema = z.object({ isMasterTeacher: z.boolean() });
+export const masterTeacherSchema = z.object({
+  isMasterTeacher: z.boolean(),
+  // Defaults to the legacy G7–G10 seat so older clients keep working.
+  band: z.enum(["7-10", "11-12"]).optional(),
+});
 
 export const dataSharingSchema = z.object({ shareStudentData: z.boolean() });
 
@@ -79,7 +83,7 @@ export const teacherNameSchema = z.object({
 export const subjectSchema = z.object({
   name: z.string().min(1).max(120),
   code: z.string().min(1).max(24),
-  gradeLevel: z.enum(["G7", "G8", "G9", "G10"]),
+  gradeLevel: z.enum(["G7", "G8", "G9", "G10", "G11", "G12"]),
   category: z.enum(["CORE", "ELECTIVE"]).optional().default("CORE"),
 });
 

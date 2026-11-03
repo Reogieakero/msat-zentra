@@ -59,6 +59,8 @@ export function SubjectAddKanban({ onClose, onProgress }: Props) {
                   { value: "G8", label: "Grade 8" },
                   { value: "G9", label: "Grade 9" },
                   { value: "G10", label: "Grade 10" },
+                  { value: "G11", label: "Grade 11" },
+                  { value: "G12", label: "Grade 12" },
                 ]}
                 ariaLabel="Grade level"
                 triggerClassName={styles.triggerLeft}

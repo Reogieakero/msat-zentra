@@ -104,20 +104,21 @@ export function subjectRate(records: { status: AttendanceStatus }[]): number {
   return present / records.length;
 }
 
-export function dailyFromSubjects(
-  records: { date: Date; status: AttendanceStatus }[],
+export interface DayCountCell {
+  present: number;
+  total: number;
+  absent: number;
+}
+
+/**
+ * Present-day roll-up from pre-aggregated per-day counts. Shared by
+ * `dailyFromSubjects` (row-level) and the rate service (SQL groupBy), so the
+ * counting rule lives in exactly one place.
+ */
+export function dailyFromDayCounts(
+  byDay: Map<string, DayCountCell>,
   expectedSubjectsPerDay: number
 ): { presentDays: number; totalDays: number } {
-  const byDay = new Map<string, { present: number; total: number; absent: number }>();
-  for (const r of records) {
-    const day = r.date.toISOString().slice(0, 10);
-    if (isWeekendKey(day)) continue;
-    if (!byDay.has(day)) byDay.set(day, { present: 0, total: 0, absent: 0 });
-    const cell = byDay.get(day)!;
-    cell.total += 1;
-    if (r.status === "present") cell.present++;
-    else cell.absent++;
-  }
   let presentDays = 0;
   for (const cell of byDay.values()) {
     if (
@@ -129,6 +130,23 @@ export function dailyFromSubjects(
     }
   }
   return { presentDays, totalDays: byDay.size };
+}
+
+export function dailyFromSubjects(
+  records: { date: Date; status: AttendanceStatus }[],
+  expectedSubjectsPerDay: number
+): { presentDays: number; totalDays: number } {
+  const byDay = new Map<string, DayCountCell>();
+  for (const r of records) {
+    const day = r.date.toISOString().slice(0, 10);
+    if (isWeekendKey(day)) continue;
+    if (!byDay.has(day)) byDay.set(day, { present: 0, total: 0, absent: 0 });
+    const cell = byDay.get(day)!;
+    cell.total += 1;
+    if (r.status === "present") cell.present++;
+    else cell.absent++;
+  }
+  return dailyFromDayCounts(byDay, expectedSubjectsPerDay);
 }
 
 export interface SectionSubjectTake {

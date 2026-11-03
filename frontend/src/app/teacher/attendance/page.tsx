@@ -7,15 +7,17 @@ import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { toast } from "@/components/ui/sonner";
 import { AttendanceRosterTable } from "./components/AttendanceRosterTable";
-import { KanbanBoardSkeleton, RowListSkeleton, IconRailSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { KanbanBoardSkeleton, RowListSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AttendanceTermGate, AttendanceLinkGate } from "./components/AttendanceTermGate";
 import { SheetDatePicker } from "./components/sheet-date-picker";
 import { VerifyCodeCard } from "./components/verify-code-card";
 import { AttendanceSidebar } from "./components/attendance-sidebar";
+import { SectionTabs } from "./components/section-tabs";
 import { useAttendancePairs, type LinkedName } from "./components/use-attendance-pairs";
 import { useSlotCards } from "./components/use-slot-cards";
 import {
+  isEditableDay,
   phTodayKey,
   useMeetupDates,
   useOfferedSubjects,
@@ -113,6 +115,27 @@ export default function TeacherAdvisoryAttendancePage() {
   const [slotKey, setSlotKey] = useState<string | null>(null);
   const selectedPair = pairs.find((p) => p.key === pairKey) ?? pairs[0];
   const resolvedSectionId = selectedPair?.section.id;
+  // One tab per section the teacher handles; picking one keeps the current
+  // subject when that section also teaches it, else opens its first subject.
+  const sectionTabs = useMemo(() => {
+    const bySection = new Map<
+      string,
+      { id: string; name: string; gradeLevel: string | null }
+    >();
+    for (const p of pairs) {
+      if (!bySection.has(p.section.id)) bySection.set(p.section.id, p.section);
+    }
+    return [...bySection.values()];
+  }, [pairs]);
+  const handleSectionSelect = (sectionId: string) => {
+    const currentSubjectId = selectedPair?.subject?.id ?? null;
+    const inSection = pairs.filter((p) => p.section.id === sectionId);
+    const next =
+      inSection.find((p) => p.subject?.id === currentSubjectId) ?? inSection[0];
+    if (!next) return;
+    setPairKey(next.key);
+    setSlotKey(null);
+  };
   const rosterQuery = useSectionRoster(resolvedSectionId);
   // Memoize the wrapper: rebuilding { ctx } every render gave the roster
   // table a new effectiveCtx identity per render, which retriggered every
@@ -186,6 +209,22 @@ export default function TeacherAdvisoryAttendancePage() {
     const todayPH = phTodayKey();
     if (date < todayPH) {
       const subjectName = selectedPair?.subject?.name;
+      // The API locks anything before this week (PAST_LOCKED); mirror it here
+      // so old sheets read as locked instead of looking editable and failing
+      // only on save. Past days inside the current week stay editable.
+      if (!isEditableDay(date)) {
+        return {
+          live: {
+            ...base,
+            locked: true,
+            tone: "lock",
+            message: subjectName
+              ? `${subjectName} · sheet ${date} is from a previous week — attendance is locked.`
+              : `Sheet ${date} is from a previous week — attendance is locked.`,
+          },
+          slot: 1,
+        };
+      }
       return {
         live: {
           ...base,
@@ -312,9 +351,16 @@ export default function TeacherAdvisoryAttendancePage() {
       <section className={styles.page} aria-busy="true" aria-label="Loading attendance">
         <div className={styles.layout}>
           <div className={styles.main}>
-            <div className="flex flex-wrap items-center justify-start gap-2 lg:hidden" aria-hidden="true">
-              <Skeleton className="h-8 w-40 rounded-md" />
-              <Skeleton className="h-8 w-32 rounded-md" />
+            <div className="flex flex-wrap items-center justify-between gap-2" aria-hidden="true">
+              <div className="flex flex-wrap items-center gap-2">
+                <Skeleton className="h-12 w-40 rounded-lg" />
+                <Skeleton className="h-8 w-32 rounded-md" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-9 w-9 rounded-xl" />
+                <Skeleton className="h-9 w-9 rounded-xl" />
+                <Skeleton className="h-9 w-9 rounded-xl" />
+              </div>
             </div>
             <div className={styles.body}>
               <KanbanBoardSkeleton rows={0}>
@@ -322,7 +368,6 @@ export default function TeacherAdvisoryAttendancePage() {
               </KanbanBoardSkeleton>
             </div>
           </div>
-          <IconRailSkeleton count={4} />
         </div>
       </section>
     );
@@ -359,6 +404,32 @@ export default function TeacherAdvisoryAttendancePage() {
       ) : (
         <div className={styles.layout}>
           <div className={styles.main}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <SectionTabs
+                  sections={sectionTabs}
+                  activeSectionId={resolvedSectionId ?? null}
+                  onSelect={handleSectionSelect}
+                />
+              </div>
+              <AttendanceSidebar
+                placement="top"
+                date={date}
+                onDateChange={setDate}
+                meetupDates={meetupDateKeys}
+                slotCards={slotCards}
+                hasSubjects={pairs.some((p) => p.subject)}
+                activeSlotKey={activeSlotKey}
+                slotQuery={slotQuery}
+                onSlotQueryChange={setSlotQuery}
+                onSelect={(card) => {
+                  setPairKey(card.pairKey);
+                  setSlotKey(card.key);
+                }}
+                blocksMode={blocksMode}
+                onToggleBlocks={() => setBlocksMode((v) => !v)}
+              />
+            </div>
             <div className="flex flex-wrap items-center justify-start gap-2 lg:hidden" aria-label="Sheet toolbar">
               <SheetDatePicker date={date} onChange={setDate} meetupDates={meetupDateKeys} />
               {gate.live.message && gate.live.tone !== "lock" ? (
@@ -401,22 +472,6 @@ export default function TeacherAdvisoryAttendancePage() {
               />
             </div>
           </div>
-          <AttendanceSidebar
-            date={date}
-            onDateChange={setDate}
-            meetupDates={meetupDateKeys}
-            slotCards={slotCards}
-            hasSubjects={pairs.some((p) => p.subject)}
-            activeSlotKey={activeSlotKey}
-            slotQuery={slotQuery}
-            onSlotQueryChange={setSlotQuery}
-            onSelect={(card) => {
-              setPairKey(card.pairKey);
-              setSlotKey(card.key);
-            }}
-            blocksMode={blocksMode}
-            onToggleBlocks={() => setBlocksMode((v) => !v)}
-          />
         </div>
       )}
     </section>

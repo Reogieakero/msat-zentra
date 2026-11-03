@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
-import { SCHEDULE_CONFIG_DEFAULTS, resolveWorkloadCaps, toScheduleConfig } from "../../modules/teacher/teacher.repository.js";
+import { SCHEDULE_CONFIG_DEFAULTS, masterTeacherBands, resolveWorkloadCaps, toScheduleConfig } from "../../modules/teacher/teacher.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 export interface ScheduleQueryOpts {
@@ -9,16 +9,23 @@ export interface ScheduleQueryOpts {
   gradeLevel?: string;
 }
 
+/** Grade levels visible in the Master Teacher timeslot workspace. */
+async function allowedGradesFor(teacherId: string): Promise<string[]> {
+  const bands = await masterTeacherBands(teacherId);
+  return bands.flatMap((band) =>
+    band === "11-12" ? ["G11", "G12"] : ["G7", "G8", "G9", "G10"],
+  );
+}
+
 export async function getSchedule(ctx: TeacherContext, opts?: ScheduleQueryOpts) {
   const termId = ctx.termId;
   const yearId = ctx.schoolYearId;
-  const allowedGrades = ["G7", "G8", "G9", "G10"] as const;
-  type AllowedGrade = (typeof allowedGrades)[number];
-  const gradeLevels: AllowedGrade[] = opts?.gradeLevel
-    ? (allowedGrades as readonly string[]).includes(opts.gradeLevel)
-      ? [opts.gradeLevel as AllowedGrade]
-      : [...allowedGrades]
-    : [...allowedGrades];
+  const allowedGrades = await allowedGradesFor(ctx.userId);
+  const gradeLevels: ("G7" | "G8" | "G9" | "G10" | "G11" | "G12")[] = opts?.gradeLevel
+    ? allowedGrades.includes(opts.gradeLevel)
+      ? [opts.gradeLevel as "G7" | "G8" | "G9" | "G10" | "G11" | "G12"]
+      : (allowedGrades as ("G7" | "G8" | "G9" | "G10" | "G11" | "G12")[])
+    : (allowedGrades as ("G7" | "G8" | "G9" | "G10" | "G11" | "G12")[]);
   const sections = await prisma.section.findMany({
     where: {
       gradeLevel: { in: gradeLevels },
@@ -95,9 +102,10 @@ export async function getMySlots(ctx: TeacherContext) {
   return { slots };
 }
 
-export async function listScheduleSubjects() {
+export async function listScheduleSubjects(ctx: TeacherContext) {
+  const allowedGrades = await allowedGradesFor(ctx.userId);
   const subjects = await prisma.subject.findMany({
-    where: { gradeLevel: { in: ["G7", "G8", "G9", "G10"] } },
+    where: { gradeLevel: { in: allowedGrades as ("G7" | "G8" | "G9" | "G10" | "G11" | "G12")[] } },
     select: { id: true, name: true, code: true, gradeLevel: true, category: true },
     orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
   });
@@ -129,8 +137,21 @@ export async function getScheduleConflicts(
   if (!termId) {
     throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
   }
+  const allowedGrades = await allowedGradesFor(ctx.userId);
   const entries = await prisma.sectionTimetableEntry.findMany({
-    where: { termId, teacherNameId: { not: null } },
+    where: {
+      termId,
+      teacherNameId: { not: null },
+      ...(allowedGrades.length > 0
+        ? {
+            section: {
+              gradeLevel: {
+                in: allowedGrades as ("G7" | "G8" | "G9" | "G10" | "G11" | "G12")[],
+              },
+            },
+          }
+        : {}),
+    },
     select: {
       teacherNameId: true,
       day: true,

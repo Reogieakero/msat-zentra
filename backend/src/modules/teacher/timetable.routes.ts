@@ -79,9 +79,9 @@ router.get(
   }
 );
 
-router.get("/schedule/subjects", requireAuth, requireRole("subject_teacher", "adviser"), async (_req, res, next) => {
+router.get("/schedule/subjects", requireAuth, requireRole("subject_teacher", "adviser"), async (req, res, next) => {
   try {
-    res.json(await listScheduleSubjects());
+    res.json(await listScheduleSubjects(await termCtxOf(req)));
   } catch (e) {
     next(e);
   }

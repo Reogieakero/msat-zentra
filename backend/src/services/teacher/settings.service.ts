@@ -8,14 +8,33 @@ import { gradeToNumber } from "../../modules/teacher/teacher.repository.js";
 import { isMascotCharacter } from "../mascot.js";
 import type { TeacherContext } from "./teacher.types.js";
 
-const MASTER_TEACHER_GRADES = new Set([7, 8, 9, 10]);
+export type MasterTeacherBand = "7-10" | "11-12";
 
-export function isMasterTeacherEligible(gradeLevels: (string | number)[]): boolean {
+const MASTER_TEACHER_GRADES: Record<MasterTeacherBand, Set<number>> = {
+  "7-10": new Set([7, 8, 9, 10]),
+  "11-12": new Set([11, 12]),
+};
+
+export const MASTER_TEACHER_BAND_LABELS: Record<MasterTeacherBand, string> = {
+  "7-10": "Grades 7–10",
+  "11-12": "Grades 11–12",
+};
+
+/** StaffProfile flags backing each Master Teacher seat. */
+export function masterTeacherFlag(band: MasterTeacherBand): "isMasterTeacher" | "isMasterTeacherSenior" {
+  return band === "11-12" ? "isMasterTeacherSenior" : "isMasterTeacher";
+}
+
+export function isMasterTeacherEligible(
+  gradeLevels: (string | number)[],
+  band: MasterTeacherBand = "7-10",
+): boolean {
+  const allowed = MASTER_TEACHER_GRADES[band];
   const nums = gradeLevels
     .map(gradeToNumber)
     .filter((n) => n >= 7 && n <= 12);
   if (nums.length === 0) return true;
-  return nums.every((n) => MASTER_TEACHER_GRADES.has(n));
+  return nums.every((n) => allowed.has(n));
 }
 
 export async function listAdviserSections(ctx: TeacherContext) {
@@ -62,8 +81,16 @@ export async function listAdviserSections(ctx: TeacherContext) {
   };
 }
 
-export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boolean) {
+export async function setMasterTeacher(
+  ctx: TeacherContext,
+  band: MasterTeacherBand,
+  isMasterTeacher: boolean,
+) {
   const teacherId = ctx.userId;
+  // Explicit branch (instead of a computed key) so Prisma keeps precise types.
+  const seatOn = band === "11-12" ? { isMasterTeacherSenior: true } : { isMasterTeacher: true };
+  const seatOff = band === "11-12" ? { isMasterTeacherSenior: false } : { isMasterTeacher: false };
+  const bandLabel = MASTER_TEACHER_BAND_LABELS[band];
   if (isMasterTeacher) {
     const termId = ctx.termId;
 
@@ -87,11 +114,11 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
       ),
       ...(advised as { gradeLevel: string }[]).map((s) => s.gradeLevel),
     ];
-    if (!isMasterTeacherEligible(gradeLevels)) {
+    if (!isMasterTeacherEligible(gradeLevels, band)) {
       throw new AppError(
         403,
         "GRADE_BAND_NOT_ALLOWED",
-        "Master Teacher designation is only available for grades 7–10"
+        `The ${bandLabel} Master Teacher designation is only available for ${bandLabel.toLowerCase()}`
       );
     }
 
@@ -101,7 +128,7 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
         where: {
           id: { not: teacherId },
           status: "active",
-          staffProfile: { isMasterTeacher: true },
+          staffProfile: seatOn,
         },
         select: { fullName: true },
       });
@@ -111,32 +138,32 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
           409,
           "MASTER_TEACHER_TAKEN",
           holderName
-            ? `Master Teacher is currently designated by ${holderName} — ask them to turn it off first`
-            : "Master Teacher is currently designated — try again after it is turned off"
+            ? `${bandLabel} Master Teacher is currently designated by ${holderName} — ask them to turn it off first`
+            : `${bandLabel} Master Teacher is currently designated — try again after it is turned off`
         );
       }
 
       await tx.staffProfile.updateMany({
-        where: { isMasterTeacher: true, userId: { not: teacherId } },
-        data: { isMasterTeacher: false },
+        where: { ...seatOn, userId: { not: teacherId } },
+        data: seatOff,
       });
       // Use upsert (not updateMany): teachers without a StaffProfile row yet
       // would otherwise get a silent 0-row update — success response, no DB
       // change, Timeslot link never appears.
       await tx.staffProfile.upsert({
         where: { userId: teacherId },
-        update: { isMasterTeacher: true },
+        update: seatOn,
         create: {
           userId: teacherId,
           employeeId: `T-${teacherId.slice(0, 8)}`,
-          isMasterTeacher: true,
+          ...seatOn,
         },
       });
     });
   } else {
     await prisma.staffProfile.updateMany({
       where: { userId: teacherId },
-      data: { isMasterTeacher: false },
+      data: seatOff,
     });
   }
   await writeAudit({
@@ -145,8 +172,8 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
     sourceTable: "staff_profiles",
     sourceId: teacherId,
     reason: isMasterTeacher
-      ? "Teacher declared Master Teacher status"
-      : "Teacher removed Master Teacher status",
+      ? `Teacher declared ${bandLabel} Master Teacher status`
+      : `Teacher removed ${bandLabel} Master Teacher status`,
   });
 
   if (isMasterTeacher) {
@@ -155,7 +182,7 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
       action: "master_take",
       sourceId: teacherId,
       excludeUserId: teacherId,
-      message: "A teacher declared Master Teacher status.",
+      message: `A teacher declared ${bandLabel} Master Teacher status.`,
     });
   }
   void fanoutNotification({
@@ -164,10 +191,10 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
     action: "master_take",
     sourceId: teacherId,
     message: isMasterTeacher
-      ? "You declared Master Teacher status."
-      : "You removed Master Teacher status.",
+      ? `You declared ${bandLabel} Master Teacher status.`
+      : `You removed ${bandLabel} Master Teacher status.`,
   });
-  return { isMasterTeacher };
+  return { isMasterTeacher, band };
 }
 
 export async function readProfileSettings(teacherId: string) {

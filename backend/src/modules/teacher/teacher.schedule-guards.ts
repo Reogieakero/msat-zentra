@@ -1,21 +1,67 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 
-export async function requireMasterTeacher(teacherId: string, action: string) {
-  const profile = await prisma.staffProfile.findUnique({ where: { userId: teacherId } });
-  if (!profile?.isMasterTeacher) {
-    throw new AppError(403, "MASTER_TEACHER_REQUIRED", `Only Master Teachers can ${action}`);
-  }
+export type MasterTeacherBand = "7-10" | "11-12";
+
+const BAND_GRADES: Record<MasterTeacherBand, readonly string[]> = {
+  "7-10": ["G7", "G8", "G9", "G10"],
+  "11-12": ["G11", "G12"],
+};
+
+export function gradeBandOf(gradeLevel: string): MasterTeacherBand | null {
+  if (BAND_GRADES["7-10"].includes(gradeLevel)) return "7-10";
+  if (BAND_GRADES["11-12"].includes(gradeLevel)) return "11-12";
+  return null;
 }
 
-export async function resolveScheduleTarget(sectionId: string, subjectId: string | null) {
+/** Bands the teacher currently holds a Master Teacher seat for. */
+export async function masterTeacherBands(teacherId: string): Promise<MasterTeacherBand[]> {
+  const profile = await prisma.staffProfile.findUnique({
+    where: { userId: teacherId },
+    select: { isMasterTeacher: true, isMasterTeacherSenior: true },
+  });
+  const bands: MasterTeacherBand[] = [];
+  if (profile?.isMasterTeacher) bands.push("7-10");
+  if (profile?.isMasterTeacherSenior) bands.push("11-12");
+  return bands;
+}
+
+export async function requireMasterTeacher(
+  teacherId: string,
+  action: string,
+  band?: MasterTeacherBand,
+) {
+  const bands = await masterTeacherBands(teacherId);
+  const allowed = band ? bands.includes(band) : bands.length > 0;
+  if (!allowed) {
+    throw new AppError(403, "MASTER_TEACHER_REQUIRED", `Only Master Teachers can ${action}`);
+  }
+  return bands;
+}
+
+export async function resolveScheduleTarget(
+  sectionId: string,
+  subjectId: string | null,
+  teacherId?: string,
+) {
   const section = await prisma.section.findUnique({ where: { id: sectionId } });
-  if (!section || !["G7", "G8", "G9", "G10"].includes(section.gradeLevel as string)) {
+  const band = section ? gradeBandOf(section.gradeLevel as string) : null;
+  if (!section || !band) {
     throw new AppError(
       403,
       "GRADE_BAND_NOT_ALLOWED",
-      "Schedule subject is only available for grades 7–10"
+      "Schedule subject is only available for grades 7–12"
     );
+  }
+  if (teacherId) {
+    const bands = await masterTeacherBands(teacherId);
+    if (!bands.includes(band)) {
+      throw new AppError(
+        403,
+        "GRADE_BAND_NOT_ALLOWED",
+        `This section belongs to the grades ${band === "11-12" ? "11–12" : "7–10"} Master Teacher scope`
+      );
+    }
   }
   if (subjectId) {
     const subject = await prisma.subject.findUnique({ where: { id: subjectId } });

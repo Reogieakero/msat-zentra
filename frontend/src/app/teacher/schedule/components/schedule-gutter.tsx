@@ -246,7 +246,7 @@ export function ScheduleGutter() {
                 </span>
               }
               count={<span className="text-amber-600 dark:text-amber-500">{subjects.length}</span>}
-              description="Create one or more subjects for grades 7–10. Usable immediately."
+              description="Create one or more subjects for grades 7–12. Usable immediately."
               className="border-0"
               footer={
                 <div className="flex justify-end gap-1.5 px-1 pb-1">

@@ -8,6 +8,7 @@ import { KanbanBoard } from "@/components/ui/kanban-board";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import sectionStyles from "./settings-section.module.css";
+import { useSettingsDockAction } from "./use-settings-dock";
 function getErrorMessage(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
   const message = data?.error?.message ?? data?.message;
@@ -69,6 +70,7 @@ export function PasswordCard() {
   const [confirm, setConfirm] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const runDockAction = useSettingsDockAction();
   // Real-time feedback: validates as the user types, before submit.
   const liveError =
     confirm.length > 0 && next !== confirm
@@ -95,10 +97,19 @@ export function PasswordCard() {
     setError(null);
     setSaving(true);
     try {
-      await apiClient.post("/api/auth/change-password", {
-        currentPassword: current,
-        newPassword: next,
-      });
+      await runDockAction(
+        {
+          title: "Updating password",
+          description: "Securing your account",
+        },
+        async () => {
+          await apiClient.post("/api/auth/change-password", {
+            currentPassword: current,
+            newPassword: next,
+          });
+        },
+        { doneDescription: "Password updated" },
+      );
       setCurrent("");
       setNext("");
       setConfirm("");

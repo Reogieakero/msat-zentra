@@ -2,8 +2,10 @@
 
 > Built 2026-10-17. Read this first; do not re-scan the whole repo.
 > Deep-dive docs: `SYSTEM_UNDERSTANDING.md` (best onboarding), `PLAN.md`
-> (spec + resolved design decisions), `docs/zentra-progress-report.md`
-> (2026-09-23 audit — partly outdated), root `*_REPORT.md` (dated audits).
+> (spec + resolved design decisions), `docs/architecture/system-architecture.md`
+> (runtime + data architecture), `docs/guides/` (user + developer guides),
+> `docs/zentra-progress-report.md` (2026-09-23 audit — partly outdated),
+> `docs/reports/` (dated audits).
 
 ## 1. PROJECT OVERVIEW
 
@@ -51,8 +53,8 @@
 - `frontend/src/components/` — shared feature kits (`adm-queue`, `anecdotal`, `dock`, `registry`, `risk-dashboard`, `session-booking`, …), `ui/` (shadcn primitives), `shared/` (pagination, headers, skeletons, empties), role sidebars (`*-sidebar.tsx`).
 - `frontend/src/services/<role>/` — query hooks + `*.types.ts` (teacher, guidance, nurse, coordinator, principal, registry, settings, anecdotal).
 - `frontend/src/lib/` — `api/` (client, queryKeys, usePaginatedQuery, useOptimisticMutation), `auth/`, `term/`, `realtime/`, `supabase/`, `notifications/`, `risk/`, `labels/`.
-- `docs/` (role-module specs, ERD, stack notes — partly stale), `PLANS/` (per-role wiring plans + `qa-output/TRANSACTION_INVENTORY.md`), `qa-output/` (**gitignored** QA artifacts), `supabase/config.toml`.
-- Root: `PLAN.md`, `SYSTEM_UNDERSTANDING.md`, dated audit reports, `push.bat`.
+- `docs/` (`architecture/` system architecture, `guides/` user + developer guides, `reports/` dated audits, `role-modules/` specs, ERD, stack notes — partly stale), `PLANS/` (per-role wiring plans + `qa-output/TRANSACTION_INVENTORY.md`), `qa-output/` (**gitignored** QA artifacts), `supabase/config.toml`.
+- Root: `PLAN.md`, `SYSTEM_UNDERSTANDING.md`, `push.bat`; dated audit reports live under `docs/reports/`.
 - `frontend/AGENTS.md` + `frontend/CLAUDE.md` are auto-managed by `next dev` — leave them alone.
 
 ## 5. COMMANDS
@@ -93,7 +95,7 @@ Backend (paths relative to `backend/src/`):
 - `modules/adm/*` — profiles/meetings/invitees/attachments/devices/meta; ADM stage machine + eligibility + principal approve. `monitoring.routes.ts` serves the adviser ADM monitoring desk (`GET /api/adm/my-cases/:caseId`, module create/patch) — module upload links live on `AdmModule.submissionUrl` (saving one auto-marks the module submitted); access is resolved through `Section.adviserId`, and `/api/adm/my-cases` lists every ADM case in the adviser's section (any filer). The case desk's module board **merges** that case's `AdmModule` rows with the section's `kind: adm` `AdvisoryModule` rows (read-only, per-learner status from `AdvisoryModuleSubmission`; edited on `/teacher/advisory/modules`) and computes progress over both.
 - `modules/sf10/*` — records + lifecycle (verify→validate→release), append-only versions, desk banding, storage.
 - `modules/risk/*` + `services/risk.ts` (flags: grade avg <75, attendance <80%, ≥1 anecdote); attendance uses `sectionAttendanceTotals(sectionIds, termId)` — section meetups elapsed from the **term start date** (timetable-derived, recorded-sheet fallback), never the learner's add date — passed as `attendanceTotal`, `services/riskRefresh.ts` (hourly snapshots).
-- `modules/teacher/*` — overview scopes, roster/students, grading workspace, grade flags, advisory (roster/advisee academics/attendance), claim/verify codes, timetable, settings, sf10-access, advisory modules (`modules.routes.ts` + `services/advisory/modules.service.ts`: section-wide module release + per-learner submissions). Biggest router.
+- `modules/teacher/*` — overview scopes, roster/students, grading workspace, grade flags, advisory (roster/advisee academics/attendance), claim/verify codes, timetable, settings, sf10-access, advisory modules (`modules.routes.ts` + `services/advisory/modules.service.ts`: section-wide module release + per-learner submissions). Biggest router. Master Teacher has **two independent band seats** — `StaffProfile.isMasterTeacher` (G7–10) and `isMasterTeacherSenior` (G11–12), one holder each; the timeslot workspace (`getSchedule`/`listScheduleSubjects`/`resolveScheduleTarget`) only exposes the bands the teacher holds.
 - `modules/registrar/*` + `modules/record-keeper/*` + `modules/registry/registry.repository.ts` — shared (banded) accounts/finals/adviser-access/academics desks.
 - `modules/academics/*` — sections/subjects/assignments/advisers/schedule + honor-roll live service.
 - `modules/guidance/*` — overview/alerts (at-risk queue)/referrals/anecdotal/schedule/settings. `alertCases.routes.ts` (+ `services/guidance/alertCases.service.ts`) serves the alerts desk's merged referrals + interventions board in one server-paged response.

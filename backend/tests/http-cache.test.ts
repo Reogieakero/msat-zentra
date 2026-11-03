@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
 import type { Request, Response, NextFunction } from "express";
-import { etag } from "../src/lib/etag.js";
+import { etag, weakEtag } from "../src/lib/etag.js";
 import { cache } from "../src/lib/cache.js";
 
 beforeAll(() => {
@@ -45,13 +45,28 @@ describe("etag middleware", () => {
   });
 });
 
+describe("weakEtag helper", () => {
+  it("derives the same tag the middleware emits", () => {
+    const { res, store } = mockJsonRes();
+    etag()({} as Request, res, (() => {}) as NextFunction);
+    (res.json as (b: unknown) => unknown)({ data: [1, 2], total: 2 });
+    expect(weakEtag(JSON.stringify({ data: [1, 2], total: 2 }))).toBe(store["ETag"]);
+  });
+
+  it("changes when the payload changes", () => {
+    expect(weakEtag('{"a":1}')).not.toBe(weakEtag('{"a":2}'));
+  });
+});
+
 describe("cache middleware headers", () => {
   it("sets Cache-Control even when redis is unavailable", async () => {
     const { res, store } = mockJsonRes();
     const next = vi.fn();
     await cache({ tags: ["audit"], ttl: 30 })({ method: "GET" } as Request, res, next as NextFunction);
     expect(next).toHaveBeenCalled();
-    expect(store["Cache-Control"]).toBe("private, max-age=30");
+    // no-store is deliberate: a client-side max-age served pre-write lists for up
+    // to 30s after a PATCH. See the comment in lib/cache.ts.
+    expect(store["Cache-Control"]).toBe("private, no-store");
   });
 
   it("honours a custom cacheControl option", async () => {

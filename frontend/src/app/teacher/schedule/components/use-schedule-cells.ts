@@ -1,6 +1,7 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useDock } from "@/components/dock/dock-store";
 import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
@@ -88,6 +89,13 @@ export function useScheduleCells(
     return init;
   };
   const invalidateTeacher = useTeacherInvalidate();
+  // Every confirmed write reports into the one shared Dock so the page never
+  // has to draw its own floating panel.
+  const dock = useDock();
+  const dockRef = useRef(dock);
+  useEffect(() => {
+    dockRef.current = dock;
+  }, [dock]);
   const [cells, setCells] = useState<Record<string, SlotValue | null>>(() => buildCells(section));
   const [cellsSectionId, setCellsSectionId] = useState(section.id);
   if (cellsSectionId !== section.id) {
@@ -146,10 +154,31 @@ export function useScheduleCells(
       );
       return { vars, warnings: data?.warnings ?? [] };
     },
-    onSuccess: ({ vars, warnings }) => {
+    onMutate: (vars) => {
+      const sub = subjectById.get(vars.subjectId)?.name ?? "Subject";
+      const teacher = teacherById.get(vars.teacherNameId)?.name ?? "Teacher";
+      const dockId = dockRef.current.startTask({
+        kind: "timetable-save",
+        title: "Saving slot",
+        description: `${sub} with ${teacher} — ${section.name}`,
+      });
+      return { dockId };
+    },
+    onSuccess: ({ vars, warnings }, _input, ctx) => {
       invalidateTeacher.schedule();
       const sub = subjectById.get(vars.subjectId)?.name ?? "Subject";
       const teacher = teacherById.get(vars.teacherNameId)?.name ?? "Teacher";
+      const doneDescription = `${sub} with ${teacher} — ${section.name}`;
+      if (ctx?.dockId) {
+        if (warnings.length > 0) {
+          dockRef.current.failTask(
+            ctx.dockId,
+            warnings[0]?.message ?? `${doneDescription} was saved with warnings.`,
+          );
+        } else {
+          dockRef.current.completeTask(ctx.dockId, doneDescription);
+        }
+      }
       if (!silent) {
         if (warnings.length > 0) {
           toast.success({
@@ -165,7 +194,7 @@ export function useScheduleCells(
       }
       setSlotModal(null);
     },
-    onError: (err: unknown, input) => {
+    onError: (err: unknown, input, ctx) => {
       // Revert to the last server value (not blank) so a failed save never
       // wipes a previously saved slot from view.
       const serverEntry = section.timetableEntries.find(
@@ -179,6 +208,7 @@ export function useScheduleCells(
       }));
       const message = apiErrorMessage(err, "Failed to save timetable slot.");
       setSlotError(message);
+      if (ctx?.dockId) dockRef.current.failTask(ctx.dockId, message);
       if (!silent) toast.error({ title: "Could not save slot", description: message });
     },
   });
@@ -189,15 +219,24 @@ export function useScheduleCells(
       });
       return vars;
     },
-    onSuccess: (vars) => {
+    onMutate: () => ({
+      dockId: dockRef.current.startTask({
+        kind: "timetable-save",
+        title: "Clearing slot",
+        description: `Removing the entry from ${section.name}`,
+      }),
+    }),
+    onSuccess: (vars, _input, ctx) => {
       setCells((prev) => ({ ...prev, [vars.key]: null }));
       invalidateTeacher.schedule();
+      if (ctx?.dockId) dockRef.current.completeTask(ctx.dockId, `Slot cleared — ${section.name}`);
       if (!silent) toast.success({ title: "Slot cleared", description: "Timetable entry removed." });
       setSlotModal(null);
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, _input, ctx) => {
       const message = apiErrorMessage(err, "Failed to clear timetable slot.");
       setSlotError(message);
+      if (ctx?.dockId) dockRef.current.failTask(ctx.dockId, message);
       if (!silent) toast.error({ title: "Could not clear slot", description: message });
     },
   });
@@ -320,6 +359,15 @@ export function useScheduleCells(
     }
     setCells(next);
     setSlotError(null);
+    const dockId = dockRef.current.startTask({
+      kind: "timetable-save",
+      title: "Discarding staged picks",
+      description: `${section.name} — reverting to last saved`,
+    });
+    dockRef.current.completeTask(
+      dockId,
+      `Staged picks discarded — ${section.name} is back to its last saved slots.`,
+    );
   }, [section]);
   const isLocked =
     section.timetableEntries.length > 0 &&
@@ -331,23 +379,33 @@ export function useScheduleCells(
       });
       return data as { deleted: number; skippedApproved?: number };
     },
-    onSuccess: (data) => {
+    onMutate: () => ({
+      dockId: dockRef.current.startTask({
+        kind: "timetable-save",
+        title: "Clearing timetable",
+        description: `Removing every slot in ${section.name}`,
+      }),
+    }),
+    onSuccess: (data, _input, ctx) => {
       setCells({});
       setSlotModal(null);
       setConfirmClearOpen(false);
       invalidateTeacher.schedule();
       const skipped = data.skippedApproved ?? 0;
-      toast.success({
-        title: "Timetable cleared",
-        description:
-          `${data.deleted} slot${data.deleted === 1 ? "" : "s"} removed for ${section.name}.` +
-          (skipped > 0
-            ? ` ${skipped} approved slot${skipped === 1 ? "" : "s"} kept — unlock the section to remove ${skipped === 1 ? "it" : "them"}.`
-            : ""),
-      });
+      const summary =
+        `${data.deleted} slot${data.deleted === 1 ? "" : "s"} removed for ${section.name}.` +
+        (skipped > 0
+          ? ` ${skipped} approved slot${skipped === 1 ? "" : "s"} kept — unlock the section to remove ${skipped === 1 ? "it" : "them"}.`
+          : "");
+      if (ctx?.dockId) {
+        if (skipped > 0) dockRef.current.failTask(ctx.dockId, summary);
+        else dockRef.current.completeTask(ctx.dockId, summary);
+      }
+      toast.success({ title: "Timetable cleared", description: summary });
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, _input, ctx) => {
       const message = apiErrorMessage(err, "Failed to clear timetable.");
+      if (ctx?.dockId) dockRef.current.failTask(ctx.dockId, message);
       toast.error({ title: "Could not clear timetable", description: message });
     },
   });
@@ -358,16 +416,23 @@ export function useScheduleCells(
       });
       return data as { drafted: number };
     },
-    onSuccess: (data) => {
+    onMutate: () => ({
+      dockId: dockRef.current.startTask({
+        kind: "timetable-save",
+        title: "Unlocking schedule",
+        description: `Sending ${section.name} back to draft`,
+      }),
+    }),
+    onSuccess: (data, _input, ctx) => {
       setConfirmUnlockOpen(false);
       invalidateTeacher.schedule();
-      toast.success({
-        title: "Schedule unlocked",
-        description: `${data.drafted} slot${data.drafted === 1 ? "" : "s"} back to draft — edit, then send for review again.`,
-      });
+      const summary = `${data.drafted} slot${data.drafted === 1 ? "" : "s"} back to draft — edit, then send for review again.`;
+      if (ctx?.dockId) dockRef.current.completeTask(ctx.dockId, summary);
+      toast.success({ title: "Schedule unlocked", description: summary });
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, _input, ctx) => {
       const message = apiErrorMessage(err, "Failed to unlock timetable.");
+      if (ctx?.dockId) dockRef.current.failTask(ctx.dockId, message);
       toast.error({ title: "Could not unlock timetable", description: message });
     },
   });

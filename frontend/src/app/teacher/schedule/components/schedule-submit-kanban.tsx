@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2, Send, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { ScrollList } from "@/components/ui/scroll-list";
+import { Pill } from "@/components/ui/pill";
 import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { useTerm } from "@/lib/term/TermContext";
@@ -125,9 +126,9 @@ export function SubmitDockRows({ rows }: { rows: SubmitRowState[] }) {
             <span className="font-sans text-xs font-medium" title={r.name}>
               {r.name}
             </span>
-            <span className="shrink-0 rounded border border-amber-600/45 bg-amber-500/10 px-1.5 font-sans text-[12px] font-medium text-amber-700 dark:border-amber-500/45 dark:text-amber-400">
+            <Pill tone="amber">
               {r.count} slot{r.count === 1 ? "" : "s"}
-            </span>
+            </Pill>
           </span>
           <span className="flex shrink-0 items-center gap-1 font-sans text-[11px] text-muted-foreground">
             {r.status === "submitted" ? (
@@ -246,9 +247,9 @@ export function SendToPrincipalKanban({
                     {s.name}
                   </span>
                   <span className={kanbanStyles.meta}>
-                    <span className="shrink-0 rounded border border-amber-600/45 bg-amber-500/10 px-1.5 font-sans text-[12px] font-medium text-amber-700 dark:border-amber-500/45 dark:text-amber-400">
+                    <Pill tone="amber">
                       {s.count} slot{s.count === 1 ? "" : "s"}
-                    </span>
+                    </Pill>
                   </span>
                 </div>
               ))}

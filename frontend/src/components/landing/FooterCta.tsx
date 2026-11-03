@@ -1,26 +1,39 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { ArrowUpRight } from "lucide-react";
 import { Reveal } from "./Reveal";
+import shell from "./LandingPage.module.css";
 import styles from "./FooterCta.module.css";
 
 export function FooterCta() {
   return (
-    <section id="access" className={styles.section}>
-      <div className={styles.inner}>
+    <section id="access" className={shell.section}>
+      <div className={shell.sectionInner}>
         <Reveal className={styles.panel}>
-          <span className={styles.eyebrowRule} aria-hidden="true" />
-          <h2 className={styles.heading}>Ready to bring Zentra to MSAT?</h2>
-          <p className={styles.sub}>
-            One system of record for every learner signal — open your workspace or
-            request access for your school.
-          </p>
-          <div className={styles.actions}>
-            <Button asChild size="lg">
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="#access">Request access</Link>
-            </Button>
+          <span className={styles.glow} aria-hidden="true" />
+          <span className={styles.grid} aria-hidden="true" />
+          <div className={styles.inner}>
+            <p className={shell.eyebrow}>
+              <span className={shell.eyebrowDot} aria-hidden="true" />
+              Bring Zentra to your school
+            </p>
+            <h2 className={styles.heading}>
+              Every learner
+              <br />
+              <span className={styles.accent}>considered.</span>
+            </h2>
+            <p className={styles.sub}>
+              Sign in to your workspace, or request access for a desk at Mati School of
+              Arts and Trades. One record, ten roles, no blind spots.
+            </p>
+            <div className={styles.actions}>
+              <Link href="/login" className={styles.primary}>
+                Open workspace
+                <ArrowUpRight size={16} aria-hidden="true" />
+              </Link>
+              <Link href="/register" className={styles.secondary}>
+                Request access
+              </Link>
+            </div>
           </div>
         </Reveal>
       </div>

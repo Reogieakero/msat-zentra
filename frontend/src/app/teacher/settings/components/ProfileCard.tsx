@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/sonner";
 import sectionStyles from "./settings-section.module.css";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
+import { useSettingsDockAction } from "./use-settings-dock";
 import {
   teacherProfileSettingsKey,
   useTeacherProfileSettings,
@@ -41,6 +42,7 @@ export function ProfileCard() {
   const invalidateTeacher = useTeacherInvalidate();
   const overview = useTeacherOverview();
   const profile = useTeacherProfileSettings();
+  const runDockAction = useSettingsDockAction();
   const profileKey = teacherProfileSettingsKey(session?.sub);
 
   const [name, setName] = React.useState("");
@@ -94,10 +96,19 @@ export function ProfileCard() {
       secondaryColor: old?.secondaryColor ?? profile.data?.secondaryColor ?? null,
     }));
     try {
-      await apiClient.patch("/api/teacher/settings/profile", {
-        ...(nameDirty ? { fullName: name.trim() } : {}),
-        ...(mascotDirty ? { mascot } : {}),
-      });
+      await runDockAction(
+        {
+          title: "Saving profile",
+          description: "Display name and mascot",
+        },
+        async () => {
+          await apiClient.patch("/api/teacher/settings/profile", {
+            ...(nameDirty ? { fullName: name.trim() } : {}),
+            ...(mascotDirty ? { mascot } : {}),
+          });
+        },
+        { doneDescription: "Profile updated" },
+      );
 
       refresh();
       toast.success({ title: "Profile updated", description: "Your mascot and display name were saved." });

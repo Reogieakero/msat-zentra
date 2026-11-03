@@ -1,6 +1,13 @@
 "use client";
 import * as React from "react";
 import "@/components/ui/scroll-list.css";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { SheetStatus } from "@/services/teacher/attendance.types";
 export const STATUS_BOXES: { value: SheetStatus; letter: string; activeClass: string; label: string }[] = [
   { value: "present", letter: "P", activeClass: "bg-green-500/70 border-green-500/70 text-white", label: "Present" },
@@ -48,11 +55,13 @@ export const StatusBoxes = React.memo(function StatusBoxes({
     </div>
   );
 });
+/* Meetup block tones mirror the shared pill / StatusBoxes palette so the
+   blocks, row pills and status buttons read as one design language. */
 export const BLOCK_DOT: Record<SheetStatus, string> = {
-  present: "bg-green-500",
-  late: "bg-amber-500",
-  absent: "bg-red-500",
-  excused: "bg-gray-400",
+  present: "border-green-500/70 bg-green-500/70",
+  late: "border-amber-500/70 bg-amber-500/70",
+  absent: "border-red-500/70 bg-red-500/70",
+  excused: "border-blue-500/70 bg-blue-500/70",
 };
 export const BLOCK_LABEL: Record<SheetStatus, string> = {
   present: "Present",
@@ -84,31 +93,45 @@ export const MeetupBlocksCell = React.memo(function MeetupBlocksCell({
   // All meetup dots from term start to the latest meetup are displayed —
   // no "+N" collapsing. The row scrolls horizontally when there are many.
   return (
-    <div
-      className="zentra-scroll flex items-center gap-[3px] overflow-x-auto py-0.5"
-      role="img"
-      aria-label={`${dates.length} meetup days`}
-    >
-      {dates.map((d) => {
-        const s = statusOf(studentId, d);
-        const autoAbsent = !s && pastDue(d);
-        return (
-          <span
-            key={d}
-            title={
-              s
-                ? `${d} — ${BLOCK_LABEL[s]}`
-                : autoAbsent
-                  ? `${d} — absent (not logged)`
-                  : `${d} — no record`
-            }
-            className={`h-[17px] w-[17px] shrink-0 rounded-[4px] border border-border/60 ${
-              s ? BLOCK_DOT[s] : autoAbsent ? "bg-red-500" : "bg-muted"
-            }`}
-          />
-        );
-      })}
-    </div>
+    <TooltipProvider delayDuration={120}>
+      <div
+        className="zentra-scroll flex items-center gap-[3px] overflow-x-auto py-0.5"
+        role="img"
+        aria-label={`${dates.length} meetup days`}
+      >
+        {dates.map((d) => {
+          const s = statusOf(studentId, d);
+          const autoAbsent = !s && pastDue(d);
+          const label = s
+            ? BLOCK_LABEL[s]
+            : autoAbsent
+              ? "Absent (not logged)"
+              : "No record";
+          return (
+            <Tooltip key={d}>
+              <TooltipTrigger asChild>
+                <span
+                  aria-label={`${d} — ${label}`}
+                  className={cn(
+                    "h-[17px] w-[17px] shrink-0 rounded-md border transition-colors",
+                    s
+                      ? BLOCK_DOT[s]
+                      : autoAbsent
+                        ? "border-red-500/70 border-dashed bg-red-500/70"
+                        : "border-border/60 bg-muted",
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>
+                <span className="font-medium tabular-nums">{d}</span>
+                <span className="opacity-50">—</span>
+                <span className="font-semibold">{label}</span>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </TooltipProvider>
   );
 });
 export function rateClass(rate: number): string {

@@ -10,6 +10,21 @@ import sectionStyles from "./settings-section.module.css";
 import { useCachedMasterTeacher, writeCachedMasterTeacher } from "@/services/teacher/flagCache";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
+import { useSettingsDockAction } from "./use-settings-dock";
+
+type MasterTeacherBand = "7-10" | "11-12";
+
+interface SeatConfig {
+  band: MasterTeacherBand;
+  label: string;
+  grades: string;
+}
+
+const SEATS: SeatConfig[] = [
+  { band: "7-10", label: "Junior High", grades: "Grades 7–10" },
+  { band: "11-12", label: "Senior High", grades: "Grades 11–12" },
+];
+
 function getErrorMessage(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
   const message = data?.error?.message ?? data?.message;
@@ -17,55 +32,104 @@ function getErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message;
   return fallback;
 }
+
 export function MasterTeacherCard() {
   const session = useSession();
   const overview = useTeacherOverview();
   const invalidateTeacher = useTeacherInvalidate();
+  const runDockAction = useSettingsDockAction();
   const cachedMaster = useCachedMasterTeacher(session?.sub);
-  // Optimistic override so the switch + sidebar Timeslot link flip instantly.
-  // overview.data stays stale (old `false`) until the refetch below lands, and
-  // `overview.data?.isMasterTeacher ?? cachedMaster` would otherwise keep
-  // showing off even after we write the cache.
-  const [optimistic, setOptimistic] = React.useState<boolean | null>(null);
+  // Optimistic overrides so each switch + the sidebar Timeslot link flip
+  // instantly; overview.data stays stale until the refetch lands.
+  const [optimistic, setOptimistic] = React.useState<Partial<Record<MasterTeacherBand, boolean>>>({});
+  const [loading, setLoading] = React.useState<Partial<Record<MasterTeacherBand, boolean>>>({});
   React.useEffect(() => {
-    if (overview.data?.isMasterTeacher !== undefined) setOptimistic(null);
-  }, [overview.data?.isMasterTeacher]);
-  const isMasterTeacher = optimistic ?? overview.data?.isMasterTeacher ?? cachedMaster;
-  const masterTeacherEligible = overview.data?.masterTeacherEligible ?? false;
-  const masterTeacherTaken = overview.data?.masterTeacherTaken ?? false;
-  const masterHolderName = overview.data?.masterTeacherHolderName ?? null;
-  const takenByOther = !isMasterTeacher && masterTeacherTaken;
-  const [mtLoading, setMtLoading] = React.useState(false);
-  if (!masterTeacherEligible) return null;
-  const handleToggleMasterTeacher = async () => {
-    if (mtLoading) return;
-    const next = !isMasterTeacher;
+    if (overview.data?.isMasterTeacher === undefined) return;
+    setOptimistic((prev) =>
+      prev["7-10"] === undefined && prev["11-12"] === undefined ? prev : {},
+    );
+  }, [overview.data?.isMasterTeacher, overview.data?.isMasterTeacherSenior]);
+
+  const seats = SEATS.map((seat) => {
+    const data = overview.data;
+    const isMasterTeacher =
+      optimistic[seat.band] ??
+      (seat.band === "11-12"
+        ? (data?.isMasterTeacherSenior ?? false)
+        : (data?.isMasterTeacher ?? cachedMaster));
+    const eligible =
+      seat.band === "11-12"
+        ? (data?.masterTeacherSeniorEligible ?? false)
+        : (data?.masterTeacherEligible ?? false);
+    const taken =
+      seat.band === "11-12"
+        ? (data?.masterTeacherSeniorTaken ?? false)
+        : (data?.masterTeacherTaken ?? false);
+    const holderName =
+      seat.band === "11-12"
+        ? (data?.masterTeacherSeniorHolderName ?? null)
+        : (data?.masterTeacherHolderName ?? null);
+    return { ...seat, isMasterTeacher, eligible, taken, holderName };
+  });
+  // Both band seats stay visible so a teacher can see which seat exists and
+  // whether their current load qualifies — never hide the G11–12 row just
+  // because this teacher has no senior classes this term.
+  const visibleSeats = seats;
+  if (visibleSeats.length === 0) return null;
+
+  const handleToggle = async (seat: (typeof seats)[number]) => {
+    if (loading[seat.band]) return;
+    const next = !seat.isMasterTeacher;
+    const takenByOther = !seat.isMasterTeacher && seat.taken;
     if (next && takenByOther) {
       toast.error({
         title: "Designation unavailable",
-        description: masterHolderName
-          ? `Master Teacher is currently designated by ${masterHolderName} — try again after it is turned off.`
-          : "Master Teacher is currently designated — try again after it is turned off.",
+        description: seat.holderName
+          ? `${seat.grades} Master Teacher is currently designated by ${seat.holderName} — try again after it is turned off.`
+          : `${seat.grades} Master Teacher is currently designated — try again after it is turned off.`,
       });
       return;
     }
-    setMtLoading(true);
+    setLoading((prev) => ({ ...prev, [seat.band]: true }));
     try {
-      await apiClient.patch("/api/teacher/settings/master-teacher", { isMasterTeacher: next });
-      writeCachedMasterTeacher(session?.sub, next);
-      setOptimistic(next);
+      await runDockAction(
+        {
+          title: next
+            ? `Enabling ${seat.grades} Master Teacher`
+            : `Disabling ${seat.grades} Master Teacher`,
+          description: seat.label,
+        },
+        async () => {
+          await apiClient.patch("/api/teacher/settings/master-teacher", {
+            isMasterTeacher: next,
+            band: seat.band,
+          });
+        },
+        {
+          doneDescription: next
+            ? `${seat.grades} Master Teacher enabled`
+            : `${seat.grades} Master Teacher disabled`,
+        },
+      );
+      const nextJunior =
+        seat.band === "7-10" ? next : (overview.data?.isMasterTeacher ?? false);
+      const nextSenior =
+        seat.band === "11-12" ? next : (overview.data?.isMasterTeacherSenior ?? false);
+      writeCachedMasterTeacher(session?.sub, nextJunior || nextSenior);
+      setOptimistic((prev) => ({ ...prev, [seat.band]: next }));
       // settings() alone only refreshes adviser-sections — overview holds
-      // isMasterTeacher (card + sidebar Timeslot link) and schedule-me/my-slots
-      // gate the timetable, so all three must refresh or the toast pops with
-      // no visible change.
+      // the seat flags (card + sidebar Timeslot link) and schedule-me/my-slots
+      // gate the timetable, so all three must refresh.
       invalidateTeacher.overview();
       invalidateTeacher.schedule();
       invalidateTeacher.settings();
       toast.success({
-        title: next ? "Master Teacher enabled" : "Master Teacher disabled",
+        title: next
+          ? `${seat.grades} Master Teacher enabled`
+          : `${seat.grades} Master Teacher disabled`,
         description: next
-          ? "Your classes now appear under the Master Teacher designation."
-          : "You no longer have the Master Teacher designation.",
+          ? `Your ${seat.label} classes now appear under the ${seat.grades} Master Teacher designation.`
+          : `You no longer hold the ${seat.grades} Master Teacher designation.`,
       });
     } catch (err) {
       const message = getErrorMessage(err, "Failed to update Master Teacher status.");
@@ -73,67 +137,60 @@ export function MasterTeacherCard() {
       invalidateTeacher.overview();
       invalidateTeacher.settings();
     } finally {
-      setMtLoading(false);
+      setLoading((prev) => ({ ...prev, [seat.band]: false }));
     }
   };
+
   return (
     <div id="section-master-teacher" className={sectionStyles.boardWrap}>
       <KanbanBoard
         title="Master Teacher"
         icon={<GraduationCap size={14} aria-hidden="true" />}
-        description="Self-declared designation for grades 7–10 classes."
+        description="One designation per grade band — each seat owns its own timeslot scope."
         ariaLabel="Master Teacher settings"
       >
-        {isMasterTeacher ? (
-          <div className="flex items-center justify-between gap-3 px-1">
-            <div>
-              <p className="text-sm font-medium">Master Teacher status</p>
-              <p className="text-xs text-muted-foreground">
-                Currently designated — only one designation at a time.
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                No teacher code is needed on My Classes / Attendance while designated —
-                your student and subject records open directly. Turn off to release the seat.
-              </p>
-            </div>
-            <Switch
-              checked
-              onCheckedChange={handleToggleMasterTeacher}
-              disabled={mtLoading}
-              aria-label="Toggle Master Teacher status"
-              className={sectionStyles.amberSwitch}
-            />
-          </div>
-        ) : takenByOther ? (
-          <div className="flex items-center justify-between gap-3 px-1">
-            <div>
-              <p className="text-sm font-medium">Master Teacher status</p>
-              <p className="text-xs text-muted-foreground">
-                {masterHolderName
-                  ? `Currently designated by ${masterHolderName} — unavailable until released.`
-                  : "Currently designated — unavailable until released."}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Enter the code from the master teacher&apos;s teacher list on My Classes /
-                Attendance to attach your student and subject records.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-3 px-1">
-            <div>
-              <p className="text-sm font-medium">Master Teacher status</p>
-              <p className="text-xs text-muted-foreground">Not designated</p>
-            </div>
-            <Switch
-              checked={false}
-              onCheckedChange={handleToggleMasterTeacher}
-              disabled={mtLoading}
-              aria-label="Toggle Master Teacher status"
-              className={sectionStyles.amberSwitch}
-            />
-          </div>
-        )}
+        <div className="flex flex-col divide-y divide-border/60">
+          {visibleSeats.map((seat) => {
+            const takenByOther = !seat.isMasterTeacher && seat.taken;
+            const notEligible = !seat.eligible && !seat.isMasterTeacher;
+            return (
+              <div key={seat.band} className="flex items-center justify-between gap-3 px-1 py-3 first:pt-0 last:pb-0">
+                <div>
+                  <p className="text-sm font-medium">
+                    {seat.label} <span className="text-muted-foreground">· {seat.grades}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {seat.isMasterTeacher
+                      ? "Currently designated — only one holder per band."
+                      : notEligible
+                        ? "Not available — no classes in this grade band this term."
+                        : takenByOther
+                          ? seat.holderName
+                            ? `Currently designated by ${seat.holderName} — unavailable until released.`
+                            : "Currently designated — unavailable until released."
+                          : "Not designated"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {seat.isMasterTeacher
+                      ? "No teacher code is needed on My Classes / Attendance while designated — your timeslot shows only this band."
+                      : notEligible
+                        ? `You need at least one ${seat.grades} class or advisory section this term to hold this seat.`
+                        : takenByOther
+                          ? "Enter the code from this band's master teacher list on My Classes / Attendance to attach records."
+                          : `Turn on to manage ${seat.grades} sections and timeslots.`}
+                  </p>
+                </div>
+                <Switch
+                  checked={seat.isMasterTeacher}
+                  onCheckedChange={() => handleToggle(seat)}
+                  disabled={!!loading[seat.band] || takenByOther || notEligible}
+                  aria-label={`Toggle ${seat.grades} Master Teacher status`}
+                  className={sectionStyles.amberSwitch}
+                />
+              </div>
+            );
+          })}
+        </div>
       </KanbanBoard>
     </div>
   );

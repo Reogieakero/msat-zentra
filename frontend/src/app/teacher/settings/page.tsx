@@ -21,9 +21,10 @@ export default function TeacherSettingsPage() {
   const profile = useTeacherProfileSettings();
   const isDark = theme === "dark";
   const masterTeacherEligible = overview.data?.masterTeacherEligible ?? false;
+  const masterTeacherSeniorEligible = overview.data?.masterTeacherSeniorEligible ?? false;
   const links = React.useMemo(
-    () => settingsSections(masterTeacherEligible),
-    [masterTeacherEligible],
+    () => settingsSections(masterTeacherEligible || masterTeacherSeniorEligible),
+    [masterTeacherEligible, masterTeacherSeniorEligible],
   );
   const [activeId, setActiveId] = React.useState("section-profile");
 

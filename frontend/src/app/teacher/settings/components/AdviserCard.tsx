@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useTerm } from "@/lib/term/TermContext";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
+import { useSettingsDockAction } from "./use-settings-dock";
 function getErrorMessage(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
   const message = data?.error?.message ?? data?.message;
@@ -71,6 +72,7 @@ export function AdviserCard() {
     ? selectedId
     : null;
   const invalidateTeacher = useTeacherInvalidate();
+  const runDockAction = useSettingsDockAction();
   const refreshAdvisory = async () => {
     invalidateTeacher.settings();
   };
@@ -91,22 +93,31 @@ export function AdviserCard() {
     }
     setSaving(true);
     try {
-      const previousMine = mine.length > 0 ? mine.map((m) => m.id) : advisorySection ? [advisorySection.id] : [];
-      await apiClient.post("/api/teacher/advisory/claim", {
-        sectionId: target.id,
-        ...(needsCode ? { code: trimmedCode } : {}),
-      });
-      await Promise.allSettled(
-        previousMine
-          .filter((id) => id !== target.id)
-          .map((oldId) =>
-            apiClient.delete(
-              `/api/teacher/advisory/claim?sectionId=${encodeURIComponent(oldId)}`,
-              { data: { sectionId: oldId } },
-            ),
-          ),
+      await runDockAction(
+        {
+          title: "Saving advisory section",
+          description: target.name,
+        },
+        async () => {
+          const previousMine = mine.length > 0 ? mine.map((m) => m.id) : advisorySection ? [advisorySection.id] : [];
+          await apiClient.post("/api/teacher/advisory/claim", {
+            sectionId: target.id,
+            ...(needsCode ? { code: trimmedCode } : {}),
+          });
+          await Promise.allSettled(
+            previousMine
+              .filter((id) => id !== target.id)
+              .map((oldId) =>
+                apiClient.delete(
+                  `/api/teacher/advisory/claim?sectionId=${encodeURIComponent(oldId)}`,
+                  { data: { sectionId: oldId } },
+                ),
+              ),
+          );
+          await refreshAdvisory();
+        },
+        { doneDescription: `Adviser of ${target.name}` },
       );
-      await refreshAdvisory();
       setPicking(false);
       setAnsweredNo(false);
       setSelectedId(null);
@@ -126,11 +137,20 @@ export function AdviserCard() {
     if (saving) return;
     setSaving(true);
     try {
-      const url = sectionId
-        ? `/api/teacher/advisory/claim?sectionId=${encodeURIComponent(sectionId)}`
-        : "/api/teacher/advisory/claim";
-      await apiClient.delete(url, sectionId ? { data: { sectionId } } : undefined);
-      await refreshAdvisory();
+      await runDockAction(
+        {
+          title: "Releasing advisory section",
+          description: "Removing your adviser assignment",
+        },
+        async () => {
+          const url = sectionId
+            ? `/api/teacher/advisory/claim?sectionId=${encodeURIComponent(sectionId)}`
+            : "/api/teacher/advisory/claim";
+          await apiClient.delete(url, sectionId ? { data: { sectionId } } : undefined);
+          await refreshAdvisory();
+        },
+        { doneDescription: "Advisory released" },
+      );
       setPicking(false);
       setSelectedId(null);
       toast.success({

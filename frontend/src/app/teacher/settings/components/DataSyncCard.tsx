@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import sectionStyles from "./settings-section.module.css";
 import { useTeacherDataSharing, setDataSharing } from "@/services/settings/data-sharing";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
+import { useSettingsDockAction } from "./use-settings-dock";
 
 function getErrorMessage(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
@@ -29,6 +30,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 export function DataSyncCard() {
   const sharing = useTeacherDataSharing();
   const invalidateTeacher = useTeacherInvalidate();
+  const runDockAction = useSettingsDockAction();
   const [loading, setLoading] = React.useState(false);
   const [confirmOff, setConfirmOff] = React.useState(false);
   const [showAll, setShowAll] = React.useState(false);
@@ -49,7 +51,18 @@ export function DataSyncCard() {
     if (loading) return;
     setLoading(true);
     try {
-      await setDataSharing(next);
+      await runDockAction(
+        {
+          title: next ? "Enabling data sync" : "Disabling data sync",
+          description: next
+            ? "Sharing grades/attendance with adviser and guidance"
+            : "Hiding your grades/attendance from adviser and guidance",
+        },
+        async () => {
+          await setDataSharing(next);
+        },
+        { doneDescription: next ? "Data sync enabled" : "Data sync disabled" },
+      );
       setOptimistic(next);
       setConfirmOff(false);
       invalidateTeacher.overview();

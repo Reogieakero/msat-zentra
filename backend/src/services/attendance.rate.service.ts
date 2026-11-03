@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
-import { dailyFromSubjects } from "./attendance.agg.utils.js";
+import { dailyFromDayCounts, type DayCountCell } from "./attendance.agg.utils.js";
+import { isWeekendKey } from "./attendance.date.utils.js";
 
 export interface AttendanceRate {
   rate: number;
@@ -22,13 +23,21 @@ export async function computeAttendanceRate(
   studentId: string,
   termId: string
 ): Promise<AttendanceRate> {
-  const records = await prisma.attendanceRecord.findMany({
+  // Count in SQL. A single student's term can hold thousands of rows, and
+  // shipping them all over the pooler just to tally four statuses was the
+  // largest single consumer of Supabase egress (~28k rows/call in
+  // pg_stat_statements). This returns at most four rows.
+  const grouped = await prisma.attendanceRecord.groupBy({
+    by: ["status"],
     where: { studentId, termId },
-    select: { status: true },
+    _count: { _all: true },
   });
   const counts = { present: 0, absent: 0, late: 0, excused: 0 };
-  for (const r of records) counts[r.status]++;
-  const total = records.length;
+  let total = 0;
+  for (const g of grouped) {
+    counts[g.status] += g._count._all;
+    total += g._count._all;
+  }
   const rate = total === 0 ? 1 : counts.present / total;
   return {
     ...counts,
@@ -43,24 +52,40 @@ export async function computeSubjectAttendanceRate(
   termId: string,
   subjectId?: string
 ): Promise<SubjectAttendanceRate> {
-  const records = await prisma.attendanceRecord.findMany({
+  // Grouped by (status, date) so the daily roll-up needs no raw rows either:
+  // the result is at most #schoolDays × 4 rows instead of one row per take.
+  const grouped = await prisma.attendanceRecord.groupBy({
+    by: ["status", "date"],
     where: {
       ...who,
       termId,
       ...(subjectId ? { subjectId } : { NOT: { subjectId: null } }),
     },
-    select: { status: true, date: true, subjectId: true },
+    _count: { _all: true },
   });
   const counts = { present: 0, absent: 0, late: 0, excused: 0 };
-  for (const r of records) counts[r.status]++;
-  const total = records.length;
+  const byDay = new Map<string, DayCountCell>();
+  let total = 0;
+  for (const g of grouped) {
+    const n = g._count._all;
+    counts[g.status] += n;
+    total += n;
+    if (subjectId) continue;
+    const day = g.date.toISOString().slice(0, 10);
+    if (isWeekendKey(day)) continue;
+    const cell = byDay.get(day) ?? { present: 0, total: 0, absent: 0 };
+    cell.total += n;
+    if (g.status === "present") cell.present += n;
+    else cell.absent += n;
+    byDay.set(day, cell);
+  }
   const rate = total === 0 ? 1 : counts.present / total;
 
   let dailyPresentDays: number | null = null;
   let dailyTotalDays: number | null = null;
   if (!subjectId && total > 0) {
     const expected = await countOfferedSubjectsFor(who, termId);
-    const daily = dailyFromSubjects(records, expected);
+    const daily = dailyFromDayCounts(byDay, expected);
     dailyPresentDays = daily.presentDays;
     dailyTotalDays = daily.totalDays;
   }

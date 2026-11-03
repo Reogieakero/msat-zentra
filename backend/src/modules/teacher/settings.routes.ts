@@ -59,9 +59,12 @@ router.patch(
   validate("body", masterTeacherSchema),
   async (req, res, next) => {
     try {
-      const { isMasterTeacher } = req.body as { isMasterTeacher: boolean };
+      const { isMasterTeacher, band = "7-10" } = req.body as {
+        isMasterTeacher: boolean;
+        band?: "7-10" | "11-12";
+      };
       const termId = await resolveActiveTermId(req);
-      const result = await setMasterTeacher({ ...ctxOf(req), termId }, isMasterTeacher);
+      const result = await setMasterTeacher({ ...ctxOf(req), termId }, band, isMasterTeacher);
       await invalidateTags(["teacher", "overview", "schedule", "academics", "principal"]);
       res.json(result);
     } catch (e) {

@@ -1,0 +1,65 @@
+.field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.85;
+  mask-image: radial-gradient(ellipse 95% 100% at 66% 48%, #000 55%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 95% 100% at 66% 48%, #000 55%, transparent 100%);
+}
+
+/* Veil between the point cloud and the page content: keeps the sculpture
+   readable as a backdrop instead of glowing through cards and body text. */
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--page-bg) 62%, transparent);
+}
+
+.field[data-align="topRight"] {
+  mask-image: radial-gradient(ellipse 62% 62% at 82% 26%, #000 45%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 62% 62% at 82% 26%, #000 45%, transparent 100%);
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.progressFill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--accent-a), var(--accent-b));
+  box-shadow: 0 0 18px rgba(var(--accent-a-rgb), 0.55);
+}
+
+@media (max-width: 640px) {
+  .field {
+    opacity: 0.4;
+    mask-image: radial-gradient(ellipse 110% 55% at 50% 62%, #000 35%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 110% 55% at 50% 62%, #000 35%, transparent 100%);
+  }
+
+  .field[data-align="topRight"] {
+    mask-image: radial-gradient(ellipse 95% 70% at 74% 30%, #000 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 95% 70% at 74% 30%, #000 40%, transparent 100%);
+  }
+}

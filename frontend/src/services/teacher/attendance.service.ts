@@ -125,6 +125,37 @@ export function useSheetMarks(
     staleTime: MARKS_STALE_MS,
     gcTime: MARKS_GC_MS,
     placeholderData: keepPreviousData,
+    // Keep the long-standing map shape for every marks consumer; the owner
+    // metadata rides along in the same cached response.
+    select: (data) => data.marks,
+  });
+}
+
+/**
+ * Who submitted this meetup's sheet. Same cache entry as `useSheetMarks`
+ * (different `select`), so no extra request. `mine: false` means another
+ * teacher already owns the meetup and the sheet must stay read-only.
+ */
+export function useSheetOwner(
+  date: string,
+  subjectId: string | undefined,
+  slot: number,
+  sectionId?: string | null,
+) {
+  const auth = useSession();
+  const { activeTerm } = useTerm();
+  const teacherId = auth?.sub ?? null;
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  return useQuery({
+    queryKey: sheetMarksKey(teacherId, date, subjectId ?? "none", slot, sectionId ?? null, termKey),
+    queryFn: () =>
+      fetchSheetMarks(`${date}T00:00:00Z`, subjectId as string, slot, sectionId ?? null),
+    enabled: !!teacherId && !!subjectId && !!sectionId,
+    retry: false,
+    staleTime: MARKS_STALE_MS,
+    gcTime: MARKS_GC_MS,
+    placeholderData: keepPreviousData,
+    select: (data) => ({ mine: data.mine, submittedBy: data.submittedBy }),
   });
 }
 
@@ -254,20 +285,33 @@ export function useSectionRoster(sectionId: string | undefined) {
   });
 }
 
+export interface SheetMarksResponse {
+  marks: Record<string, SheetStatus>;
+  /** Another teacher owns this meetup (API refuses overwrites). */
+  mine: boolean;
+  submittedBy: { userId: string; name: string } | null;
+}
+
 export async function fetchSheetMarks(
   dateISO: string,
   subjectId: string,
   slot: number,
   sectionId?: string | null,
-): Promise<Record<string, SheetStatus>> {
+): Promise<SheetMarksResponse> {
   const params = new URLSearchParams({ date: dateISO, subjectId, slot: String(slot) });
   if (sectionId) params.set("sectionId", sectionId);
-  const { data } = await apiClient.get<{ marks: { studentId: string; status: SheetStatus }[] }>(
-    `/api/teacher/advisory/attendance?${params.toString()}`
-  );
+  const { data } = await apiClient.get<{
+    marks: { studentId: string; status: SheetStatus }[];
+    mine?: boolean;
+    submittedBy?: { userId: string; name: string } | null;
+  }>(`/api/teacher/advisory/attendance?${params.toString()}`);
   const map: Record<string, SheetStatus> = {};
   for (const m of data.marks) map[m.studentId] = m.status;
-  return map;
+  return {
+    marks: map,
+    mine: data.mine !== false,
+    submittedBy: data.submittedBy ?? null,
+  };
 }
 
 export async function submitSheet(payload: SubmitSheetPayload): Promise<{ count: number }> {

@@ -11,11 +11,12 @@ import { ExternalLink, Inbox, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { ScrollList } from "@/components/ui/scroll-list";
+import { Pill, type PillTone } from "@/components/ui/pill";
+import { sectionSlug } from "@/lib/sectionSlug";
 
 import {
   SECTION_CARD_STATUS_META,
   sectionCardStatus,
-  sectionInitials,
 } from "@/components/schedule/SectionScheduleCard";
 import type { StatusEntry } from "@/components/schedule/SectionScheduleCard";
 import styles from "./schedule-empty.module.css";
@@ -72,12 +73,23 @@ interface ScheduleData {
   sections: ScheduleSectionSummary[];
 }
 
-const GRADES = [
-  { key: "G7", label: "Grade 7" },
-  { key: "G8", label: "Grade 8" },
-  { key: "G9", label: "Grade 9" },
-  { key: "G10", label: "Grade 10" },
+const ALL_GRADES = [
+  { key: "G7", label: "Grade 7", band: "7-10" },
+  { key: "G8", label: "Grade 8", band: "7-10" },
+  { key: "G9", label: "Grade 9", band: "7-10" },
+  { key: "G10", label: "Grade 10", band: "7-10" },
+  { key: "G11", label: "Grade 11", band: "11-12" },
+  { key: "G12", label: "Grade 12", band: "11-12" },
 ] as const;
+
+/* Section-card status → shared pill tone (Bootstrap-ish status families). */
+const SECTION_STATUS_TONE: Record<string, PillTone> = {
+  submitted: "blue",
+  returned: "amber",
+  approved: "green",
+  draft: "red",
+  empty: "neutral",
+};
 
 function ScheduleSkeleton() {
   return (
@@ -113,7 +125,14 @@ export default function TeacherSchedulePage() {
   const overview = useTeacherOverview();
 
   const cachedMaster = useCachedMasterTeacher(session?.sub);
-  const isMasterTeacher = overview.data?.isMasterTeacher ?? cachedMaster;
+  const isMasterTeacher =
+    overview.data?.isMasterTeacher ||
+    overview.data?.isMasterTeacherSenior ||
+    cachedMaster;
+  const heldBands = {
+    junior: overview.data ? overview.data.isMasterTeacher : cachedMaster,
+    senior: overview.data?.isMasterTeacherSenior ?? false,
+  };
 
   const {
     data: schedData,
@@ -146,7 +165,7 @@ export default function TeacherSchedulePage() {
           </p>
         </div>
         <div className="rounded-xl border border-input bg-card p-8 text-center text-sm text-muted-foreground">
-          Enable Master Teacher status in Settings to manage subject assignments for grades 7–10.
+          Enable Master Teacher status in Settings to manage subject assignments for grades 7–12.
         </div>
       </section>
     );
@@ -169,13 +188,16 @@ export default function TeacherSchedulePage() {
   }
 
   const sections = schedData.sections;
+  const grades = ALL_GRADES.filter((g) =>
+    g.band === "11-12" ? heldBands.senior : heldBands.junior,
+  );
 
   const gradeNumber = (g: string) => Number(g.replace("G", "")) || 0;
   const orderedSections = [...sections].sort(
     (a, b) => gradeNumber(a.gradeLevel) - gradeNumber(b.gradeLevel) || a.name.localeCompare(b.name),
   );
   const byGrade = new Map<string, typeof orderedSections>();
-  for (const g of GRADES) byGrade.set(g.key, []);
+  for (const g of grades) byGrade.set(g.key, []);
   for (const s of orderedSections) {
     const bucket = byGrade.get(s.gradeLevel);
     if (bucket) bucket.push(s);
@@ -188,7 +210,7 @@ export default function TeacherSchedulePage() {
         <div className="flex min-w-0 flex-col gap-5">
           <TeacherPageHeader
             title="Schedule"
-            description="Master scheduling workspace for grades 7–10 sections, subjects, and timetable slots."
+            description="Master scheduling workspace for the grade bands you hold, their sections, subjects, and timetable slots."
             actions={
               <Button asChild size="sm" className="h-8 px-3">
                 <a href="/teacher/schedule/template" target="_blank" rel="noopener noreferrer">
@@ -203,13 +225,13 @@ export default function TeacherSchedulePage() {
               centered
               icon={Inbox}
               title="No sections yet"
-              hint="Sections created by the principal (grades 7–10) will appear here for scheduling."
+              hint="Sections created by the principal for your Master Teacher bands will appear here for scheduling."
               label="Schedule sections"
             />
           ) : (
             <div className={kanbanStyles.view} aria-label="Sections by grade level">
               <div className={kanbanStyles.grid} role="group" aria-label="Sections">
-                {GRADES.map((g, colIdx) => {
+                {grades.map((g, colIdx) => {
                   const list = byGrade.get(g.key) ?? [];
                   return (
                     <div
@@ -240,7 +262,7 @@ export default function TeacherSchedulePage() {
                               return (
                                 <Link
                                   key={section.id}
-                                  href={`/teacher/schedule/template?sectionId=${encodeURIComponent(section.id)}`}
+                                  href={`/teacher/schedule/template/${encodeURIComponent(sectionSlug(section.name, section.gradeLevel, orderedSections))}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   aria-label={
@@ -252,28 +274,22 @@ export default function TeacherSchedulePage() {
                                   style={{ animationDelay: `${colIdx * 70 + Math.min(cardIdx, 8) * 35}ms` }}
                                 >
                                   <span className="flex min-w-0 flex-1 items-center gap-2">
-                                    <span
-                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground"
-                                      aria-hidden="true"
-                                    >
-                                      {sectionInitials(section.name)}
-                                    </span>
                                     <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
                                       <span className="w-full truncate text-[13px] font-medium" title={section.name}>
                                         {section.name}
                                       </span>
                                       <span className="flex flex-wrap items-center gap-1">
-                                        <span className="inline-flex items-center gap-1 rounded border border-border px-1.5 text-[11px] text-muted-foreground">
+                                        <Pill tone={SECTION_STATUS_TONE[status] ?? "neutral"} label="Schedule status">
                                           <span
                                             className="h-1.5 w-1.5 shrink-0 rounded-full"
                                             style={{ backgroundColor: meta.color }}
                                             aria-hidden="true"
                                           />
                                           {meta.label}
-                                        </span>
-                                        <span className="rounded border border-amber-600/45 bg-amber-500/10 px-1.5 text-[11px] font-medium text-amber-700 dark:border-amber-500/45 dark:text-amber-400">
+                                        </Pill>
+                                        <Pill tone="amber" label="Timetable slots">
                                           {section.timetableEntries.length} slot{section.timetableEntries.length === 1 ? "" : "s"}
-                                        </span>
+                                        </Pill>
                                       </span>
                                       <span className="w-full truncate text-[11px] text-muted-foreground" title={section.adviser?.fullName ?? "No adviser"}>
                                         {section.adviser?.fullName ?? "No adviser"}

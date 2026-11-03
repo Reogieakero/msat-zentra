@@ -28,7 +28,7 @@ export async function getMyLink(ctx: TeacherContext) {
     }),
     prisma.staffProfile.findUnique({
       where: { userId: teacherId },
-      select: { isMasterTeacher: true },
+      select: { isMasterTeacher: true, isMasterTeacherSenior: true },
     }),
   ]);
   const termId = ctx.termId;
@@ -53,7 +53,8 @@ export async function getMyLink(ctx: TeacherContext) {
         }
       : null,
     termGrant,
-    isMasterTeacher: profile?.isMasterTeacher ?? false,
+    isMasterTeacher:
+      (profile?.isMasterTeacher ?? false) || (profile?.isMasterTeacherSenior ?? false),
   };
 }
 
@@ -233,7 +234,13 @@ export async function verifyAttendance(ctx: TeacherContext, code: string) {
   void (async () => {
     try {
       const masters = await prisma.user.findMany({
-        where: { status: "active", staffProfile: { isMasterTeacher: true } },
+        where: {
+          status: "active",
+          OR: [
+            { staffProfile: { isMasterTeacher: true } },
+            { staffProfile: { isMasterTeacherSenior: true } },
+          ],
+        },
         select: { id: true },
       });
       await fanoutNotification({

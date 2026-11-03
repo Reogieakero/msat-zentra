@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { getRedis } from "./redis.js";
 import { getEnv } from "../config/env.js";
 import { logger } from "./pino.js";
+import { weakEtag } from "./etag.js";
 
 function buildKey(req: Request): string {
   const user = (req as Request & { user?: { id?: string; role?: string } }).user;
@@ -45,6 +46,9 @@ export function cache(options: CacheOptions = {}) {
     // PATCH (a completed ADM case popped back onto its board on refetch).
     // Awaited tag invalidation completes before the write responds, so the
     // refetch that follows always misses the stale entry.
+    // "private, no-cache" (store-but-revalidate) would avoid the stale-list bug
+    // above, but it writes confidential records to the browser's disk cache, so
+    // no-store stays the default; pass cacheControl explicitly to opt a route in.
     const cacheControl = options.cacheControl ?? "private, no-store";
     res.setHeader("Cache-Control", cacheControl);
     if (!redis) return next();
@@ -53,9 +57,15 @@ export function cache(options: CacheOptions = {}) {
     try {
       const hit = await redis.get<string>(key);
       if (hit) {
+        const payload = typeof hit === "string" ? hit : JSON.stringify(hit);
         res.setHeader("x-cache", "HIT");
         res.setHeader("content-type", "application/json");
-        return res.status(200).send(typeof hit === "string" ? hit : JSON.stringify(hit));
+        // The live path gets its ETag from the `etag()` middleware, which wraps
+        // res.json — this HIT path uses res.send, so it would otherwise ship the
+        // full body on every repeat read. Same tag algorithm, so Express answers
+        // req.fresh with a bodyless 304 when the client already has it.
+        res.setHeader("ETag", weakEtag(payload));
+        return res.status(200).send(payload);
       }
     } catch (err) {
       logger.warn({ err, key }, "cache read failed — serving live");

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { ScrollList } from "@/components/ui/scroll-list";
+import { Pill } from "@/components/ui/pill";
 import {
   AfterSelect,
   TimePicker,
@@ -404,12 +405,9 @@ export function ConfigDockRows({
               </span>
               <span className="flex flex-wrap gap-1">
                 {it.parts.map((part) => (
-                  <span
-                    key={part}
-                    className="shrink-0 rounded border border-amber-600/45 bg-amber-500/10 px-1.5 font-sans text-[12px] font-medium text-amber-700 dark:border-amber-500/45 dark:text-amber-400"
-                  >
+                  <Pill key={part} tone="amber">
                     {part}
-                  </span>
+                  </Pill>
                 ))}
               </span>
             </span>

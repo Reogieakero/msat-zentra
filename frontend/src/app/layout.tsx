@@ -15,9 +15,9 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Zentra - Student Information System",
+  title: "Zentra — Every learner in focus",
   description:
-    "Zentra SIS for Mati School of Arts and Trades â€” learner records, grading, attendance, and early intervention.",
+    "Zentra is the Student Information & Management System for Mati School of Arts and Trades — grading, attendance, records, early intervention, and ADM in one living record.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

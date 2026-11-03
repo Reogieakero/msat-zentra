@@ -19,6 +19,14 @@ describe("Master Teacher eligibility (grades 7–10)", () => {
     expect(isMasterTeacherEligible([])).toBe(true);
   });
 
+  it("scopes the senior seat to grades 11–12", () => {
+    expect(isMasterTeacherEligible(["G11"], "11-12")).toBe(true);
+    expect(isMasterTeacherEligible(["G11", "G12"], "11-12")).toBe(true);
+    expect(isMasterTeacherEligible(["G10"], "11-12")).toBe(false);
+    expect(isMasterTeacherEligible(["G7", "G12"], "11-12")).toBe(false);
+    expect(isMasterTeacherEligible([], "11-12")).toBe(true);
+  });
+
   it("parses grade numbers from enum labels", () => {
     expect(gradeToNumber("G7")).toBe(7);
     expect(gradeToNumber("G12")).toBe(12);

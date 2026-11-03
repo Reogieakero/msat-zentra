@@ -354,9 +354,12 @@ model StaffProfile {
   employeeId   String  @unique
   department   String?
   isAdviser    Boolean @default(false)
-  // Master Teacher designation (grades 7–10 only). Self-declared by the
+  // Master Teacher designation (grades 7–10 seat). Self-declared by the
   // teacher from Settings; the update endpoint enforces the grade band.
   isMasterTeacher Boolean @default(false)
+  // Senior High Master Teacher seat (grades 11–12). Independent from the
+  // 7–10 seat — one holder per band, and a teacher may hold both.
+  isMasterTeacherSenior Boolean @default(false)
   handledGradeLevels GradeLevel[]
   // The teacher's one reusable drawn signature (PNG data URL), stamped onto
   // records via POST /api/anecdotal/:id/apply-signature.

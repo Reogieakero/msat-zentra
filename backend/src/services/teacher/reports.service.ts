@@ -188,7 +188,10 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
     }),
     prisma.user.findUnique({
       where: { id: teacherId },
-      select: { fullName: true, staffProfile: { select: { isMasterTeacher: true } } },
+      select: {
+        fullName: true,
+        staffProfile: { select: { isMasterTeacher: true, isMasterTeacherSenior: true } },
+      },
     }),
     prisma.teacherName.findUnique({ where: { userId: teacherId }, select: { code: true } }),
     prisma.section.findMany({
@@ -688,7 +691,9 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
       name: user?.fullName ?? "",
       code: teacherName?.code ?? null,
       isAdviser: advisorySection !== null,
-      isMasterTeacher: user?.staffProfile?.isMasterTeacher ?? false,
+      isMasterTeacher:
+        (user?.staffProfile?.isMasterTeacher ?? false) ||
+        (user?.staffProfile?.isMasterTeacherSenior ?? false),
       advisorySection: advisorySection
         ? {
             id: advisorySection.id,

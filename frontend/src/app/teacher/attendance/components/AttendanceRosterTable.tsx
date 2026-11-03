@@ -4,29 +4,28 @@ import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import {
   getCoreRowModel,
   getFilteredRowModel,
-  getSortedRowModel,
   useReactTable,
   type ColumnDef,
   type ColumnFiltersState,
-  type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table";
 import { SearchIcon, Users } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { assignUniqueMascots } from "@/app/teacher/grading/[assignmentId]/components/mascot-assignment";
+import { compareSurnameFirst, formatSurnameFirst } from "@/lib/names";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sonner";
 import { useDock } from "@/components/dock/dock-store";
-import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
-import { DropdownSelect } from "@/app/principal/academics/assign/components/DropdownSelect";
-import dropdownStyles from "@/app/principal/academics/assign/components/dropdown-select.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import rowStyles from "@/components/ui/row-list.module.css";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
-import { MARKS_STALE_MS, DEFAULT_MEETUP_DAYS, fetchSheetMarks, phTodayKey, sheetMarksKey, submitSheet, useMeetupDates, useSheetMarks } from "@/services/teacher/attendance.service";
+import { MARKS_STALE_MS, DEFAULT_MEETUP_DAYS, fetchSheetMarks, phTodayKey, sheetMarksKey, submitSheet, useMeetupDates, useSheetMarks, useSheetOwner } from "@/services/teacher/attendance.service";
 import { apiErrorMessage } from "@/lib/api/errors";
 import type { SheetContext, SheetStatus } from "@/services/teacher/attendance.types";
 import { MeetupBlocksCell, StatusBoxes } from "./status-boxes";
@@ -78,18 +77,6 @@ function ratePillTone(rate: number): string {
   return "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400";
 }
 
-function lastNameOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return parts.length > 1 ? (parts[parts.length - 1] ?? "") : (parts[0] ?? "");
-}
-
-const SORT_OPTIONS = [
-  { value: "name", label: "First name A–Z" },
-  { value: "lastName", label: "Last name A–Z" },
-  { value: "rate-desc", label: "Highest %" },
-  { value: "rate-asc", label: "Lowest %" },
-  { value: "status", label: "Status" },
-];
 interface AttendanceRosterTableProps {
   date: string;
   subjectId: string | undefined;
@@ -111,6 +98,11 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
   const sectionId = roster?.ctx?.sectionId ?? null;
   const hasSection = !!sectionId;
   const marksQuery = useSheetMarks(date, subjectId, slot, sectionId);
+  // One teacher owns a meetup: if someone else already saved this sheet, it is
+  // read-only here (the API answers 409 MEETUP_TAKEN if a save slips through).
+  const ownerQuery = useSheetOwner(date, subjectId, slot, sectionId);
+  const ownedByOther = ownerQuery.data?.mine === false;
+  const ownerName = ownerQuery.data?.submittedBy?.name ?? "another teacher";
   // The parent rebuilds the roster wrapper per render — read through to the
   // stable query-backed students array so downstream memos stay settled.
   const students = roster?.ctx?.students ?? EMPTY_STUDENTS;
@@ -144,7 +136,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const openSave = () => {
-    if (live.locked) return;
+    if (live.locked || ownedByOther) return;
     setSaveError(null);
     setSaveOpen(true);
   };
@@ -204,7 +196,8 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
     const sheetPastDue =
       date < live.todayKey ||
       (date === live.todayKey && live.todayEnd !== null && live.nowMin >= live.todayEnd);
-    return students.map((s) => {
+    const ordered = [...students].sort((a, b) => compareSurnameFirst(a.name, b.name));
+    return ordered.map((s) => {
       const days = dayStatusByStudent.get(s.studentId);
       let present = 0;
       for (const d of elapsed) {
@@ -214,42 +207,15 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
       // meetup time has passed, display absent (implied, not saved).
       const saved = merged[s.studentId] ?? null;
       const impliedAbsent = saved === null && sheetPastDue;
-      return { id: s.studentId, name: s.name, lrn: s.lrn, rate: elapsed.length === 0 ? null : present / elapsed.length, status: saved ?? (sheetPastDue ? "absent" : null), impliedAbsent };
+      return { id: s.studentId, name: formatSurnameFirst(s.name), lrn: s.lrn, rate: elapsed.length === 0 ? null : present / elapsed.length, status: saved ?? (sheetPastDue ? "absent" : null), impliedAbsent };
     });
   }, [students, merged, meetupDates, dayStatusByStudent, live.todayKey, live.todayEnd, live.nowMin, date]);
-  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const columns = React.useMemo<ColumnDef<RosterRow>[]>(() => [
-    { accessorKey: "name" },
-    {
-      id: "lastName",
-      accessorKey: "name",
-      sortingFn: (a, b) =>
-        lastNameOf(a.original.name).localeCompare(lastNameOf(b.original.name), "en", {
-          sensitivity: "base",
-        }),
-    },
-    {
-      accessorKey: "rate",
-      sortingFn: (a, b) => (a.original.rate ?? -1) - (b.original.rate ?? -1),
-    },
-    { accessorKey: "status" },
-  ], []);
-  const sortValue =
-    sorting.length === 0
-      ? ""
-      : sorting[0].id === "rate"
-        ? sorting[0].desc
-          ? "rate-desc"
-          : "rate-asc"
-        : sorting[0].id;
-  const handleSortChange = (value: string) => {
-    if (value === "rate-desc") setSorting([{ id: "rate", desc: true }]);
-    else if (value === "rate-asc") setSorting([{ id: "rate", desc: false }]);
-    else if (value === "status") setSorting([{ id: "status", desc: false }]);
-    else if (value === "lastName") setSorting([{ id: "lastName", desc: false }]);
-    else setSorting([{ id: "name", desc: false }]);
-  };
+  // Data arrives surname-sorted; the header only filters by name now.
+  const columns = React.useMemo<ColumnDef<RosterRow>[]>(
+    () => [{ accessorKey: "name" }],
+    [],
+  );
   const effectiveVisibility = React.useMemo<VisibilityState>(
     () =>
       (blocksMode
@@ -257,7 +223,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
         : { name: true, rate: true, status: true, blocks: false }) as VisibilityState,
     [blocksMode],
   );
-  const table = useReactTable({ data, columns, getRowId: (row) => row.id, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel(), state: { sorting, columnFilters, columnVisibility: effectiveVisibility } });
+  const table = useReactTable({ data, columns, getRowId: (row) => row.id, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getFilteredRowModel: getFilteredRowModel(), state: { columnFilters, columnVisibility: effectiveVisibility } });
   // Dirty-only: send just the rows the teacher actually changed since the last
   // save (local pick differs from the server mark). Unmarked rows are never
   // submitted.
@@ -284,6 +250,10 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
   async function handleSaveConfirm() {
     const ctx = roster?.ctx ?? null;
     if (!ctx || !subjectId || saving) return;
+    if (ownedByOther) {
+      setSaveError(`This meetup was already submitted by ${ownerName} — one teacher per meetup.`);
+      return;
+    }
     if (delta.length === 0) {
       setSaveError("No changes to save — update at least one status first.");
       return;
@@ -338,10 +308,13 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
       <Users size={14} />
     </span>
   );
-  const sheetDesc =
-    date === phTodayKey()
-      ? "Mark today's sheet for this subject and section."
-      : `Viewing the ${date} sheet for this subject and section.`;
+  const sheetDesc = ownedByOther
+    ? `Submitted by ${ownerName} — one teacher per meetup, this sheet is read-only.`
+    : live.locked && live.message
+      ? live.message
+      : date === phTodayKey()
+        ? "Mark today's sheet for this subject and section."
+        : `Viewing the ${date} sheet for this subject and section.`;
   const rows = table.getRowModel().rows;
   if (loading) {
     return (
@@ -378,35 +351,22 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
     return (<p role="alert" className="text-sm text-destructive">Could not load the class roster.</p>);
   }
   const headerActions = (
-    <span className="flex items-center gap-1.5">
-      <InputGroup className="h-6 w-32 shrink-0 text-xs sm:w-36">
-        <InputGroupInput
-          placeholder="Filter students..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-          aria-label="Filter students"
-          className="h-6 text-xs"
-        />
-        <InputGroupAddon><SearchIcon size={12} /></InputGroupAddon>
-      </InputGroup>
-      <span className="w-24 shrink-0 sm:w-28">
-        <DropdownSelect
-          value={sortValue}
-          onValueChange={handleSortChange}
-          options={SORT_OPTIONS}
-          placeholder="Sort…"
-          ariaLabel="Sort students"
-          triggerClassName={`${dropdownStyles.dropdown24} text-left`}
-        />
-      </span>
-    </span>
+    <InputGroup className="h-8 w-40 shrink-0 rounded-[16px] text-xs sm:w-48">
+      <InputGroupInput
+        placeholder="Filter students..."
+        value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+        onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
+        aria-label="Filter students"
+        className="h-8 text-xs"
+      />
+      <InputGroupAddon><SearchIcon size={13} /></InputGroupAddon>
+    </InputGroup>
   );
   return (
     <section aria-label="Class attendance" className="flex min-w-0 flex-col gap-3">
       <KanbanBoard
         title="Class attendance"
         icon={boardIcon}
-        count={data.length === 0 ? undefined : rows.length}
         actions={data.length === 0 ? undefined : headerActions}
         description={sheetDesc}
         footer={
@@ -415,7 +375,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
               <span className="text-sm text-muted-foreground">
                 {rows.length} student{rows.length === 1 ? "" : "s"}
               </span>
-              <Button size="sm" className="h-6 px-2.5 text-xs" onClick={openSave} disabled={live.locked || delta.length === 0} title={delta.length === 0 ? "Update at least one status to enable saving" : undefined}>Save{delta.length > 0 ? ` (${delta.length})` : ""}</Button>
+              <Button size="sm" className="h-6 px-2.5 text-xs" onClick={openSave} disabled={live.locked || ownedByOther || delta.length === 0} title={ownedByOther ? `Submitted by ${ownerName} — one teacher per meetup` : delta.length === 0 ? "Update at least one status to enable saving" : undefined}>Save{delta.length > 0 ? ` (${delta.length})` : ""}</Button>
             </div>
           )
         }
@@ -427,7 +387,12 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
             <p className="max-w-sm text-sm text-muted-foreground">Students will appear here once they are enlisted in this section.</p>
           </div>
         ) : rows.length === 0 ? (
-          <KanbanBoardEmpty>No students match your search.</KanbanBoardEmpty>
+          <div className="flex w-full justify-center px-1 py-6">
+            <InsightCallout role="status" className="w-full max-w-xl text-left">
+              <strong>No students match your search.</strong> Try a different name
+              or LRN — or clear the filter to see everyone.
+            </InsightCallout>
+          </div>
         ) : (
           <ul
             className={`${rowStyles.list} ${rowStyles.listBleed}`}
@@ -465,12 +430,14 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
                     <span className={rowStyles.title} title={r.name}>
                       {r.name}
                     </span>
-                    <span
-                      className="inline-flex shrink-0 items-center rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground"
+                    <Pill
+                      tone="neutral"
+                      label="LRN"
+                      className="min-w-0 max-w-full truncate tabular-nums"
                       title={r.lrn}
                     >
                       {r.lrn}
-                    </span>
+                    </Pill>
                   </span>
                   <span className={rowStyles.metaCell}>
                     {blocksMode ? (
@@ -495,7 +462,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
                         <StatusBoxes
                           value={r.status}
                           onPick={(s) => pick(r.id, s)}
-                          disabled={live.locked}
+                          disabled={live.locked || ownedByOther}
                           impliedAbsent={r.impliedAbsent}
                         />
                       </span>
