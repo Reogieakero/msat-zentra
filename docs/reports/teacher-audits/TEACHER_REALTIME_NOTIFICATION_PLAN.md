@@ -2,7 +2,17 @@
 
 **Date:** 2026-11-04
 **Scope:** `teacher` and `adviser` desks (pages, actions, live updates)
-**Status:** Assessment complete; implementation not started
+**Status:** Phase 0 + Phase 1 + Phase 2 implemented (2026-11-04); ops step pending
+
+### Implementation notes (2026-11-04)
+
+- **Transport:** authenticated push enabled via `NEXT_PUBLIC_SUPABASE_REALTIME_AUTH=true` (set in the local `frontend/.env.local`; **must also be set in the deploy environment**). Requires the Supabase project JWT secret to match backend `JWT_ACCESS_SECRET`. With push on, the HTTP fallback poll backs off from 5s to 60s; with the flag off it stays at 5s.
+- **Key registry:** new `frontend/src/lib/realtime/teacherKeys.ts` is the single source of truth (`TEACHER_QUERY_KEYS`, `TEACHER_SCOPE_KEYS`, `scopesForNotification`, `isSelfNotification`, `keysForScopes`). `app/teacher/components/use-teacher-invalidate.ts` re-exports it; `teacherChannel.ts` no longer keeps a duplicate list.
+- **Notification routing:** explicit `type → scopes` map with source-table fallback (instead of prefix guessing + invalidate-all); per-scope 2s throttling (coalesced, not dropped) and a 60s push-mode poll; bursts >3 collapse into one "N new updates" toast.
+- **Self echoes:** `*_self` types no longer toast (the mutation already did); `markSelfNotified(sourceId)` remains for referral-submission echoes.
+- **Deep links:** `teacherNotificationTarget` now resolves `advisory_module_submissions`, `adm_learner_profiles`, `adm_devices`, `student_roster`, `anecdotal_record_followups`, `teacher_names`.
+- **Adviser visibility decision:** **no** cross-teacher adviser notification — anecdotal records can only be created by the section adviser (`records.routes.ts:40`), and referral follow-ups already notify the observing adviser. So no new backend fan-outs were needed for Phase 2; existing fan-outs were already sufficient.
+- **Verification:** `npx tsc --noEmit -p tsconfig.json` passes. Two-browser acceptance still needs manual verification.
 **Related:** [`TEACHER_NOTIFICATION_AUDIT.md`](./TEACHER_NOTIFICATION_AUDIT.md), [`TEACHER_NOTIFICATION_FIXES.md`](./TEACHER_NOTIFICATION_FIXES.md)
 
 ---
@@ -142,10 +152,8 @@ Also:
 
 ---
 
-## 5. Decisions required
+## 5. Decisions (resolved 2026-11-04)
 
-1. **Transport:** enable Supabase realtime auth (true push, ops work) vs stay on the 5 s poll (zero ops, already works)?
-2. **Adviser visibility:** should the section adviser be notified when *another* teacher files a referral/anecdotal follow-up about their advisee, or when an ADM case they didn't file moves stage?
-3. **Scope:** Phase 1 only (fix stale panels + routing), or Phase 1+2 (add new backend fan-outs too)?
-
-Recommended starting point: **Phase 1** — it fixes the Modules / ADM / overview staleness without backend changes.
+1. **Transport:** enable Supabase realtime auth (true push) — done in code/env; deploy env + Supabase JWT-secret alignment still required.
+2. **Adviser visibility:** **no** cross-teacher adviser fan-out — a teacher can only file anecdotal records for their own advisees (adviser-only create route), and referral follow-ups already notify the observing adviser.
+3. **Scope:** Phase 1 + Phase 2.

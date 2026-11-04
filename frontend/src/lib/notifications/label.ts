@@ -212,7 +212,18 @@ export function teacherNotificationTitle(n: {
   }
   if (n.type === "grade_locked" || /locked \d+ .* grades? for/i.test(n.message ?? ""))
     return gradeLockedTitle(n.message ?? "");
+  if (n.sourceTable === "advisory_module_submissions") {
+    return /submitted/i.test(n.message ?? "") ? "Module submitted" : "Module update";
+  }
   if (n.sourceTable === "adm_devices") return "Device update";
+  if (n.sourceTable === "adm_learner_profiles") {
+    if (/returned .*revision|sent it back/i.test(n.message ?? "")) return "ADM case returned";
+    if (/signed|approved by the principal/i.test(n.message ?? "")) return "ADM case signed";
+    if (/completed the ADM case/i.test(n.message ?? "")) return "ADM case completed";
+    if (/certified the ADM case/i.test(n.message ?? "")) return "ADM case certified";
+    return "ADM case update";
+  }
+  if (n.type === "principal_verdict") return "Principal verdict";
   if (n.sourceTable === "section_timetable_entries") {
     if (/sent back/i.test(n.message ?? "")) return "Schedule sent back";
     if (/you sent .* principal review/i.test(n.message ?? "")) return "Sent to principal";
@@ -336,6 +347,15 @@ export function teacherNotificationTarget(
   if (n.sourceTable === "sf10_records") return { href: "/teacher/advisory/sf10-access" };
   if (n.sourceTable === "adm_parent_meetings") return { href: "/teacher/advisory/referrals" };
   if (n.sourceTable === "adm_profiles") return { href: "/teacher/advisory/referrals" };
+  if (n.sourceTable === "adm_learner_profiles" && n.sourceId)
+    return { href: `/teacher/advisory/adm-cases?highlight=${encodeURIComponent(n.sourceId)}` };
+  if (n.sourceTable === "adm_learner_profiles") return { href: "/teacher/advisory/adm-cases" };
+  if (n.sourceTable === "adm_devices") return { href: "/teacher/advisory/adm-cases" };
+  if (n.sourceTable === "advisory_module_submissions")
+    return { href: "/teacher/advisory/modules" };
+  if (n.sourceTable === "student_roster") return { href: "/teacher/advisory/list" };
+  if (n.sourceTable === "anecdotal_record_followups") return { href: "/teacher/anecdotal" };
+  if (n.sourceTable === "teacher_names") return { href: "/teacher/classes" };
   if (n.sourceTable === "grade_flags") return { href: "/teacher/grade-flags" };
   if (n.sourceTable === "sections") return { href: "/teacher/schedule" };
   if (n.sourceTable === "teacher_subject_assignments") return { href: "/teacher/schedule" };

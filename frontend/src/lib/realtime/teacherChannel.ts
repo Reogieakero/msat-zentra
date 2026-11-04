@@ -6,38 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { teacherNotificationTitle } from "@/lib/notifications/label";
-
-const TEACHER_KEYS = [
-  ["teacher-overview"],
-  ["teacher-overview-secondary"],
-  ["teacher-student-list"],
-  ["adm-my-cases"],
-  ["myReferrals"],
-  ["referableAnecdotal"],
-  ["advisory-students"],
-  ["advisory-students-archived"],
-  ["teacher-sf10-access"],
-  ["advisee-academic"],
-  ["advisee-attendance"],
-  ["anecdotal-mine"],
-  ["teacher-anecdotes"],
-  ["teacher-notifications"],
-  ["teacher-settings-adviser-sections"],
-  ["grade-flags"],
-  ["teacher-schedule"],
-  ["teacher-schedule-subjects"],
-  ["teacher-schedule-teachers"],
-  ["teacher-schedule-config"],
-  ["teacher-schedule-me"],
-  ["teacher-my-slots"],
-  ["attendance-sheet-marks"],
-  ["attendance-subject-days"],
-  ["attendance-section-summary"],
-  ["attendance-section-matrix"],
-  ["attendance-section-roster"],
-  ["offered-subjects"],
-  ["teacher-grading-class"],
-] as const;
+import {
+  isSelfNotification,
+  keysForScopes,
+  scopesForNotification,
+  type TeacherInvalidateScope,
+} from "@/lib/realtime/teacherKeys";
 
 interface TeacherNotification {
   id: string;
@@ -49,8 +23,19 @@ interface TeacherNotification {
   createdAt?: string;
 }
 
-const FALLBACK_POLL_MS = 5_000;
+const SUPABASE_CONFIGURED = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+);
+// With authenticated push enabled the HTTP poll is a safety net only, so it
+// backs off from 5s to 60s. Without push (or without Supabase env) the poll is
+// the delivery mechanism and stays fast.
+const PUSH_ENABLED =
+  process.env.NEXT_PUBLIC_SUPABASE_REALTIME_AUTH === "true" &&
+  SUPABASE_CONFIGURED;
+const FALLBACK_POLL_MS = PUSH_ENABLED ? 60_000 : 5_000;
 const MAX_TOASTS_PER_POLL = 3;
+const SCOPE_THROTTLE_MS = 2_000;
 
 const selfSaved = new Map<string, number>();
 const SELF_SUPPRESS_MS = 30_000;
@@ -85,7 +70,7 @@ function toastTitleFor(n: TeacherNotification): string {
 
 export function useTeacherRealtime(enabled = true) {
   const queryClient = useQueryClient();
-  const lastInvalidated = React.useRef(0);
+  const lastInvalidatedByScope = React.useRef<Map<string, number>>(new Map());
   const seenIds = React.useRef<Set<string>>(new Set());
   const userId = enabled ? currentUserId() : null;
 
@@ -93,74 +78,25 @@ export function useTeacherRealtime(enabled = true) {
     if (!enabled) return;
     if (!userId) return;
     seenIds.current = new Set();
+    lastInvalidatedByScope.current = new Map();
     let channel: { unsubscribe: () => void } | null = null;
     let cancelled = false;
 
-    function keysForNotification(
-      n: TeacherNotification,
-    ): readonly (readonly string[])[] {
-      const table = (n.sourceTable ?? "").toLowerCase();
-      const type = (n.type ?? "").toLowerCase();
-      const ATTENDANCE: readonly (readonly string[])[] = [
-        ["attendance-sheet-marks"],
-        ["attendance-subject-days"],
-        ["attendance-section-summary"],
-        ["attendance-section-matrix"],
-        ["attendance-section-roster"],
-        ["offered-subjects"],
-        ["teacher-my-slots"],
-      ];
-      const GRADING: readonly (readonly string[])[] = [
-        ["teacher-grading-class"],
-        ["advisee-academic"],
-        ["advisory-students"],
-      ];
-      const SCHEDULE: readonly (readonly string[])[] = [
-        ["teacher-schedule"],
-        ["teacher-schedule-summary"],
-        ["teacher-schedule-section"],
-  ["teacher-schedule-summary"],
-  ["teacher-schedule-section"],
-        ["teacher-schedule-config"],
-        ["teacher-schedule-me"],
-        ["teacher-my-slots"],
-      ];
-      const REFERRAL: readonly (readonly string[])[] = [
-        ["myReferrals"],
-        ["referableAnecdotal"],
-        ["anecdotal-mine"],
-      ];
-      const ANECDOTAL: readonly (readonly string[])[] = [
-        ["anecdotal-mine"],
-        ["referableAnecdotal"],
-      ];
-      const ADVISORY: readonly (readonly string[])[] = [
-        ["advisory-students"],
-        ["advisee-academic"],
-        ["advisee-attendance"],
-        ["adm-my-cases"],
-      ];
-      if (table.startsWith("attendance")) return ATTENDANCE;
-      if (table.startsWith("student_grade") || table.startsWith("final_grade"))
-        return GRADING;
-      if (table.startsWith("section_timetable") || table.startsWith("teacher_") || table.startsWith("section") || table.startsWith("subject"))
-        return SCHEDULE;
-      if (table.startsWith("referral")) return REFERRAL;
-      if (table.startsWith("anecdotal")) return ANECDOTAL;
-      if (table.startsWith("adm_module"))
-        return [["adm-my-cases"], ["adm-monitoring"]];
-      if (table.startsWith("student_roster") || table.startsWith("intervention"))
-        return ADVISORY;
-      if (table.startsWith("adviser_sf10_access_request"))
-        return [["teacher-sf10-access"]];
-      if (table.startsWith("sf10_record"))
-        return [["teacher-sf10-access"]];
-      if (type.includes("grade-flag") || type.includes("grade_flag") || table.startsWith("grade_flag"))
-        return [["grade-flags"]];
-      return [];
+    function invalidate(scopes: readonly TeacherInvalidateScope[]) {
+      const now = Date.now();
+      const due = scopes.filter((scope) => {
+        const last = lastInvalidatedByScope.current.get(scope) ?? 0;
+        if (now - last < SCOPE_THROTTLE_MS) return false;
+        lastInvalidatedByScope.current.set(scope, now);
+        return true;
+      });
+      if (due.length === 0) return;
+      for (const key of keysForScopes(due)) {
+        void queryClient.invalidateQueries({ queryKey: [...key] });
+      }
     }
 
-    function notify(row: TeacherNotification) {
+    function notify(row: TeacherNotification, { silent = false } = {}) {
       if (!row || row.userId !== userId || seenIds.current.has(row.id)) return;
       seenIds.current.add(row.id);
       const msg = row.message ?? "";
@@ -169,22 +105,26 @@ export function useTeacherRealtime(enabled = true) {
         /your referral to the .* was submitted|your cancelled referral .*was re-submitted/i.test(
           msg,
         );
-      const selfConfirmed =
-        isOwnEcho &&
+      const selfMarked =
         !!row.sourceId &&
         Date.now() - (selfSaved.get(row.sourceId) ?? 0) < SELF_SUPPRESS_MS;
-      if (!selfConfirmed) {
+      // `*_self` types are deterministic server labels for the user's own
+      // action (the mutation already showed its own toast). Text matching stays
+      // only for echo rows that lack a dedicated self type.
+      const suppressToast =
+        silent || isSelfNotification(row) || (isOwnEcho && selfMarked);
+      if (!suppressToast) {
         toast.info({
           title: toastTitleFor(row),
-          description: row.message,
+          description: msg,
         });
       }
-      void invalidate(row);
+      invalidate([...scopesForNotification(row), "notifications"]);
     }
 
     // Realtime needs Supabase env; the HTTP fallback poll below runs
     // regardless so the bell still updates live without it.
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (PUSH_ENABLED) {
       try {
         const supabase = createClient();
         const ch = supabase
@@ -216,7 +156,7 @@ export function useTeacherRealtime(enabled = true) {
       if (cancelled || document.hidden) return;
       try {
         const { data } = await apiClient.get<TeacherNotification[]>(
-          "/api/notifications/",
+          "/api/notifications/?take=10",
         );
         if (cancelled || !Array.isArray(data)) return;
         const mine = data.filter((n) => n.userId === userId);
@@ -227,48 +167,36 @@ export function useTeacherRealtime(enabled = true) {
         }
         const fresh = mine.filter((n) => !seenIds.current.has(n.id));
         if (fresh.length === 0) return;
-        const ordered = [...fresh].reverse().slice(0, MAX_TOASTS_PER_POLL);
+        if (fresh.length > MAX_TOASTS_PER_POLL) {
+          // Burst: one summary toast, then refresh everything the burst
+          // touched (and the bell) instead of spamming toasts.
+          const scopes = new Set<TeacherInvalidateScope>(["notifications"]);
+          for (const n of fresh) {
+            seenIds.current.add(n.id);
+            for (const s of scopesForNotification(n)) scopes.add(s);
+          }
+          toast.info({
+            title: `${fresh.length} new updates`,
+            description: "Open the notifications bell to review them.",
+          });
+          invalidate([...scopes]);
+          return;
+        }
+        const ordered = [...fresh].reverse();
         for (const n of ordered) notify(n);
-        for (const n of fresh) seenIds.current.add(n.id);
-        if (fresh.length > MAX_TOASTS_PER_POLL) void invalidate(fresh);
       } catch {
       }
     }
     const timer = window.setInterval(poll, FALLBACK_POLL_MS);
     const seedTimer = window.setTimeout(poll, 1_000);
     const onFocus = () => {
+      // Coming back online/into the tab should not wait out the throttle.
+      lastInvalidatedByScope.current.clear();
       void poll();
     };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     window.addEventListener("online", onFocus);
-
-    function invalidate(
-      rowOrRows?: TeacherNotification | TeacherNotification[],
-    ) {
-      const now = Date.now();
-      if (now - lastInvalidated.current < 2000) return;
-      lastInvalidated.current = now;
-      const rows = Array.isArray(rowOrRows)
-        ? rowOrRows
-        : rowOrRows
-          ? [rowOrRows]
-          : [];
-      const scoped = new Map<string, readonly string[]>();
-      for (const row of rows) {
-        for (const key of keysForNotification(row)) {
-          scoped.set(key.join("\u0000"), key);
-        }
-      }
-      const targets =
-        scoped.size > 0 ? [...scoped.values()] : [...TEACHER_KEYS];
-      for (const key of targets) {
-        void queryClient.invalidateQueries({ queryKey: [...key] });
-      }
-      void queryClient.invalidateQueries({
-        queryKey: ["teacher-notifications"],
-      });
-    }
 
     return () => {
       cancelled = true;

@@ -1,100 +1,25 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  TEACHER_QUERY_KEYS,
+  TEACHER_SCOPE_KEYS,
+  keysForScopes,
+  type TeacherInvalidateScope,
+} from "@/lib/realtime/teacherKeys";
 
-export const TEACHER_QUERY_KEYS = [
-  ["teacher-overview"],
-  ["teacher-overview-secondary"],
-  ["teacher-student-list"],
-  ["advisory-students"],
-  ["advisory-modules"],
-  ["teacher-sf10-access"],
-  ["advisee-academic"],
-  ["advisee-attendance"],
-  ["adm-my-cases"],
-  ["myReferrals"],
-  ["referableAnecdotal"],
-  ["anecdotal-mine"],
-  ["teacher-anecdotes"],
-  ["teacher-notifications"],
-  ["teacher-schedule"],
-  ["teacher-schedule-subjects"],
-  ["teacher-schedule-teachers"],
-  ["teacher-schedule-config"],
-  ["teacher-schedule-me"],
-  ["teacher-my-slots"],
-  ["teacher-grading-class"],
-  ["teacher-settings-adviser-sections"],
-  ["teacher-profile-settings"],
-  ["teacher-data-sharing"],
-  ["grade-flags"],
-  ["attendance-sheet-marks"],
-  ["attendance-subject-days"],
-  ["attendance-section-summary"],
-  ["attendance-section-matrix"],
-  ["attendance-section-roster"],
-  ["offered-subjects"],
-] as const;
-
-export const TEACHER_SCOPE_KEYS = {
-  marks: [
-    ["attendance-sheet-marks"],
-    ["attendance-subject-days"],
-    ["attendance-section-summary"],
-    ["attendance-section-matrix"],
-    ["attendance-section-roster"],
-    ["offered-subjects"],
-  ],
-  grading: [
-    ["teacher-grading-class"],
-    ["advisee-academic"],
-    ["advisory-students"],
-    ["teacher-overview"],
-    ["teacher-overview-secondary"],
-  ],
-  schedule: [
-    ["teacher-schedule"],
-    ["teacher-schedule-summary"],
-    ["teacher-schedule-section"],
-  ["teacher-schedule-summary"],
-  ["teacher-schedule-section"],
-    ["teacher-schedule-subjects"],
-    ["teacher-schedule-teachers"],
-    ["teacher-schedule-config"],
-    ["teacher-schedule-conflicts"],
-    ["teacher-schedule-me"],
-    ["teacher-my-slots"],
-  ],
-  overview: [
-    ["teacher-overview"],
-    ["teacher-overview-secondary"],
-    ["teacher-student-list"],
-  ],
-  referrals: [["myReferrals"], ["referableAnecdotal"]],
-  advisory: [
-    ["advisory-students"],
-    ["advisory-modules"],
-    ["teacher-sf10-access"],
-    ["advisee-academic"],
-    ["advisee-attendance"],
-    ["adm-my-cases"],
-  ],
-  anecdotal: [["anecdotal-mine"], ["teacher-anecdotes"], ["referableAnecdotal"]],
-  flags: [["grade-flags"]],
-  notifications: [["teacher-notifications"]],
-  settings: [["teacher-settings-adviser-sections"], ["teacher-profile-settings"], ["teacher-data-sharing"]],
-} as const;
-
-export type TeacherInvalidateScope = keyof typeof TEACHER_SCOPE_KEYS;
+export { TEACHER_QUERY_KEYS, TEACHER_SCOPE_KEYS };
+export type { TeacherInvalidateScope };
 
 export function invalidateTeacherScope(
   queryClient: { invalidateQueries: (opts: { queryKey: string[] }) => void },
-  scope: TeacherInvalidateScope,
+  scope: TeacherInvalidateScope | readonly TeacherInvalidateScope[],
 ) {
-  for (const key of TEACHER_SCOPE_KEYS[scope]) {
+  const scopes = Array.isArray(scope) ? scope : [scope as TeacherInvalidateScope];
+  for (const key of keysForScopes(scopes)) {
     void queryClient.invalidateQueries({ queryKey: [...key] });
   }
-  if (scope !== "notifications") {
+  if (!scopes.includes("notifications")) {
     void queryClient.invalidateQueries({ queryKey: ["teacher-notifications"] });
   }
 }
@@ -107,15 +32,18 @@ export interface TeacherInvalidator {
   overview: () => void;
   referrals: () => void;
   advisory: () => void;
+  modules: () => void;
+  adm: () => void;
   anecdotal: () => void;
   flags: () => void;
+  sf10: () => void;
   settings: () => void;
-  scope: (scope: TeacherInvalidateScope) => void;
+  scope: (scope: TeacherInvalidateScope | readonly TeacherInvalidateScope[]) => void;
 }
 
 export function useTeacherInvalidate(): TeacherInvalidator {
   const queryClient = useQueryClient();
-  const run = (scope: TeacherInvalidateScope) =>
+  const run = (scope: TeacherInvalidateScope | readonly TeacherInvalidateScope[]) =>
     invalidateTeacherScope(queryClient, scope);
   return {
     all: () => {
@@ -129,8 +57,11 @@ export function useTeacherInvalidate(): TeacherInvalidator {
     overview: () => run("overview"),
     referrals: () => run("referrals"),
     advisory: () => run("advisory"),
+    modules: () => run("modules"),
+    adm: () => run("adm"),
     anecdotal: () => run("anecdotal"),
     flags: () => run("flags"),
+    sf10: () => run("sf10"),
     settings: () => run("settings"),
     scope: run,
   };

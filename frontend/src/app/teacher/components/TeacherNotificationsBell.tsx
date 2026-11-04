@@ -13,9 +13,12 @@ export function TeacherNotificationsBell() {
       refreshKeys={[
         ["teacher-notifications"],
         ["teacher-overview"],
+        ["teacher-overview-secondary"],
         ["adm-my-cases"],
+        ["adm-monitoring"],
         ["myReferrals"],
         ["advisory-students"],
+        ["advisory-modules"],
         ["anecdotal-mine"],
         ["teacher-schedule"],
         ["grade-flags"],
