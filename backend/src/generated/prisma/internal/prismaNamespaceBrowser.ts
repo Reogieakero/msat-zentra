@@ -364,6 +364,7 @@ export const AssessmentScalarFieldEnum = {
   title: 'title',
   maxScore: 'maxScore',
   dateGiven: 'dateGiven',
+  audience: 'audience',
   createdBy: 'createdBy',
   createdAt: 'createdAt'
 } as const

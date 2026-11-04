@@ -30,10 +30,12 @@ export const assessmentSchema = z.object({
   title: z.string().trim().min(1).max(120),
   maxScore: z.number().positive().max(100000),
   dateGiven: z.string().datetime().optional(),
+  audience: z.enum(["regular", "adm"]).default("regular"),
 });
 
 export const assessmentPatchSchema = z.object({
   title: z.string().trim().min(1).max(120).optional(),
   maxScore: z.number().positive().max(100000).optional(),
   dateGiven: z.string().datetime().optional(),
+  audience: z.enum(["regular", "adm"]).optional(),
 });

@@ -71,6 +71,13 @@ enum ComponentType {
   EXAM
 }
 
+/// Which learners an assessment counts for. ADM learners with a signed case
+/// are graded only from `adm` assessments; everyone else from `regular`.
+enum AssessmentAudience {
+  regular
+  adm
+}
+
 enum LockStatus {
   unlocked
   locked
@@ -672,6 +679,9 @@ model Assessment {
   title           String
   maxScore        Float
   dateGiven       DateTime
+  // Regular vs ADM grade input. Defaults to regular so pre-existing rows and
+  // ordinary classes are unaffected.
+  audience        AssessmentAudience @default(regular)
   createdBy       String
   createdAt       DateTime @default(now())
   gradeComponent  GradeComponent  @relation(fields: [gradeComponentId], references: [id], onDelete: Cascade)

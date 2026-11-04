@@ -130,6 +130,24 @@
   min-width: 10rem;
 }
 
+.admChip {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid rgb(245 158 11 / 0.4);
+  border-radius: var(--radius-md);
+  background: #fef3c7;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #92400e;
+  vertical-align: middle;
+}
+
+:global(.dark) .admChip {
+  background: rgb(245 158 11 / 0.2);
+  color: #fbbf24;
+}
+
 .row {
   display: flex;
   align-items: center;

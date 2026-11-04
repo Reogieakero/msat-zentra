@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../risk.js";
 import { ATTENDANCE_RISK_CUTOFF, subjectAverageAttendance } from "../attendance.js";
 import { sectionHeadcounts } from "../enrollment.js";
+import { admExemptStudentIds } from "../adm/attendancePolicy.js";
 import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
 import type { AdvisoryContext } from "./advisory.types.js";
 
@@ -118,6 +119,10 @@ export async function getStudents(ctx: AdvisoryContext) {
     sectionHeadcounts(sectionIds, counts),
   ]);
 
+  // Signed ADM cases: seat time is not their risk signal (module work is not
+  // attendance evidence either — the factor is simply suppressed).
+  const admExempt = await admExemptStudentIds(termId);
+
   const finalsByRoster = new Map<string, typeof rosterFinals>();
   for (const f of rosterFinals) {
     const arr = finalsByRoster.get(f.rosterId as string) ?? [];
@@ -224,6 +229,7 @@ export async function getStudents(ctx: AdvisoryContext) {
           attendanceTotal: sectionTotals.get(s.sectionId ?? ""),
           anecdotalCount: s.anecdotalRecords.length,
           enrolled,
+          attendanceExempt: admExempt.has(s.userId),
         }),
       );
       const activeFlags = toActiveFlags(factors);
@@ -248,6 +254,7 @@ export async function getStudents(ctx: AdvisoryContext) {
         hasOpenFlag: openFlags > 0,
         openFlagCount: openFlags,
         hasAccount: true,
+        admExempt: admExempt.has(s.userId),
         grades: s.finalGrades.map((f) => ({
           subject: f.subject.name,
           code: f.subject.code,
@@ -293,6 +300,7 @@ export async function getStudents(ctx: AdvisoryContext) {
         hasOpenFlag: false,
         openFlagCount: 0,
         hasAccount: false,
+        admExempt: false,
         grades: finals.map((f) => ({
           subject: f.subject.name,
           code: f.subject.code,

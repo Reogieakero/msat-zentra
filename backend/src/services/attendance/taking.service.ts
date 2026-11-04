@@ -3,6 +3,7 @@ import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
 import { recomputeRisk, recomputeRosterRisk } from "../risk.js";
+import { admExemptStudentIds } from "../adm/attendancePolicy.js";
 import {
   mondayOf,
   phDayKey,
@@ -84,6 +85,16 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
   ]);
   if (enrolledProfiles !== profileIds.length || rosterEntries.length !== rosterIds.length) {
     throw new AppError(422, "STUDENT_NOT_IN_SECTION", "One or more students are not in this section");
+  }
+  // Signed ADM cases are measured by module work, not seat time. The sheet
+  // hides them, and the API refuses them too so a stale client cannot mark one.
+  const admExempt = await admExemptStudentIds(termId);
+  if (profileIds.some((id) => admExempt.has(id))) {
+    throw new AppError(
+      409,
+      "ADM_EXEMPT_LEARNER",
+      "Attendance cannot be recorded for a learner whose ADM case is signed by the Principal",
+    );
   }
   const keyOf = (studentId: string | null, rosterId: string | null) =>
     rosterId ? `roster:${rosterId}` : (studentId as string);
@@ -428,6 +439,14 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
   ]);
   if (enrolledProfiles !== profileIds.length || rosterEntries.length !== rosterIds.length) {
     throw new AppError(422, "STUDENT_NOT_IN_SECTION", "One or more students are not in this section");
+  }
+  const admExempt = await admExemptStudentIds(termId);
+  if (profileIds.some((id) => admExempt.has(id))) {
+    throw new AppError(
+      409,
+      "ADM_EXEMPT_LEARNER",
+      "Attendance cannot be recorded for a learner whose ADM case is signed by the Principal",
+    );
   }
   const keyOf = (studentId: string | null, rosterId: string | null) =>
     rosterId ? `roster:${rosterId}` : (studentId as string);

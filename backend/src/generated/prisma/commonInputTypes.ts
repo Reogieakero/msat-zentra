@@ -305,6 +305,13 @@ export type FloatFilter<$PrismaModel = never> = {
   not?: Prisma.NestedFloatFilter<$PrismaModel> | number
 }
 
+export type EnumAssessmentAudienceFilter<$PrismaModel = never> = {
+  equals?: $Enums.AssessmentAudience | Prisma.EnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  in?: $Enums.AssessmentAudience[] | Prisma.ListEnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AssessmentAudience[] | Prisma.ListEnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAssessmentAudienceFilter<$PrismaModel> | $Enums.AssessmentAudience
+}
+
 export type FloatWithAggregatesFilter<$PrismaModel = never> = {
   equals?: number | Prisma.FloatFieldRefInput<$PrismaModel>
   in?: number[] | Prisma.ListFloatFieldRefInput<$PrismaModel>
@@ -319,6 +326,16 @@ export type FloatWithAggregatesFilter<$PrismaModel = never> = {
   _sum?: Prisma.NestedFloatFilter<$PrismaModel>
   _min?: Prisma.NestedFloatFilter<$PrismaModel>
   _max?: Prisma.NestedFloatFilter<$PrismaModel>
+}
+
+export type EnumAssessmentAudienceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.AssessmentAudience | Prisma.EnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  in?: $Enums.AssessmentAudience[] | Prisma.ListEnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AssessmentAudience[] | Prisma.ListEnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAssessmentAudienceWithAggregatesFilter<$PrismaModel> | $Enums.AssessmentAudience
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumAssessmentAudienceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumAssessmentAudienceFilter<$PrismaModel>
 }
 
 export type FloatNullableFilter<$PrismaModel = never> = {
@@ -1191,6 +1208,13 @@ export type NestedEnumComponentTypeWithAggregatesFilter<$PrismaModel = never> = 
   _max?: Prisma.NestedEnumComponentTypeFilter<$PrismaModel>
 }
 
+export type NestedEnumAssessmentAudienceFilter<$PrismaModel = never> = {
+  equals?: $Enums.AssessmentAudience | Prisma.EnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  in?: $Enums.AssessmentAudience[] | Prisma.ListEnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AssessmentAudience[] | Prisma.ListEnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAssessmentAudienceFilter<$PrismaModel> | $Enums.AssessmentAudience
+}
+
 export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
   equals?: number | Prisma.FloatFieldRefInput<$PrismaModel>
   in?: number[] | Prisma.ListFloatFieldRefInput<$PrismaModel>
@@ -1205,6 +1229,16 @@ export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
   _sum?: Prisma.NestedFloatFilter<$PrismaModel>
   _min?: Prisma.NestedFloatFilter<$PrismaModel>
   _max?: Prisma.NestedFloatFilter<$PrismaModel>
+}
+
+export type NestedEnumAssessmentAudienceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.AssessmentAudience | Prisma.EnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  in?: $Enums.AssessmentAudience[] | Prisma.ListEnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AssessmentAudience[] | Prisma.ListEnumAssessmentAudienceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAssessmentAudienceWithAggregatesFilter<$PrismaModel> | $Enums.AssessmentAudience
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumAssessmentAudienceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumAssessmentAudienceFilter<$PrismaModel>
 }
 
 export type NestedFloatNullableFilter<$PrismaModel = never> = {

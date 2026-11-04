@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/pino.js";
 import { invalidateTags } from "../lib/cache.js";
 import { recomputeRisk, recomputeRosterRisk } from "./risk.js";
+import { admExemptStudentIds } from "./adm/attendancePolicy.js";
 import {
   SCHEDULE_CONFIG_DEFAULTS,
   toScheduleConfig,
@@ -51,7 +52,7 @@ function phParts(now: Date): { key: string; min: number; dow: number } {
 
 export async function sweepAutoAbsent(
   now = new Date()
-): Promise<{ meetups: number; rows: number }> {
+): Promise<{ meetups: number; rows: number; exemptLearners: number }> {
   // Rule: no record + subject time done = absent. Covers whole missing sheets
   // AND unmarked students on partially saved sheets, for past days and for
   // today's already-elapsed periods. Runs hourly + on demand.
@@ -69,6 +70,7 @@ export async function sweepAutoAbsent(
 
   let meetups = 0;
   let rows = 0;
+  let exemptLearners = 0;
   const touchedProfiles = new Map<string, string>();
   const touchedRosters = new Map<string, string>();
 
@@ -113,6 +115,15 @@ export async function sweepAutoAbsent(
       }),
     ]);
 
+    // Signed ADM cases are exempt from seat-time attendance: the sweep never
+    // synthesizes absences for a learner the Principal moved to enrollment
+    // monitoring. (Module work is not attendance evidence — owner decision.)
+    const exemptIds = await admExemptStudentIds(term.id);
+    const activeProfiles = exemptIds.size
+      ? profiles.filter((p) => !exemptIds.has(p.userId))
+      : profiles;
+    exemptLearners += exemptIds.size;
+
     // Sheets already taken (any writer, incl. teachers) + who is on each sheet.
     const takenSheets = new Set<string>();
     const takenStudents = new Map<string, Set<string>>();
@@ -127,7 +138,7 @@ export async function sweepAutoAbsent(
       takenStudents.set(key, set);
     }
     const profilesBySection = new Map<string, string[]>();
-    for (const p of profiles) {
+    for (const p of activeProfiles) {
       if (!p.sectionId) continue;
       const arr = profilesBySection.get(p.sectionId) ?? [];
       arr.push(p.userId);
@@ -296,6 +307,6 @@ export async function sweepAutoAbsent(
   if (rows > 0) {
     await invalidateTags(["teacher", "risk", "guidance", "overview", "alerts"]);
   }
-  logger.info({ meetups, rows }, "Auto-absent sweep complete");
-  return { meetups, rows };
+  logger.info({ meetups, rows, exemptLearners }, "Auto-absent sweep complete");
+  return { meetups, rows, exemptLearners };
 }

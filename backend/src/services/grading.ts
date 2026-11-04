@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import { isAdmExempt } from "./adm/attendancePolicy.js";
 
 const TRANSMUTATION: { min: number; grade: number }[] = [
   { min: 100, grade: 100 },
@@ -249,9 +250,33 @@ export async function recomputeSubjectFinal(
   const sectionFilter = sectionId
     ? { OR: [{ sectionId }, { sectionId: null }] }
     : {};
+  // Audience split: a signed ADM learner is graded from `adm` assessments and
+  // everyone else from `regular` ones. Weights and transmutation are identical
+  // for both pools. Legacy classes have no `adm` rows yet, so an ADM learner
+  // falls back to the regular pool rather than losing an existing grade.
+  const admLearner =
+    "studentId" in student
+      ? await isAdmExempt(student.studentId, termId)
+      : false;
+  let audience: "regular" | "adm" = "regular";
+  if (admLearner) {
+    const admRows = await prisma.assessment.count({
+      where: {
+        audience: "adm",
+        gradeComponent: { subjectId, termId },
+        ...sectionFilter,
+      },
+    });
+    if (admRows > 0) audience = "adm";
+  }
   const components = await prisma.gradeComponent.findMany({
     where: { subjectId, termId },
-    include: { assessments: { where: sectionFilter, include: { studentGrades: { where: gradeFilter } } } },
+    include: {
+      assessments: {
+        where: { audience, ...sectionFilter },
+        include: { studentGrades: { where: gradeFilter } },
+      },
+    },
   });
   const evidence: CategoryEvidence[] = components.map((c) => {
     const encoded = c.assessments.filter((a) => a.studentGrades.length > 0);

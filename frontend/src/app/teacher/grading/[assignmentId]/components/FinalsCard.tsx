@@ -90,6 +90,11 @@ export function FinalsCard({ assignmentId, students, onChanged }: Props) {
                 <tr key={s.id}>
                   <th className={styles.stickyCol} scope="row">
                     {formatSurnameFirst(s.name)}
+                    {s.isAdm ? (
+                      <span className={styles.admChip} title="Signed ADM case — same weights, module evidence">
+                        ADM
+                      </span>
+                    ) : null}
                   </th>
                   <td>{f?.computedAverage != null ? f.computedAverage.toFixed(2) : "—"}</td>
                   <td>{f?.transmutedGrade != null ? f.transmutedGrade.toFixed(0) : "—"}</td>

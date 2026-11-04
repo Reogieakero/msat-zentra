@@ -90,6 +90,14 @@ export const ComponentType = {
 export type ComponentType = (typeof ComponentType)[keyof typeof ComponentType]
 
 
+export const AssessmentAudience = {
+  regular: 'regular',
+  adm: 'adm'
+} as const
+
+export type AssessmentAudience = (typeof AssessmentAudience)[keyof typeof AssessmentAudience]
+
+
 export const LockStatus = {
   unlocked: 'unlocked',
   locked: 'locked',

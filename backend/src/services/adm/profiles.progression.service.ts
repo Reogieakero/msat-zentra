@@ -5,6 +5,8 @@ import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { canTransition, evaluateAdmEligibility, type AdmStage } from "../adm.js";
 import { actorName, ensureAdmForm } from "../../modules/adm/adm.repository.js";
 import type { AdmContext } from "./adm.types.js";
+import { recomputeRisk } from "../risk.js";
+import { logger } from "../../lib/pino.js";
 
 const ROLE_FOR_STAGE: Record<AdmStage, string[]> = {
   anecdotal: ["adviser"],
@@ -345,6 +347,12 @@ export async function principalApprove(ctx: AdmContext, profileId: string) {
   });
   await writeAudit({ userId: ctx.userId, actionType: "adm_edit", sourceTable: "adm_learner_profiles", sourceId: profile.id, reason: "Principal final signature", oldValue: { approvedBy: null }, newValue: { approvedBy: ctx.userId } });
 
+  // The signature is the attendance-exemption switch — refresh the learner's
+  // risk now so stale absences stop flagging them before the hourly sweep.
+  await recomputeRisk(updated.studentId, updated.termId).catch((err) =>
+    logger.warn({ err }, "risk recompute after ADM approval failed"),
+  );
+
   const studentName = profile.student?.user?.fullName ?? "your student";
   const actor = await actorName(ctx.userId);
   if (profile.referral && profile.referral.referredBy !== ctx.userId) {
@@ -428,6 +436,12 @@ export async function principalReturn(ctx: AdmContext, profileId: string, reason
     oldValue: { approvedBy: profile.approvedBy, eligibilityStatus: profile.eligibilityStatus },
     newValue: { approvedBy: null, eligibilityStatus: "pending", returnReason: trimmedReason },
   });
+
+  // Returning the case withdraws the signature, so the attendance exemption
+  // ends here too — recompute now instead of waiting for the hourly sweep.
+  await recomputeRisk(profile.studentId, profile.termId).catch((err) =>
+    logger.warn({ err }, "risk recompute after ADM return failed"),
+  );
 
   const studentName = profile.student?.user?.fullName ?? "your student";
   const actor = await actorName(ctx.userId);

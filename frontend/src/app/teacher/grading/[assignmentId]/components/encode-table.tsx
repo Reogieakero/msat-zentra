@@ -64,6 +64,16 @@ export function PlainEncodeTable({ assessment, students, drafts, nameFilter, onD
               <Pill tone="neutral" label="LRN" className="min-w-0 max-w-full truncate" title={s.lrn}>
                 {s.lrn}
               </Pill>
+              {s.isAdm ? (
+                <Pill
+                  tone="amber"
+                  label="ADM case"
+                  title="Signed ADM case — same weights, evidence comes from module work"
+                  className="shrink-0"
+                >
+                  ADM
+                </Pill>
+              ) : null}
             </span>
             <span className={rowStyles.metaCell}>
               <ScoreCellInput

@@ -19,6 +19,7 @@ export interface AddAssessmentSaveInput {
   title: string;
   maxScore: number;
   dateGiven?: string;
+  audience?: "regular" | "adm";
   pills: string[];
 }
 
@@ -84,6 +85,7 @@ export function AddAssessmentSaveProvider({ children }: { children: React.ReactN
           title: input.title,
           maxScore: input.maxScore,
           dateGiven: input.dateGiven,
+          audience: input.audience,
         });
         queryClient.setQueriesData<ClassDetail>(
           { queryKey: ["teacher-grading-class"] },

@@ -41,6 +41,7 @@ export type AssessmentMinAggregateOutputType = {
   title: string | null
   maxScore: number | null
   dateGiven: Date | null
+  audience: $Enums.AssessmentAudience | null
   createdBy: string | null
   createdAt: Date | null
 }
@@ -52,6 +53,7 @@ export type AssessmentMaxAggregateOutputType = {
   title: string | null
   maxScore: number | null
   dateGiven: Date | null
+  audience: $Enums.AssessmentAudience | null
   createdBy: string | null
   createdAt: Date | null
 }
@@ -63,6 +65,7 @@ export type AssessmentCountAggregateOutputType = {
   title: number
   maxScore: number
   dateGiven: number
+  audience: number
   createdBy: number
   createdAt: number
   _all: number
@@ -84,6 +87,7 @@ export type AssessmentMinAggregateInputType = {
   title?: true
   maxScore?: true
   dateGiven?: true
+  audience?: true
   createdBy?: true
   createdAt?: true
 }
@@ -95,6 +99,7 @@ export type AssessmentMaxAggregateInputType = {
   title?: true
   maxScore?: true
   dateGiven?: true
+  audience?: true
   createdBy?: true
   createdAt?: true
 }
@@ -106,6 +111,7 @@ export type AssessmentCountAggregateInputType = {
   title?: true
   maxScore?: true
   dateGiven?: true
+  audience?: true
   createdBy?: true
   createdAt?: true
   _all?: true
@@ -204,6 +210,7 @@ export type AssessmentGroupByOutputType = {
   title: string
   maxScore: number
   dateGiven: Date
+  audience: $Enums.AssessmentAudience
   createdBy: string
   createdAt: Date
   _count: AssessmentCountAggregateOutputType | null
@@ -238,6 +245,7 @@ export type AssessmentWhereInput = {
   title?: Prisma.StringFilter<"Assessment"> | string
   maxScore?: Prisma.FloatFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeFilter<"Assessment"> | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFilter<"Assessment"> | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFilter<"Assessment"> | string
   createdAt?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   gradeComponent?: Prisma.XOR<Prisma.GradeComponentScalarRelationFilter, Prisma.GradeComponentWhereInput>
@@ -252,6 +260,7 @@ export type AssessmentOrderByWithRelationInput = {
   title?: Prisma.SortOrder
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
+  audience?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   gradeComponent?: Prisma.GradeComponentOrderByWithRelationInput
@@ -269,6 +278,7 @@ export type AssessmentWhereUniqueInput = Prisma.AtLeast<{
   title?: Prisma.StringFilter<"Assessment"> | string
   maxScore?: Prisma.FloatFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeFilter<"Assessment"> | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFilter<"Assessment"> | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFilter<"Assessment"> | string
   createdAt?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   gradeComponent?: Prisma.XOR<Prisma.GradeComponentScalarRelationFilter, Prisma.GradeComponentWhereInput>
@@ -283,6 +293,7 @@ export type AssessmentOrderByWithAggregationInput = {
   title?: Prisma.SortOrder
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
+  audience?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.AssessmentCountOrderByAggregateInput
@@ -302,6 +313,7 @@ export type AssessmentScalarWhereWithAggregatesInput = {
   title?: Prisma.StringWithAggregatesFilter<"Assessment"> | string
   maxScore?: Prisma.FloatWithAggregatesFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeWithAggregatesFilter<"Assessment"> | Date | string
+  audience?: Prisma.EnumAssessmentAudienceWithAggregatesFilter<"Assessment"> | $Enums.AssessmentAudience
   createdBy?: Prisma.StringWithAggregatesFilter<"Assessment"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Assessment"> | Date | string
 }
@@ -311,6 +323,7 @@ export type AssessmentCreateInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
   gradeComponent: Prisma.GradeComponentCreateNestedOneWithoutAssessmentsInput
@@ -325,6 +338,7 @@ export type AssessmentUncheckedCreateInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutAssessmentInput
@@ -335,6 +349,7 @@ export type AssessmentUpdateInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   gradeComponent?: Prisma.GradeComponentUpdateOneRequiredWithoutAssessmentsNestedInput
@@ -349,6 +364,7 @@ export type AssessmentUncheckedUpdateInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutAssessmentNestedInput
@@ -361,6 +377,7 @@ export type AssessmentCreateManyInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
 }
@@ -370,6 +387,7 @@ export type AssessmentUpdateManyMutationInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -381,6 +399,7 @@ export type AssessmentUncheckedUpdateManyInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -402,6 +421,7 @@ export type AssessmentCountOrderByAggregateInput = {
   title?: Prisma.SortOrder
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
+  audience?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -417,6 +437,7 @@ export type AssessmentMaxOrderByAggregateInput = {
   title?: Prisma.SortOrder
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
+  audience?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -428,6 +449,7 @@ export type AssessmentMinOrderByAggregateInput = {
   title?: Prisma.SortOrder
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
+  audience?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -533,6 +555,10 @@ export type FloatFieldUpdateOperationsInput = {
   divide?: number
 }
 
+export type EnumAssessmentAudienceFieldUpdateOperationsInput = {
+  set?: $Enums.AssessmentAudience
+}
+
 export type AssessmentCreateNestedOneWithoutStudentGradesInput = {
   create?: Prisma.XOR<Prisma.AssessmentCreateWithoutStudentGradesInput, Prisma.AssessmentUncheckedCreateWithoutStudentGradesInput>
   connectOrCreate?: Prisma.AssessmentCreateOrConnectWithoutStudentGradesInput
@@ -552,6 +578,7 @@ export type AssessmentCreateWithoutSectionInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
   gradeComponent: Prisma.GradeComponentCreateNestedOneWithoutAssessmentsInput
@@ -564,6 +591,7 @@ export type AssessmentUncheckedCreateWithoutSectionInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutAssessmentInput
@@ -605,6 +633,7 @@ export type AssessmentScalarWhereInput = {
   title?: Prisma.StringFilter<"Assessment"> | string
   maxScore?: Prisma.FloatFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeFilter<"Assessment"> | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFilter<"Assessment"> | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFilter<"Assessment"> | string
   createdAt?: Prisma.DateTimeFilter<"Assessment"> | Date | string
 }
@@ -614,6 +643,7 @@ export type AssessmentCreateWithoutGradeComponentInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
   section?: Prisma.SectionCreateNestedOneWithoutAssessmentsInput
@@ -626,6 +656,7 @@ export type AssessmentUncheckedCreateWithoutGradeComponentInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutAssessmentInput
@@ -662,6 +693,7 @@ export type AssessmentCreateWithoutStudentGradesInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
   gradeComponent: Prisma.GradeComponentCreateNestedOneWithoutAssessmentsInput
@@ -675,6 +707,7 @@ export type AssessmentUncheckedCreateWithoutStudentGradesInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
 }
@@ -700,6 +733,7 @@ export type AssessmentUpdateWithoutStudentGradesInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   gradeComponent?: Prisma.GradeComponentUpdateOneRequiredWithoutAssessmentsNestedInput
@@ -713,6 +747,7 @@ export type AssessmentUncheckedUpdateWithoutStudentGradesInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -723,6 +758,7 @@ export type AssessmentCreateManySectionInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
 }
@@ -732,6 +768,7 @@ export type AssessmentUpdateWithoutSectionInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   gradeComponent?: Prisma.GradeComponentUpdateOneRequiredWithoutAssessmentsNestedInput
@@ -744,6 +781,7 @@ export type AssessmentUncheckedUpdateWithoutSectionInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutAssessmentNestedInput
@@ -755,6 +793,7 @@ export type AssessmentUncheckedUpdateManyWithoutSectionInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -765,6 +804,7 @@ export type AssessmentCreateManyGradeComponentInput = {
   title: string
   maxScore: number
   dateGiven: Date | string
+  audience?: $Enums.AssessmentAudience
   createdBy: string
   createdAt?: Date | string
 }
@@ -774,6 +814,7 @@ export type AssessmentUpdateWithoutGradeComponentInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneWithoutAssessmentsNestedInput
@@ -786,6 +827,7 @@ export type AssessmentUncheckedUpdateWithoutGradeComponentInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutAssessmentNestedInput
@@ -797,6 +839,7 @@ export type AssessmentUncheckedUpdateManyWithoutGradeComponentInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  audience?: Prisma.EnumAssessmentAudienceFieldUpdateOperationsInput | $Enums.AssessmentAudience
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -839,6 +882,7 @@ export type AssessmentSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   title?: boolean
   maxScore?: boolean
   dateGiven?: boolean
+  audience?: boolean
   createdBy?: boolean
   createdAt?: boolean
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
@@ -854,6 +898,7 @@ export type AssessmentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   title?: boolean
   maxScore?: boolean
   dateGiven?: boolean
+  audience?: boolean
   createdBy?: boolean
   createdAt?: boolean
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
@@ -867,6 +912,7 @@ export type AssessmentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   title?: boolean
   maxScore?: boolean
   dateGiven?: boolean
+  audience?: boolean
   createdBy?: boolean
   createdAt?: boolean
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
@@ -880,11 +926,12 @@ export type AssessmentSelectScalar = {
   title?: boolean
   maxScore?: boolean
   dateGiven?: boolean
+  audience?: boolean
   createdBy?: boolean
   createdAt?: boolean
 }
 
-export type AssessmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "gradeComponentId" | "sectionId" | "title" | "maxScore" | "dateGiven" | "createdBy" | "createdAt", ExtArgs["result"]["assessment"]>
+export type AssessmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "gradeComponentId" | "sectionId" | "title" | "maxScore" | "dateGiven" | "audience" | "createdBy" | "createdAt", ExtArgs["result"]["assessment"]>
 export type AssessmentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
   section?: boolean | Prisma.Assessment$sectionArgs<ExtArgs>
@@ -914,6 +961,7 @@ export type $AssessmentPayload<ExtArgs extends runtime.Types.Extensions.Internal
     title: string
     maxScore: number
     dateGiven: Date
+    audience: $Enums.AssessmentAudience
     createdBy: string
     createdAt: Date
   }, ExtArgs["result"]["assessment"]>
@@ -1348,6 +1396,7 @@ export interface AssessmentFieldRefs {
   readonly title: Prisma.FieldRef<"Assessment", 'String'>
   readonly maxScore: Prisma.FieldRef<"Assessment", 'Float'>
   readonly dateGiven: Prisma.FieldRef<"Assessment", 'DateTime'>
+  readonly audience: Prisma.FieldRef<"Assessment", 'AssessmentAudience'>
   readonly createdBy: Prisma.FieldRef<"Assessment", 'String'>
   readonly createdAt: Prisma.FieldRef<"Assessment", 'DateTime'>
 }

@@ -16,6 +16,7 @@ import { COMPONENT_LABELS } from "@/services/teacher/grading.compute";
 import type { ComponentType } from "@/services/teacher/grading.types";
 import { cn } from "@/lib/utils";
 import { CategoryTabs } from "./CategoryTabs";
+import categoryStyles from "./CategoryTabs.module.css";
 import { useAddAssessmentSave } from "./add-assessment-save-context";
 
 function todayKey(): string {
@@ -47,6 +48,7 @@ export function AddAssessmentForm({
   const { saveAssessment } = useAddAssessmentSave();
   const [componentType, setComponentType] =
     React.useState<ComponentType>(defaultType);
+  const [audience, setAudience] = React.useState<"regular" | "adm">("regular");
   const [title, setTitle] = React.useState("");
   const [max, setMax] = React.useState("100");
   const [date, setDate] = React.useState(todayKey());
@@ -72,6 +74,7 @@ export function AddAssessmentForm({
     const trimmedTitle = title.trim();
     const pills = [
       COMPONENT_LABELS[componentType],
+      audience === "adm" ? "ADM" : "Regular",
       `${maxScore} max`,
       selectedDate ? format(selectedDate, "MM/dd/yyyy") : "No date",
     ];
@@ -84,6 +87,7 @@ export function AddAssessmentForm({
       dateGiven: date
         ? new Date(`${date}T00:00:00Z`).toISOString()
         : undefined,
+      audience,
       pills,
     });
     setSaving(false);
@@ -108,6 +112,40 @@ export function AddAssessmentForm({
           Category
         </span>
         <CategoryTabs value={componentType} onChange={setComponentType} />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-muted-foreground">
+          Type
+        </span>
+        <div
+          className={categoryStyles.tabs}
+          role="tablist"
+          aria-label="Assessment type"
+        >
+          {(
+            [
+              { value: "regular", label: "Regular" },
+              { value: "adm", label: "ADM" },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              role="tab"
+              aria-selected={audience === t.value}
+              className={`${categoryStyles.tab} ${audience === t.value ? categoryStyles.tabActive : ""}`}
+              onClick={() => setAudience(t.value)}
+              disabled={saving}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          Regular counts toward regular learners; ADM counts toward signed ADM
+          learners.
+        </p>
       </div>
 
       <div className="flex flex-col gap-1.5">

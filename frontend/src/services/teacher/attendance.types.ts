@@ -21,6 +21,11 @@ export interface SheetStudent {
   name: string;
   lrn: string;
   attendanceRate: number;
+  /**
+   * Signed ADM case: seat-time attendance is not recorded for this learner —
+   * the sheet lists them separately and never submits their marks.
+   */
+  admExempt?: boolean;
 }
 
 export interface SheetContext {

@@ -93,6 +93,7 @@ export async function enlistRoster(
     hasOpenFlag: false,
     openFlagCount: 0,
     hasAccount: false,
+    admExempt: false,
   };
   void (async () => {
     try {

@@ -39,6 +39,8 @@ export interface AdviseeRow {
   hasOpenFlag: boolean;
   openFlagCount: number;
   hasAccount: boolean;
+  /** Signed ADM case — attendance is exempt, module work is the evidence. */
+  admExempt: boolean;
   grades: AdviseeSubjectGrade[];
   liveGrades: AdviseeLiveGrade[];
 }

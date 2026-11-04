@@ -34,6 +34,7 @@ function toSheetContext(roster: AdvisoryRoster): SheetContext {
       name: s.name,
       lrn: s.lrn,
       attendanceRate: s.attendanceRate,
+      admExempt: s.admExempt,
     })),
   };
 }

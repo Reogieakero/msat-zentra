@@ -137,12 +137,14 @@ router.post(
         title: string;
         maxScore: number;
         dateGiven?: string;
+        audience?: "regular" | "adm";
       };
       const assessment = await createAssessment(await gradingCtxOf(req), String(req.params.assignmentId), {
         componentType: body.componentType,
         title: body.title,
         maxScore: body.maxScore,
         dateGiven: body.dateGiven,
+        audience: body.audience,
       });
       await invalidateGradingCaches();
 
@@ -160,11 +162,17 @@ router.patch(
   validate("body", assessmentPatchSchema),
   async (req, res, next) => {
     try {
-      const body = req.body as { title?: string; maxScore?: number; dateGiven?: string };
+      const body = req.body as {
+        title?: string;
+        maxScore?: number;
+        dateGiven?: string;
+        audience?: "regular" | "adm";
+      };
       const updated = await patchAssessment(await gradingCtxOf(req), String(req.params.id), {
         title: body.title,
         maxScore: body.maxScore,
         dateGiven: body.dateGiven,
+        audience: body.audience,
       });
       await invalidateGradingCaches();
 

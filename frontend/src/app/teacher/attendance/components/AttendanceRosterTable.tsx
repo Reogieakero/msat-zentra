@@ -38,6 +38,7 @@ interface RosterRow {
   rate: number | null;
   status: SheetStatus | null;
   impliedAbsent?: boolean;
+  admExempt: boolean;
 }
 export interface AttendanceLive {
   locked: boolean;
@@ -198,6 +199,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
       (date === live.todayKey && live.todayEnd !== null && live.nowMin >= live.todayEnd);
     const ordered = [...students].sort((a, b) => compareSurnameFirst(a.name, b.name));
     return ordered.map((s) => {
+      const admExempt = s.admExempt ?? false;
       const days = dayStatusByStudent.get(s.studentId);
       let present = 0;
       for (const d of elapsed) {
@@ -207,7 +209,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
       // meetup time has passed, display absent (implied, not saved).
       const saved = merged[s.studentId] ?? null;
       const impliedAbsent = saved === null && sheetPastDue;
-      return { id: s.studentId, name: formatSurnameFirst(s.name), lrn: s.lrn, rate: elapsed.length === 0 ? null : present / elapsed.length, status: saved ?? (sheetPastDue ? "absent" : null), impliedAbsent };
+      return { id: s.studentId, name: formatSurnameFirst(s.name), lrn: s.lrn, rate: admExempt || elapsed.length === 0 ? null : present / elapsed.length, status: admExempt ? null : saved ?? (sheetPastDue ? "absent" : null), impliedAbsent: admExempt ? false : impliedAbsent, admExempt };
     });
   }, [students, merged, meetupDates, dayStatusByStudent, live.todayKey, live.todayEnd, live.nowMin, date]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -231,6 +233,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
     () =>
       data.filter(
         (d): d is RosterRow & { status: SheetStatus } =>
+          !d.admExempt &&
           d.status !== null && marks[d.id] !== undefined && marks[d.id] !== serverMarks[d.id],
       ),
     [data, marks, serverMarks],
@@ -408,7 +411,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
                 <li
                   key={r.id}
                   className={rowStyles.row}
-                  aria-label={`${r.name}, ${pillLabel}, attendance ${pct}`}
+                  aria-label={`${r.name}, ${pillLabel}, ${r.admExempt ? "attendance exempt" : `attendance ${pct}`}`}
                 >
                   {!blocksMode || pill ? (
                     <span className={`${PILL_BASE} w-fit max-w-full justify-center ${pill ? pill.tone : UNMARKED_PILL}`}>
@@ -438,9 +441,23 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
                     >
                       {r.lrn}
                     </Pill>
+                    {r.admExempt ? (
+                      <Pill
+                        tone="amber"
+                        label="ADM case"
+                        title="Signed ADM case — seat-time attendance is exempt; module work is the evidence"
+                        className="shrink-0"
+                      >
+                        ADM
+                      </Pill>
+                    ) : null}
                   </span>
                   <span className={rowStyles.metaCell}>
-                    {blocksMode ? (
+                    {r.admExempt ? (
+                      <span className="text-xs italic text-muted-foreground">
+                        Exempt — not marked
+                      </span>
+                    ) : blocksMode ? (
                       <span className="w-[22.5rem] max-w-full flex-none">
                         <MeetupBlocksCell
                           dates={blocksInfo.dates}

@@ -12,6 +12,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { assertAssignment } from "../teacher/grading.repository.js";
 import { verifyTeacherCode } from "../../services/teacher/directory.service.js";
+import { admExemptStudentIds, isAdmExempt } from "../../services/adm/attendancePolicy.js";
 
 const router = Router();
 
@@ -67,6 +68,15 @@ router.post(
         }
       }
       const gc = assessment.gradeComponent;
+      // Audience guard: ADM assessments only take signed ADM learners' scores.
+      // (Regular assessments stay open to ADM learners as the legacy fallback
+      // pool when no ADM row exists yet.)
+      if (assessment.audience === "adm") {
+        const admStudent = !isRoster && (await isAdmExempt(rawStudentId, gc.termId));
+        if (!admStudent) {
+          throw new AppError(409, "ASSESSMENT_AUDIENCE_MISMATCH", "This assessment is for ADM learners only");
+        }
+      }
       if (isRoster) {
         const coverage = await prisma.teacherSubjectAssignment.findFirst({
           where: {
@@ -224,6 +234,17 @@ router.post(
           if (studentSection !== assessment.sectionId) {
             it.ok = false;
             it.error = "Student is not in this section's class for this assessment";
+          }
+        }
+      }
+
+      // Audience guard: ADM rows only take signed ADM learners' scores.
+      if (assessment.audience === "adm") {
+        const admIds = await admExemptStudentIds(gc.termId);
+        for (const it of candidates) {
+          if (it.ok && (it.rosterId !== null || !admIds.has(it.studentId))) {
+            it.ok = false;
+            it.error = "This assessment is for ADM learners only";
           }
         }
       }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
-import { AmberRectPill } from "../../classes/components/UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
 import { gradebookSlug } from "@/lib/gradebookSlug";
 import type {
   ClassAverageRow,
@@ -88,13 +88,10 @@ export function GradebookCards({ classes, assessments, standings }: Props) {
                 <BookOpen size={14} />
               </span>
             }
-            count={
-              <span className="text-amber-600 dark:text-amber-500">{assessmentCount}</span>
-            }
             actions={
               <span className="flex items-center gap-1.5">
-                <AmberRectPill>{c.section}</AmberRectPill>
-                <AmberRectPill>{c.gradeLevel}</AmberRectPill>
+                <Pill tone="amber" label="Section">{c.section}</Pill>
+                <Pill tone="amber" label="Grade level">{c.gradeLevel}</Pill>
               </span>
             }
             description={`${c.studentCount} student${c.studentCount === 1 ? "" : "s"} enrolled`}

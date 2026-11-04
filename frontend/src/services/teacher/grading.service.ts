@@ -81,7 +81,7 @@ export async function applyWeightPreset(assignmentId: string, preset: WeightPres
 
 export async function createAssessment(
   assignmentId: string,
-  input: { componentType: ComponentType; title: string; maxScore: number; dateGiven?: string }
+  input: { componentType: ComponentType; title: string; maxScore: number; dateGiven?: string; audience?: "regular" | "adm" }
 ): Promise<ClassAssessment> {
   const { data } = await apiClient.post<ClassAssessment>(
     `/api/teacher/grading/classes/${assignmentId}/assessments`,
@@ -92,7 +92,7 @@ export async function createAssessment(
 
 export async function updateAssessment(
   id: string,
-  input: { title?: string; maxScore?: number; dateGiven?: string }
+  input: { title?: string; maxScore?: number; dateGiven?: string; audience?: "regular" | "adm" }
 ): Promise<void> {
   await apiClient.patch(`/api/teacher/grading/assessments/${id}`, input);
 }

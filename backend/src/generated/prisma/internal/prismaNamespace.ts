@@ -4376,6 +4376,7 @@ export const AssessmentScalarFieldEnum = {
   title: 'title',
   maxScore: 'maxScore',
   dateGiven: 'dateGiven',
+  audience: 'audience',
   createdBy: 'createdBy',
   createdAt: 'createdAt'
 } as const
@@ -5126,6 +5127,20 @@ export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, '
  * Reference to a field of type 'Float[]'
  */
 export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+    
+
+
+/**
+ * Reference to a field of type 'AssessmentAudience'
+ */
+export type EnumAssessmentAudienceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssessmentAudience'>
+    
+
+
+/**
+ * Reference to a field of type 'AssessmentAudience[]'
+ */
+export type ListEnumAssessmentAudienceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AssessmentAudience[]'>
     
 
 

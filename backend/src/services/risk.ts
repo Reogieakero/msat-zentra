@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import { resolveActiveTermId as resolveActiveTermIdCore } from "../lib/term-resolve.js";
 import { sectionHeadcounts } from "./enrollment.js";
 import { notifyInterventionDetected } from "../lib/notify.js";
+import { isAdmExempt } from "./adm/attendancePolicy.js";
 import type { RiskLevel } from "../generated/prisma/client.js";
 
 export const resolveActiveTermId = resolveActiveTermIdCore;
@@ -19,6 +20,8 @@ function flagsFromParts(args: {
   attendanceTotal?: number;
   anecdotalCount: number;
   enrolled: number;
+  /** Signed ADM case: seat-time attendance is not a risk signal. */
+  attendanceExempt?: boolean;
 }): { academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean; result: RiskResult } {
   // Real-time unified rule: EITHER average < 75 flags academic.
   // gradeMode is ignored (kept for backwards compat).
@@ -39,14 +42,18 @@ function flagsFromParts(args: {
   // pre-enrolment days count as missed) instead of from their first mark.
   const attTotal = Math.max(args.attendanceTotal ?? 0, args.attendance.length);
   // No attendance signal at all — never treat an empty record set as 0%.
+  // Signed ADM cases are exempt: seat time is the wrong metric for them, so
+  // the attendance factor is suppressed while academic/behavioral still count.
   const attendanceFlag =
-    attTotal === 0
+    args.attendanceExempt
       ? false
-      : args.attendance.some((a) => a.subjectId !== null)
-        ? attPresent / attTotal < 0.8
-        : args.enrolled > 0
-          ? attPresent / args.enrolled < 0.8
-          : false;
+      : attTotal === 0
+        ? false
+        : args.attendance.some((a) => a.subjectId !== null)
+          ? attPresent / attTotal < 0.8
+          : args.enrolled > 0
+            ? attPresent / args.enrolled < 0.8
+            : false;
 
   const behavioralFlag = args.anecdotalCount >= 1;
 
@@ -147,7 +154,7 @@ export async function evaluateRisk(
   termId: string,
   _gradeMode?: GradeMode,
 ): Promise<{ academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean; result: RiskResult }> {
-  const [finalGrades, attendance, anecdotals, profile] = await Promise.all([
+  const [finalGrades, attendance, anecdotals, profile, attendanceExempt] = await Promise.all([
     prisma.finalGrade.findMany({
       where: { studentId, termId },
       select: { computedAverage: true, transmutedGrade: true },
@@ -164,6 +171,7 @@ export async function evaluateRisk(
         section: { select: { _count: { select: { students: true } } } },
       },
     }),
+    isAdmExempt(studentId, termId),
   ]);
   const sectionId = profile?.sectionId ?? null;
   const totals = sectionId
@@ -176,6 +184,7 @@ export async function evaluateRisk(
     attendanceTotal: sectionId ? totals.get(sectionId) : undefined,
     anecdotalCount: anecdotals,
     enrolled: profile?.section?._count.students ?? 0,
+    attendanceExempt,
   });
 }
 
@@ -190,7 +199,7 @@ export async function evaluateBothRisk(
   studentId: string,
   termId: string,
 ): Promise<DualRisk> {
-  const [finalGrades, attendance, anecdotals, profile] = await Promise.all([
+  const [finalGrades, attendance, anecdotals, profile, attendanceExempt] = await Promise.all([
     prisma.finalGrade.findMany({
       where: { studentId, termId },
       select: { computedAverage: true, transmutedGrade: true },
@@ -207,6 +216,7 @@ export async function evaluateBothRisk(
         section: { select: { _count: { select: { students: true } } } },
       },
     }),
+    isAdmExempt(studentId, termId),
   ]);
   const sectionId = profile?.sectionId ?? null;
   const totals = sectionId
@@ -218,6 +228,7 @@ export async function evaluateBothRisk(
     attendanceTotal: sectionId ? totals.get(sectionId) : undefined,
     anecdotalCount: anecdotals,
     enrolled: profile?.section?._count.students ?? 0,
+    attendanceExempt,
   };
   const rawFull = flagsFromParts({ ...parts });
   const finalFull = flagsFromParts({ ...parts });
@@ -272,6 +283,12 @@ export interface FactorInputs {
   anecdotalCount: number;
 
   enrolled: number;
+
+  /**
+   * Signed ADM case: seat-time attendance is not a risk signal. Suppresses the
+   * attendance factor only — academic and behavioral factors still apply.
+   */
+  attendanceExempt?: boolean;
 }
 
 export function computeRiskFactors(inputs: FactorInputs): RiskFactors {
@@ -300,13 +317,15 @@ export function computeRiskFactors(inputs: FactorInputs): RiskFactors {
   const attTotal = Math.max(inputs.attendanceTotal ?? 0, attendance.length);
   const subjectEra = attendance.some((a) => a.subjectId != null) || attendance.length === 0;
   const attendanceFlag =
-    attTotal === 0
+    inputs.attendanceExempt
       ? false
-      : subjectEra
-        ? attPresent / attTotal < 0.8
-        : enrolled > 0
-          ? attPresent / enrolled < 0.8
-          : false;
+      : attTotal === 0
+        ? false
+        : subjectEra
+          ? attPresent / attTotal < 0.8
+          : enrolled > 0
+            ? attPresent / enrolled < 0.8
+            : false;
   const behavioralFlag = anecdotalCount >= 1;
   return { academicFlag, attendanceFlag, behavioralFlag };
 }

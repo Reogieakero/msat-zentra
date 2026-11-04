@@ -41,11 +41,12 @@ type Props = {
   students: ClassStudent[];
   components: ClassComponent[];
   query: string;
+  audience: "regular" | "adm";
   onSelect: (category: ComponentType, assessmentId: string) => void;
   onDeleted: (assessmentId: string) => void;
 };
 
-export function AssessmentList({ students, components, query, onSelect, onDeleted }: Props) {
+export function AssessmentList({ students, components, query, audience, onSelect, onDeleted }: Props) {
   const [pendingDelete, setPendingDelete] = React.useState<{
     assessment: ClassAssessment;
     type: ComponentType;
@@ -56,6 +57,7 @@ export function AssessmentList({ students, components, query, onSelect, onDelete
   const groups = components.map((c) => ({
     type: c.type,
     assessments: [...c.assessments]
+      .filter((a) => a.audience === audience)
       .filter((a) =>
         a.title.toLowerCase().includes(query.trim().toLowerCase()),
       )
@@ -65,9 +67,18 @@ export function AssessmentList({ students, components, query, onSelect, onDelete
   }));
   const total = groups.reduce((n, g) => n + g.assessments.length, 0);
   const unfilteredTotal = components.reduce((n, c) => n + c.assessments.length, 0);
+  const audienceTotal = components.reduce(
+    (n, c) => n + c.assessments.filter((a) => a.audience === audience).length,
+    0,
+  );
+
+  const poolOf = (a: ClassAssessment) =>
+    a.audience === "adm"
+      ? students.filter((s) => s.isAdm)
+      : students.filter((s) => !s.isAdm);
 
   const scoredOf = (a: ClassAssessment) =>
-    students.filter((s) => a.scores[s.id] != null).length;
+    poolOf(a).filter((s) => a.scores[s.id] != null).length;
 
   const handleDelete = async () => {
     if (!pendingDelete) return;
@@ -107,7 +118,14 @@ export function AssessmentList({ students, components, query, onSelect, onDelete
   return (
     <>
     <div className="min-w-0 flex-1" aria-label="Select assessment">
-      {total === 0 ? (
+      {audienceTotal === 0 ? (
+        <div className="mx-auto mt-2 w-full max-w-md">
+          <InsightCallout className="text-center">
+            No {audience === "adm" ? "ADM" : "regular"} assessments yet — switch the type
+            above or add one from the dock.
+          </InsightCallout>
+        </div>
+      ) : total === 0 ? (
         <div className="mx-auto mt-2 w-full max-w-md">
           <InsightCallout className="text-center">
             No assessments match &quot;{query.trim()}&quot;.
@@ -131,8 +149,9 @@ export function AssessmentList({ students, components, query, onSelect, onDelete
             <ul className={`${styles.row} flex min-w-0 flex-row gap-2 overflow-x-auto pb-2`}>
               {g.assessments.map((a, cardIdx) => {
                 const scored = scoredOf(a);
+                const poolSize = poolOf(a).length;
                 const busy = deletingId === a.id;
-                const pct = students.length > 0 ? Math.round((scored / students.length) * 100) : 0;
+                const pct = poolSize > 0 ? Math.round((scored / poolSize) * 100) : 0;
                 return (
                   <li
                     key={a.id}
@@ -160,9 +179,12 @@ export function AssessmentList({ students, components, query, onSelect, onDelete
                       }}
                       description={
                         <span className="flex flex-wrap items-center gap-1">
+                          <Pill tone={a.audience === "adm" ? "amber" : "neutral"} label="Assessment type">
+                            {a.audience === "adm" ? "ADM" : "Regular"}
+                          </Pill>
                           <Pill tone="amber" label="Date added">Added {a.createdAt}</Pill>
                           <Pill tone="amber" label="Encoding progress">
-                            {scored}/{students.length} scored
+                            {scored}/{poolSize} scored
                           </Pill>
                         </span>
                       }

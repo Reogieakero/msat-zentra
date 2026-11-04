@@ -57,6 +57,15 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
   const [rangeError, setRangeError] = React.useState<string | null>(null);
   const assessments = React.useMemo(() => components.find((c) => c.type === category)?.assessments ?? [], [components, category]);
   const selected = assessments.find((a) => a.id === selectedId) ?? assessments[0] ?? null;
+  // Audience pool: an ADM assessment only lists signed ADM learners and a
+  // regular one only non-ADM learners. Weights stay class-wide.
+  const pool = React.useMemo(
+    () =>
+      selected
+        ? students.filter((s) => (selected.audience === "adm" ? s.isAdm : !s.isAdm))
+        : students,
+    [students, selected],
+  );
   const selectedKey = selected?.id ?? "";
   const { scores, recovered, restoredMax, onDraft, clear, writeMax, maxRef } = useScoreDrafts(teacherId, selectedKey);
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -92,7 +101,7 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
       effectiveMax = parsed;
     }
     const jobs: { studentId: string; raw: number }[] = [];
-    for (const s of students) {
+    for (const s of pool) {
       const raw = (scores[s.id] ?? "").trim();
       if (raw === "") continue;
       const value = Number(raw);
@@ -275,13 +284,16 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
         );
       })()}
       count={
-        selected ? `${students.filter((s) => selected.scores[s.id] != null).length}/${students.length} scored` : undefined
+        selected ? `${pool.filter((s) => selected.scores[s.id] != null).length}/${pool.length} scored` : undefined
       }
       description={
         selected ? (
           <span className="flex items-center justify-between gap-2">
             <span className="flex flex-wrap items-center gap-1">
               <Pill tone="amber" label="Assessment category">{COMPONENT_NAMES[category]}</Pill>
+              <Pill tone={selected.audience === "adm" ? "amber" : "neutral"} label="Assessment type">
+                {selected.audience === "adm" ? "ADM" : "Regular"}
+              </Pill>
               <Pill tone="amber" label="Maximum score">Max {selected.maxScore}</Pill>
               <Pill tone="amber" label="Section">{sectionName}</Pill>
             </span>
@@ -337,7 +349,7 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
       ariaLabel={selected ? `Encode scores for ${selected.title}` : undefined}
       boardLabel={
         selected
-          ? `${selected.title}, ${students.filter((s) => selected.scores[s.id] != null).length} of ${students.length} scored`
+          ? `${selected.title}, ${pool.filter((s) => selected.scores[s.id] != null).length} of ${pool.length} scored`
           : undefined
       }
     >
@@ -348,9 +360,9 @@ export function ScoreGrid({ queryKeyId, sectionName, students, components, categ
       {assessments.length === 0 || !selected ? (
         <KanbanBoardEmpty>No {COMPONENT_NAMES[category].toLowerCase()} assessments yet — use the Add assessment card.</KanbanBoardEmpty>
       ) : editing ? (
-        <PlainEncodeTable assessment={selected} students={students} drafts={scores} nameFilter={nameFilter} onDraftChange={onDraft} />
+        <PlainEncodeTable assessment={selected} students={pool} drafts={scores} nameFilter={nameFilter} onDraftChange={onDraft} />
       ) : (
-        <ScoreDataTable assessment={selected} students={students} drafts={scores} nameFilter={nameFilter} />
+        <ScoreDataTable assessment={selected} students={pool} drafts={scores} nameFilter={nameFilter} />
       )}
     </KanbanBoard>
     </div>

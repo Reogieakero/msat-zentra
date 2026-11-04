@@ -28,6 +28,9 @@ export interface ClassStudent {
   name: string;
   lrn: string;
   hasAccount: boolean;
+  /** Signed ADM case: same weights, evidence comes from module work. */
+  isAdm: boolean;
+  admStage: string | null;
   final: ClassFinal | null;
 }
 
@@ -37,6 +40,8 @@ export interface ClassAssessment {
   maxScore: number;
   dateGiven: string;
   createdAt: string;
+  /** regular = counts for regular learners, adm = counts for signed ADM learners. */
+  audience: "regular" | "adm";
   scores: Record<string, number>;
 }
 

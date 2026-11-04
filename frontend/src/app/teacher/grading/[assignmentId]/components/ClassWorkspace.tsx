@@ -18,6 +18,7 @@ import type {
 import { WorkspaceGutter, type WorkspaceView } from "./WorkspaceGutter";
 import { SubjectRail } from "./SubjectRail";
 import { AssessmentList } from "./AssessmentList";
+import { AudienceTabs, type AssessmentAudience } from "./AudienceTabs";
 import { ScoreGrid } from "./ScoreGrid";
 import { FinalsCard } from "./FinalsCard";
 import { WeightsBoard } from "./WeightsBoard";
@@ -43,6 +44,7 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
   const [encodeCategory, setEncodeCategory] = React.useState<ComponentType>("WRITTEN_WORK");
   const [encodeAssessmentId, setEncodeAssessmentId] = React.useState("");
   const [assessmentQuery, setAssessmentQuery] = React.useState("");
+  const [audience, setAudience] = React.useState<AssessmentAudience>("regular");
 
   const selectedAssessment = React.useMemo(
     () =>
@@ -70,17 +72,20 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
               <SubjectRail currentId={queryKeyId} />
             </div>
             {weightsConfigured && !selectedAssessment ? (
-              <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
-                <InputGroupInput
-                  placeholder="Search assessments..."
-                  value={assessmentQuery}
-                  onChange={(event) => setAssessmentQuery(event.target.value)}
-                  aria-label="Search assessments"
-                />
-                <InputGroupAddon>
-                  <SearchIcon />
-                </InputGroupAddon>
-              </InputGroup>
+              <div className="flex flex-wrap items-center gap-2">
+                <AudienceTabs value={audience} onChange={setAudience} />
+                <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
+                  <InputGroupInput
+                    placeholder="Search assessments..."
+                    value={assessmentQuery}
+                    onChange={(event) => setAssessmentQuery(event.target.value)}
+                    aria-label="Search assessments"
+                  />
+                  <InputGroupAddon>
+                    <SearchIcon />
+                  </InputGroupAddon>
+                </InputGroup>
+              </div>
             ) : null}
           </div>
           {!weightsConfigured ? (
@@ -139,6 +144,7 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
             students={students}
             components={detail.components}
             query={assessmentQuery}
+            audience={audience}
             onSelect={(c, id) => {
               setEncodeCategory(c);
               setEncodeAssessmentId(id);

@@ -13,6 +13,7 @@ import {
   refreshFinals,
 } from "../../modules/teacher/grading.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
+import { admCaseSnapshot } from "../adm/attendancePolicy.js";
 
 export interface GradingContext extends TeacherContext {
 
@@ -119,6 +120,11 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
   const finalByStudent = new Map(profileFinals.map((f) => [f.studentId as string, f]));
   const finalByRoster = new Map(rosterFinals.map((f) => [`roster:${f.rosterId}`, f]));
 
+  // ADM visibility only — weights stay class-wide. A signed ADM case tells the
+  // teacher that evidence comes from modules; it never changes the grading
+  // rules for that learner (same components, same transmutation).
+  const admByStudent = await admCaseSnapshot(a.termId, studentIds);
+
   return {
     assignment: {
       id: a.id,
@@ -140,6 +146,8 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
         name: p.user.fullName,
         lrn: p.lrn,
         hasAccount: true as const,
+        isAdm: admByStudent.get(p.userId)?.exempt ?? false,
+        admStage: admByStudent.get(p.userId)?.stage ?? null,
         final: finalByStudent.get(p.userId) ?? null,
       })),
       ...rosterOnly.map((r) => ({
@@ -147,6 +155,8 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
         name: r.fullName,
         lrn: r.lrn,
         hasAccount: false as const,
+        isAdm: false,
+        admStage: null,
         final: finalByRoster.get(`roster:${r.id}`) ?? null,
       })),
     ].sort((x, y) => x.name.localeCompare(y.name)),
@@ -161,6 +171,7 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
         maxScore: as.maxScore,
         dateGiven: as.dateGiven.toISOString().slice(0, 10),
         createdAt: as.createdAt.toISOString().slice(0, 10),
+        audience: as.audience,
         scores: Object.fromEntries(
           as.studentGrades
             .filter((g) => {
@@ -354,6 +365,7 @@ export interface CreateAssessmentInput {
   title: string;
   maxScore: number;
   dateGiven?: string;
+  audience?: "regular" | "adm";
 }
 
 export async function createAssessment(
@@ -398,6 +410,7 @@ export async function createAssessment(
       sectionId: a.sectionId,
       title: input.title.trim(),
       maxScore: input.maxScore,
+      audience: input.audience ?? "regular",
       dateGiven: input.dateGiven ? new Date(input.dateGiven) : new Date(),
       createdBy: teacherId,
     },
@@ -417,6 +430,7 @@ export async function createAssessment(
     maxScore: assessment.maxScore,
     dateGiven: assessment.dateGiven.toISOString().slice(0, 10),
     createdAt: assessment.createdAt.toISOString().slice(0, 10),
+    audience: assessment.audience,
     scores: {},
   };
 }
@@ -425,6 +439,7 @@ export interface PatchAssessmentInput {
   title?: string;
   maxScore?: number;
   dateGiven?: string;
+  audience?: "regular" | "adm";
 }
 
 export async function patchAssessment(
@@ -453,16 +468,23 @@ export async function patchAssessment(
 
   const maxChanged =
     input.maxScore !== undefined && input.maxScore !== assessment.maxScore;
+  const audienceChanged =
+    input.audience !== undefined && input.audience !== assessment.audience;
   const updated = await prisma.assessment.update({
     where: { id: assessment.id },
     data: {
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.maxScore !== undefined ? { maxScore: input.maxScore } : {}),
       ...(input.dateGiven !== undefined ? { dateGiven: new Date(input.dateGiven) } : {}),
+      ...(input.audience !== undefined ? { audience: input.audience } : {}),
     },
   });
 
-  if (maxChanged) {
+  // Audience changes move the whole row between grade pools, so every learner
+  // in the subject/term needs a fresh final — not just the scored ones.
+  if (audienceChanged) {
+    await refreshFinals(assessment.gradeComponent.subjectId, assessment.gradeComponent.termId);
+  } else if (maxChanged) {
     const rows = await prisma.studentGrade.findMany({
       where: { assessmentId: assessment.id },
       select: { id: true, rawScore: true, studentId: true, rosterId: true },
@@ -498,6 +520,7 @@ export async function patchAssessment(
     title: updated.title,
     maxScore: updated.maxScore,
     dateGiven: updated.dateGiven.toISOString().slice(0, 10),
+    audience: updated.audience,
   };
 }
 

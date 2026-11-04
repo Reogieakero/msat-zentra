@@ -12,6 +12,7 @@ import {
 import {
   GRADE_NUMERIC,
 } from "../../modules/attendance/attendance.repository.js";
+import { admExemptStudentIds } from "../adm/attendancePolicy.js";
 
 export interface SectionScope {
   termId?: string;
@@ -47,6 +48,8 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
   }
 
   const totalSchoolDays = countSchoolDays(buildDayAxis(startDate ?? null));
+  // Signed ADM cases: the sheet shows them as an exempt group, not absent.
+  const admExempt = await admExemptStudentIds(termId);
 
   const section = await prisma.section.findUnique({
     where: { id: sectionId },
@@ -132,6 +135,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
         excused: counts.excused,
         rate,
         hasAccount,
+        admExempt: admExempt.has(id),
       };
     };
 
@@ -248,6 +252,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
       excused: o.excused,
       rate,
       hasAccount: e.hasAccount,
+      admExempt: admExempt.has(e.id),
     };
   });
 
@@ -292,6 +297,7 @@ export async function getSectionRoster(
     }),
   ]);
   const registeredLrns = new Set(profiles.map((p) => p.lrn));
+  const admExempt = await admExemptStudentIds(termId);
   const students = [
     ...profiles.map((p) => {
       const present = p.attendanceRecords.filter((r) => r.status === "present").length;
@@ -302,11 +308,12 @@ export async function getSectionRoster(
         lrn: p.lrn,
         mascot: p.mascot ?? null,
         attendanceRate: total === 0 ? 1 : present / total,
+        admExempt: admExempt.has(p.userId),
       };
     }),
     ...rosterRows
       .filter((r) => !registeredLrns.has(r.lrn))
-      .map((r) => ({ studentId: `roster:${r.id}`, name: r.fullName, lrn: r.lrn, mascot: r.mascot ?? null, attendanceRate: 1 })),
+      .map((r) => ({ studentId: `roster:${r.id}`, name: r.fullName, lrn: r.lrn, mascot: r.mascot ?? null, attendanceRate: 1, admExempt: false })),
   ];
 
   const surnameOf = (name: string) => {
