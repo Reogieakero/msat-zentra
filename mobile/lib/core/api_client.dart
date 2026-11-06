@@ -63,25 +63,55 @@ class ApiClient {
     ));
   }
 
+  /// Reads the refresh token out of a `Set-Cookie` header.
+  ///
+  /// The backend sends the refresh token as an httpOnly cookie and never in
+  /// the JSON body, so the native client has to capture it here and replay it
+  /// manually on `/api/auth/refresh`.
+  String? refreshCookieFrom(Response res) {
+    final headers = res.headers.map['set-cookie'];
+    if (headers == null) return null;
+    for (final header in headers) {
+      for (final part in header.split(';')) {
+        final idx = part.indexOf('=');
+        if (idx < 0) continue;
+        final name = part.substring(0, idx).trim();
+        if (name == AppConfig.refreshCookieName) {
+          final value = part.substring(idx + 1).trim();
+          return value.isEmpty ? null : value;
+        }
+      }
+    }
+    return null;
+  }
+
   Future<String?> _refresh() async {
     final refresh = await _storage.read(key: AppConfig.refreshTokenKey);
-    if (refresh == null) return null;
+    if (refresh == null || refresh.isEmpty) return null;
     try {
-      final res = await Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl))
-          .post('/api/auth/refresh', data: {'refreshToken': refresh});
+      final res = await Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl)).post(
+        '/api/auth/refresh',
+        options: Options(headers: {
+          'Cookie': '${AppConfig.refreshCookieName}=$refresh',
+        }),
+      );
       final access = res.data['accessToken'] as String?;
-      final next = res.data['refreshToken'] as String?;
+      final next = refreshCookieFrom(res) ?? res.data['refreshToken'] as String?;
       if (access != null) await _storage.write(key: AppConfig.accessTokenKey, value: access);
-      if (next != null) await _storage.write(key: AppConfig.refreshTokenKey, value: next);
+      if (next != null && next.isNotEmpty) {
+        await _storage.write(key: AppConfig.refreshTokenKey, value: next);
+      }
       return access;
     } catch (_) {
       return null;
     }
   }
 
-  Future<void> saveSession({required String access, required String refresh}) async {
+  Future<void> saveSession({required String access, String? refresh}) async {
     await _storage.write(key: AppConfig.accessTokenKey, value: access);
-    await _storage.write(key: AppConfig.refreshTokenKey, value: refresh);
+    if (refresh != null && refresh.isNotEmpty) {
+      await _storage.write(key: AppConfig.refreshTokenKey, value: refresh);
+    }
   }
 
   Future<void> logout() async {

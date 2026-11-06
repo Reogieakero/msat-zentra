@@ -18,6 +18,11 @@ class AppConfig {
   /// Matches backend JWT TTLs (see backend/.env.example).
   static const accessTokenKey = 'zentra.access';
   static const refreshTokenKey = 'zentra.refresh';
+
+  /// httpOnly cookie name set by the backend (`backend/src/lib/cookies.ts`).
+  /// The native client can't rely on a cookie jar, so it captures this from
+  /// the login/refresh `Set-Cookie` header and replays it as a Cookie header.
+  static const refreshCookieName = 'zentra.refresh';
   static const termScopeBox = 'zentra.term';
   static const outboxBox = 'zentra.outbox';
   static const cacheBox = 'zentra.cache';

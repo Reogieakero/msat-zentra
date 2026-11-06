@@ -44,11 +44,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
         'password': password,
         'role': 'staff',
       });
-      await api.saveSession(
-        access: res.data['accessToken'] as String,
-        refresh: res.data['refreshToken'] as String,
-      );
-      final role = res.data['role']?.toString();
+      final data = res.data is Map ? res.data as Map : const {};
+      final access = data['accessToken']?.toString();
+      if (access == null || access.isEmpty) {
+        state = const AuthState(error: 'Sign-in failed: missing access token.');
+        return false;
+      }
+      // The backend only sets the refresh token as an httpOnly cookie, so fall
+      // back to the Set-Cookie header when the body has no refreshToken.
+      final refresh = api.refreshCookieFrom(res) ?? data['refreshToken']?.toString();
+      await api.saveSession(access: access, refresh: refresh);
+      final role = data['role']?.toString();
       state = AuthState(loggedIn: true, role: role);
       return true;
     } on DioException catch (e) {
@@ -57,6 +63,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } on ApiException catch (ae) {
         state = AuthState(error: ae.message);
       }
+      return false;
+    } catch (e) {
+      state = AuthState(error: e.toString());
       return false;
     }
   }

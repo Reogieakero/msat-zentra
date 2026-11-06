@@ -16,10 +16,10 @@ flutter run --dart-define=API_BASE_URL=http://192.168.1.10:4000
 ## Structure
 
 - `lib/core/config.dart` — API base URL, Hive box names
-- `lib/core/api_client.dart` — Dio port of `frontend/src/lib/api/client.ts` (Bearer + x-school-year-id/x-term-id, single-flight refresh)
+- `lib/core/api_client.dart` — Dio port of `frontend/src/lib/api/client.ts` (Bearer + x-school-year-id/x-term-id, single-flight refresh). Refresh is cookie-based (`zentra.refresh`, httpOnly, `Path=/api/auth`): the client captures it from `Set-Cookie` on login/refresh and replays it as a `Cookie` header, since native has no cookie jar.
 - `lib/core/session.dart` — login, school-years, term scope, overview role gate
 - `lib/core/sync_outbox.dart` — Hive offline queue (PLAN.md O9: LWW + idempotent by opId)
-- `lib/features/auth/` — login, term select, first-time claim/verify gate
+- `lib/features/auth/` — login, term select, first-time claim/verify gate. The login screen's **Sign in with Google** button forwards to the web OAuth URL (`GET /api/auth/google?role=staff`) in the system browser; backend support for that route is still pending, so the button is wired but not yet functional.
 - `lib/features/adviser/` — advisory list (Name/LRN/Risk/Factor), student detail, per-subject attendance, section schedule
 - `lib/features/teacher/` — my classes, gradebook workspace (components/assessments/scores), attendance
 - `lib/features/bama/` — Chat with Bama guided wizard (port of `bama-flow.ts` + `useAnecdotalFlow.ts`), Hive draft resume
