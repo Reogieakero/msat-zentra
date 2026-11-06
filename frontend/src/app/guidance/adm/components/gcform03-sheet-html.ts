@@ -1,13 +1,5 @@
 import type { Workbook, Worksheet } from "exceljs";
 
-/**
- * Renders a filled GCForm-03 worksheet to a self-contained HTML string so
- * the preview dialog shows the actual Excel file — every label, merge,
- * font, alignment, border, row height, column width, and the embedded
- * DepEd logo comes straight from the workbook. All styling is inline, so
- * the markup is immune to app CSS and prints exactly as shown.
- */
-
 type StyleRecord = Record<string, unknown>;
 
 function toRecord(value: unknown): StyleRecord {
@@ -24,7 +16,6 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Office theme slot → screen color (only slots the template uses). */
 function themeToCss(theme: unknown): string | null {
   if (theme === 1) return "#000000";
   if (theme === 0) return "#ffffff";
@@ -66,7 +57,6 @@ function borderCss(side: unknown): string | null {
   return `${width} ${kind} ${color}`;
 }
 
-/** Plain-text content of a cell (checkbox glyphs pass through untouched). */
 function cellText(cell: {
   value?: unknown;
 }): string {
@@ -142,9 +132,6 @@ function cellInlineStyle(cell: {
   if (bottom) parts.push(`border-bottom:${bottom}`);
   if (left) parts.push(`border-left:${left}`);
 
-  // The official template paints its header bands solid black with white
-  // text. The preview drops the black fill so the sheet reads on white,
-  // forcing dark text on those cells so the headers stay visible.
   let bg: string | null = null;
   if (toRecord(fill).pattern === "solid") {
     bg = colorToCss(toRecord(fill).fgColor ?? toRecord(fill).bgColor);
@@ -176,7 +163,6 @@ function colNumberToLetter(n: number): string {
   return s;
 }
 
-/** master address → { cols, rows } for every merged range on the sheet. */
 function mergeMap(ws: Worksheet): Map<string, { cols: number; rows: number }> {
   const merges = (
     toRecord((ws as unknown as StyleRecord).model).merges as unknown
@@ -207,7 +193,6 @@ function mergeSlaves(map: Map<string, { cols: number; rows: number }>): Set<stri
   return (map as unknown as { slaves: Set<string> }).slaves ?? new Set<string>();
 }
 
-/** Excel column-width units → px (MaximumDigitWidth ≈ 7 + 5 padding). */
 function colWidthPx(width: number | undefined): number {
   return Math.max(8, Math.round((width ?? 8.43) * 7 + 5));
 }
@@ -236,7 +221,6 @@ function num(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-/** Embedded sheet images (the DepEd logo) as absolutely-positioned <img>. */
 function renderImages(
   wb: Workbook,
   ws: Worksheet,
@@ -249,17 +233,26 @@ function renderImages(
   if (typeof getImages !== "function") return "";
   const media = (
     toRecord((wb as unknown as StyleRecord).model).media as unknown
-  ) as { buffer?: Uint8Array; extension?: string }[] | undefined;
+  ) as { buffer?: Uint8Array; base64?: string; extension?: string }[] | undefined;
   if (!media) return "";
   const out: string[] = [];
   for (const img of getImages.call(ws)) {
     const imageId = num(img.imageId, -1);
     const entry = imageId >= 0 ? media[imageId] : undefined;
-    if (!entry?.buffer) continue;
+    if (!entry) continue;
+    // Template media carries a buffer; images added in-memory (school crest
+    // stamped by the workbook builder) only carry base64.
+    let base64: string | null = null;
+    if (entry.buffer) {
+      base64 = u8ToBase64(entry.buffer);
+    } else if (typeof entry.base64 === "string" && entry.base64) {
+      const comma = entry.base64.indexOf(",");
+      base64 = comma >= 0 ? entry.base64.slice(comma + 1) : entry.base64;
+    }
+    if (!base64) continue;
     const range = toRecord(img.range);
     const tl = toRecord(range.tl);
     const ext = toRecord(range.ext);
-    // Anchor col/row are 0-based in ExcelJS; offsets + ext may be EMU or px.
     const col = num(tl.nativeCol ?? tl.col, 0);
     const row = num(tl.nativeRow ?? tl.row, 0);
     const offXemu = num(tl.nativeColOff ?? tl.colOff, 0);
@@ -274,19 +267,24 @@ function renderImages(
     let h = num(ext.height, 115);
     if (w > 5000) w /= 9525;
     if (h > 5000) h /= 9525;
-    const src = `data:${mimeForExtension(String(entry.extension ?? "png"))};base64,${u8ToBase64(entry.buffer)}`;
+    // X position and width are percentages of the sheet's natural width so
+    // the images track the column grid at any display size (preview, image
+    // export box, print). Right-half images anchor to the right edge so their
+    // inset stays proportional; height follows the aspect ratio.
+    const totalPx = colPx.reduce((sum, value) => sum + value, 0) || 1;
+    const anchor =
+      left + w / 2 <= totalPx / 2
+        ? `left:${((left / totalPx) * 100).toFixed(4)}%`
+        : `right:${((Math.max(0, totalPx - left - w) / totalPx) * 100).toFixed(4)}%`;
+    const widthPct = ((w / totalPx) * 100).toFixed(4);
+    const src = `data:${mimeForExtension(String(entry.extension ?? "png"))};base64,${base64}`;
     out.push(
-      `<img src="${src}" alt="" style="position:absolute;left:${Math.round(left)}px;top:${Math.round(top)}px;width:${Math.round(w)}px;height:${Math.round(h)}px;" />`
+      `<img src="${src}" alt="" style="position:absolute;${anchor};top:${Math.round(top)}px;width:${widthPct}%;aspect-ratio:${Math.round(w)} / ${Math.round(h)};" />`
     );
   }
   return out.join("");
 }
 
-/**
- * Render the worksheet (masters only; slaves fold into colspan/rowspan)
- * to an HTML table string. Column widths use the sheet's own proportions
- * so screen and print keep the Excel layout at any container width.
- */
 export function renderGcForm03SheetHtml(wb: Workbook): string {
   const ws: Worksheet =
     wb.getWorksheet("Referral Form") ?? wb.worksheets[0];

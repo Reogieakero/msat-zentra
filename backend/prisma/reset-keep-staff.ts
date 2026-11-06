@@ -4,12 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Full wipe EXCEPT staff accounts.
-// Keeps: User rows where role NOT IN ('student','parent') + their StaffProfile.
-// Deletes: student + parent Users (cascades to StudentProfile/ParentProfile),
-//   plus every transactional / academic table listed below.
-// Order = children first to satisfy FKs (plain DELETE, no TRUNCATE CASCADE
-// so staff Users are never touched).
 const WIPES: string[] = [
   '"RefreshToken"',
   '"Notification"',
@@ -69,7 +63,7 @@ async function countAll(): Promise<Record<string, number>> {
       `SELECT role::text AS role, COUNT(*)::int AS c FROM "User" GROUP BY role ORDER BY role;`,
     )) as { role: string; c: number }[];
     for (const r of roles) out[`User:${r.role}`] = r.c;
-  } catch { /* ignore */ }
+  } catch {  }
   return out;
 }
 
@@ -82,9 +76,6 @@ async function main() {
     console.log(`  wiped ${t}`);
   }
 
-  // Delete student + parent login accounts (profiles cascade via FK).
-  // Staff roles kept: subject_teacher, adviser, nurse, adm_coordinator,
-  // guidance_counselor, record_keeper, registrar, principal.
   const del = await prisma.$executeRawUnsafe(
     `DELETE FROM "User" WHERE role IN ('student', 'parent');`,
   );

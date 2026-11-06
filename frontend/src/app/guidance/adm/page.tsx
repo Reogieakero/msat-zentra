@@ -3,56 +3,49 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
-import { Loader2 } from "lucide-react";
+import { FileBarChart2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshBadge } from "@/components/ui/refresh-badge";
-import {
-  fetchAllGuidanceReferrals,
-  fetchGuidanceRiskLevels,
-  type GuidanceReferralItem,
-  type GuidanceRiskLevel,
-} from "../referrals/components/guidance-referrals-data";
+import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
+import { fetchAllGuidanceReferrals } from "@/services/guidance/referrals.service";
+import { fetchGuidanceRiskLevels } from "@/services/guidance/risk.service";
+import type {
+  GuidanceReferralItem,
+  GuidanceRiskLevel,
+} from "@/services/guidance/guidance.types";
 import {
   buildGuidanceAdmInsights,
   buildGuidanceAdmReferrals,
-} from "./components/guidance-adm-report-data";
-import { GuidanceAdmInsights } from "./components/GuidanceAdmInsights";
+} from "@/services/guidance/adm.reports";
+import {
+  GuidanceAdmInsights,
+  GuidanceAdmStats,
+} from "./components/GuidanceAdmInsights";
+import { GuidanceAdmRisk } from "./components/GuidanceAdmRisk";
 import { GuidanceAdmReports } from "./components/guidance-adm-reports";
 import pageStyles from "../pages.module.css";
 import styles from "./components/guidance-adm.module.css";
 
-/**
- * Referrals Report — insights and reports over every case referred to
- * guidance (ADM + Counseling). Same contents as the nurse Referrals Report,
- * over the guidance referrals basis. Case work itself lives on the ADM Cases
- * and Counseling Cases timelines, linked from the recommendations below.
- */
 export default function GuidanceAdmPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  // Aggregate insights view: bounded desk walks feed the client-side
-  // insights (nested under ["guidance-adm"] so desk invalidation reaches it).
+
   const { data: referrals, isPending, isError, refetch, isFetching } =
     useQuery<GuidanceReferralItem[]>({
       queryKey: ["guidance-adm", "report", termKey],
       queryFn: () => fetchAllGuidanceReferrals(),
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
-  // All-status case list (pending through dismissed) — insights, reports,
-  // and queue always reflect the current referrals whatever their status.
   const data = React.useMemo(
     () =>
       Array.isArray(referrals) ? buildGuidanceAdmReferrals(referrals) : null,
     [referrals]
   );
 
-  // Live rule-based risk level per student behind these cases (account
-  // id or roster id — the endpoint serves both). Desk-wide so the
-  // high-risk recommendation sees counseling cases too.
   const studentIds = React.useMemo(
     () =>
       [
@@ -74,12 +67,9 @@ export default function GuidanceAdmPage() {
     queryFn: () => fetchGuidanceRiskLevels(studentIds),
     placeholderData: keepPreviousData,
     staleTime: 300_000,
-    enabled: studentIds.length > 0,
+    enabled: termReady && studentIds.length > 0,
   });
 
-  // Referral insights derive from the same desk list the reports read
-  // (ADM + counseling), so every number repaints live with the desk — no
-  // extra fetch.
   const insights = React.useMemo(
     () => (data ? buildGuidanceAdmInsights(data.desk, riskByStudent ?? {}) : null),
     [data, riskByStudent]
@@ -87,7 +77,7 @@ export default function GuidanceAdmPage() {
 
   if (isPending) {
     return (
-      <section className={pageStyles.page} aria-busy="true" aria-label="Loading referrals report">
+      <section className={styles.page} aria-busy="true" aria-label="Loading referrals report">
         <div className={styles.skelFindings} aria-hidden="true">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className={styles.skelFinding} />
@@ -95,33 +85,18 @@ export default function GuidanceAdmPage() {
         </div>
         <div
           aria-hidden="true"
-          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(17rem, 1fr))", gap: "1rem" }}
+          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(17rem, 1fr))", gap: "0.75rem" }}
         >
-          <Card>
-            <CardContent>
-              <Skeleton style={{ width: "45%", height: "0.9375rem" }} />
-              <Skeleton style={{ width: "75%", height: "0.8125rem", marginTop: "0.125rem" }} />
-              <Skeleton style={{ width: "100%", height: "168px", marginTop: "0.75rem" }} />
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginTop: "0.5rem" }}>
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <div key={j} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
-                    <Skeleton style={{ width: "6rem", height: "0.8125rem" }} />
-                    <Skeleton style={{ width: "2rem", height: "0.8125rem" }} />
-                  </div>
-                ))}
-              </div>
-              <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.625rem", paddingLeft: "0.625rem" }} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <Skeleton style={{ width: "45%", height: "0.9375rem" }} />
-              <Skeleton style={{ width: "75%", height: "0.8125rem", marginTop: "0.125rem" }} />
-              {/* Trend chart is 200px with axes, not 168px like the donut. */}
-              <Skeleton style={{ width: "100%", height: "200px", marginTop: "0.75rem" }} />
-              <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.625rem", paddingLeft: "0.625rem" }} />
-            </CardContent>
-          </Card>
+          {[0, 1, 2].map((i) => (
+            <KanbanBoard
+              key={i}
+              title={<Skeleton style={{ width: "45%", height: "0.9375rem" }} />}
+              description={<Skeleton style={{ width: "75%", height: "0.8125rem" }} />}
+            >
+              <Skeleton style={{ width: "100%", height: "168px" }} />
+              <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.625rem" }} />
+            </KanbanBoard>
+          ))}
         </div>
       </section>
     );
@@ -129,7 +104,7 @@ export default function GuidanceAdmPage() {
 
   if (isError || !data) {
     return (
-      <section className={pageStyles.page}>
+      <section className={styles.page}>
         <div className={styles.errorBlock} role="alert">
           <p className={styles.errorText}>
             We couldn&apos;t load the referrals report. Please check your internet
@@ -152,10 +127,14 @@ export default function GuidanceAdmPage() {
   }
 
   const refreshing = isFetching && !isPending;
+  const isTrueEmpty = (data?.desk.length ?? 0) === 0;
 
   return (
-    <section className={pageStyles.page} aria-busy={refreshing}>
-      {refreshing ? <RefreshBadge label="Refreshing referrals report…" /> : null}
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label="Referrals report"
+    >
       {riskError && studentIds.length > 0 ? (
         <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
           Risk levels couldn&apos;t load.{" "}
@@ -169,8 +148,27 @@ export default function GuidanceAdmPage() {
           </button>
         </p>
       ) : null}
-      {insights ? <GuidanceAdmInsights data={insights} /> : null}
-      <GuidanceAdmReports data={data} />
+      {isTrueEmpty ? (
+        <GuidanceEmptyCard
+          icon={FileBarChart2}
+          title="No referrals this term"
+          hint="Referral trends and outcomes will appear here once cases are filed."
+          label="Referrals report"
+          centered
+          layout="fit"
+        />
+      ) : (
+        <>
+          {insights ? (
+            <>
+              <GuidanceAdmStats data={insights} />
+              <GuidanceAdmReports data={data} insights={insights} />
+              <GuidanceAdmInsights data={insights} />
+              <GuidanceAdmRisk />
+            </>
+          ) : null}
+        </>
+      )}
     </section>
   );
 }

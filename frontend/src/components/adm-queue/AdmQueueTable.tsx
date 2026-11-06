@@ -20,9 +20,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import styles from "./adm-queue.module.css";
+import { formatElapsedShort, msSinceDate as msSince, useNowTick } from "@/lib/clock";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
-/* Badge color language for queue statuses — color-coded (amber/blue/green/
-   red) plus the legacy neutrals guidance still passes. */
 export type AdmQueueStatusVariant =
   | "amber"
   | "blue"
@@ -37,8 +37,6 @@ export type AdmQueueStatusVariant =
 
 export type AdmQueueRisk = "High" | "Moderate" | "Low";
 
-/* One display-ready row. Each role maps its own case shape onto this —
-   the table itself never knows about guidance or nurse rows. */
 export interface AdmQueueRowVM {
   id: string;
   lrn: string;
@@ -50,46 +48,9 @@ export interface AdmQueueRowVM {
   riskLevel: AdmQueueRisk | undefined;
   latestLabel: string;
   LatestIcon: React.ComponentType<{ className?: string }>;
-  /* ISO time of the latest action for the elapsed clock ("—"/null
-     renders "—"). */
+
   actionTime: string | null;
   dateReferred: string;
-}
-
-/* Live clock — ticks every 30s; elapsed readouts render days / hours /
-   minutes only, so per-second ticks would just burn renders. */
-function useNowTick(): number {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
-  return now;
-}
-
-/* "4d 3h 12m" / "3h 12m" / "12m" / "just now" — days, hours, minutes
-   only, never seconds. */
-function formatElapsedShort(ms: number): string {
-  const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
-  if (totalMinutes < 1) return "just now";
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
-  return parts.join(" ");
-}
-
-/* ms from the given action time to now. Null when unparseable — the
-   cell then shows "—". */
-function msSince(time: string | null, now: number): number | null {
-  if (!time || time === "—") return null;
-  const iso = /^\d{4}-\d{2}-\d{2}$/.test(time) ? `${time}T00:00:00` : time;
-  const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return null;
-  return Math.max(0, now - t);
 }
 
 function RiskBadge({ level, loading = false }: { level: AdmQueueRisk | undefined; loading?: boolean }) {
@@ -100,19 +61,11 @@ function RiskBadge({ level, loading = false }: { level: AdmQueueRisk | undefined
       </span>
     );
   if (!level) return <span className={styles.noRisk}>—</span>;
-  // Shared RAG convention (same as teacher/principal desks):
-  // High red, Moderate amber, Low green.
+
   const variant = level === "High" ? "red" : level === "Moderate" ? "amber" : "green";
   return <Badge variant={variant}>{level}</Badge>;
 }
 
-/**
- * Latest referred ADM cases — one shared table list and header for the
- * guidance and nurse ADM referrals queues: LRN, Type, Case status,
- * Risk, Latest action, Time elapsed, Date referred, Row actions.
- * Roles map their rows onto the view-model and inject their own
- * action cells; dialogs and mutations stay with the callers.
- */
 export function AdmQueueTable({
   title,
   description,
@@ -126,6 +79,8 @@ export function AdmQueueTable({
   onRowClick,
   typeBadgeLabel = "ADM",
   glow = false,
+  searchValue,
+  onSearchChange,
 }: {
   title: string;
   description: string;
@@ -135,29 +90,36 @@ export function AdmQueueTable({
   rows: AdmQueueRowVM[];
   renderActions: (id: string) => React.ReactNode;
   riskLoading?: boolean;
-  /** Cap the visible list to the latest N rows (search still matches all). */
+
   limit?: number;
-  /** Redirect on row click (keyboard-accessible). Omit for static rows. */
+
   onRowClick?: (id: string) => void;
-  /** Type-column badge text. Defaults to "ADM" (queue tables); pass null
-      to hide the Type column for non-case lists. */
+
   typeBadgeLabel?: string | null;
-  /** Glow accent card treatment. Defaults off so existing queues render
-      byte-identical. */
+
   glow?: boolean;
+
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
 }) {
-  const [query, setQuery] = React.useState("");
+  const [innerQuery, setInnerQuery] = React.useState("");
   const now = useNowTick();
+  const controlled = onSearchChange !== undefined;
+  const query = controlled ? (searchValue ?? "") : innerQuery;
+  const setQuery = controlled ? onSearchChange : setInnerQuery;
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const activeQuery = controlled ? query : debouncedQuery;
 
   const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
+    if (controlled) return rows;
+    const q = debouncedQuery.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((r) => r.searchText.toLowerCase().includes(q));
-  }, [rows, query]);
+  }, [rows, debouncedQuery, controlled]);
 
   const visible = limit !== undefined ? filtered.slice(0, limit) : filtered;
 
-  const searching = query.trim() !== "";
+  const searching = activeQuery.trim() !== "";
 
   return (
     <Card className={glow ? styles.glow : undefined}>
@@ -225,7 +187,7 @@ export function AdmQueueTable({
                       onClick={
                         clickable
                           ? (e) => {
-                              // Action buttons handle their own clicks.
+
                               if ((e.target as HTMLElement).closest("button,a")) return;
                               onRowClick(row.id);
                             }
@@ -247,7 +209,7 @@ export function AdmQueueTable({
                           <span className={styles.lrn}>{row.lrn}</span>
                         </p>
                         <p className={styles.cellSub}>
-                          {row.student} · {row.section}
+                          <span className={styles.cellName}>{row.student}</span> · {row.section}
                         </p>
                       </TableCell>
                       {typeBadgeLabel !== null ? (

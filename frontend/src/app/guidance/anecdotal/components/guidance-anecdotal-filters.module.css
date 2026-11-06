@@ -26,6 +26,7 @@
   padding-left: 2rem;
   height: 32px;
   font-size: 0.8125rem;
+  border-radius: 16px;
 }
 
 .filterBtn {

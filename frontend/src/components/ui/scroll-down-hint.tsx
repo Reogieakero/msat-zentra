@@ -4,11 +4,6 @@ import * as React from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/* Scroll-down hint for scrollbar-less lists: a bouncing chevron + label.
-   By default it appears only while the container actually overflows and the
-   bottom isn't reached yet; pass `always` to keep it floating permanently.
-   Clicking scrolls further down. Pass a `watchKey` (e.g. the list identity)
-   so it re-checks when content swaps. */
 export function ScrollDownHint({
   scrollRef,
   watchKey,

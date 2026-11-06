@@ -3,47 +3,31 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pie, PieChart, Cell, Tooltip } from "recharts";
-import {
-  ChevronRight,
-  FileText,
-  TriangleAlert,
-  Users,
-  X,
-} from "lucide-react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { FileText, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
-import { usePrincipalProfileSettings } from "@/app/principal/settings/components/profile-settings-data";
-import type { RecordStudent } from "../types";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import {
   CATEGORY_KEYS,
   CATEGORY_META,
   fetchRecords,
-} from "./records-data";
+} from "@/services/principal/records.service";
 import styles from "./RecordsOverview.module.css";
 
 const chartConfig = {
   value: { label: "Records", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
+/* Amber ramp — the records desk accent, darkest last so the biggest slice
+   (sorted first) reads brightest. */
+const AMBER_SLICES = ["#fbbf24", "#f59e0b", "#d97706", "#b45309", "#92400e"];
+
 interface Kpi {
   icon: React.ComponentType<{ className?: string; size?: number }>;
   label: string;
   value: string;
-  suffix?: string;
-  tone: "default" | "good" | "warn";
 }
 
-// Theme-safe tooltip shell (same tokens as the other heatmap tooltips —
-// tracks light/dark and user recolors automatically).
 const TOOLTIP_STYLE: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid var(--border)",
@@ -94,7 +78,13 @@ function DonutTooltip({
   );
 }
 
-export function RecordsBreakdown() {
+/**
+ * Breakdown contents for the records desk — stats, category donut and the
+ * heaviest-record students. Lives inside the right rail's flyout kanban board
+ * (same interaction as the principal overview rail), so it ships without any
+ * card chrome of its own.
+ */
+export function RecordsBreakdownContent() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["records-heatmap"],
     queryFn: fetchRecords,
@@ -126,219 +116,99 @@ export function RecordsBreakdown() {
 
   const categoryTotal = categoryRows.reduce((s, r) => s + r.value, 0);
 
-  // Donut slices wear the viewer's own primary (shades, darkest first) —
-  // one family, matching the attendance trend chart.
-  const profile = usePrincipalProfileSettings();
-  const scale = usePrimaryScale(
-    Math.max(categoryRows.length, 1),
-    profile.data?.primaryColor
-  );
-  const sliceColor = (i: number) => scale[i % scale.length] ?? "#888888";
-
-  const attention = React.useMemo(() => {
-    const highWeight = (s: RecordStudent) =>
-      s.behavioral.filter((r) => r.severity === "High").length;
-    return [...allStudents]
-      .sort((a, b) => {
-        const d = b.behavioral.length - a.behavioral.length;
-        return d !== 0 ? d : highWeight(b) - highWeight(a);
-      })
-      .slice(0, 6);
-  }, [allStudents]);
-
-  const [attentionOpen, setAttentionOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!attentionOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setAttentionOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [attentionOpen]);
+  const sliceColor = (i: number) =>
+    AMBER_SLICES[i % AMBER_SLICES.length] ?? AMBER_SLICES[0];
 
   const kpis: Kpi[] = [
     {
       icon: FileText,
       label: "Total records",
       value: allRecords.length.toLocaleString(),
-      tone: "default",
     },
     {
       icon: Users,
       label: "Students tracked",
       value: allStudents.length.toLocaleString(),
-      tone: "default",
     },
   ];
 
+  if (isPending) {
+    return (
+      <div className={styles.rowSkel}>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className={styles.rowSkelItem} />
+        ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return <p className={styles.empty}>Could not load student records.</p>;
+  }
+
+  if (categoryRows.length === 0) {
+    return (
+      <PrincipalEmptyState
+        icon={FileText}
+        title="No records this term"
+        hint="No behavioral records filed for the active term. New records will appear here once filed."
+      />
+    );
+  }
+
   return (
-    <>
-    <Card className={`${styles.card} ${styles.narrow} ${styles.glowCard}`}>
-      <span className={styles.glowClip} aria-hidden="true">
-        <span className={styles.cardGlow} />
-      </span>
-      <CardHeader className={styles.header}>
-        <div className={styles.headerText}>
-          <CardTitle>Anecdotal record breakdown</CardTitle>
-          <CardDescription>
-            Records grouped by anecdotal category and severity for the active term.
-          </CardDescription>
-        </div>
-      </CardHeader>
-
-      <CardContent className={styles.content}>
-        {isPending ? (
-          <div className={styles.rowSkel}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className={styles.rowSkelItem} />
-            ))}
+    <div className={styles.content}>
+      <div className={styles.statRow}>
+        {kpis.map((k) => (
+          <div key={k.label} className={styles.statItem}>
+            <span className={styles.statValue}>{k.value}</span>
+            <span className={styles.statLabel}>{k.label}</span>
+            {/* Overview-style accent: plain amber glyph on the right. */}
+            <span className={styles.statIcon} aria-hidden>
+              <k.icon size={14} />
+            </span>
           </div>
-        ) : isError ? (
-          <p className={styles.empty}>Could not load student records.</p>
-        ) : categoryRows.length === 0 ? (
-          <p className={styles.empty}>No records this term.</p>
-        ) : (
-          <>
-            <div className={styles.statRow}>
-              {kpis.map((k) => (
-                <div key={k.label} className={styles.statItem}>
-                  <span className={`${styles.statIcon} ${styles[`tone_${k.tone}`]}`}>
-                    <k.icon size={14} aria-hidden />
-                  </span>
-                  <span className={styles.statValue}>{k.value}</span>
-                  <span className={styles.statLabel}>{k.label}</span>
-                </div>
+        ))}
+      </div>
+
+      <div className={styles.donutWrap}>
+        <ChartContainer config={chartConfig} className={styles.donut}>
+          <PieChart>
+            <Tooltip
+              wrapperStyle={{ zIndex: 90 }}
+              content={
+                <DonutTooltip
+                  total={categoryTotal}
+                  colorForKey={(key) => {
+                    const i = categoryRows.findIndex((r) => r.key === key);
+                    return sliceColor(Math.max(0, i));
+                  }}
+                />
+              }
+              contentStyle={TOOLTIP_STYLE}
+            />
+            <Pie
+              data={categoryRows}
+              dataKey="value"
+              nameKey="key"
+              cx="50%"
+              cy="50%"
+              innerRadius={40}
+              outerRadius={64}
+              paddingAngle={2}
+              strokeWidth={0}
+            >
+              {categoryRows.map((entry, i) => (
+                <Cell key={entry.key} fill={sliceColor(i)} />
               ))}
-            </div>
-
-            <div className={styles.donutWrap}>
-              <ChartContainer config={chartConfig} className={styles.donut}>
-                <PieChart>
-                  <Tooltip
-                    content={
-                      <DonutTooltip
-                        total={categoryTotal}
-                        colorForKey={(key) => {
-                          const i = categoryRows.findIndex(
-                            (r) => r.key === key
-                          );
-                          return sliceColor(Math.max(0, i));
-                        }}
-                      />
-                    }
-                    contentStyle={TOOLTIP_STYLE}
-                  />
-                  <Pie
-                    data={categoryRows}
-                    dataKey="value"
-                    nameKey="key"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={64}
-                    paddingAngle={2}
-                    strokeWidth={0}
-                  >
-                    {categoryRows.map((entry, i) => (
-                      <Cell key={entry.key} fill={sliceColor(i)} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
-              <div className={styles.donutCenter}>
-                <span className={styles.donutTotal}>{categoryTotal}</span>
-                <span className={styles.donutLabel}>records</span>
-              </div>
-            </div>
-
-            {attention.length > 0 ? (
-              <button
-                type="button"
-                className={styles.attentionBanner}
-                onClick={() => setAttentionOpen(true)}
-                aria-label="See needs attention list"
-              >
-                <TriangleAlert className={styles.attentionIcon} aria-hidden />
-                <span className={styles.attentionBannerText}>
-                  <span className={styles.attentionBannerTitle}>See needs attention list</span>
-                  <span className={styles.attentionBannerSub}>
-                    Students carrying the heaviest record load
-                  </span>
-                </span>
-                <Badge variant="secondary" className={styles.attentionCount}>
-                  {attention.length}
-                </Badge>
-                <ChevronRight className={styles.attentionGo} aria-hidden />
-              </button>
-            ) : null}
-          </>
-        )}
-      </CardContent>
-    </Card>
-
-      {attentionOpen ? (
-        <div
-          className={styles.overlay}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Needs attention"
-          onClick={() => setAttentionOpen(false)}
-        >
-          <div
-            className={styles.modal}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.modalHead}>
-              <h2 className={styles.modalTitle}>Needs attention</h2>
-              <button
-                type="button"
-                className={styles.modalClose}
-                onClick={() => setAttentionOpen(false)}
-                aria-label="Close"
-              >
-                <X className={styles.modalCloseIcon} aria-hidden />
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              {attention.length === 0 ? (
-                <p className={styles.empty}>No students with records this term.</p>
-              ) : (
-                <div className={styles.tableWrap}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th className={styles.colLeft}>Student</th>
-                        <th className={styles.colLeft}>Section</th>
-                        <th>Records</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {attention.map((s) => (
-                        <tr key={s.lrn}>
-                          <td className={styles.colLeft}>
-                            <span className={styles.cellName}>{s.name}</span>
-                            <span className={styles.cellSub}>{s.lrn}</span>
-                          </td>
-                          <td className={styles.colLeft}>{s.section}</td>
-                          <td>
-                            <Badge variant="secondary">{s.behavioral.length}</Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
+            </Pie>
+          </PieChart>
+        </ChartContainer>
+        <div className={styles.donutCenter}>
+          <span className={styles.donutTotal}>{categoryTotal}</span>
+          <span className={styles.donutLabel}>records</span>
         </div>
-      ) : null}
-    </>
+      </div>
+    </div>
   );
 }

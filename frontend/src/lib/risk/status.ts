@@ -1,6 +1,3 @@
-/* Shared risk-status presentation (teacher, principal, guidance desks).
-   Low renders green, Moderate amber, High red — in badges and dots alike. */
-
 export type RiskLevel = "Low" | "Moderate" | "High";
 
 export type RiskBadgeVariant = "green" | "amber" | "red";

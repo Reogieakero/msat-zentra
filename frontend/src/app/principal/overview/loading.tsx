@@ -1,12 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 import styles from "./components/overview.module.css";
 
-/* Route skeleton: mirrors OverviewRisk (4 KPI cards) + OverviewPopulation
-   (matrix) + OverviewAction (rail) — same column, same 1rem gaps, so the
-   skeleton → data swap doesn't shift layout. */
 export default function PrincipalOverviewLoading() {
   return (
     <section className={styles.page} aria-label="Loading overview" aria-busy="true">
+      <PageHeaderSkeleton />
       <div className={styles.layout}>
         <div className={styles.main}>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-hidden="true">

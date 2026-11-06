@@ -8,48 +8,65 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Loader2, TabletSmartphone } from "lucide-react";
+import { TabletSmartphone } from "lucide-react";
+import { CoordinatorEmptyCard } from "../components/CoordinatorEmptyCard";
 import { Button } from "@/components/ui/button";
-import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
+import { useDock } from "@/components/dock/dock-store";
 import {
   fetchCoordinatorApprovals,
   fetchCoordinatorDevices,
-  apiErrorMessage,
-  type AdmDeviceRow,
-} from "../components/coordinator-data";
+} from "@/services/coordinator/overview.service";
+import { apiErrorMessage } from "@/lib/api/errors";
+import type { AdmDeviceRow } from "@/services/coordinator/coordinator.types";
 import {
-  CoordinatorDevicesTable,
+  CoordinatorDevicesBoard,
   type DeviceFilter,
-} from "./components/coordinator-devices-table";
+} from "./components/coordinator-devices-board";
 import { CoordinatorDevicesIssueDialog } from "./components/coordinator-devices-issue-dialog";
+import { CoordinatorDeviceReturnOverlay } from "./components/coordinator-device-return-overlay";
 import pageStyles from "../pages.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
-/* Desk-level pagination standard: full list pages = 15. */
-const DEVICE_PAGE_SIZE = 15;
+const DEVICE_PAGE_SIZE = PAGE_SIZE;
 
 function CoordinatorDevicesPageInner() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const [queryInput, setQueryInput] = React.useState("");
-  // Debounced 300ms server search (registrar precedent).
+  const { startTask, completeTask, failTask } = useDock();
+  const dockTaskRef = React.useRef<string | null>(null);
+  const [queryInput, setQueryInput] = React.useState(
+    () => searchParams.get("q") ?? "",
+  );
+
   const debounced = useDebouncedValue(queryInput.trim(), 300);
-  const [filter, setFilter] = React.useState<DeviceFilter>("all");
-  const [page, setPage] = React.useState(1);
-  // Deep-link from the sidebar needs-device reminder (?issue=1): initial
-  // state derives from the URL (no effect); the effect below only clears
-  // the param so a later close never reopens it.
+  const [filter, setFilterState] = React.useState<DeviceFilter>(() => {
+    const s = searchParams.get("status");
+    return s === "issued" || s === "returned" ? s : "all";
+  });
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "status"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const setFilter = React.useCallback(
+    (v: DeviceFilter) => {
+      setFilterState(v);
+      pager.setFilters({ status: v === "all" ? undefined : v });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const [issueOpen, setIssueOpen] = React.useState(
     () => searchParams.get("issue") === "1",
   );
   const [returnTarget, setReturnTarget] = React.useState<AdmDeviceRow | null>(null);
-  /** Id of the device being returned — its row button shows `Recording…`
-      while every other row stays usable. */
+
   const [returningId, setReturningId] = React.useState<string | null>(null);
   const issueParamCleared = React.useRef(false);
   React.useEffect(() => {
@@ -61,8 +78,18 @@ function CoordinatorDevicesPageInner() {
   }, [searchParams, pathname, router]);
   const setQuery = React.useCallback((v: string) => {
     setQueryInput(v);
-    setPage(1);
   }, []);
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debounced || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced]);
 
   const devicesQuery = useQuery({
     queryKey: ["coordinator-devices", page, debounced, filter, DEVICE_PAGE_SIZE],
@@ -78,13 +105,10 @@ function CoordinatorDevicesPageInner() {
     staleTime: 30_000,
   });
 
-  // Principal-approved cases with no device issued yet — powers the
-  // centered needs prompt and scopes the issue dialog's learner picker.
-  // Preview shape (distinct key suffix) so it never poisons the paged list.
   const needsQuery = useQuery({
     queryKey: ["coordinator-devices", "preview", "needs-device"],
     queryFn: ({ signal }) =>
-      fetchCoordinatorApprovals(1, { limit: 200, signal }),
+      fetchCoordinatorApprovals(1, { limit: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
@@ -107,38 +131,57 @@ function CoordinatorDevicesPageInner() {
       const { data } = await apiClient.post(`/api/adm/devices/${id}/return`, {});
       return data;
     },
-    // Pessimistic: the row flips only via the refetch below after the
-    // server confirms. No optimistic patch: the UI must never outrun the
-    // processing. The acting row shows Recording… until settle.
+
     onSuccess: (data, id) => {
       void data;
       markSelfNotified(id);
       invalidate();
+      if (dockTaskRef.current) {
+        completeTask(dockTaskRef.current, "Marked returned today.");
+        dockTaskRef.current = null;
+      }
       setReturnTarget(null);
       toast.success({ title: "Device returned", description: "Return recorded." });
     },
-    onError: (err) => toast.error({ title: "Could not record return", description: apiErrorMessage(err) }),
+    onError: (err) => {
+      if (dockTaskRef.current) {
+        failTask(dockTaskRef.current, apiErrorMessage(err));
+        dockTaskRef.current = null;
+      }
+      toast.error({ title: "Could not record return", description: apiErrorMessage(err) });
+    },
     onSettled: () => setReturningId(null),
   });
 
-  // Defensive: non-array payloads (cached/error shapes) never crash the table.
   const rows = React.useMemo(
     () => (Array.isArray(devicesQuery.data?.rows) ? devicesQuery.data.rows : []),
     [devicesQuery.data],
   );
-  // `total` = filtered pager count; tiles read the UNFILTERED globals.
+
   const deviceTotal = devicesQuery.data?.total ?? 0;
   const deviceTotalPages = devicesQuery.data?.totalPages ?? 1;
-  // Derived clamp — never setState in an effect.
+
   const deviceSafePage = Math.min(page, deviceTotalPages);
-  const deviceLimit = devicesQuery.data?.limit ?? DEVICE_PAGE_SIZE;
-  const deviceStart = deviceTotal === 0 ? 0 : (deviceSafePage - 1) * deviceLimit + 1;
-  const deviceEnd = Math.min(deviceSafePage * deviceLimit, deviceTotal);
   const deviceBackground = devicesQuery.isFetching && !devicesQuery.isPending;
 
+  // Prefetch the next page while the user views the current one.
+  React.useEffect(() => {
+    if (page >= deviceTotalPages) return;
+    void queryClient.prefetchQuery({
+      queryKey: ["coordinator-devices", page + 1, debounced, filter, DEVICE_PAGE_SIZE],
+      queryFn: ({ signal }) =>
+        fetchCoordinatorDevices({
+          q: debounced || undefined,
+          status: filter === "all" ? undefined : filter,
+          page: page + 1,
+          limit: DEVICE_PAGE_SIZE,
+          signal,
+        }),
+      staleTime: 30_000,
+    });
+  }, [queryClient, page, debounced, filter, deviceTotalPages]);
+
   const hasActiveFilters = filter !== "all" || debounced !== "";
-  const statusLabel =
-    filter === "issued" ? "Issued" : filter === "returned" ? "Returned" : "Status";
 
   const clearFilters = () => {
     setFilter("all");
@@ -146,13 +189,23 @@ function CoordinatorDevicesPageInner() {
     setPage(1);
   };
 
+  const confirmReturn = () => {
+    if (!returnTarget || returnMutation.isPending) return;
+    dockTaskRef.current = startTask({
+      kind: "generic",
+      title: "Recording device return",
+      description: `${returnTarget.deviceType} (${returnTarget.deviceSerial}) · ${returnTarget.student}`,
+    });
+    setReturningId(returnTarget.id);
+    setReturnTarget(null);
+    returnMutation.mutate(returnTarget.id);
+  };
+
   const showNeeds = !needsQuery.isPending && needsDevice.length > 0;
   const needsCountText = `${needsDevice.length} principal-approved case${
     needsDevice.length === 1 ? "" : "s"
   } still ${needsDevice.length === 1 ? "needs" : "need"} a device.`;
-  // Truly empty ledger (loaded, no error, no active filters): the table
-  // (with its title + search) steps aside so one centered block owns the
-  // page. Filtered-to-zero keeps the table so the search can be cleared.
+
   const ledgerTrulyEmpty =
     !devicesQuery.isPending &&
     !devicesQuery.isError &&
@@ -161,22 +214,28 @@ function CoordinatorDevicesPageInner() {
     !hasActiveFilters;
 
   return (
-    <section className={pageStyles.page}>
+    <section
+      className={ledgerTrulyEmpty ? `${pageStyles.page} ${pageStyles.pageEmpty}` : pageStyles.page}
+      aria-label="Learning devices"
+      aria-busy={devicesQuery.isPending || undefined}
+    >
       {ledgerTrulyEmpty ? (
-        <div className={pageStyles.centerEmpty}>
-          {showNeeds ? (
-            <p className={pageStyles.needsMessage}>
-              <TabletSmartphone aria-hidden="true" />
-              {needsCountText}
-            </p>
-          ) : null}
-          <p className={pageStyles.emptyHint}>No devices issued yet.</p>
-          {showNeeds ? (
-            <Button onClick={() => setIssueOpen(true)}>
-              Issue device
-            </Button>
-          ) : null}
-        </div>
+        <CoordinatorEmptyCard
+          icon={TabletSmartphone}
+          title="No devices issued yet"
+          hint={
+            showNeeds
+              ? needsCountText
+              : "Devices you issue to principal-approved cases will appear here."
+          }
+          label="Learning devices"
+          action={
+            showNeeds ? (
+              <Button onClick={() => setIssueOpen(true)}>Issue device</Button>
+            ) : undefined
+          }
+          centered
+        />
       ) : (
         <>
           {showNeeds ? (
@@ -191,7 +250,7 @@ function CoordinatorDevicesPageInner() {
             </div>
           ) : null}
 
-          <CoordinatorDevicesTable
+          <CoordinatorDevicesBoard
             rows={rows}
             isPending={devicesQuery.isPending}
             isError={devicesQuery.isError || !devicesQuery.data}
@@ -199,7 +258,6 @@ function CoordinatorDevicesPageInner() {
             query={queryInput}
             onQueryChange={setQuery}
             filter={filter}
-            statusLabel={statusLabel}
             onFilterChange={(v) => {
               setFilter(v);
               setPage(1);
@@ -208,19 +266,16 @@ function CoordinatorDevicesPageInner() {
             onClear={clearFilters}
             returningId={returningId}
             total={deviceTotal}
-            start={deviceStart}
-            end={deviceEnd}
             page={deviceSafePage}
-            totalPages={deviceTotalPages}
             isBackground={deviceBackground}
             onRetry={() => devicesQuery.refetch()}
             onPageChange={(next) => setPage(next)}
             onRecordReturn={setReturnTarget}
+            onIssueDevice={() => setIssueOpen(true)}
           />
         </>
       )}
 
-      {/* Issue to an approved case without a device */}
       <CoordinatorDevicesIssueDialog
         open={issueOpen}
         candidates={needsDevice}
@@ -229,45 +284,12 @@ function CoordinatorDevicesPageInner() {
         onIssued={invalidate}
       />
 
-      {/* Return confirm — same card-modal UI as every other dialog. */}
-      <CardModal
-        open={returnTarget !== null}
+      <CoordinatorDeviceReturnOverlay
+        row={returnTarget}
+        pending={returnMutation.isPending}
         onClose={() => setReturnTarget(null)}
-        dismissable={!returnMutation.isPending}
-        title="Record device return?"
-        description={
-          returnTarget ? (
-            <>
-              {returnTarget.deviceType} ({returnTarget.deviceSerial}) issued to{" "}
-              {returnTarget.student} will be marked returned today.
-            </>
-          ) : undefined
-        }
-        size="sm"
-      >
-        <div className={pageStyles.modalActions}>
-          <Button
-            variant="outline"
-            onClick={() => setReturnTarget(null)}
-            disabled={returnMutation.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            disabled={returnMutation.isPending}
-            aria-busy={returnMutation.isPending || undefined}
-            onClick={() => {
-              if (returnTarget && !returnMutation.isPending) {
-                setReturningId(returnTarget.id);
-                returnMutation.mutate(returnTarget.id);
-              }
-            }}
-          >
-            {returnMutation.isPending ? <Loader2 className={pageStyles.spin} aria-hidden="true" /> : null}
-            {returnMutation.isPending ? "Recording…" : "Record return"}
-          </Button>
-        </div>
-      </CardModal>
+        onConfirm={confirmReturn}
+      />
     </section>
   );
 }

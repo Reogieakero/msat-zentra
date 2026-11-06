@@ -1,31 +1,34 @@
 import axios, { type AxiosInstance } from "axios";
+import { decodeTokenIdentity, canSteerTermRole } from "@/lib/auth/roles";
+import { clearTermStorage, readStoredTerm, type StoredTerm } from "@/lib/term/termStorage";
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   headers: { "Content-Type": "application/json" },
-  withCredentials: false,
+
+  withCredentials: true,
 });
 
-// Attach the access token (stored by the auth layer) to every request,
-// plus the session's active School Year + Term (chosen once after login).
-// The backend scopes all reads to this selection and saves all writes
-// under it — pages never pick a year/term per action.
 apiClient.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  const scope = getActiveTermScope();
-  if (scope?.schoolYearId) {
-    (config.headers as Record<string, string>)["x-school-year-id"] = scope.schoolYearId;
-  }
-  if (scope?.termId) {
-    (config.headers as Record<string, string>)["x-term-id"] = scope.termId;
+  // Only term-steering roles (teachers + principal) carry a term. Every other
+  // desk is scoped server-side, so its requests must never send term headers.
+  const identity = decodeTokenIdentity(token);
+  if (identity && canSteerTermRole(identity.role)) {
+    const scope = getActiveTermScope();
+    if (scope?.schoolYearId) {
+      (config.headers as Record<string, string>)["x-school-year-id"] = scope.schoolYearId;
+    }
+    if (scope?.termId) {
+      (config.headers as Record<string, string>)["x-term-id"] = scope.termId;
+    }
   }
   return config;
 });
 
-// Single in-flight refresh to avoid stampede on 401.
 let refreshPromise: Promise<string | null> | null = null;
 
 apiClient.interceptors.response.use(
@@ -51,40 +54,25 @@ apiClient.interceptors.response.use(
   },
 );
 
-// When auth recovery fails on a 401, route the user to the 403 page.
 function redirectToUnauthorized() {
   if (typeof window === "undefined") return;
+  const identity = decodeTokenIdentity(getAccessToken());
   setAccessToken(null);
-  window.localStorage.removeItem("zentra.refresh");
+  clearTermStorage(identity?.sub ?? null);
   if (window.location.pathname !== "/errors/403") {
     window.location.href = "/errors/403";
   }
 }
 
-// --- active term scope (Login → select → session context) ---
-const TERM_SCOPE_KEY = "zentra.activeTerm";
-
-export interface ActiveTermScope {
-  schoolYearId: string;
-  schoolYearName: string;
-  termId: string;
-  termNumber: number;
-}
+export type ActiveTermScope = StoredTerm;
 
 export function getActiveTermScope(): ActiveTermScope | null {
   if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(TERM_SCOPE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as ActiveTermScope;
-    if (!parsed.schoolYearId || !parsed.termId) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
+  const identity = decodeTokenIdentity(getAccessToken());
+  if (!identity || !canSteerTermRole(identity.role)) return null;
+  return readStoredTerm(identity.sub);
 }
 
-// --- access token storage ( bridging backend JWT with the client ) ---
 const ACCESS_KEY = "zentra.access";
 
 export function getAccessToken(): string | null {
@@ -98,26 +86,36 @@ export function setAccessToken(token: string | null) {
   else window.localStorage.removeItem(ACCESS_KEY);
 }
 
-export function setRefreshToken(token: string | null) {
-  if (typeof window === "undefined") return;
-  if (token) window.localStorage.setItem("zentra.refresh", token);
-  else window.localStorage.removeItem("zentra.refresh");
-}
-
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = window.localStorage.getItem("zentra.refresh");
-  if (!refreshToken) return null;
   try {
     const { data } = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/refresh`,
-      { refreshToken },
+      {},
+      { withCredentials: true },
     );
     setAccessToken(data.accessToken);
-    window.localStorage.setItem("zentra.refresh", data.refreshToken);
     return data.accessToken as string;
   } catch {
     setAccessToken(null);
-    window.localStorage.removeItem("zentra.refresh");
     return null;
   }
+}
+
+export async function logout(): Promise<void> {
+  const identity = decodeTokenIdentity(getAccessToken());
+  try {
+    await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`,
+      {},
+      { withCredentials: true },
+    );
+  } catch {
+
+  }
+  setAccessToken(null);
+  if (typeof window !== "undefined") {
+
+    window.localStorage.removeItem("zentra.refresh");
+  }
+  clearTermStorage(identity?.sub ?? null);
 }

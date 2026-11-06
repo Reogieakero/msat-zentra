@@ -6,39 +6,70 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { FolderLegendCard } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
-import { TopReferredCard } from "./components/guidance-anecdotal-siderail";
+import {
+  GuidanceAnecdotalSidebar,
+  TopReferredCard,
+} from "./components/guidance-anecdotal-siderail";
 import { GuidanceAnecdotalFolders } from "./components/guidance-anecdotal-folders";
 import type { TypeFilter } from "./components/guidance-anecdotal-filters";
-import {
-  fetchGuidanceAnecdotal,
-  type GuidanceAnecdotalData,
-} from "./components/guidance-anecdotal-data";
+import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
+import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/guidance-anecdotal.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 
-const GUIDANCE_ANECDOTAL_PAGE_SIZE = 15;
+const GUIDANCE_ANECDOTAL_PAGE_SIZE = PAGE_SIZE;
 
-/**
- * Guidance anecdotal repository — same layout as the teacher records page:
- * folder panel + right rail (top referred + legend). Every ADM and
- * counseling case referred to the desk, one folder per case; search + type
- * stay in the panel header.
- */
 export default function GuidanceAnecdotalPage() {
-  const { activeTerm } = useTerm();
+  return (
+    <React.Suspense>
+      <GuidanceAnecdotalPageInner />
+    </React.Suspense>
+  );
+}
+
+function GuidanceAnecdotalPageInner() {
+  const searchParams = useSearchParams();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [queryInput, setQueryInput] = React.useState("");
-  const [type, setType] = React.useState<TypeFilter>("");
-  const [page, setPage] = React.useState(1);
-  // Debounced 300ms so server queries fire after the user pauses typing.
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const [type, setTypeState] = React.useState<TypeFilter>(
+    searchParams.get("type") === "adm" || searchParams.get("type") === "counseling"
+      ? searchParams.get("type") as TypeFilter
+      : "",
+  );
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "type"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const setType = React.useCallback(
+    (value: TypeFilter) => {
+      setTypeState(value);
+      pager.setFilters({ type: value === "" ? undefined : value });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const query = useDebouncedValue(queryInput.trim(), 300);
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: query || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   const handleQueryInputChange = (value: string) => {
     setQueryInput(value);
-    setPage(1);
   };
 
   const { data, isPending, isError, isFetching, refetch, isRefetching } =
@@ -51,16 +82,16 @@ export default function GuidanceAnecdotalPage() {
         ),
       staleTime: 60_000,
       placeholderData: keepPreviousData,
+      enabled: termReady,
     });
 
-  // Derived, never setState-in-effect.
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);
 
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading referred records">
-        <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
           <div className={`${styles.main} flex min-w-0 flex-col`}>
             <div className={styles.skelPanel}>
               <div className={styles.skelPanelHead}>
@@ -96,31 +127,9 @@ export default function GuidanceAnecdotalPage() {
               </div>
             </div>
           </div>
-          <div className="hidden min-w-0 flex-col gap-4 lg:flex" aria-hidden="true">
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendLabel} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendLabel} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="hidden min-w-0 flex-col items-end gap-2 lg:flex" aria-hidden="true">
+            <Skeleton className="h-9 w-9 rounded-xl" />
+            <Skeleton className="h-9 w-9 rounded-xl" />
           </div>
         </div>
       </section>
@@ -151,34 +160,26 @@ export default function GuidanceAnecdotalPage() {
   const hasActiveFilters = query !== "" || type !== "";
   if (data.total === 0 && !hasActiveFilters) {
     return (
-      <section className={`${styles.page} flex min-h-[60vh] flex-1 flex-col justify-center`}>
-        <div className={`${assign.card} mx-auto w-full max-w-md`}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-col items-center gap-2 py-8 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-              aria-hidden="true"
-            >
-              <FolderOpen size={24} className="text-muted-foreground" />
-            </span>
-            <p className="font-medium">No referred files yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Every ADM and counseling case advisers refer to you will appear here as its own folder.
-            </p>
+      <section className={styles.page} aria-label="Anecdotal records">
+        <GuidanceEmptyCard
+          icon={FolderOpen}
+          title="No referred files yet"
+          hint="Every ADM and counseling case advisers refer to you will appear here as its own folder."
+          label="Anecdotal records"
+          action={
             <Button asChild size="sm" className="mt-2">
               <Link href="/guidance/referrals">View referrals</Link>
             </Button>
-          </div>
-        </div>
+          }
+          centered
+        />
       </section>
     );
   }
 
   return (
-    <section className={styles.page}>
-      <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+    <section className={styles.page} aria-label="Anecdotal records">
+      <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
         <div className={`${styles.main} flex min-w-0 flex-col`}>
           <GuidanceAnecdotalFolders
             records={Array.isArray(data.records) ? data.records : []}
@@ -197,10 +198,7 @@ export default function GuidanceAnecdotalPage() {
             }}
           />
         </div>
-        <div className="hidden min-w-0 flex-col gap-4 lg:flex">
-          <TopReferredCard items={data.summary.topStudents ?? []} />
-          <FolderLegendCard />
-        </div>
+        <GuidanceAnecdotalSidebar items={data.summary.topStudents ?? []} />
       </div>
       <div className="flex min-w-0 flex-col gap-4 lg:hidden">
         <TopReferredCard items={data.summary.topStudents ?? []} />

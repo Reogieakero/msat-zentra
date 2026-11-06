@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Trophy } from "lucide-react";
 import styles from "./HonorRollHero.module.css";
@@ -10,8 +9,6 @@ interface Props {
   candidateCount: number;
 }
 
-/* Demoted content strip — the page header lives above in
-   PrincipalPageHeader. No h1 here (single h1 per page). */
 export function HonorRollHero({ data, candidateCount }: Props) {
   return (
     <Card className={styles.bannerCardBox}>

@@ -1,11 +1,11 @@
-import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useLowRiskStudents } from "../riskBoard";
+import { useLowRiskStudents } from "@/services/principal/risk.service";
 import styles from "./low-risk-students.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
-const PAGE_SIZE = 15;
+
 
 export function LowRiskStudents() {
   const { students, total, page, totalPages, setPage, loading, error } =
@@ -44,7 +44,7 @@ export function LowRiskStudents() {
           </ul>
         )}
 
-        {!loading && total > 0 && (
+        {!loading && totalPages > 1 && (
           <div className={styles.pager}>
             <span className={styles.pageInfo}>
               {from}–{to} of {total}

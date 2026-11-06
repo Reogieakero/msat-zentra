@@ -4,22 +4,8 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 import { recomputeRisk } from "../src/services/risk.js";
 import argon2 from "argon2";
 
-// Targeted demo seed: ONE student engineered to trip exactly the academic +
-// attendance engine flags (High risk = 2 flags), so they show up on the
-// guidance interventions queue needing intervention.
-//
-// - Final grades average below 75  -> academic flag
-// - Almost no "present" attendance -> attendance flag (present / enrolled < 0.8)
-// - Zero anecdotal records          -> behavioral flag stays off
-//
-// Idempotent: fixed email/LRN, scoped deletes, then recomputeRisk() writes a
-// fresh RiskSnapshot and auto-creates the guidance intervention when none is
-// open. Run with: npx tsx prisma/seed-low-academic-attendance.ts
-
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Row 1 reuses the legacy demo account from the first run so the page holds
-// exactly 5 rows across re-runs.
 const DEMO_STUDENTS = [1, 2, 3, 4, 5].map((n) => ({
   email: n === 1 ? "student.demolow@zentra.test" : `student.demolow${n}@zentra.test`,
   fullName: `Demo Low Academic ${n}`,
@@ -40,7 +26,6 @@ async function main() {
   });
   if (!term) throw new Error("No terms found — run the main seed first.");
 
-  // Prefer G7-A so the demo sits with the main seed cohort; else first section.
   const section =
     (await prisma.section.findFirst({
       where: { schoolYearId: schoolYear.id, name: "G7-A" },
@@ -63,7 +48,6 @@ async function main() {
 
   const studentHash = await argon2.hash("Student2025!");
   const termStart = new Date("2026-06-20T08:00:00");
-  // Low-grade bands per demo student (all averages well below 75).
   const gradeBands: number[][] = [
     [70, 71, 72, 73],
     [68, 69, 70, 71],
@@ -92,43 +76,61 @@ async function main() {
       },
     });
 
-    // Reset this student's term data so re-runs stay deterministic.
-    await prisma.finalGrade.deleteMany({ where: { studentId: user.id, termId: term.id } });
-    await prisma.attendanceRecord.deleteMany({ where: { studentId: user.id, termId: term.id } });
-    await prisma.anecdotalRecord.deleteMany({ where: { studentId: user.id, termId: term.id } });
-
-    // Low grades in every subject: average well below 75.
+    // This seed used to delete-then-reinsert the demo rows on every run. Postgres
+    // keeps the dead tuple of every deleted/rewritten row until a VACUUM FULL, so
+    // re-running it repeatedly was the main source of the table bloat we found
+    // (AttendanceRecord at ~87 KB and FinalGrade at ~126 KB per *live* row on a
+    // 500 MB free-tier DB). Upserting in place keeps the physical size flat.
+    // The prior anecdotalRecord.deleteMany() was removed too: nothing ever creates
+    // anecdotal records for these five demo users, so it only deleted 0 rows.
     const band = gradeBands[n % gradeBands.length];
-    await prisma.finalGrade.createMany({
-      data: subjects.map((s, i) => {
-        const g = band[i % band.length];
-        return {
-          studentId: user.id,
-          subjectId: s.id,
-          termId: term.id,
-          computedAverage: g,
-          transmutedGrade: g,
-          remarks: "Failed",
-          lockStatus: "unlocked",
-        };
-      }),
-    });
+    for (const [i, s] of subjects.entries()) {
+      const g = band[i % band.length];
+      const data = {
+        computedAverage: g,
+        transmutedGrade: g,
+        remarks: "Failed" as const,
+        lockStatus: "unlocked" as const,
+      };
+      await prisma.finalGrade.upsert({
+        where: { studentId_subjectId_termId: { studentId: user.id, subjectId: s.id, termId: term.id } },
+        update: data,
+        create: { studentId: user.id, subjectId: s.id, termId: term.id, ...data },
+      });
+    }
 
-    // Poor attendance: a handful of absences, zero presences.
-    await prisma.attendanceRecord.createMany({
-      data: [0, 1, 2, 3, 4].map((d) => ({
-        studentId: user.id,
-        sectionId: section.id,
-        date: new Date(termStart.getTime() + (d + n) * 86_400_000),
-        session: d % 2 === 0 ? "AM" : "PM",
-        status: "absent",
-        recordedBy: section.adviserId!,
-        termId: term.id,
-      })),
-    });
+    // AttendanceRecord's compound uniques include { studentId, subjectId, date, slot }
+    // and subjectId/slot are nullable here (legacy AM/PM rows). Postgres treats NULLs
+    // as distinct, so an upsert would never match the existing legacy row and would
+    // keep appending. Match on the legacy identity explicitly instead.
+    const attendanceRows = [0, 1, 2, 3, 4].map((d) => ({
+      studentId: user.id,
+      sectionId: section.id,
+      date: new Date(termStart.getTime() + (d + n) * 86_400_000),
+      session: (d % 2 === 0 ? "AM" : "PM") as "AM" | "PM",
+      status: "absent" as const,
+      recordedBy: section.adviserId!,
+      termId: term.id,
+    }));
 
-    // Engine recompute: writes the RiskSnapshot (detection date) and
-    // auto-creates the approved, ongoing guidance intervention.
+    for (const row of attendanceRows) {
+      const existing = await prisma.attendanceRecord.findFirst({
+        where: {
+          studentId: row.studentId,
+          termId: row.termId,
+          date: row.date,
+          session: row.session,
+          subjectId: null,
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        await prisma.attendanceRecord.update({ where: { id: existing.id }, data: row });
+      } else {
+        await prisma.attendanceRecord.create({ data: row });
+      }
+    }
+
     const result = await recomputeRisk(user.id, term.id);
     const snapshot = await prisma.riskSnapshot.findFirst({
       where: { studentId: user.id, termId: term.id },

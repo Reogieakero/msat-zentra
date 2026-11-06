@@ -1,12 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { History } from "lucide-react";
-import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
-import { Badge } from "@/components/ui/badge";
+import { createPortal } from "react-dom";
+import { History, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CardModal } from "@/components/ui/CardModal";
-import refStyles from "./referrals.module.css";
+import { Pill } from "@/components/ui/pill";
 import { AdmTrackingTimeline } from "@/components/adm-tracker/AdmTrackingTimeline";
 import type { TrackerCaseInput } from "@/components/adm-tracker/adm-stage-activity";
 
@@ -36,6 +34,7 @@ export interface TrackableReferral {
   }[];
   consultReviewer?: string | null;
   admStage?: string | null;
+  dismissedByRole?: string | null;
   observationDate?: string | null;
   meetingAttended?: boolean | null;
   lastMeetingAt?: string | null;
@@ -63,9 +62,27 @@ function formatDateTime(iso: string): string {
   return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · ${d.toTimeString().slice(0, 5)}`;
 }
 
-/* Read-only tracking card: where the referred case stands — status and type
-   badges, the filing reason in sentence form, and the case history as a
-   vertical stepper with one friendly sentence per step. */
+/** Status tone carried by the shared Pill, same map as the referrals table. */
+const VARIANT_TONE: Record<
+  TrackableReferral["statusVariant"],
+  "amber" | "blue" | "green" | "red" | "neutral"
+> = {
+  amber: "amber",
+  blue: "blue",
+  green: "green",
+  red: "red",
+  outline: "neutral",
+};
+
+const REVIEWER_LABELS: Record<string, string> = {
+  nurse: "School Nurse",
+  guidance_counselor: "Guidance Counselor",
+  lrpc: "LRPC",
+};
+
+/** ADM stages where the case still sits with the consultation reviewer. */
+const EARLY_ADM_STAGES = new Set(["anecdotal", "consultation"]);
+
 export function ReferralTrackDialog({
   referral,
   onClose,
@@ -73,17 +90,16 @@ export function ReferralTrackDialog({
   referral: TrackableReferral | null;
   onClose: () => void;
 }) {
-  // The history list hides its scrollbar — the shared hint surfaces only
-  // while there is more below.
-  const listRef = React.useRef<HTMLOListElement | null>(null);
+  const open = referral !== null;
+  const [mounted, setMounted] = React.useState(false);
+  const panelRef = React.useRef<HTMLDivElement | null>(null);
   const isAdmTrack = referral?.track === "adm";
-  // Same shared tracker input as the adm-cases rail — one output on both
-  // pages. The referral stays the source of truth for filing identity.
   const trackInput: TrackerCaseInput | null =
     referral && isAdmTrack
       ? {
           stage: referral.admStage ?? null,
           referralStatus: referral.status,
+          dismissedByRole: referral.dismissedByRole ?? null,
           consultReviewer: referral.consultReviewer ?? null,
           referredBy: null,
           anecdotalDate: referral.observationDate ?? null,
@@ -113,101 +129,142 @@ export function ReferralTrackDialog({
         }
       : null;
 
-  return (
-    <CardModal
-      open={referral !== null}
-      onClose={onClose}
-      size="md"
-      title="Track referral"
-      description={
-        referral ? (
-          <>
-            {referral.studentName} · {referral.lrn}
-          </>
-        ) : undefined
-      }
-      watchKey={referral?.id}
+  React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    panelRef.current?.focus({ preventScroll: true });
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  if (!open || !mounted || !referral) return null;
+
+  const withReviewer =
+    referral.targetRole === "adm_coordinator" &&
+    !!referral.consultReviewer &&
+    EARLY_ADM_STAGES.has(referral.admStage ?? "consultation");
+  const deskNow =
+    withReviewer && referral.consultReviewer
+      ? (REVIEWER_LABELS[referral.consultReviewer] ?? humanize(referral.consultReviewer))
+      : humanize(referral.targetRole);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/55 p-4 backdrop-blur-[2px] animate-in fade-in-0 duration-150 dark:bg-black/70"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-        {referral ? (
-          <div className="flex min-w-0 flex-col gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={referral.statusVariant}>{referral.statusLabel}</Badge>
-              <Badge variant={referral.typeVariant}>{referral.typeLabel}</Badge>
-              <span className="text-sm text-muted-foreground">
-                to {humanize(referral.targetRole)}
-              </span>
-            </div>
-            <div className="rounded-md bg-muted/50 px-3 py-2">
-              <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                Filing reason
-              </p>
-              <p className="mt-0.5 text-sm leading-relaxed">
-                {referral.reason || "No reason recorded."}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Submitted {formatDateTime(referral.referredAt)}
-              </p>
-            </div>
-            <div>
-              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                <History size={14} aria-hidden />
-                {isAdmTrack ? "Pipeline tracking" : "Case history"}
-              </p>
-              {isAdmTrack && trackInput ? (
-                <AdmTrackingTimeline input={trackInput} />
-              ) : referral.timeline.length > 0 ? (
-                <>
-                <div className="relative">
-                <ol
-                  ref={listRef}
-                  className={`flex max-h-48 min-w-0 flex-col gap-4 overflow-y-auto pr-1 pb-8 ${refStyles.noScrollbar}`}
-                >
-                  {referral.timeline.map((step, index) => (
-                    <li
-                      key={`${step.label}-${step.date}-${index}`}
-                      className="relative flex gap-3 pl-5 before:absolute before:top-5 before:bottom-[-1rem] before:left-[3px] before:w-px before:bg-border last:before:hidden"
-                    >
-                      <span
-                        className="absolute top-1.5 left-0 h-2 w-2 shrink-0 rounded-full bg-primary"
-                        aria-hidden="true"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm leading-snug font-medium">{step.label}</p>
-                        {step.detail ? (
-                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                            {step.detail}
-                          </p>
-                        ) : null}
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {formatDateTime(step.date)}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-background via-background/85 to-transparent pt-8 pb-1">
-                  <ScrollDownHint
-                    scrollRef={listRef}
-                    watchKey={referral?.id}
-                    always
-                    className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
-                  />
-                </div>
-                </div>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No history recorded yet.
-                </p>
-              )}
-            </div>
+      {/* One shared shell for both referral types — Other matters uses the
+          same board width, header pills and card grid as ADM cases. */}
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="referral-track-title"
+        tabIndex={-1}
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-4xl min-w-0 flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-muted p-2.5 shadow-xl [font-family:var(--font-inter)] animate-in fade-in-0 zoom-in-95 duration-150 dark:bg-background"
+      >
+        <div className="-mx-2.5 flex min-w-0 items-start gap-1.5 border-b border-border px-3.5 pb-2">
+          <div className="min-w-0 flex-1">
+            <h2 id="referral-track-title" className="truncate text-[13px] font-semibold">
+              Track referral
+            </h2>
+            <span className="mt-1 flex min-w-0 max-w-full flex-wrap items-center gap-1">
+              <Pill tone="amber" label="Student" className="max-w-full overflow-hidden">
+                <span className="truncate" title={referral.studentName}>
+                  {referral.studentName}
+                </span>
+              </Pill>
+              <Pill className="tabular-nums" label="LRN">
+                {referral.lrn}
+              </Pill>
+            </span>
           </div>
-        ) : null}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Close
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-6 w-6 shrink-0 px-0"
+            onClick={onClose}
+            aria-label="Close dialog"
+          >
+            <X size={14} strokeWidth={1.8} aria-hidden />
           </Button>
         </div>
-    </CardModal>
+
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 px-1">
+          <Pill tone={VARIANT_TONE[referral.statusVariant]} label="Referral status">
+            {referral.statusLabel}
+          </Pill>
+          <Pill tone={isAdmTrack ? "amber" : "blue"} label="Referral type">
+            {referral.typeLabel}
+          </Pill>
+          <span className="text-[11px] text-muted-foreground">to {deskNow}</span>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-1.5 px-1">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            <History size={14} aria-hidden />
+            {isAdmTrack ? "Pipeline tracking" : "Case history"}
+          </p>
+          {isAdmTrack && trackInput ? (
+            <AdmTrackingTimeline input={trackInput} variant="cards" />
+          ) : referral.timeline.length > 0 ? (
+            <ol
+              className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4"
+              aria-label="Case history steps"
+            >
+              {referral.timeline.map((step, index) => (
+                <li
+                  key={`${step.label}-${step.date}-${index}`}
+                  className="flex min-w-0 flex-col gap-2 overflow-hidden rounded-xl border border-border bg-muted/60 p-2.5 dark:bg-muted/20"
+                >
+                  <div className="-mx-2.5 flex min-w-0 items-center gap-1.5 border-b border-border px-3.5 pb-2">
+                    <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">
+                      Update {index + 1}
+                    </span>
+                    <Pill label="Logged">{formatDateTime(step.date)}</Pill>
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden rounded-lg border border-border bg-white p-2 shadow-sm dark:bg-card">
+                    <span
+                      className="line-clamp-2 min-h-10 text-xs/5 font-semibold text-foreground"
+                      title={step.label}
+                    >
+                      {step.label}
+                    </span>
+                    {step.detail ? (
+                      <span className="block min-w-0 break-all text-[11px] leading-snug text-muted-foreground">
+                        {step.detail}
+                      </span>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No history recorded yet.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

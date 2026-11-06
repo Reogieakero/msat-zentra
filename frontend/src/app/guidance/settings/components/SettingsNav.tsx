@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Brush,
   KeyRound,
   Palette,
   UserRound,
@@ -14,12 +13,10 @@ export interface SettingsSectionLink {
   Icon: LucideIcon;
 }
 
-/* Guidance settings sections — preferences only. */
 export function guidanceSettingsSections(): SettingsSectionLink[] {
   return [
     { id: "section-profile", label: "Profile", Icon: UserRound },
     { id: "section-appearance", label: "Appearance", Icon: Palette },
-    { id: "section-palette", label: "Palette", Icon: Brush },
     { id: "section-password", label: "Password", Icon: KeyRound },
   ];
 }

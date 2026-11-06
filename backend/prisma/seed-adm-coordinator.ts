@@ -3,9 +3,6 @@ import { PrismaClient } from "../src/generated/prisma/client.js";
 import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 import argon2 from "argon2";
 
-// Idempotent seeding for the hardcoded ADM Coordinator account.
-// Mirrors backend/prisma/seed.ts STAFF_ACCOUNTS + STAFF_PASSWORD so a full
-// seed and this targeted script never disagree on credentials.
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
 const EMAIL = "adm@zentra.test";

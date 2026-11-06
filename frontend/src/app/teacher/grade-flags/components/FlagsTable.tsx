@@ -20,9 +20,9 @@ import { Button } from "@/components/ui/button";
 import {
   REASON_LABELS,
   STATUS_LABELS,
-  formatAge,
   type GradeFlagRow,
-} from "./grade-flags-data";
+} from "@/services/teacher/gradeFlags.types";
+import { formatAge } from "@/services/teacher/gradeFlags.service";
 import styles from "./FlagsTable.module.css";
 
 const STATUS_VARIANTS = {

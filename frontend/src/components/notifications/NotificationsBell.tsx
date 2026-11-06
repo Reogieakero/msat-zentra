@@ -5,13 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,8 +33,6 @@ export interface BellNotice {
   createdAt: string;
 }
 
-// The dropdown never scrolls: only the latest few show, anything beyond
-// opens the "View all" overlay instead.
 const VISIBLE_COUNT = 5;
 
 function bellApiErrorMessage(err: unknown, fallback: string): string {
@@ -59,22 +51,16 @@ async function fetchBellNotices(signal?: AbortSignal): Promise<BellNotice[]> {
 }
 
 interface NotificationsBellProps {
-  /** React Query key backing the inbox (e.g. ["teacher-notifications"]). */
+
   queryKey: string[];
-  /** Every key invalidated after a read (defaults to [queryKey]). */
+
   refreshKeys?: string[][];
-  /** Role-scoped deep link for an item (schedule verdict → section page). */
+
   resolveTarget: (n: BellNotice) => BellNotificationTarget;
-  /** Role-scoped inbox title per item. Defaults to the prettified type
-      ("Referral Status Change") — pass a mapper for specific titles that
-      name the event instead of the generic type. */
+
   titleFor?: (n: BellNotice) => string;
 }
 
-/* Shared notification bell — one icon, badge, dropdown, and view-all
-   overlay used by the teacher and principal desks. Missed sileo toasts stay
-   here with an unread badge; realtime invalidation keeps the count live
-   without manual refresh. */
 export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleFor }: NotificationsBellProps) {
   const titleOf = titleFor ?? ((n: BellNotice) => prettifyNotificationType(n.type));
   const router = useRouter();
@@ -88,8 +74,22 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleF
     staleTime: 30_000,
   });
 
+  // Badge uses a dedicated count so it reflects the true unread total, not just
+  // the unread items within the first page of the list.
+  const unreadQuery = useQuery({
+    queryKey: [...queryKey, "unread-count"],
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.get<{ count: number }>(
+        "/api/notifications/unread-count",
+        { signal },
+      );
+      return typeof data?.count === "number" ? data.count : 0;
+    },
+    staleTime: 30_000,
+  });
+
   const notifications = notificationsQuery.data ?? [];
-  const unread = notifications.filter((n) => !n.isRead).length;
+  const unread = unreadQuery.data ?? notifications.filter((n) => !n.isRead).length;
 
   const refresh = () => {
     for (const key of targets) {
@@ -265,21 +265,18 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleF
         </DropdownMenuContent>
       </DropdownMenu>
       {viewAllOpen ? (
-        <Dialog
+        <CardModal
           open
-          onOpenChange={(open) => {
-            if (!open) setViewAllOpen(false);
-          }}
+          onClose={() => setViewAllOpen(false)}
+          size="md"
+          title="Notifications"
+          description={
+            unread === 0
+              ? "You're all caught up."
+              : `${unread} unread notification${unread === 1 ? "" : "s"}.`
+          }
+          watchKey={[notifications.length, unread, readingId]}
         >
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Notifications</DialogTitle>
-              <DialogDescription>
-                {unread === 0
-                  ? "You're all caught up."
-                  : `${unread} unread notification${unread === 1 ? "" : "s"}.`}
-              </DialogDescription>
-            </DialogHeader>
             <div className={styles.modalList} aria-label="All notifications">
               {notifications.map((n) => {
                 const target = resolveTarget(n);
@@ -296,8 +293,7 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleF
                 );
               })}
             </div>
-          </DialogContent>
-        </Dialog>
+        </CardModal>
       ) : null}
     </>
   );

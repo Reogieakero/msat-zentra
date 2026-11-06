@@ -17,11 +17,7 @@ export function createPrismaAdapter(connectionString?: string): PrismaPg {
     {
       connectionString: stripSslMode(url),
       ssl: { rejectUnauthorized: false },
-      // Supabase's pooler closes connections server-side without warning;
-      // a query that reuses the dead socket fails with "Connection
-      // terminated unexpectedly". Recycle sockets before the pooler kills
-      // them and detect dead ones with TCP keepalive so this never
-      // surfaces to requests.
+
       max: 10,
       connectionTimeoutMillis: 15_000,
       idleTimeoutMillis: 30_000,
@@ -29,9 +25,7 @@ export function createPrismaAdapter(connectionString?: string): PrismaPg {
       keepAliveInitialDelayMillis: 10_000,
     },
     {
-      // Idle-client errors otherwise arrive as unhandled 'error' events
-      // and crash the process. Log them instead — the pool replaces the
-      // dead client automatically.
+
       onPoolError: (err) => {
         logger.error({ err: err?.message ?? err }, "Database pool error");
       },

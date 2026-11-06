@@ -39,6 +39,14 @@ export type RiskSnapshotMinAggregateOutputType = {
   studentId: string | null
   rosterId: string | null
   riskLevel: $Enums.RiskLevel | null
+  riskLevelRaw: $Enums.RiskLevel | null
+  riskLevelFinal: $Enums.RiskLevel | null
+  academicFlag: boolean | null
+  attendanceFlag: boolean | null
+  behavioralFlag: boolean | null
+  academicFlagRaw: boolean | null
+  attendanceFlagRaw: boolean | null
+  behavioralFlagRaw: boolean | null
   riskCount: number | null
   snapshotDate: Date | null
   termId: string | null
@@ -49,6 +57,14 @@ export type RiskSnapshotMaxAggregateOutputType = {
   studentId: string | null
   rosterId: string | null
   riskLevel: $Enums.RiskLevel | null
+  riskLevelRaw: $Enums.RiskLevel | null
+  riskLevelFinal: $Enums.RiskLevel | null
+  academicFlag: boolean | null
+  attendanceFlag: boolean | null
+  behavioralFlag: boolean | null
+  academicFlagRaw: boolean | null
+  attendanceFlagRaw: boolean | null
+  behavioralFlagRaw: boolean | null
   riskCount: number | null
   snapshotDate: Date | null
   termId: string | null
@@ -59,6 +75,14 @@ export type RiskSnapshotCountAggregateOutputType = {
   studentId: number
   rosterId: number
   riskLevel: number
+  riskLevelRaw: number
+  riskLevelFinal: number
+  academicFlag: number
+  attendanceFlag: number
+  behavioralFlag: number
+  academicFlagRaw: number
+  attendanceFlagRaw: number
+  behavioralFlagRaw: number
   riskCount: number
   snapshotDate: number
   termId: number
@@ -79,6 +103,14 @@ export type RiskSnapshotMinAggregateInputType = {
   studentId?: true
   rosterId?: true
   riskLevel?: true
+  riskLevelRaw?: true
+  riskLevelFinal?: true
+  academicFlag?: true
+  attendanceFlag?: true
+  behavioralFlag?: true
+  academicFlagRaw?: true
+  attendanceFlagRaw?: true
+  behavioralFlagRaw?: true
   riskCount?: true
   snapshotDate?: true
   termId?: true
@@ -89,6 +121,14 @@ export type RiskSnapshotMaxAggregateInputType = {
   studentId?: true
   rosterId?: true
   riskLevel?: true
+  riskLevelRaw?: true
+  riskLevelFinal?: true
+  academicFlag?: true
+  attendanceFlag?: true
+  behavioralFlag?: true
+  academicFlagRaw?: true
+  attendanceFlagRaw?: true
+  behavioralFlagRaw?: true
   riskCount?: true
   snapshotDate?: true
   termId?: true
@@ -99,6 +139,14 @@ export type RiskSnapshotCountAggregateInputType = {
   studentId?: true
   rosterId?: true
   riskLevel?: true
+  riskLevelRaw?: true
+  riskLevelFinal?: true
+  academicFlag?: true
+  attendanceFlag?: true
+  behavioralFlag?: true
+  academicFlagRaw?: true
+  attendanceFlagRaw?: true
+  behavioralFlagRaw?: true
   riskCount?: true
   snapshotDate?: true
   termId?: true
@@ -196,6 +244,14 @@ export type RiskSnapshotGroupByOutputType = {
   studentId: string | null
   rosterId: string | null
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw: $Enums.RiskLevel | null
+  riskLevelFinal: $Enums.RiskLevel | null
+  academicFlag: boolean | null
+  attendanceFlag: boolean | null
+  behavioralFlag: boolean | null
+  academicFlagRaw: boolean | null
+  attendanceFlagRaw: boolean | null
+  behavioralFlagRaw: boolean | null
   riskCount: number
   snapshotDate: Date
   termId: string
@@ -229,6 +285,14 @@ export type RiskSnapshotWhereInput = {
   studentId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
   rosterId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
   riskLevel?: Prisma.EnumRiskLevelFilter<"RiskSnapshot"> | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.EnumRiskLevelNullableFilter<"RiskSnapshot"> | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.EnumRiskLevelNullableFilter<"RiskSnapshot"> | $Enums.RiskLevel | null
+  academicFlag?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  attendanceFlag?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  behavioralFlag?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  academicFlagRaw?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  attendanceFlagRaw?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  behavioralFlagRaw?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
   riskCount?: Prisma.IntFilter<"RiskSnapshot"> | number
   snapshotDate?: Prisma.DateTimeFilter<"RiskSnapshot"> | Date | string
   termId?: Prisma.StringFilter<"RiskSnapshot"> | string
@@ -242,6 +306,14 @@ export type RiskSnapshotOrderByWithRelationInput = {
   studentId?: Prisma.SortOrderInput | Prisma.SortOrder
   rosterId?: Prisma.SortOrderInput | Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
+  riskLevelRaw?: Prisma.SortOrderInput | Prisma.SortOrder
+  riskLevelFinal?: Prisma.SortOrderInput | Prisma.SortOrder
+  academicFlag?: Prisma.SortOrderInput | Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrderInput | Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrderInput | Prisma.SortOrder
+  academicFlagRaw?: Prisma.SortOrderInput | Prisma.SortOrder
+  attendanceFlagRaw?: Prisma.SortOrderInput | Prisma.SortOrder
+  behavioralFlagRaw?: Prisma.SortOrderInput | Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   snapshotDate?: Prisma.SortOrder
   termId?: Prisma.SortOrder
@@ -258,6 +330,14 @@ export type RiskSnapshotWhereUniqueInput = Prisma.AtLeast<{
   studentId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
   rosterId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
   riskLevel?: Prisma.EnumRiskLevelFilter<"RiskSnapshot"> | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.EnumRiskLevelNullableFilter<"RiskSnapshot"> | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.EnumRiskLevelNullableFilter<"RiskSnapshot"> | $Enums.RiskLevel | null
+  academicFlag?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  attendanceFlag?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  behavioralFlag?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  academicFlagRaw?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  attendanceFlagRaw?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  behavioralFlagRaw?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
   riskCount?: Prisma.IntFilter<"RiskSnapshot"> | number
   snapshotDate?: Prisma.DateTimeFilter<"RiskSnapshot"> | Date | string
   termId?: Prisma.StringFilter<"RiskSnapshot"> | string
@@ -271,6 +351,14 @@ export type RiskSnapshotOrderByWithAggregationInput = {
   studentId?: Prisma.SortOrderInput | Prisma.SortOrder
   rosterId?: Prisma.SortOrderInput | Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
+  riskLevelRaw?: Prisma.SortOrderInput | Prisma.SortOrder
+  riskLevelFinal?: Prisma.SortOrderInput | Prisma.SortOrder
+  academicFlag?: Prisma.SortOrderInput | Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrderInput | Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrderInput | Prisma.SortOrder
+  academicFlagRaw?: Prisma.SortOrderInput | Prisma.SortOrder
+  attendanceFlagRaw?: Prisma.SortOrderInput | Prisma.SortOrder
+  behavioralFlagRaw?: Prisma.SortOrderInput | Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   snapshotDate?: Prisma.SortOrder
   termId?: Prisma.SortOrder
@@ -289,6 +377,14 @@ export type RiskSnapshotScalarWhereWithAggregatesInput = {
   studentId?: Prisma.StringNullableWithAggregatesFilter<"RiskSnapshot"> | string | null
   rosterId?: Prisma.StringNullableWithAggregatesFilter<"RiskSnapshot"> | string | null
   riskLevel?: Prisma.EnumRiskLevelWithAggregatesFilter<"RiskSnapshot"> | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.EnumRiskLevelNullableWithAggregatesFilter<"RiskSnapshot"> | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.EnumRiskLevelNullableWithAggregatesFilter<"RiskSnapshot"> | $Enums.RiskLevel | null
+  academicFlag?: Prisma.BoolNullableWithAggregatesFilter<"RiskSnapshot"> | boolean | null
+  attendanceFlag?: Prisma.BoolNullableWithAggregatesFilter<"RiskSnapshot"> | boolean | null
+  behavioralFlag?: Prisma.BoolNullableWithAggregatesFilter<"RiskSnapshot"> | boolean | null
+  academicFlagRaw?: Prisma.BoolNullableWithAggregatesFilter<"RiskSnapshot"> | boolean | null
+  attendanceFlagRaw?: Prisma.BoolNullableWithAggregatesFilter<"RiskSnapshot"> | boolean | null
+  behavioralFlagRaw?: Prisma.BoolNullableWithAggregatesFilter<"RiskSnapshot"> | boolean | null
   riskCount?: Prisma.IntWithAggregatesFilter<"RiskSnapshot"> | number
   snapshotDate?: Prisma.DateTimeWithAggregatesFilter<"RiskSnapshot"> | Date | string
   termId?: Prisma.StringWithAggregatesFilter<"RiskSnapshot"> | string
@@ -297,6 +393,14 @@ export type RiskSnapshotScalarWhereWithAggregatesInput = {
 export type RiskSnapshotCreateInput = {
   id?: string
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
   student?: Prisma.StudentProfileCreateNestedOneWithoutRiskSnapshotsInput
@@ -309,6 +413,14 @@ export type RiskSnapshotUncheckedCreateInput = {
   studentId?: string | null
   rosterId?: string | null
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
   termId: string
@@ -317,6 +429,14 @@ export type RiskSnapshotUncheckedCreateInput = {
 export type RiskSnapshotUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   student?: Prisma.StudentProfileUpdateOneWithoutRiskSnapshotsNestedInput
@@ -329,6 +449,14 @@ export type RiskSnapshotUncheckedUpdateInput = {
   studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   termId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -339,6 +467,14 @@ export type RiskSnapshotCreateManyInput = {
   studentId?: string | null
   rosterId?: string | null
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
   termId: string
@@ -347,6 +483,14 @@ export type RiskSnapshotCreateManyInput = {
 export type RiskSnapshotUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -356,6 +500,14 @@ export type RiskSnapshotUncheckedUpdateManyInput = {
   studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   termId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -376,6 +528,14 @@ export type RiskSnapshotCountOrderByAggregateInput = {
   studentId?: Prisma.SortOrder
   rosterId?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
+  riskLevelRaw?: Prisma.SortOrder
+  riskLevelFinal?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
+  academicFlagRaw?: Prisma.SortOrder
+  attendanceFlagRaw?: Prisma.SortOrder
+  behavioralFlagRaw?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   snapshotDate?: Prisma.SortOrder
   termId?: Prisma.SortOrder
@@ -390,6 +550,14 @@ export type RiskSnapshotMaxOrderByAggregateInput = {
   studentId?: Prisma.SortOrder
   rosterId?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
+  riskLevelRaw?: Prisma.SortOrder
+  riskLevelFinal?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
+  academicFlagRaw?: Prisma.SortOrder
+  attendanceFlagRaw?: Prisma.SortOrder
+  behavioralFlagRaw?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   snapshotDate?: Prisma.SortOrder
   termId?: Prisma.SortOrder
@@ -400,6 +568,14 @@ export type RiskSnapshotMinOrderByAggregateInput = {
   studentId?: Prisma.SortOrder
   rosterId?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
+  riskLevelRaw?: Prisma.SortOrder
+  riskLevelFinal?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
+  academicFlagRaw?: Prisma.SortOrder
+  attendanceFlagRaw?: Prisma.SortOrder
+  behavioralFlagRaw?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   snapshotDate?: Prisma.SortOrder
   termId?: Prisma.SortOrder
@@ -535,9 +711,25 @@ export type RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput = {
   deleteMany?: Prisma.RiskSnapshotScalarWhereInput | Prisma.RiskSnapshotScalarWhereInput[]
 }
 
+export type NullableEnumRiskLevelFieldUpdateOperationsInput = {
+  set?: $Enums.RiskLevel | null
+}
+
+export type NullableBoolFieldUpdateOperationsInput = {
+  set?: boolean | null
+}
+
 export type RiskSnapshotCreateWithoutStudentInput = {
   id?: string
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
   roster?: Prisma.StudentRosterCreateNestedOneWithoutRiskSnapshotsInput
@@ -548,6 +740,14 @@ export type RiskSnapshotUncheckedCreateWithoutStudentInput = {
   id?: string
   rosterId?: string | null
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
   termId: string
@@ -587,6 +787,14 @@ export type RiskSnapshotScalarWhereInput = {
   studentId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
   rosterId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
   riskLevel?: Prisma.EnumRiskLevelFilter<"RiskSnapshot"> | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.EnumRiskLevelNullableFilter<"RiskSnapshot"> | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.EnumRiskLevelNullableFilter<"RiskSnapshot"> | $Enums.RiskLevel | null
+  academicFlag?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  attendanceFlag?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  behavioralFlag?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  academicFlagRaw?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  attendanceFlagRaw?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
+  behavioralFlagRaw?: Prisma.BoolNullableFilter<"RiskSnapshot"> | boolean | null
   riskCount?: Prisma.IntFilter<"RiskSnapshot"> | number
   snapshotDate?: Prisma.DateTimeFilter<"RiskSnapshot"> | Date | string
   termId?: Prisma.StringFilter<"RiskSnapshot"> | string
@@ -595,6 +803,14 @@ export type RiskSnapshotScalarWhereInput = {
 export type RiskSnapshotCreateWithoutTermInput = {
   id?: string
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
   student?: Prisma.StudentProfileCreateNestedOneWithoutRiskSnapshotsInput
@@ -606,6 +822,14 @@ export type RiskSnapshotUncheckedCreateWithoutTermInput = {
   studentId?: string | null
   rosterId?: string | null
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
 }
@@ -639,6 +863,14 @@ export type RiskSnapshotUpdateManyWithWhereWithoutTermInput = {
 export type RiskSnapshotCreateWithoutRosterInput = {
   id?: string
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
   student?: Prisma.StudentProfileCreateNestedOneWithoutRiskSnapshotsInput
@@ -649,6 +881,14 @@ export type RiskSnapshotUncheckedCreateWithoutRosterInput = {
   id?: string
   studentId?: string | null
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
   termId: string
@@ -684,6 +924,14 @@ export type RiskSnapshotCreateManyStudentInput = {
   id?: string
   rosterId?: string | null
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
   termId: string
@@ -692,6 +940,14 @@ export type RiskSnapshotCreateManyStudentInput = {
 export type RiskSnapshotUpdateWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   roster?: Prisma.StudentRosterUpdateOneWithoutRiskSnapshotsNestedInput
@@ -702,6 +958,14 @@ export type RiskSnapshotUncheckedUpdateWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   termId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -711,6 +975,14 @@ export type RiskSnapshotUncheckedUpdateManyWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   termId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -721,6 +993,14 @@ export type RiskSnapshotCreateManyTermInput = {
   studentId?: string | null
   rosterId?: string | null
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
 }
@@ -728,6 +1008,14 @@ export type RiskSnapshotCreateManyTermInput = {
 export type RiskSnapshotUpdateWithoutTermInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   student?: Prisma.StudentProfileUpdateOneWithoutRiskSnapshotsNestedInput
@@ -739,6 +1027,14 @@ export type RiskSnapshotUncheckedUpdateWithoutTermInput = {
   studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -748,6 +1044,14 @@ export type RiskSnapshotUncheckedUpdateManyWithoutTermInput = {
   studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -756,6 +1060,14 @@ export type RiskSnapshotCreateManyRosterInput = {
   id?: string
   studentId?: string | null
   riskLevel: $Enums.RiskLevel
+  riskLevelRaw?: $Enums.RiskLevel | null
+  riskLevelFinal?: $Enums.RiskLevel | null
+  academicFlag?: boolean | null
+  attendanceFlag?: boolean | null
+  behavioralFlag?: boolean | null
+  academicFlagRaw?: boolean | null
+  attendanceFlagRaw?: boolean | null
+  behavioralFlagRaw?: boolean | null
   riskCount: number
   snapshotDate?: Date | string
   termId: string
@@ -764,6 +1076,14 @@ export type RiskSnapshotCreateManyRosterInput = {
 export type RiskSnapshotUpdateWithoutRosterInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   student?: Prisma.StudentProfileUpdateOneWithoutRiskSnapshotsNestedInput
@@ -774,6 +1094,14 @@ export type RiskSnapshotUncheckedUpdateWithoutRosterInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   termId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -783,6 +1111,14 @@ export type RiskSnapshotUncheckedUpdateManyWithoutRosterInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskLevelRaw?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  riskLevelFinal?: Prisma.NullableEnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel | null
+  academicFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlag?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  academicFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  attendanceFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  behavioralFlagRaw?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   termId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -795,6 +1131,14 @@ export type RiskSnapshotSelect<ExtArgs extends runtime.Types.Extensions.Internal
   studentId?: boolean
   rosterId?: boolean
   riskLevel?: boolean
+  riskLevelRaw?: boolean
+  riskLevelFinal?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  academicFlagRaw?: boolean
+  attendanceFlagRaw?: boolean
+  behavioralFlagRaw?: boolean
   riskCount?: boolean
   snapshotDate?: boolean
   termId?: boolean
@@ -808,6 +1152,14 @@ export type RiskSnapshotSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   studentId?: boolean
   rosterId?: boolean
   riskLevel?: boolean
+  riskLevelRaw?: boolean
+  riskLevelFinal?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  academicFlagRaw?: boolean
+  attendanceFlagRaw?: boolean
+  behavioralFlagRaw?: boolean
   riskCount?: boolean
   snapshotDate?: boolean
   termId?: boolean
@@ -821,6 +1173,14 @@ export type RiskSnapshotSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   studentId?: boolean
   rosterId?: boolean
   riskLevel?: boolean
+  riskLevelRaw?: boolean
+  riskLevelFinal?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  academicFlagRaw?: boolean
+  attendanceFlagRaw?: boolean
+  behavioralFlagRaw?: boolean
   riskCount?: boolean
   snapshotDate?: boolean
   termId?: boolean
@@ -834,12 +1194,20 @@ export type RiskSnapshotSelectScalar = {
   studentId?: boolean
   rosterId?: boolean
   riskLevel?: boolean
+  riskLevelRaw?: boolean
+  riskLevelFinal?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  academicFlagRaw?: boolean
+  attendanceFlagRaw?: boolean
+  behavioralFlagRaw?: boolean
   riskCount?: boolean
   snapshotDate?: boolean
   termId?: boolean
 }
 
-export type RiskSnapshotOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "rosterId" | "riskLevel" | "riskCount" | "snapshotDate" | "termId", ExtArgs["result"]["riskSnapshot"]>
+export type RiskSnapshotOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "rosterId" | "riskLevel" | "riskLevelRaw" | "riskLevelFinal" | "academicFlag" | "attendanceFlag" | "behavioralFlag" | "academicFlagRaw" | "attendanceFlagRaw" | "behavioralFlagRaw" | "riskCount" | "snapshotDate" | "termId", ExtArgs["result"]["riskSnapshot"]>
 export type RiskSnapshotInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   student?: boolean | Prisma.RiskSnapshot$studentArgs<ExtArgs>
   roster?: boolean | Prisma.RiskSnapshot$rosterArgs<ExtArgs>
@@ -868,6 +1236,14 @@ export type $RiskSnapshotPayload<ExtArgs extends runtime.Types.Extensions.Intern
     studentId: string | null
     rosterId: string | null
     riskLevel: $Enums.RiskLevel
+    riskLevelRaw: $Enums.RiskLevel | null
+    riskLevelFinal: $Enums.RiskLevel | null
+    academicFlag: boolean | null
+    attendanceFlag: boolean | null
+    behavioralFlag: boolean | null
+    academicFlagRaw: boolean | null
+    attendanceFlagRaw: boolean | null
+    behavioralFlagRaw: boolean | null
     riskCount: number
     snapshotDate: Date
     termId: string
@@ -1301,6 +1677,14 @@ export interface RiskSnapshotFieldRefs {
   readonly studentId: Prisma.FieldRef<"RiskSnapshot", 'String'>
   readonly rosterId: Prisma.FieldRef<"RiskSnapshot", 'String'>
   readonly riskLevel: Prisma.FieldRef<"RiskSnapshot", 'RiskLevel'>
+  readonly riskLevelRaw: Prisma.FieldRef<"RiskSnapshot", 'RiskLevel'>
+  readonly riskLevelFinal: Prisma.FieldRef<"RiskSnapshot", 'RiskLevel'>
+  readonly academicFlag: Prisma.FieldRef<"RiskSnapshot", 'Boolean'>
+  readonly attendanceFlag: Prisma.FieldRef<"RiskSnapshot", 'Boolean'>
+  readonly behavioralFlag: Prisma.FieldRef<"RiskSnapshot", 'Boolean'>
+  readonly academicFlagRaw: Prisma.FieldRef<"RiskSnapshot", 'Boolean'>
+  readonly attendanceFlagRaw: Prisma.FieldRef<"RiskSnapshot", 'Boolean'>
+  readonly behavioralFlagRaw: Prisma.FieldRef<"RiskSnapshot", 'Boolean'>
   readonly riskCount: Prisma.FieldRef<"RiskSnapshot", 'Int'>
   readonly snapshotDate: Prisma.FieldRef<"RiskSnapshot", 'DateTime'>
   readonly termId: Prisma.FieldRef<"RiskSnapshot", 'String'>

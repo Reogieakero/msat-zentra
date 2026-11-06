@@ -1,10 +1,6 @@
 import { prisma } from "../lib/prisma.js";
+import { isAdmExempt } from "./adm/attendancePolicy.js";
 
-// PLAN.md §6.1 — DepEd grade transmutation (60-100 scale).
-// Maps a computed average (0-100) to the DepEd transmuted grade.
-// Reference: DepEd Order No. 8, s. 2015 transmutation table. Each row is the
-// INCLUSIVE lower bound of the initial-grade range for that transmuted grade
-// (e.g. 60.00-61.59 -> 75, the lowest passing mark).
 const TRANSMUTATION: { min: number; grade: number }[] = [
   { min: 100, grade: 100 },
   { min: 98.4, grade: 99 },
@@ -68,12 +64,6 @@ export type DescriptorBand =
   | "Developing"
   | "Emerging";
 
-// DepEd Order No. 015, s. 2026 — Academic Excellence Award (Key Stages 2-4):
-// General Average of 90 or higher with no Final Grade below 80 in any
-// learning area, subject to the order's other conditions (all grades
-// finalized, student in good standing — enforced by callers). Replaces the
-// three-band honor tiers. Shared by the academics + overview endpoints so the
-// award concept is identical across principal pages.
 export function meetsAcademicExcellenceAward(
   overallAverage: number,
   lowestSubject: number
@@ -81,7 +71,6 @@ export function meetsAcademicExcellenceAward(
   return overallAverage >= 90 && lowestSubject >= 80;
 }
 
-// DO 15, s. 2026 qualitative descriptors for numeric grades (Key Stages 2-4).
 export function descriptorBand(average: number): DescriptorBand {
   if (average >= 90) return "Advancing";
   if (average >= 80) return "Benchmarking";
@@ -90,9 +79,6 @@ export function descriptorBand(average: number): DescriptorBand {
   return "Emerging";
 }
 
-// DepEd Order No. 8, s. 2015 assessment weights (WW / PT / E), which must
-// total 100%. Senior High (G11-12) uses one set for every subject;
-// Junior High (G7-10) varies by learning area.
 export interface DepEdWeights {
   WRITTEN_WORK: number;
   PERFORMANCE_TASK: number;
@@ -120,23 +106,6 @@ export const DEPED_JHS_WEIGHTS: { label: string; weights: DepEdWeights }[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Assessment-driven grade computation — the single source of truth for the
-// pipeline: Assessment → Category → Weighted → Final (+ Risk inputs).
-//
-// Rules:
-// - Only categories that actually contain assessments contribute. A
-//   category with no assessments is N/A — never an automatic zero.
-// - Configured weights of available categories are normalized to 100.
-// - Within a category, the percentage is total-earned / total-possible over
-//   RECORDED assessments only (DepEd Order No. 8 method). An assessment that
-//   exists but has no encoded score for the student is excluded — never an
-//   automatic zero (no such grading policy exists in this codebase).
-// - A student is graded only on categories where they have encoded scores;
-//   those shares are rescaled to 100. No evidence at all → null (no fake
-//   0% / Failed); callers delete any stale final row.
-// ---------------------------------------------------------------------------
-
 export const CATEGORY_ORDER = ["WRITTEN_WORK", "PERFORMANCE_TASK", "EXAM"] as const;
 
 export type CategoryKey = (typeof CATEGORY_ORDER)[number];
@@ -144,13 +113,13 @@ export type CategoryKey = (typeof CATEGORY_ORDER)[number];
 export interface CategoryEvidence {
   componentType: string;
   weightPercentage: number;
-  /** Σ rawScore over assessments WITH this student's score. */
+
   earned: number;
-  /** Σ maxScore over assessments WITH this student's score. */
+
   possible: number;
-  /** Assessments existing in the category (subject + term). */
+
   assessmentCount: number;
-  /** Of those, with this student's score encoded. */
+
   encodedCount: number;
 }
 
@@ -158,14 +127,14 @@ export interface CategoryResult {
   componentType: string;
   assessmentCount: number;
   encodedCount: number;
-  /** Encoded / existing (null when nothing exists). Separate from performance. */
+
   coverage: number | null;
-  /** Earned / possible × 100 (null when the student has nothing encoded). */
+
   percentage: number | null;
   configuredWeight: number;
-  /** Share within available (existing) categories. */
+
   normalizedWeight: number;
-  /** Share within categories where the student has evidence. */
+
   effectiveWeight: number;
 }
 
@@ -183,8 +152,7 @@ export interface SubjectGradeComputation {
 
 export function computeSubjectGrade(evidence: CategoryEvidence[]): SubjectGradeComputation {
   const byType = new Map(evidence.map((e) => [e.componentType, e]));
-  // Every canonical category is reported (transparency), even ones with no
-  // component row — they read as N/A with zero weights.
+
   const rows = CATEGORY_ORDER.map(
     (t): Required<CategoryEvidence> & { componentType: string } =>
       byType.get(t) ?? {
@@ -224,17 +192,15 @@ export function computeSubjectGrade(evidence: CategoryEvidence[]): SubjectGradeC
     transmutedGrade: null,
     remarks: null,
   };
-  // Case 7: no assessments exist anywhere — no grade, never 0% / Failed.
+
   if (active.length === 0) return base;
 
-  // Normalize configured weights across available categories. Unconfigured
-  // (all-zero) weights fall back to an equal split — never a fake failure.
   const availWeight = active.reduce((s, r) => s + r.weightPercentage, 0);
   for (const r of active) {
     byResult.get(r.componentType)!.normalizedWeight =
       availWeight > 0 ? (r.weightPercentage * 100) / availWeight : 100 / active.length;
   }
-  // Grade the student only on categories where they have encoded scores.
+
   const evidenced = active.filter((r) => {
     const c = byResult.get(r.componentType)!;
     return c.percentage !== null;
@@ -245,7 +211,7 @@ export function computeSubjectGrade(evidence: CategoryEvidence[]): SubjectGradeC
     0,
   );
   if (scale <= 0) {
-    // Degenerate (evidenced categories carry no weight): equal split.
+
     for (const r of evidenced) byResult.get(r.componentType)!.normalizedWeight = 100 / evidenced.length;
     scale = 100;
   }
@@ -268,16 +234,6 @@ export function computeSubjectGrade(evidence: CategoryEvidence[]): SubjectGradeC
   };
 }
 
-// Recompute + persist one student's final grade for a subject + term from
-// their recorded percentage scores, then return it. Works for registered
-// profiles ({ studentId }) and roster enlistments ({ rosterId }) alike.
-// Pure grade math — risk recompute / notifications stay with the callers.
-//
-// Assessment-driven: only categories that actually contain assessments
-// contribute (weights normalized across them); a category with no
-// assessments is N/A, never zero. A student with no encoded scores in any
-// existing category gets no final row at all (existing row deleted) —
-// never a fake 0% / Failed.
 export async function recomputeSubjectFinal(
   student: { studentId: string } | { rosterId: string },
   subjectId: string,
@@ -285,9 +241,42 @@ export async function recomputeSubjectFinal(
 ) {
   const gradeFilter =
     "studentId" in student ? { studentId: student.studentId } : { rosterId: student.rosterId };
+  // Section-subject scope: a student's final only draws from assessments
+  // added in their own section, plus legacy pre-scope rows (NULL) which
+  // remain shared across sections.
+  const sectionId = "studentId" in student
+    ? (await prisma.studentProfile.findUnique({ where: { userId: student.studentId }, select: { sectionId: true } }))?.sectionId ?? null
+    : (await prisma.studentRoster.findUnique({ where: { id: student.rosterId }, select: { sectionId: true } }))?.sectionId ?? null;
+  const sectionFilter = sectionId
+    ? { OR: [{ sectionId }, { sectionId: null }] }
+    : {};
+  // Audience split: a signed ADM learner is graded from `adm` assessments and
+  // everyone else from `regular` ones. Weights and transmutation are identical
+  // for both pools. Legacy classes have no `adm` rows yet, so an ADM learner
+  // falls back to the regular pool rather than losing an existing grade.
+  const admLearner =
+    "studentId" in student
+      ? await isAdmExempt(student.studentId, termId)
+      : false;
+  let audience: "regular" | "adm" = "regular";
+  if (admLearner) {
+    const admRows = await prisma.assessment.count({
+      where: {
+        audience: "adm",
+        gradeComponent: { subjectId, termId },
+        ...sectionFilter,
+      },
+    });
+    if (admRows > 0) audience = "adm";
+  }
   const components = await prisma.gradeComponent.findMany({
     where: { subjectId, termId },
-    include: { assessments: { include: { studentGrades: { where: gradeFilter } } } },
+    include: {
+      assessments: {
+        where: { audience, ...sectionFilter },
+        include: { studentGrades: { where: gradeFilter } },
+      },
+    },
   });
   const evidence: CategoryEvidence[] = components.map((c) => {
     const encoded = c.assessments.filter((a) => a.studentGrades.length > 0);
@@ -305,8 +294,7 @@ export async function recomputeSubjectFinal(
   });
   const result = computeSubjectGrade(evidence);
   if (result.rawGrade === null || result.computedAverage === null) {
-    // Case 7: no assessments (or nothing encoded) — remove any stale final
-    // row instead of manufacturing a fake 0% / Failed.
+
     if ("studentId" in student) {
       await prisma.finalGrade.deleteMany({
         where: { studentId: student.studentId, subjectId, termId },
@@ -335,8 +323,6 @@ export async function recomputeSubjectFinal(
 
 export type StudentKey = { studentId: string } | { rosterId: string };
 
-// Distinct student keys holding a final grade for a subject + term — the
-// recompute fan-out set.
 export async function finalKeysForSubjectTerm(
   subjectId: string,
   termId: string,
@@ -350,8 +336,6 @@ export async function finalKeysForSubjectTerm(
   );
 }
 
-// Weighted sum of component averages → computed grade, then transmute.
-// Weights are shares of the final grade and must total 100%.
 export function computeFinalGrade(
   componentAverages: { weightPercentage: number; average: number }[]
 ): { computedAverage: number; transmutedGrade: number; remarks: "Passed" | "Failed" } {

@@ -20,8 +20,18 @@ export type StudentRosterModel = runtime.Types.Result.DefaultSelection<Prisma.$S
 
 export type AggregateStudentRoster = {
   _count: StudentRosterCountAggregateOutputType | null
+  _avg: StudentRosterAvgAggregateOutputType | null
+  _sum: StudentRosterSumAggregateOutputType | null
   _min: StudentRosterMinAggregateOutputType | null
   _max: StudentRosterMaxAggregateOutputType | null
+}
+
+export type StudentRosterAvgAggregateOutputType = {
+  riskCount: number | null
+}
+
+export type StudentRosterSumAggregateOutputType = {
+  riskCount: number | null
 }
 
 export type StudentRosterMinAggregateOutputType = {
@@ -31,6 +41,12 @@ export type StudentRosterMinAggregateOutputType = {
   gradeLevel: $Enums.GradeLevel | null
   sectionId: string | null
   schoolYearId: string | null
+  mascot: string | null
+  riskCount: number | null
+  riskLevel: $Enums.RiskLevel | null
+  academicFlag: boolean | null
+  attendanceFlag: boolean | null
+  behavioralFlag: boolean | null
 }
 
 export type StudentRosterMaxAggregateOutputType = {
@@ -40,6 +56,12 @@ export type StudentRosterMaxAggregateOutputType = {
   gradeLevel: $Enums.GradeLevel | null
   sectionId: string | null
   schoolYearId: string | null
+  mascot: string | null
+  riskCount: number | null
+  riskLevel: $Enums.RiskLevel | null
+  academicFlag: boolean | null
+  attendanceFlag: boolean | null
+  behavioralFlag: boolean | null
 }
 
 export type StudentRosterCountAggregateOutputType = {
@@ -49,9 +71,23 @@ export type StudentRosterCountAggregateOutputType = {
   gradeLevel: number
   sectionId: number
   schoolYearId: number
+  mascot: number
+  riskCount: number
+  riskLevel: number
+  academicFlag: number
+  attendanceFlag: number
+  behavioralFlag: number
   _all: number
 }
 
+
+export type StudentRosterAvgAggregateInputType = {
+  riskCount?: true
+}
+
+export type StudentRosterSumAggregateInputType = {
+  riskCount?: true
+}
 
 export type StudentRosterMinAggregateInputType = {
   id?: true
@@ -60,6 +96,12 @@ export type StudentRosterMinAggregateInputType = {
   gradeLevel?: true
   sectionId?: true
   schoolYearId?: true
+  mascot?: true
+  riskCount?: true
+  riskLevel?: true
+  academicFlag?: true
+  attendanceFlag?: true
+  behavioralFlag?: true
 }
 
 export type StudentRosterMaxAggregateInputType = {
@@ -69,6 +111,12 @@ export type StudentRosterMaxAggregateInputType = {
   gradeLevel?: true
   sectionId?: true
   schoolYearId?: true
+  mascot?: true
+  riskCount?: true
+  riskLevel?: true
+  academicFlag?: true
+  attendanceFlag?: true
+  behavioralFlag?: true
 }
 
 export type StudentRosterCountAggregateInputType = {
@@ -78,6 +126,12 @@ export type StudentRosterCountAggregateInputType = {
   gradeLevel?: true
   sectionId?: true
   schoolYearId?: true
+  mascot?: true
+  riskCount?: true
+  riskLevel?: true
+  academicFlag?: true
+  attendanceFlag?: true
+  behavioralFlag?: true
   _all?: true
 }
 
@@ -119,6 +173,18 @@ export type StudentRosterAggregateArgs<ExtArgs extends runtime.Types.Extensions.
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: StudentRosterAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: StudentRosterSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: StudentRosterMinAggregateInputType
@@ -149,6 +215,8 @@ export type StudentRosterGroupByArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   _count?: StudentRosterCountAggregateInputType | true
+  _avg?: StudentRosterAvgAggregateInputType
+  _sum?: StudentRosterSumAggregateInputType
   _min?: StudentRosterMinAggregateInputType
   _max?: StudentRosterMaxAggregateInputType
 }
@@ -160,7 +228,15 @@ export type StudentRosterGroupByOutputType = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot: string | null
+  riskCount: number
+  riskLevel: $Enums.RiskLevel
+  academicFlag: boolean
+  attendanceFlag: boolean
+  behavioralFlag: boolean
   _count: StudentRosterCountAggregateOutputType | null
+  _avg: StudentRosterAvgAggregateOutputType | null
+  _sum: StudentRosterSumAggregateOutputType | null
   _min: StudentRosterMinAggregateOutputType | null
   _max: StudentRosterMaxAggregateOutputType | null
 }
@@ -190,6 +266,12 @@ export type StudentRosterWhereInput = {
   gradeLevel?: Prisma.EnumGradeLevelFilter<"StudentRoster"> | $Enums.GradeLevel
   sectionId?: Prisma.StringFilter<"StudentRoster"> | string
   schoolYearId?: Prisma.StringFilter<"StudentRoster"> | string
+  mascot?: Prisma.StringNullableFilter<"StudentRoster"> | string | null
+  riskCount?: Prisma.IntFilter<"StudentRoster"> | number
+  riskLevel?: Prisma.EnumRiskLevelFilter<"StudentRoster"> | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
+  attendanceFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
+  behavioralFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
   section?: Prisma.XOR<Prisma.SectionScalarRelationFilter, Prisma.SectionWhereInput>
   schoolYear?: Prisma.XOR<Prisma.SchoolYearScalarRelationFilter, Prisma.SchoolYearWhereInput>
   attendanceRecords?: Prisma.AttendanceRecordListRelationFilter
@@ -199,6 +281,7 @@ export type StudentRosterWhereInput = {
   finalGrades?: Prisma.FinalGradeListRelationFilter
   riskSnapshots?: Prisma.RiskSnapshotListRelationFilter
   interventions?: Prisma.InterventionListRelationFilter
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionListRelationFilter
 }
 
 export type StudentRosterOrderByWithRelationInput = {
@@ -208,6 +291,12 @@ export type StudentRosterOrderByWithRelationInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   schoolYearId?: Prisma.SortOrder
+  mascot?: Prisma.SortOrderInput | Prisma.SortOrder
+  riskCount?: Prisma.SortOrder
+  riskLevel?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
   section?: Prisma.SectionOrderByWithRelationInput
   schoolYear?: Prisma.SchoolYearOrderByWithRelationInput
   attendanceRecords?: Prisma.AttendanceRecordOrderByRelationAggregateInput
@@ -217,6 +306,7 @@ export type StudentRosterOrderByWithRelationInput = {
   finalGrades?: Prisma.FinalGradeOrderByRelationAggregateInput
   riskSnapshots?: Prisma.RiskSnapshotOrderByRelationAggregateInput
   interventions?: Prisma.InterventionOrderByRelationAggregateInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionOrderByRelationAggregateInput
 }
 
 export type StudentRosterWhereUniqueInput = Prisma.AtLeast<{
@@ -230,6 +320,12 @@ export type StudentRosterWhereUniqueInput = Prisma.AtLeast<{
   gradeLevel?: Prisma.EnumGradeLevelFilter<"StudentRoster"> | $Enums.GradeLevel
   sectionId?: Prisma.StringFilter<"StudentRoster"> | string
   schoolYearId?: Prisma.StringFilter<"StudentRoster"> | string
+  mascot?: Prisma.StringNullableFilter<"StudentRoster"> | string | null
+  riskCount?: Prisma.IntFilter<"StudentRoster"> | number
+  riskLevel?: Prisma.EnumRiskLevelFilter<"StudentRoster"> | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
+  attendanceFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
+  behavioralFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
   section?: Prisma.XOR<Prisma.SectionScalarRelationFilter, Prisma.SectionWhereInput>
   schoolYear?: Prisma.XOR<Prisma.SchoolYearScalarRelationFilter, Prisma.SchoolYearWhereInput>
   attendanceRecords?: Prisma.AttendanceRecordListRelationFilter
@@ -239,6 +335,7 @@ export type StudentRosterWhereUniqueInput = Prisma.AtLeast<{
   finalGrades?: Prisma.FinalGradeListRelationFilter
   riskSnapshots?: Prisma.RiskSnapshotListRelationFilter
   interventions?: Prisma.InterventionListRelationFilter
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionListRelationFilter
 }, "id" | "lrn_schoolYearId">
 
 export type StudentRosterOrderByWithAggregationInput = {
@@ -248,9 +345,17 @@ export type StudentRosterOrderByWithAggregationInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   schoolYearId?: Prisma.SortOrder
+  mascot?: Prisma.SortOrderInput | Prisma.SortOrder
+  riskCount?: Prisma.SortOrder
+  riskLevel?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
   _count?: Prisma.StudentRosterCountOrderByAggregateInput
+  _avg?: Prisma.StudentRosterAvgOrderByAggregateInput
   _max?: Prisma.StudentRosterMaxOrderByAggregateInput
   _min?: Prisma.StudentRosterMinOrderByAggregateInput
+  _sum?: Prisma.StudentRosterSumOrderByAggregateInput
 }
 
 export type StudentRosterScalarWhereWithAggregatesInput = {
@@ -263,6 +368,12 @@ export type StudentRosterScalarWhereWithAggregatesInput = {
   gradeLevel?: Prisma.EnumGradeLevelWithAggregatesFilter<"StudentRoster"> | $Enums.GradeLevel
   sectionId?: Prisma.StringWithAggregatesFilter<"StudentRoster"> | string
   schoolYearId?: Prisma.StringWithAggregatesFilter<"StudentRoster"> | string
+  mascot?: Prisma.StringNullableWithAggregatesFilter<"StudentRoster"> | string | null
+  riskCount?: Prisma.IntWithAggregatesFilter<"StudentRoster"> | number
+  riskLevel?: Prisma.EnumRiskLevelWithAggregatesFilter<"StudentRoster"> | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolWithAggregatesFilter<"StudentRoster"> | boolean
+  attendanceFlag?: Prisma.BoolWithAggregatesFilter<"StudentRoster"> | boolean
+  behavioralFlag?: Prisma.BoolWithAggregatesFilter<"StudentRoster"> | boolean
 }
 
 export type StudentRosterCreateInput = {
@@ -270,6 +381,12 @@ export type StudentRosterCreateInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
@@ -279,6 +396,7 @@ export type StudentRosterCreateInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateInput = {
@@ -288,6 +406,12 @@ export type StudentRosterUncheckedCreateInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -295,6 +419,7 @@ export type StudentRosterUncheckedCreateInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUpdateInput = {
@@ -302,6 +427,12 @@ export type StudentRosterUpdateInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
@@ -311,6 +442,7 @@ export type StudentRosterUpdateInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateInput = {
@@ -320,6 +452,12 @@ export type StudentRosterUncheckedUpdateInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -327,6 +465,7 @@ export type StudentRosterUncheckedUpdateInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateManyInput = {
@@ -336,6 +475,12 @@ export type StudentRosterCreateManyInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
 }
 
 export type StudentRosterUpdateManyMutationInput = {
@@ -343,6 +488,12 @@ export type StudentRosterUpdateManyMutationInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type StudentRosterUncheckedUpdateManyInput = {
@@ -352,6 +503,12 @@ export type StudentRosterUncheckedUpdateManyInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type StudentRosterListRelationFilter = {
@@ -376,6 +533,16 @@ export type StudentRosterCountOrderByAggregateInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   schoolYearId?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
+  riskCount?: Prisma.SortOrder
+  riskLevel?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
+}
+
+export type StudentRosterAvgOrderByAggregateInput = {
+  riskCount?: Prisma.SortOrder
 }
 
 export type StudentRosterMaxOrderByAggregateInput = {
@@ -385,6 +552,12 @@ export type StudentRosterMaxOrderByAggregateInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   schoolYearId?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
+  riskCount?: Prisma.SortOrder
+  riskLevel?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
 }
 
 export type StudentRosterMinOrderByAggregateInput = {
@@ -394,6 +567,16 @@ export type StudentRosterMinOrderByAggregateInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   schoolYearId?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
+  riskCount?: Prisma.SortOrder
+  riskLevel?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
+}
+
+export type StudentRosterSumOrderByAggregateInput = {
+  riskCount?: Prisma.SortOrder
 }
 
 export type StudentRosterNullableScalarRelationFilter = {
@@ -581,6 +764,22 @@ export type StudentRosterUpdateOneWithoutInterventionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudentRosterUpdateToOneWithWhereWithoutInterventionsInput, Prisma.StudentRosterUpdateWithoutInterventionsInput>, Prisma.StudentRosterUncheckedUpdateWithoutInterventionsInput>
 }
 
+export type StudentRosterCreateNestedOneWithoutAdvisoryModuleSubmissionsInput = {
+  create?: Prisma.XOR<Prisma.StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  connectOrCreate?: Prisma.StudentRosterCreateOrConnectWithoutAdvisoryModuleSubmissionsInput
+  connect?: Prisma.StudentRosterWhereUniqueInput
+}
+
+export type StudentRosterUpdateOneWithoutAdvisoryModuleSubmissionsNestedInput = {
+  create?: Prisma.XOR<Prisma.StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  connectOrCreate?: Prisma.StudentRosterCreateOrConnectWithoutAdvisoryModuleSubmissionsInput
+  upsert?: Prisma.StudentRosterUpsertWithoutAdvisoryModuleSubmissionsInput
+  disconnect?: Prisma.StudentRosterWhereInput | boolean
+  delete?: Prisma.StudentRosterWhereInput | boolean
+  connect?: Prisma.StudentRosterWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StudentRosterUpdateToOneWithWhereWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUpdateWithoutAdvisoryModuleSubmissionsInput>, Prisma.StudentRosterUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+}
+
 export type StudentRosterCreateNestedOneWithoutRiskSnapshotsInput = {
   create?: Prisma.XOR<Prisma.StudentRosterCreateWithoutRiskSnapshotsInput, Prisma.StudentRosterUncheckedCreateWithoutRiskSnapshotsInput>
   connectOrCreate?: Prisma.StudentRosterCreateOrConnectWithoutRiskSnapshotsInput
@@ -602,6 +801,12 @@ export type StudentRosterCreateWithoutSchoolYearInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -610,6 +815,7 @@ export type StudentRosterCreateWithoutSchoolYearInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutSchoolYearInput = {
@@ -618,6 +824,12 @@ export type StudentRosterUncheckedCreateWithoutSchoolYearInput = {
   fullName: string
   gradeLevel: $Enums.GradeLevel
   sectionId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -625,6 +837,7 @@ export type StudentRosterUncheckedCreateWithoutSchoolYearInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutSchoolYearInput = {
@@ -663,6 +876,12 @@ export type StudentRosterScalarWhereInput = {
   gradeLevel?: Prisma.EnumGradeLevelFilter<"StudentRoster"> | $Enums.GradeLevel
   sectionId?: Prisma.StringFilter<"StudentRoster"> | string
   schoolYearId?: Prisma.StringFilter<"StudentRoster"> | string
+  mascot?: Prisma.StringNullableFilter<"StudentRoster"> | string | null
+  riskCount?: Prisma.IntFilter<"StudentRoster"> | number
+  riskLevel?: Prisma.EnumRiskLevelFilter<"StudentRoster"> | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
+  attendanceFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
+  behavioralFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
 }
 
 export type StudentRosterCreateWithoutSectionInput = {
@@ -670,6 +889,12 @@ export type StudentRosterCreateWithoutSectionInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -678,6 +903,7 @@ export type StudentRosterCreateWithoutSectionInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutSectionInput = {
@@ -686,6 +912,12 @@ export type StudentRosterUncheckedCreateWithoutSectionInput = {
   fullName: string
   gradeLevel: $Enums.GradeLevel
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -693,6 +925,7 @@ export type StudentRosterUncheckedCreateWithoutSectionInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutSectionInput = {
@@ -726,6 +959,12 @@ export type StudentRosterCreateWithoutStudentGradesInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
@@ -734,6 +973,7 @@ export type StudentRosterCreateWithoutStudentGradesInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutStudentGradesInput = {
@@ -743,12 +983,19 @@ export type StudentRosterUncheckedCreateWithoutStudentGradesInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutStudentGradesInput = {
@@ -772,6 +1019,12 @@ export type StudentRosterUpdateWithoutStudentGradesInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
@@ -780,6 +1033,7 @@ export type StudentRosterUpdateWithoutStudentGradesInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutStudentGradesInput = {
@@ -789,12 +1043,19 @@ export type StudentRosterUncheckedUpdateWithoutStudentGradesInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutFinalGradesInput = {
@@ -802,6 +1063,12 @@ export type StudentRosterCreateWithoutFinalGradesInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
@@ -810,6 +1077,7 @@ export type StudentRosterCreateWithoutFinalGradesInput = {
   studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutFinalGradesInput = {
@@ -819,12 +1087,19 @@ export type StudentRosterUncheckedCreateWithoutFinalGradesInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutFinalGradesInput = {
@@ -848,6 +1123,12 @@ export type StudentRosterUpdateWithoutFinalGradesInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
@@ -856,6 +1137,7 @@ export type StudentRosterUpdateWithoutFinalGradesInput = {
   studentGrades?: Prisma.StudentGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutFinalGradesInput = {
@@ -865,12 +1147,19 @@ export type StudentRosterUncheckedUpdateWithoutFinalGradesInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutAttendanceRecordsInput = {
@@ -878,6 +1167,12 @@ export type StudentRosterCreateWithoutAttendanceRecordsInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -886,6 +1181,7 @@ export type StudentRosterCreateWithoutAttendanceRecordsInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutAttendanceRecordsInput = {
@@ -895,12 +1191,19 @@ export type StudentRosterUncheckedCreateWithoutAttendanceRecordsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutAttendanceRecordsInput = {
@@ -924,6 +1227,12 @@ export type StudentRosterUpdateWithoutAttendanceRecordsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -932,6 +1241,7 @@ export type StudentRosterUpdateWithoutAttendanceRecordsInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutAttendanceRecordsInput = {
@@ -941,12 +1251,19 @@ export type StudentRosterUncheckedUpdateWithoutAttendanceRecordsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutAnecdotalRecordsInput = {
@@ -954,6 +1271,12 @@ export type StudentRosterCreateWithoutAnecdotalRecordsInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
@@ -962,6 +1285,7 @@ export type StudentRosterCreateWithoutAnecdotalRecordsInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutAnecdotalRecordsInput = {
@@ -971,12 +1295,19 @@ export type StudentRosterUncheckedCreateWithoutAnecdotalRecordsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutAnecdotalRecordsInput = {
@@ -1000,6 +1331,12 @@ export type StudentRosterUpdateWithoutAnecdotalRecordsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
@@ -1008,6 +1345,7 @@ export type StudentRosterUpdateWithoutAnecdotalRecordsInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutAnecdotalRecordsInput = {
@@ -1017,12 +1355,19 @@ export type StudentRosterUncheckedUpdateWithoutAnecdotalRecordsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutReferralsInput = {
@@ -1030,6 +1375,12 @@ export type StudentRosterCreateWithoutReferralsInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
@@ -1038,6 +1389,7 @@ export type StudentRosterCreateWithoutReferralsInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutReferralsInput = {
@@ -1047,12 +1399,19 @@ export type StudentRosterUncheckedCreateWithoutReferralsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutReferralsInput = {
@@ -1076,6 +1435,12 @@ export type StudentRosterUpdateWithoutReferralsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
@@ -1084,6 +1449,7 @@ export type StudentRosterUpdateWithoutReferralsInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutReferralsInput = {
@@ -1093,12 +1459,19 @@ export type StudentRosterUncheckedUpdateWithoutReferralsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutInterventionsInput = {
@@ -1106,6 +1479,12 @@ export type StudentRosterCreateWithoutInterventionsInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
@@ -1114,6 +1493,7 @@ export type StudentRosterCreateWithoutInterventionsInput = {
   studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutInterventionsInput = {
@@ -1123,12 +1503,19 @@ export type StudentRosterUncheckedCreateWithoutInterventionsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutInterventionsInput = {
@@ -1152,6 +1539,12 @@ export type StudentRosterUpdateWithoutInterventionsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
@@ -1160,6 +1553,7 @@ export type StudentRosterUpdateWithoutInterventionsInput = {
   studentGrades?: Prisma.StudentGradeUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutInterventionsInput = {
@@ -1169,12 +1563,123 @@ export type StudentRosterUncheckedUpdateWithoutInterventionsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
+}
+
+export type StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: string
+  lrn: string
+  fullName: string
+  gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
+  referrals?: Prisma.ReferralCreateNestedManyWithoutRosterInput
+  studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutRosterInput
+  finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
+  riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+}
+
+export type StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: string
+  lrn: string
+  fullName: string
+  gradeLevel: $Enums.GradeLevel
+  sectionId: string
+  schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
+  referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
+  studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
+  finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
+  riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+}
+
+export type StudentRosterCreateOrConnectWithoutAdvisoryModuleSubmissionsInput = {
+  where: Prisma.StudentRosterWhereUniqueInput
+  create: Prisma.XOR<Prisma.StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+}
+
+export type StudentRosterUpsertWithoutAdvisoryModuleSubmissionsInput = {
+  update: Prisma.XOR<Prisma.StudentRosterUpdateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+  create: Prisma.XOR<Prisma.StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  where?: Prisma.StudentRosterWhereInput
+}
+
+export type StudentRosterUpdateToOneWithWhereWithoutAdvisoryModuleSubmissionsInput = {
+  where?: Prisma.StudentRosterWhereInput
+  data: Prisma.XOR<Prisma.StudentRosterUpdateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentRosterUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+}
+
+export type StudentRosterUpdateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  lrn?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
+  referrals?: Prisma.ReferralUpdateManyWithoutRosterNestedInput
+  studentGrades?: Prisma.StudentGradeUpdateManyWithoutRosterNestedInput
+  finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
+  riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+}
+
+export type StudentRosterUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  lrn?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
+  referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
+  studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
+  finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
+  riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateWithoutRiskSnapshotsInput = {
@@ -1182,6 +1687,12 @@ export type StudentRosterCreateWithoutRiskSnapshotsInput = {
   lrn: string
   fullName: string
   gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
@@ -1190,6 +1701,7 @@ export type StudentRosterCreateWithoutRiskSnapshotsInput = {
   studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterUncheckedCreateWithoutRiskSnapshotsInput = {
@@ -1199,12 +1711,19 @@ export type StudentRosterUncheckedCreateWithoutRiskSnapshotsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
   interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
 }
 
 export type StudentRosterCreateOrConnectWithoutRiskSnapshotsInput = {
@@ -1228,6 +1747,12 @@ export type StudentRosterUpdateWithoutRiskSnapshotsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
@@ -1236,6 +1761,7 @@ export type StudentRosterUpdateWithoutRiskSnapshotsInput = {
   studentGrades?: Prisma.StudentGradeUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutRiskSnapshotsInput = {
@@ -1245,12 +1771,19 @@ export type StudentRosterUncheckedUpdateWithoutRiskSnapshotsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterCreateManySchoolYearInput = {
@@ -1259,6 +1792,12 @@ export type StudentRosterCreateManySchoolYearInput = {
   fullName: string
   gradeLevel: $Enums.GradeLevel
   sectionId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
 }
 
 export type StudentRosterUpdateWithoutSchoolYearInput = {
@@ -1266,6 +1805,12 @@ export type StudentRosterUpdateWithoutSchoolYearInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -1274,6 +1819,7 @@ export type StudentRosterUpdateWithoutSchoolYearInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutSchoolYearInput = {
@@ -1282,6 +1828,12 @@ export type StudentRosterUncheckedUpdateWithoutSchoolYearInput = {
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -1289,6 +1841,7 @@ export type StudentRosterUncheckedUpdateWithoutSchoolYearInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateManyWithoutSchoolYearInput = {
@@ -1297,6 +1850,12 @@ export type StudentRosterUncheckedUpdateManyWithoutSchoolYearInput = {
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type StudentRosterCreateManySectionInput = {
@@ -1305,6 +1864,12 @@ export type StudentRosterCreateManySectionInput = {
   fullName: string
   gradeLevel: $Enums.GradeLevel
   schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
 }
 
 export type StudentRosterUpdateWithoutSectionInput = {
@@ -1312,6 +1877,12 @@ export type StudentRosterUpdateWithoutSectionInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -1320,6 +1891,7 @@ export type StudentRosterUpdateWithoutSectionInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateWithoutSectionInput = {
@@ -1328,6 +1900,12 @@ export type StudentRosterUncheckedUpdateWithoutSectionInput = {
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -1335,6 +1913,7 @@ export type StudentRosterUncheckedUpdateWithoutSectionInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
   interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
 }
 
 export type StudentRosterUncheckedUpdateManyWithoutSectionInput = {
@@ -1343,6 +1922,12 @@ export type StudentRosterUncheckedUpdateManyWithoutSectionInput = {
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 
@@ -1358,6 +1943,7 @@ export type StudentRosterCountOutputType = {
   finalGrades: number
   riskSnapshots: number
   interventions: number
+  advisoryModuleSubmissions: number
 }
 
 export type StudentRosterCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1368,6 +1954,7 @@ export type StudentRosterCountOutputTypeSelect<ExtArgs extends runtime.Types.Ext
   finalGrades?: boolean | StudentRosterCountOutputTypeCountFinalGradesArgs
   riskSnapshots?: boolean | StudentRosterCountOutputTypeCountRiskSnapshotsArgs
   interventions?: boolean | StudentRosterCountOutputTypeCountInterventionsArgs
+  advisoryModuleSubmissions?: boolean | StudentRosterCountOutputTypeCountAdvisoryModuleSubmissionsArgs
 }
 
 /**
@@ -1429,6 +2016,13 @@ export type StudentRosterCountOutputTypeCountInterventionsArgs<ExtArgs extends r
   where?: Prisma.InterventionWhereInput
 }
 
+/**
+ * StudentRosterCountOutputType without action
+ */
+export type StudentRosterCountOutputTypeCountAdvisoryModuleSubmissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdvisoryModuleSubmissionWhereInput
+}
+
 
 export type StudentRosterSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1437,6 +2031,12 @@ export type StudentRosterSelect<ExtArgs extends runtime.Types.Extensions.Interna
   gradeLevel?: boolean
   sectionId?: boolean
   schoolYearId?: boolean
+  mascot?: boolean
+  riskCount?: boolean
+  riskLevel?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
   attendanceRecords?: boolean | Prisma.StudentRoster$attendanceRecordsArgs<ExtArgs>
@@ -1446,6 +2046,7 @@ export type StudentRosterSelect<ExtArgs extends runtime.Types.Extensions.Interna
   finalGrades?: boolean | Prisma.StudentRoster$finalGradesArgs<ExtArgs>
   riskSnapshots?: boolean | Prisma.StudentRoster$riskSnapshotsArgs<ExtArgs>
   interventions?: boolean | Prisma.StudentRoster$interventionsArgs<ExtArgs>
+  advisoryModuleSubmissions?: boolean | Prisma.StudentRoster$advisoryModuleSubmissionsArgs<ExtArgs>
   _count?: boolean | Prisma.StudentRosterCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studentRoster"]>
 
@@ -1456,6 +2057,12 @@ export type StudentRosterSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   gradeLevel?: boolean
   sectionId?: boolean
   schoolYearId?: boolean
+  mascot?: boolean
+  riskCount?: boolean
+  riskLevel?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studentRoster"]>
@@ -1467,6 +2074,12 @@ export type StudentRosterSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   gradeLevel?: boolean
   sectionId?: boolean
   schoolYearId?: boolean
+  mascot?: boolean
+  riskCount?: boolean
+  riskLevel?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studentRoster"]>
@@ -1478,9 +2091,15 @@ export type StudentRosterSelectScalar = {
   gradeLevel?: boolean
   sectionId?: boolean
   schoolYearId?: boolean
+  mascot?: boolean
+  riskCount?: boolean
+  riskLevel?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
 }
 
-export type StudentRosterOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "lrn" | "fullName" | "gradeLevel" | "sectionId" | "schoolYearId", ExtArgs["result"]["studentRoster"]>
+export type StudentRosterOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "lrn" | "fullName" | "gradeLevel" | "sectionId" | "schoolYearId" | "mascot" | "riskCount" | "riskLevel" | "academicFlag" | "attendanceFlag" | "behavioralFlag", ExtArgs["result"]["studentRoster"]>
 export type StudentRosterInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
@@ -1491,6 +2110,7 @@ export type StudentRosterInclude<ExtArgs extends runtime.Types.Extensions.Intern
   finalGrades?: boolean | Prisma.StudentRoster$finalGradesArgs<ExtArgs>
   riskSnapshots?: boolean | Prisma.StudentRoster$riskSnapshotsArgs<ExtArgs>
   interventions?: boolean | Prisma.StudentRoster$interventionsArgs<ExtArgs>
+  advisoryModuleSubmissions?: boolean | Prisma.StudentRoster$advisoryModuleSubmissionsArgs<ExtArgs>
   _count?: boolean | Prisma.StudentRosterCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type StudentRosterIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1514,6 +2134,7 @@ export type $StudentRosterPayload<ExtArgs extends runtime.Types.Extensions.Inter
     finalGrades: Prisma.$FinalGradePayload<ExtArgs>[]
     riskSnapshots: Prisma.$RiskSnapshotPayload<ExtArgs>[]
     interventions: Prisma.$InterventionPayload<ExtArgs>[]
+    advisoryModuleSubmissions: Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1522,6 +2143,12 @@ export type $StudentRosterPayload<ExtArgs extends runtime.Types.Extensions.Inter
     gradeLevel: $Enums.GradeLevel
     sectionId: string
     schoolYearId: string
+    mascot: string | null
+    riskCount: number
+    riskLevel: $Enums.RiskLevel
+    academicFlag: boolean
+    attendanceFlag: boolean
+    behavioralFlag: boolean
   }, ExtArgs["result"]["studentRoster"]>
   composites: {}
 }
@@ -1925,6 +2552,7 @@ export interface Prisma__StudentRosterClient<T, Null = never, ExtArgs extends ru
   finalGrades<T extends Prisma.StudentRoster$finalGradesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$finalGradesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FinalGradePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   riskSnapshots<T extends Prisma.StudentRoster$riskSnapshotsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$riskSnapshotsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RiskSnapshotPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   interventions<T extends Prisma.StudentRoster$interventionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$interventionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InterventionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  advisoryModuleSubmissions<T extends Prisma.StudentRoster$advisoryModuleSubmissionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$advisoryModuleSubmissionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1960,6 +2588,12 @@ export interface StudentRosterFieldRefs {
   readonly gradeLevel: Prisma.FieldRef<"StudentRoster", 'GradeLevel'>
   readonly sectionId: Prisma.FieldRef<"StudentRoster", 'String'>
   readonly schoolYearId: Prisma.FieldRef<"StudentRoster", 'String'>
+  readonly mascot: Prisma.FieldRef<"StudentRoster", 'String'>
+  readonly riskCount: Prisma.FieldRef<"StudentRoster", 'Int'>
+  readonly riskLevel: Prisma.FieldRef<"StudentRoster", 'RiskLevel'>
+  readonly academicFlag: Prisma.FieldRef<"StudentRoster", 'Boolean'>
+  readonly attendanceFlag: Prisma.FieldRef<"StudentRoster", 'Boolean'>
+  readonly behavioralFlag: Prisma.FieldRef<"StudentRoster", 'Boolean'>
 }
     
 
@@ -2526,6 +3160,30 @@ export type StudentRoster$interventionsArgs<ExtArgs extends runtime.Types.Extens
   take?: number
   skip?: number
   distinct?: Prisma.InterventionScalarFieldEnum | Prisma.InterventionScalarFieldEnum[]
+}
+
+/**
+ * StudentRoster.advisoryModuleSubmissions
+ */
+export type StudentRoster$advisoryModuleSubmissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdvisoryModuleSubmission
+   */
+  select?: Prisma.AdvisoryModuleSubmissionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdvisoryModuleSubmission
+   */
+  omit?: Prisma.AdvisoryModuleSubmissionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdvisoryModuleSubmissionInclude<ExtArgs> | null
+  where?: Prisma.AdvisoryModuleSubmissionWhereInput
+  orderBy?: Prisma.AdvisoryModuleSubmissionOrderByWithRelationInput | Prisma.AdvisoryModuleSubmissionOrderByWithRelationInput[]
+  cursor?: Prisma.AdvisoryModuleSubmissionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdvisoryModuleSubmissionScalarFieldEnum | Prisma.AdvisoryModuleSubmissionScalarFieldEnum[]
 }
 
 /**

@@ -46,8 +46,6 @@ export function FloatingMenu({
   const router = useRouter();
   const sectionRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map());
 
-  // Once the section list is loaded, scroll the active (e.g. persisted)
-  // section into view so the Grades & sections card reflects the selection.
   React.useEffect(() => {
     if (!selectedSectionId || sections.length === 0) return;
     const el = sectionRefs.current.get(selectedSectionId);
@@ -78,9 +76,6 @@ export function FloatingMenu({
     };
   }, []);
 
-  // If the incoming selected section no longer exists in the loaded list
-  // (e.g. a persisted id from a previous term), clear it so the card and the
-  // rest of the page don't stay stuck on a stale selection.
   React.useEffect(() => {
     if (
       selectedSectionId &&
@@ -113,7 +108,6 @@ export function FloatingMenu({
     go(id);
   };
 
-  // Group sections by grade for the list.
   const byGrade = React.useMemo(() => {
     const map = new Map<string, MenuSection[]>();
     for (const s of sections) {

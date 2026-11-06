@@ -1,14 +1,9 @@
-import { Router } from "express";
-import { prisma } from "../../lib/prisma.js";
+import { Router, type Request, type Response } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
-import {
-  computeRiskFactors,
-  evaluateRosterRisk,
-  levelFromFlags,
-  resolveActiveTermId,
-} from "../../services/risk.js";
-import { sectionHeadcounts } from "../../services/enrollment.js";
+import { etag } from "../../lib/etag.js";
+import { prisma } from "../../lib/prisma.js";
+import { resolveActiveTermId } from "../../services/risk.js";
 import { getRiskBoard, getRiskTrend, getSchoolsForRisk } from "./riskBoard.service.js";
 import { getLowRiskStudents } from "./lowRiskStudents.service.js";
 import {
@@ -18,23 +13,47 @@ import {
 } from "./riskHeatmap.service.js";
 import { getRiskStudents } from "./riskStudents.service.js";
 import { getInterventionStudents } from "./interventions.service.js";
-import { fanoutToRole } from "../../lib/notify.js";
+import {
+  getBatchLevels,
+  getSectionFactorCounts,
+  getSingleStudentLevel,
+} from "../../services/risk/riskLookups.service.js";
+import { getRiskStaff } from "../../services/risk/riskStaff.service.js";
+import { alertGuidance } from "../../services/risk/riskAlert.service.js";
 
 const router = Router();
 
-// Principal board overview (O4): KPIs, level distribution, factor totals, trend.
+type ServiceError = { status: number; code: string; message: string };
+
+function sendLookupResult(
+  res: Response,
+  next: (e: unknown) => void,
+  run: () => Promise<unknown>,
+) {
+  run()
+    .then((result) => res.json(result))
+    .catch((e: unknown) => {
+      if (e && typeof e === "object" && "status" in e && "code" in e) {
+        const se = e as ServiceError;
+        res.status(se.status).json({ error: { code: se.code, message: se.message } });
+        return;
+      }
+      next(e);
+    });
+}
+
 router.get(
   "/board",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 15 }),
+  etag(),
   async (req, res, next) => {
     try {
-      const gradeMode =
-        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
-          ? (req.query.gradeMode as "raw" | "final")
-          : "final";
-      const board = await getRiskBoard(gradeMode, req.termScope ?? undefined);
+      // Real-time unified: ?gradeMode accepted but ignored. ?scope=adm limits
+      // the board to learners with an ADM case (principal ADM desk).
+      const admOnly = req.query.scope === "adm";
+      const board = await getRiskBoard(undefined, req.termScope ?? undefined, admOnly);
       res.json(board);
     } catch (e) {
       next(e);
@@ -42,12 +61,12 @@ router.get(
   }
 );
 
-// School years (with nested terms) to power the Risk Trend filters.
 router.get(
   "/school-years",
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["risk", "principal", "schoolyear"] }),
+  etag(),
   async (_req, res, next) => {
     try {
       res.json(await getSchoolsForRisk());
@@ -57,40 +76,35 @@ router.get(
   }
 );
 
-// School-year/term-scoped risk trend for the Risk Trend chart.
 router.get(
   "/trend",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 15 }),
+  etag(),
   async (req, res, next) => {
     try {
-      const schoolYearId =
-        typeof req.query.schoolYearId === "string" && req.query.schoolYearId !== ""
-          ? req.query.schoolYearId
-          : undefined;
-      const termId =
-        typeof req.query.termId === "string" && req.query.termId !== ""
-          ? req.query.termId
-          : undefined;
-      res.json(await getRiskTrend(schoolYearId, termId));
+      // Server-scoped: the trend follows the active school year/term —
+      // client-supplied filters are ignored.
+      res.json(await getRiskTrend(req.termScope?.schoolYearId, req.termScope?.termId));
     } catch (e) {
       next(e);
     }
   }
 );
 
-// Principal: paginated low-risk student list (LRN + name only).
 router.get(
   "/low-risk-students",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 15 }),
+  etag(),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(50, Math.max(1, Number(req.query.pageSize) || 15));
-      const result = await getLowRiskStudents(page, pageSize, req.termScope ?? undefined);
+      const pageSize = Math.min(15, Math.max(1, Number(req.query.pageSize) || 15));
+      const q = typeof req.query.q === "string" ? req.query.q : undefined;
+      const result = await getLowRiskStudents(page, pageSize, req.termScope ?? undefined, q);
       res.json(result);
     } catch (e) {
       next(e);
@@ -98,26 +112,38 @@ router.get(
   }
 );
 
-// Principal: full at-risk student list with status-only factors (O1). Optional
-// `section` filter (section name) for the heatmap drill-down.
 router.get(
   "/students",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 60 }),
+  etag(),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      // Default 50 (Teacher-aligned small pages); cap 1000 preserved for
-      // explicit export/full-scan callers. Tables render ≤20 rows/page.
-      const pageSize = Math.min(1000, Math.max(1, Number(req.query.pageSize) || 50));
+
+      // Strict 15-record ceiling for normal lists.
+      const pageSize = Math.min(15, Math.max(1, Number(req.query.pageSize) || 15));
       const section =
         typeof req.query.section === "string" ? req.query.section : undefined;
-      const gradeMode =
-        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
-          ? (req.query.gradeMode as "raw" | "final")
-          : "final";
-      const result = await getRiskStudents(page, pageSize, section, gradeMode, req.termScope ?? undefined);
+      const q = typeof req.query.q === "string" ? req.query.q : undefined;
+      const riskLevel =
+        req.query.riskLevel === "High" ||
+        req.query.riskLevel === "Moderate" ||
+        req.query.riskLevel === "Low"
+          ? (req.query.riskLevel as "High" | "Moderate" | "Low")
+          : undefined;
+      const factor =
+        req.query.factor === "Academic" ||
+        req.query.factor === "Attendance" ||
+        req.query.factor === "Behavioral"
+          ? (req.query.factor as "Academic" | "Attendance" | "Behavioral")
+          : undefined;
+      // Real-time unified: ?gradeMode accepted but ignored.
+      const result = await getRiskStudents(page, pageSize, section, undefined, req.termScope ?? undefined, q, {
+        riskLevel,
+        factor,
+      });
       res.json(result);
     } catch (e) {
       next(e);
@@ -125,264 +151,42 @@ router.get(
   }
 );
 
-// Batch risk levels for desk queues (nurse/alerts, guidance, ADM).
-// Single HTTP round-trip replacing the per-student N+1 fan-out:
-//   GET /api/risk/students/batch?ids=a,b,c → { levels: { [id]: "High"|"Moderate"|"Low" } }
-// Profiles return the stored riskLevel (same as the single endpoint — one
-// query); roster-enlisted students are evaluated live in bulk (bulk grades +
-// attendance + anecdotal groupBy + section headcounts, then the pure
-// computeRiskFactors — constant queries regardless of N). Unknown ids are
-// omitted (caller renders "—"). Auth mirrors the single endpoint: staff +
-// principal broad read, advisers scoped to their own advisees.
 router.get(
   "/students/batch",
   requireAuth,
-  async (req, res, next) => {
-    try {
-      const raw = req.query.ids;
-      const list = Array.isArray(raw)
-        ? raw.flatMap((v) => String(v).split(","))
-        : String(raw ?? "").split(",");
-      const ids = [...new Set(list.map((s) => s.trim()).filter(Boolean))].slice(0, 100);
-      if (ids.length === 0) return res.json({ levels: {} });
-
-      const role = req.user!.role;
-      const isPrincipal = role === "principal";
-      const isStaff = ["adviser", "guidance_counselor", "nurse", "adm_coordinator"].includes(role);
-      if (!isPrincipal && !isStaff) {
-        return res.status(403).json({ error: { code: "FORBIDDEN", message: "Limited view only" } });
-      }
-
-      const [profiles, rosters] = await Promise.all([
-        prisma.studentProfile.findMany({
-          where: { userId: { in: ids } },
-          select: {
-            userId: true,
-            riskLevel: true,
-            section: { select: { id: true, adviserId: true } },
-          },
-        }),
-        prisma.studentRoster.findMany({
-          where: { id: { in: ids } },
-          select: {
-            id: true,
-            sectionId: true,
-            section: { select: { adviserId: true } },
-          },
-        }),
-      ]);
-
-      const levels: Record<string, string> = {};
-      // Status-only factor flags per student (Academic/Attendance/Behavioral
-      // booleans — same posture as levels, no confidential fields). Lets
-      // desks explain *why* in plain words without another round-trip.
-      const factors: Record<string, { Academic: boolean; Attendance: boolean; Behavioral: boolean }> = {};
-      const rosterIds: string[] = [];
-      const rosterSection = new Map<string, string>();
-      const visibleProfiles = profiles.filter(
-        (p) =>
-          !(
-            role === "adviser" &&
-            req.user!.id !== p.userId &&
-            p.section?.adviserId !== req.user!.id
-          ),
-      );
-      for (const p of visibleProfiles) {
-        if (p.riskLevel) levels[p.userId] = String(p.riskLevel);
-      }
-      for (const r of rosters) {
-        if (role === "adviser" && r.section?.adviserId !== req.user!.id) continue;
-        rosterIds.push(r.id);
-        if (r.sectionId) rosterSection.set(r.id, r.sectionId);
-      }
-      // Live factor flags for account-backed students (same engine rule as
-      // the roster path below, batched to constant queries regardless of N).
-      const profileIds = visibleProfiles.map((p) => p.userId);
-      if (profileIds.length > 0) {
-        const termId = await resolveActiveTermId(req);
-        if (termId) {
-          const profileRows = await prisma.studentProfile.findMany({
-            where: { userId: { in: profileIds } },
-            select: {
-              userId: true,
-              section: { select: { id: true } },
-              finalGrades: {
-                where: { termId },
-                select: { computedAverage: true, transmutedGrade: true },
-              },
-              attendanceRecords: {
-                where: { termId },
-                select: { status: true, subjectId: true },
-              },
-              anecdotalRecords: { where: { termId }, select: { id: true } },
-            },
-          });
-          const pSectionIds = [
-            ...new Set(
-              profileRows.map((r) => r.section?.id).filter((v): v is string => !!v),
-            ),
-          ];
-          const pHeadcounts = await sectionHeadcounts(pSectionIds);
-          for (const pr of profileRows) {
-            const enrolled = pHeadcounts.get(pr.section?.id ?? "") ?? 0;
-            const flags = computeRiskFactors({
-              finalGrades: pr.finalGrades,
-              attendance: pr.attendanceRecords.map((a) => ({
-                status: a.status,
-                subjectId: a.subjectId,
-              })),
-              anecdotalCount: pr.anecdotalRecords.length,
-              enrolled,
-            });
-            factors[pr.userId] = {
-              Academic: flags.academicFlag,
-              Attendance: flags.attendanceFlag,
-              Behavioral: flags.behavioralFlag,
-            };
-          }
-        }
-      }
-      if (rosterIds.length > 0) {
-        const termId = await resolveActiveTermId(req);
-        if (termId) {
-          const [grades, attendance, anecdotalGroups, headcounts] = await Promise.all([
-            prisma.finalGrade.findMany({
-              where: { rosterId: { in: rosterIds }, termId },
-              select: { rosterId: true, computedAverage: true, transmutedGrade: true },
-            }),
-            prisma.attendanceRecord.findMany({
-              where: { rosterId: { in: rosterIds }, termId },
-              select: { rosterId: true, status: true, subjectId: true },
-            }),
-            prisma.anecdotalRecord.groupBy({
-              by: ["rosterId"],
-              where: { rosterId: { in: rosterIds }, termId },
-              _count: { _all: true },
-            }),
-            sectionHeadcounts([...new Set(rosterSection.values())]),
-          ]);
-          const gradesBy = new Map<string, { computedAverage: number | null; transmutedGrade: number | null }[]>();
-          for (const g of grades) {
-            if (!g.rosterId) continue;
-            const arr = gradesBy.get(g.rosterId) ?? [];
-            arr.push({ computedAverage: g.computedAverage, transmutedGrade: g.transmutedGrade });
-            gradesBy.set(g.rosterId, arr);
-          }
-          const attBy = new Map<string, { status: string; subjectId: string | null }[]>();
-          for (const a of attendance) {
-            if (!a.rosterId) continue;
-            const arr = attBy.get(a.rosterId) ?? [];
-            arr.push({ status: a.status, subjectId: a.subjectId });
-            attBy.set(a.rosterId, arr);
-          }
-          const anecBy = new Map<string, number>();
-          for (const g of anecdotalGroups) {
-            if (g.rosterId) anecBy.set(g.rosterId, g._count._all);
-          }
-          for (const rid of rosterIds) {
-            const sectionId = rosterSection.get(rid);
-            const enrolled = sectionId ? (headcounts.get(sectionId) ?? 0) : 0;
-            const flags = computeRiskFactors({
-              finalGrades: gradesBy.get(rid) ?? [],
-              attendance: attBy.get(rid) ?? [],
-              anecdotalCount: anecBy.get(rid) ?? 0,
-              enrolled,
-            });
-            levels[rid] = levelFromFlags(flags);
-            factors[rid] = {
-              Academic: flags.academicFlag,
-              Attendance: flags.attendanceFlag,
-              Behavioral: flags.behavioralFlag,
-            };
-          }
-        }
-      }
-      res.json({ levels, factors });
-    } catch (e) {
-      next(e);
-    }
+  cache({ tags: ["risk"], ttl: 60 }),
+  etag(),
+  (req: Request, res: Response, next: (e: unknown) => void) => {
+    sendLookupResult(res, next, () =>
+      getBatchLevels(req.query.ids, req.user!.role, req.user!.id, req),
+    );
   }
 );
 
-// Student/parent: limited projection only (O1) — risk_level + behavioral flag.
 router.get(
   "/students/:id",
   requireAuth,
-  async (req, res, next) => {
-    try {
-      const profile = await prisma.studentProfile.findUnique({
-        where: { userId: String(req.params.id) },
-        select: { riskLevel: true, riskCount: true, lrn: true },
-      });
-      if (!profile) {
-        // Roster-enlisted students have no profile — evaluate live from
-        // their roster rows so desks (e.g. nurse alerts) can show a risk
-        // level for every referred student, not just account holders.
-        // Same shape as the profile path: { lrn, riskLevel }.
-        const roster = await prisma.studentRoster.findUnique({
-          where: { id: String(req.params.id) },
-          select: {
-            id: true,
-            lrn: true,
-            section: { select: { adviserId: true } },
-          },
-        });
-        if (!roster) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found" } });
-        const isPrincipal = req.user!.role === "principal";
-        const isStaff = ["adviser", "guidance_counselor", "nurse", "adm_coordinator"].includes(req.user!.role);
-        if (!isPrincipal && !isStaff) {
-          return res.status(403).json({ error: { code: "FORBIDDEN", message: "Limited view only" } });
-        }
-        if (req.user!.role === "adviser" && roster.section?.adviserId !== req.user!.id) {
-          return res.status(403).json({ error: { code: "FORBIDDEN", message: "Not your advisee" } });
-        }
-        const termId = await resolveActiveTermId(req);
-        if (!termId) {
-          return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
-        }
-        const { result } = await evaluateRosterRisk(roster.id, termId);
-        return res.json({ lrn: roster.lrn, riskLevel: result.riskLevel });
-      }
-      const isSelf = req.user!.id === String(req.params.id);
-      const isPrincipal = req.user!.role === "principal";
-      const isStaff = ["adviser", "guidance_counselor", "nurse", "adm_coordinator"].includes(req.user!.role);
-      if (!isSelf && !isPrincipal && !isStaff) {
-        return res.status(403).json({ error: { code: "FORBIDDEN", message: "Limited view only" } });
-      }
-      // Advisers are staff, but scoped to their own advisees — never the
-      // whole school. Other staff roles keep their broad read.
-      if (req.user!.role === "adviser" && !isSelf && !isPrincipal) {
-        const advisee = await prisma.studentProfile.findUnique({
-          where: { userId: String(req.params.id) },
-          select: { section: { select: { adviserId: true } } },
-        });
-        if (!advisee || advisee.section?.adviserId !== req.user!.id) {
-          return res.status(403).json({ error: { code: "FORBIDDEN", message: "Not your advisee" } });
-        }
-      }
-      const limited = { lrn: profile.lrn, riskLevel: profile.riskLevel };
-      res.json(limited);
-    } catch (e) { next(e); }
+  (req: Request, res: Response, next: (e: unknown) => void) => {
+    sendLookupResult(res, next, () =>
+      getSingleStudentLevel(String(req.params.id), req.user!.role, req.user!.id, req),
+    );
   }
 );
 
-// Principal board heat map: all sections × risk-factor counts (O4, status-only).
 router.get(
   "/heatmap",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 60 }),
+  etag(),
   async (req, res, next) => {
     try {
       const termId = await resolveActiveTermId(req);
       if (!termId) {
         return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
       }
-      const gradeMode =
-        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
-          ? (req.query.gradeMode as "raw" | "final")
-          : "final";
-      const heatmap = await getRiskHeatmap(termId, gradeMode, req.termScope?.schoolYearId ?? null);
+      // Real-time unified: ?gradeMode accepted but ignored.
+      const heatmap = await getRiskHeatmap(termId, undefined, req.termScope?.schoolYearId ?? null);
       res.json(heatmap);
     } catch (e) {
       next(e);
@@ -390,22 +194,20 @@ router.get(
   }
 );
 
-// Per section × factor at-risk student list (principal only).
 router.get(
   "/sections/:id/students",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 15 }),
+  etag(),
   async (req, res, next) => {
     try {
-      const termId = typeof req.query.termId === "string" ? req.query.termId : null;
+      // Server-scoped: the drill-down follows the active term — a client term
+      // query param is ignored.
+      const termId = await resolveActiveTermId(req);
       const factor = req.query.factor as RiskFactor | undefined;
-      const gradeMode =
-        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
-          ? (req.query.gradeMode as "raw" | "final")
-          : "final";
       if (!termId) {
-        return res.status(400).json({ error: { code: "MISSING_TERM", message: "termId query required" } });
+        return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
       }
       if (!factor || !["Academic", "Attendance", "Behavioral"].includes(factor)) {
         return res.status(400).json({ error: { code: "MISSING_FACTOR", message: "factor query required" } });
@@ -414,7 +216,7 @@ router.get(
         String(req.params.id),
         factor,
         termId,
-        gradeMode
+        undefined,
       );
       res.json({ sectionId: String(req.params.id), termId, factor, students });
     } catch (e) {
@@ -423,92 +225,49 @@ router.get(
   }
 );
 
-// Section heat map: section × risk_factor counts (no student identities).
 router.get(
   "/sections/:id/heatmap",
   requireAuth,
   requireRole("principal", "adviser", "guidance_counselor", "nurse"),
   async (req, res, next) => {
     try {
-      const termId = typeof req.query.termId === "string" ? req.query.termId : undefined;
-      if (!termId) return res.status(400).json({ error: { code: "MISSING_TERM", message: "termId query required" } });
-      const students = await prisma.studentProfile.findMany({
-        where: { sectionId: String(req.params.id) },
-        select: { userId: true },
-      });
-      const ids = students.map((s) => s.userId);
-      const [anecdotals, finals, attendance] = await Promise.all([
-        prisma.anecdotalRecord.groupBy({ by: ["studentId"], where: { sectionId: String(req.params.id), termId }, _count: true }),
-        prisma.finalGrade.findMany({ where: { studentId: { in: ids }, termId }, select: { studentId: true, transmutedGrade: true } }),
-        prisma.attendanceRecord.findMany({ where: { sectionId: String(req.params.id), termId }, select: { studentId: true, status: true } }),
-      ]);
-      const factors = { attendance: 0, grades: 0, behavior: 0, wellbeing: 0 };
-      // behavior
-      factors.behavior = anecdotals.length;
-      // grades: students with any subject < 75
-      const lowGradeStudents = new Set(finals.filter((f) => (f.transmutedGrade ?? 100) < 75).map((f) => f.studentId));
-      factors.grades = lowGradeStudents.size;
-      // attendance: students with < 80% present, measured against the section's
-      // enrolled headcount (consistent with the Attendance system).
-      const enrolled = students.length;
-      const attByStudent = new Map<string, { present: number }>();
-      for (const a of attendance) {
-        // Roster marks (no account) carry no grade/risk identity — the
-        // section headcount already accounts for those students.
-        if (!a.studentId) continue;
-        const cur = attByStudent.get(a.studentId) ?? { present: 0 };
-        if (a.status === "present") cur.present++;
-        attByStudent.set(a.studentId, cur);
-      }
-      for (const [, v] of attByStudent) if (enrolled > 0 && v.present / enrolled < 0.8) factors.attendance++;
-      res.json({ sectionId: String(req.params.id), termId, factors });
-    } catch (e) { next(e); }
-  }
-);
-
-// Principal: staff directory for intervention assignment (all staff roles).
-router.get(
-  "/staff",
-  requireAuth,
-  requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
-  async (_req, res, next) => {
-    try {
-      const staff = await prisma.user.findMany({
-        where: {
-          role: {
-            in: [
-              "subject_teacher",
-              "adviser",
-              "nurse",
-              "adm_coordinator",
-              "guidance_counselor",
-              "record_keeper",
-              "registrar",
-            ],
-          },
-        },
-        select: { id: true, fullName: true, role: true },
-        orderBy: [{ role: "asc" }, { fullName: "asc" }],
-      });
-      res.json(staff);
+      // Server-scoped: the heatmap follows the active term — a client term
+      // query param is ignored.
+      const termId = await resolveActiveTermId(req);
+      if (!termId) return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
+      res.json(await getSectionFactorCounts(String(req.params.id), termId));
     } catch (e) {
       next(e);
     }
   }
 );
 
-// Principal: at-risk students (RiskSnapshot) for the active term, each with
-// their current intervention link. This is the principal's intervention queue.
+router.get(
+  "/staff",
+  requireAuth,
+  requireRole("principal"),
+  cache({ tags: ["risk", "principal"] }),
+  etag(),
+  async (_req, res, next) => {
+    try {
+      res.json(await getRiskStaff());
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 router.get(
   "/interventions",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 60 }),
+  etag(),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
+      // Strict 15-record ceiling for normal lists.
+      const pageSize = Math.min(15, Math.max(1, Number(req.query.pageSize) || 15));
       const riskLevel =
         typeof req.query.riskLevel === "string"
           ? (req.query.riskLevel as "Low" | "Moderate" | "High")
@@ -521,22 +280,40 @@ router.get(
         typeof req.query.factor === "string"
           ? (req.query.factor as "Academic" | "Attendance" | "Behavioral")
           : undefined;
-      const gradeMode =
-        typeof req.query.gradeMode === "string" &&
-        (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
-          ? (req.query.gradeMode as "raw" | "final")
+      const q =
+        typeof req.query.q === "string" && req.query.q.trim()
+          ? req.query.q.trim()
           : undefined;
-      // Same queue as the guidance desk: full live enrollment (profiles +
-      // roster) plus recovered students with open cases, so both desks track
-      // the same at-risk students.
+      const section =
+        typeof req.query.section === "string" && req.query.section.trim()
+          ? req.query.section.trim()
+          : undefined;
+      const outcomeStatus =
+        typeof req.query.outcomeStatus === "string" &&
+        ["ongoing", "resolved", "unresolved"].includes(req.query.outcomeStatus)
+          ? (req.query.outcomeStatus as "ongoing" | "resolved" | "unresolved")
+          : undefined;
+      const sort =
+        req.query.sort === "detected" ? ("detected" as const) : undefined;
+      const plan =
+        req.query.plan === "ongoing" || req.query.plan === "none"
+          ? (req.query.plan as "ongoing" | "none")
+          : undefined;
+
       const result = await getInterventionStudents(
         {
           riskLevel,
           hasIntervention,
           factor,
-          gradeMode,
+          q,
+          section,
+          outcomeStatus,
+          plan,
+          sort,
           includeRecovered: true,
           fullCohort: true,
+          // Principal desk: only adviser-shared learners.
+          sharedOnly: true,
           page,
           pageSize,
         },
@@ -549,139 +326,70 @@ router.get(
   }
 );
 
-// Principal: alert guidance counselors about an at-risk student with no
-// intervention action yet. Read-only tracking otherwise — the principal never
-// edits interventions. Fans out to every active guidance counselor.
 router.post(
   "/interventions/:studentId/alert",
   requireAuth,
   requireRole("principal"),
   async (req, res, next) => {
     try {
-      const rawId = String(req.params.studentId);
-      const isRoster = rawId.startsWith("roster:");
-      const note =
-        typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 500) : "";
-
-      const [profile, roster, existing] = await Promise.all([
-        !isRoster
-          ? prisma.studentProfile.findUnique({
-              where: { userId: rawId },
-              select: {
-                lrn: true,
-                user: { select: { fullName: true } },
-                section: { select: { name: true } },
-              },
-            })
-          : null,
-        isRoster
-          ? prisma.studentRoster.findUnique({
-              where: { id: rawId.slice("roster:".length) },
-              select: {
-                lrn: true,
-                fullName: true,
-                section: { select: { name: true } },
-              },
-            })
-          : null,
-        prisma.intervention.findFirst({
-          where: isRoster
-            ? { rosterId: rawId.slice("roster:".length) }
-            : { studentId: rawId },
-          select: { id: true, outcomeStatus: true },
-        }),
-      ]);
-
-      if (!profile && !roster) {
-        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found" } });
+      const result = await alertGuidance(
+        { userId: req.user!.id },
+        String(req.params.studentId),
+        typeof req.body?.note === "string" ? req.body.note : "",
+      );
+      if (!result.alerted) {
+        const status = result.code === "INTERVENTION_EXISTS" ? 409 : 404;
+        return res.status(status).json({ error: { code: result.code, message: result.message } });
       }
-      if (existing && existing.outcomeStatus !== "unresolved") {
-        return res.status(409).json({
-          error: {
-            code: "INTERVENTION_EXISTS",
-            message: "Guidance already has action on this case.",
-          },
-        });
-      }
-
-      const name = profile?.user.fullName ?? roster?.fullName ?? "Unknown student";
-      const lrn = profile?.lrn ?? roster?.lrn ?? "";
-      const section = profile?.section?.name ?? roster?.section?.name ?? "";
-      const message =
-        `Principal flagged ${name}${lrn ? ` (LRN ${lrn})` : ""}${section ? ` of ${section}` : ""} — no intervention action yet.` +
-        (note ? ` Note: ${note}` : "");
-
       res.json({ alerted: true });
-
-      // Best-effort fanout after responding (never delays the response).
-      void fanoutToRole("guidance_counselor", {
-        sourceTable: "interventions",
-        action: "principal_alert",
-        message,
-        sourceId: rawId,
-        excludeUserId: req.user!.id,
-      });
     } catch (e) {
       next(e);
     }
   }
 );
 
-// Principal: intervention stats for the carousel/sidebar widgets.
 router.get(
   "/interventions/stats",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 15 }),
+  etag(),
   async (req, res, next) => {
     try {
-      const gradeMode =
-        typeof req.query.gradeMode === "string" &&
-        (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
-          ? (req.query.gradeMode as "raw" | "final")
-          : undefined;
-      // Service clamps to 100 internally; pass 100 explicitly instead of
-      // 1000 so the intent is honest. Follow-up: dedicated groupBy/count
-      // stats query to avoid materializing student rows for 6 ints.
+      // Aggregate stats via DB counts — never slice a page to compute totals.
+      // totalAtRisk still needs the live cohort computation; intervention
+      // breakdowns come from cheap indexed counts scoped to the term.
+      const termId = req.termScope?.termId ?? null;
+      const termWhere = termId ? { termId } : {};
       const result = await getInterventionStudents(
         {
-          gradeMode,
           includeRecovered: true,
           fullCohort: true,
           page: 1,
-          pageSize: 100,
+          pageSize: 15,
         },
         req.termScope ?? undefined,
       );
-      const students = result.students;
-      const withIntervention = students.filter((s) => s.intervention !== null);
-      const pendingApproval = withIntervention.filter(
-        (s) => s.intervention?.approvalStatus === "pending"
-      );
-      const highRisk = students.filter((s) => s.riskLevel === "High");
-      const resolved = withIntervention.filter(
-        (s) => s.intervention?.outcomeStatus === "resolved"
-      );
-      const ongoing = withIntervention.filter(
-        (s) => s.intervention?.outcomeStatus === "ongoing"
-      );
+      const [withIntervention, pendingApproval, resolved, ongoing, highRisk] =
+        await Promise.all([
+          prisma.intervention.count({ where: termWhere }),
+          prisma.intervention.count({ where: { ...termWhere, approvalStatus: "pending" } }),
+          prisma.intervention.count({ where: { ...termWhere, outcomeStatus: "resolved" } }),
+          prisma.intervention.count({ where: { ...termWhere, outcomeStatus: "ongoing" } }),
+          prisma.riskSnapshot.count({ where: { ...termWhere, riskLevel: "High" } }),
+        ]);
       res.json({
         totalAtRisk: result.highModerate,
-        withIntervention: withIntervention.length,
-        pendingApproval: pendingApproval.length,
-        highRisk: highRisk.length,
-        resolved: resolved.length,
-        ongoing: ongoing.length,
+        withIntervention,
+        pendingApproval,
+        highRisk,
+        resolved,
+        ongoing,
       });
     } catch (e) {
       next(e);
     }
   }
 );
-
-// Interventions are auto-created by the risk engine (recomputeRisk) and assigned to
-// the Guidance Counselor. The Principal has read-only visibility (list + detail) — no
-// create/assign/approve/edit endpoints are exposed. The guidance_counselor owns the
-// lifecycle (outcome updates) via their own role-guarded routes if/when added.
 
 export default router;

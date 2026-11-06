@@ -132,6 +132,16 @@
   background-color: var(--background);
   padding: 1rem 0.75rem 0.375rem 1.25rem;
   font-family: var(--font-sans), system-ui, sans-serif;
+  transition: width 240ms ease-out, padding 240ms ease-out;
+}
+
+/* Collapsed icon-only rail — same pattern as the /teacher/classes
+   right cards: expanded content folds away, only icons stay. The icon
+   list itself lives in the shared nav/SidebarIconRail component. */
+.railCollapsed {
+  width: 4rem;
+  padding: 0.75rem 0.5rem 0.375rem;
+  align-items: stretch;
 }
 
 .railScroll {
@@ -171,5 +181,11 @@
   }
   .tabsMobile {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail {
+    transition: none;
   }
 }

@@ -2,68 +2,47 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { FolderOpen, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchNurseAlerts,
-  type NurseAlertsPage,
-} from "../alerts/components/nurse-alerts-data";
+import { ZentraPaginationSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { NurseEmptyCard } from "../components/NurseEmptyCard";
+import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
+import type { NurseAlertsPage } from "@/services/nurse/nurse.types";
 import { useTerm } from "@/lib/term/TermContext";
 import { NurseDocumentariesList } from "./components/NurseDocumentariesList";
-import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
+import { HealthRecordCardSkeleton } from "./components/HealthRecordCardSkeleton";
+import listStyles from "./components/NurseDocumentariesList.module.css";
 import styles from "./health-records-page.module.css";
+import pageStyles from "../pages.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
-/**
- * Health Records — the school nurse transaction archive: every finished
- * transaction (completed clinic sessions with notes, outcomes, and
- * attached files, plus resolved case closures) for the students on the
- * nurse's desk. Read-only; handling stays on the case pages.
- */
 export default function NurseHealthRecordsPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  // Archive view over finished transactions: bounded desk fetch, entries
-  // derived client-side (completed/resolved/endorse-ready), folders unpaged,
-  // in-folder tables paginate at the strict 15 with safePage.
+
   const { data, isPending, isError, refetch, isRefetching } =
     useQuery<NurseAlertsPage>({
       queryKey: ["nurse-alerts", "preview", termKey],
       queryFn: ({ signal }) =>
-        fetchNurseAlerts({ page: 1, pageSize: 100, signal }),
+        fetchNurseAlerts({ page: 1, pageSize: PAGE_SIZE, signal }),
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
-        <div className={styles.skelPanel}>
-          <div className={styles.skelPanelHead}>
-            <div>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelPanelDesc} />
-            </div>
-            <div className={styles.skelPanelActions}>
-              <Skeleton className={styles.skelSearch} />
-              <Skeleton className={styles.skelDrop} />
-            </div>
+      <section className={styles.page} aria-busy="true" aria-label="Loading health records">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Skeleton className="h-8 w-56 max-w-full shrink-0 rounded-[16px]" />
           </div>
-          <div className={styles.skelThead} aria-hidden="true">
-            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} className={styles.skelTheadCell} />
+          <div className={listStyles.grid}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <HealthRecordCardSkeleton key={i} />
             ))}
           </div>
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <Skeleton key={i} className={styles.skelRow} />
-          ))}
-          <div className={styles.skelPager}>
-            <Skeleton className={styles.skelRange} />
-            <div className={styles.skelPagerBtns}>
-              <Skeleton className={styles.skelBtn} />
-              <Skeleton className={styles.skelPageLabel} aria-hidden="true" />
-              <Skeleton className={styles.skelBtn} />
-            </div>
-          </div>
+          <ZentraPaginationSkeleton />
         </div>
       </section>
     );
@@ -94,13 +73,28 @@ export default function NurseHealthRecordsPage() {
   }
 
   const refreshing = isRefetching && !isPending;
+  const isTrueEmpty = (data.unfilteredTotal ?? data.total) === 0;
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
-      {refreshing ? <NurseRefreshBadge label="Refreshing records…" /> : null}
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label="Health records"
+    >
+      {isTrueEmpty ? (
+        <NurseEmptyCard
+          icon={FolderOpen}
+          title="No health records yet"
+          hint="Finished clinic sessions and resolved cases will appear here, one card per record."
+          label="Health records"
+          centered
+          layout="fit"
+        />
+      ) : (
       <NurseDocumentariesList
         alerts={Array.isArray(data.alerts) ? data.alerts : []}
       />
+      )}
     </section>
   );
 }

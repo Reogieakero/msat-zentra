@@ -3,11 +3,13 @@
 import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BamaChat } from "./components/BamaChat";
-import { useTeacherOverview } from "../overview/components/teacher-overview-data";
+import { TeacherEmptyCard } from "../components/TeacherEmptyCard";
+import { KanbanBoardSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
+import chatStyles from "./components/bama-chat.module.css";
+import { MessageSquareOff } from "lucide-react";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 
-// Chat with Bama is an adviser-only filing surface: regular subject
-// teachers get no nav item, and a direct URL bounces them back to Overview
-// once the overview confirms they advise no section.
 export default function TeacherChatPage() {
   return (
     <Suspense>
@@ -29,19 +31,26 @@ function TeacherChatGate() {
 
   if (overview.isPending || overview.isError || !overview.data) {
     return (
-      <section aria-busy="true" aria-label="Loading chat">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+      <section className={chatStyles.page} aria-busy="true" aria-label="Loading chat">
+        <div className={chatStyles.layout}>
+          <Skeleton className="min-h-[30rem] w-full rounded-xl" />
+          <div className={chatStyles.body}>
+            <KanbanBoardSkeleton rows={6} className="flex-1" />
+          </div>
+        </div>
       </section>
     );
   }
 
   if (!isAdviser) {
     return (
-      <section aria-label="Chat unavailable">
-        <p className="text-sm text-muted-foreground">
-          Chat with Bama is available to class advisers.
-        </p>
-      </section>
+      <TeacherEmptyCard
+        centered
+        icon={MessageSquareOff}
+        title="Chat with Bama is available to class advisers"
+        hint="Your account is not linked to an advisory section. Once assigned, adviser chat will appear here."
+        label="Chat unavailable"
+      />
     );
   }
 

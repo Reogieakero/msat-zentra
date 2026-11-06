@@ -3,28 +3,13 @@ import {
   remarksFromTransmuted,
   meetsAcademicExcellenceAward,
 } from "../../services/grading.js";
-import { computeRiskFactors, levelFromFlags } from "../../services/risk.js";
+import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../../services/risk.js";
 import { schoolDaysToDate } from "../../services/attendance.js";
-
-const GRADE_LABELS: Record<string, string> = {
-  G7: "Grade 7",
-  G8: "Grade 8",
-  G9: "Grade 9",
-  G10: "Grade 10",
-  G11: "Grade 11",
-  G12: "Grade 12",
-};
-
-function gradeLabel(gradeLevel: string): string {
-  return GRADE_LABELS[gradeLevel] ?? gradeLevel;
-}
+import { gradeLabel } from "../../lib/grades.js";
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
-
-// DO 15, s. 2026 lists Academic Excellence awardees alphabetically — no
-// bands, no rank order.
 
 export interface AcademicsSummary {
   schoolYear: string;
@@ -35,10 +20,6 @@ export interface AcademicsSummary {
   potentialHonorRoll: PotentialHonorCandidateDTO[];
 }
 
-// Students not yet confirmed (grades still unlocked) but whose current raw
-// partial grades already satisfy the Academic Excellence rule — i.e. they
-// have the potential to make the award list once remaining grades are
-// locked/finalized.
 export interface PotentialHonorCandidateDTO {
   studentId: string;
   name: string;
@@ -57,6 +38,8 @@ export interface StudentRowDTO {
   studentId: string;
   lrn: string;
   name: string;
+  /** Persisted sprite mascot; null falls back to the derived one client-side. */
+  mascot: string | null;
   riskLevel: "High" | "Moderate" | "Low";
   overallAverage: number;
   attendanceRatePct: number;
@@ -70,6 +53,8 @@ export interface SectionSummaryDTO {
   sectionId: string;
   section: string;
   grade: string;
+  /** Adviser has switched student-data sharing ON; metrics are hidden otherwise. */
+  shared: boolean;
   avgTransmuted: number;
   passPct: number;
   failPct: number;
@@ -93,8 +78,7 @@ export async function getAcademicsSummary(
   mode: "raw" | "final" = "final",
   scope?: { schoolYearId?: string | null; termId?: string | null },
 ): Promise<AcademicsSummary> {
-  // Scoped to the session's active School Year + Term (req.termScope).
-  // Falls back to the database-active year so legacy callers keep working.
+
   let activeTerm: {
     id: string;
     termNumber: number;
@@ -124,16 +108,11 @@ export async function getAcademicsSummary(
   const termId = activeTerm?.id;
   const termLabel = activeTerm ? `Term ${activeTerm.termNumber}` : "No active term";
   const schoolYear = activeTerm?.schoolYear?.name ?? "No active school year";
-  // Global "school days done" — weekdays from term start through today.
-  // Single source of truth shared with the attendance heatmaps.
+
   const schoolDays = schoolDaysToDate(activeTerm?.startDate);
 
-  // "final" = only locked/finalized grades; "raw" = include every graded row
-  // (locked or not) so the principal can preview before grades are finalized.
   const lockedOnly = mode === "final";
 
-  // Scope sections to the active school year (was: all years, all sections).
-  // Falls back to the DB-active year when the session carries no scope.
   let resolvedYearId = scope?.schoolYearId ?? null;
   if (!resolvedYearId) {
     const activeYear = await prisma.schoolYear.findFirst({
@@ -146,6 +125,9 @@ export async function getAcademicsSummary(
   const sections = await prisma.section.findMany({
     where: resolvedYearId ? { schoolYearId: resolvedYearId } : undefined,
     include: {
+      adviser: {
+        select: { staffProfile: { select: { shareStudentData: true } } },
+      },
       students: {
         include: {
           user: { select: { fullName: true } },
@@ -171,13 +153,13 @@ export async function getAcademicsSummary(
           },
         },
       },
-      // Enlisted students without accounts — account status never excludes
-      // anyone from academics or risk. Same shape as profiles below.
+
       rosterEntries: {
         select: {
           id: true,
           lrn: true,
           fullName: true,
+          mascot: true,
           finalGrades: {
             where: { termId },
             select: {
@@ -207,18 +189,27 @@ export async function getAcademicsSummary(
   const passFailMap = new Map<string, { passed: number; failed: number }>();
   const honorRollPool: HonorRollCandidateDTO[] = [];
   const potentialPool: PotentialHonorCandidateDTO[] = [];
+  const sectionTotals = termId
+    ? await sectionAttendanceTotals(
+        sections.map((s) => s.id),
+        termId,
+      )
+    : new Map<string, number>();
 
   for (const section of sections) {
     const grade = gradeLabel(section.gradeLevel);
     const gradeAcc = passFailMap.get(grade) ?? { passed: 0, failed: 0 };
+    // The principal only reads student data the adviser has explicitly shared
+    // (Settings → share student data). Names/LRNs stay for the roster itself;
+    // averages, attendance, risk and honour-roll entries are withheld.
+    const shared = section.adviser?.staffProfile?.shareStudentData ?? false;
 
-    // Registered profiles plus unregistered enlistments (matched by LRN so
-    // nobody counts twice once they register), normalized to one shape.
     const registeredLrns = new Set(section.students.map((s) => s.lrn));
     const enrolledStudents: {
       userId: string;
       lrn: string;
       fullName: string;
+      mascot: string | null;
       finalGrades: {
         termId: string | null;
         transmutedGrade: number | null;
@@ -235,6 +226,7 @@ export async function getAcademicsSummary(
         userId: s.userId,
         lrn: s.lrn,
         fullName: s.user.fullName,
+        mascot: s.mascot ?? null,
         finalGrades: s.finalGrades,
         attendanceRecords: s.attendanceRecords,
         anecdotalCount: s.anecdotalRecords.length,
@@ -245,6 +237,7 @@ export async function getAcademicsSummary(
           userId: `roster:${r.id}`,
           lrn: r.lrn,
           fullName: r.fullName,
+          mascot: r.mascot ?? null,
           finalGrades: r.finalGrades,
           attendanceRecords: r.attendanceRecords,
           anecdotalCount: r.anecdotalRecords.length,
@@ -254,6 +247,23 @@ export async function getAcademicsSummary(
 
     const students: StudentRowDTO[] = [];
     for (const student of enrolledStudents) {
+      if (!shared) {
+        // Roster identity only — no grades, attendance, risk or anecdotes.
+        students.push({
+          studentId: student.userId,
+          lrn: student.lrn,
+          name: student.fullName,
+          mascot: student.mascot,
+          riskLevel: "Low",
+          overallAverage: 0,
+          attendanceRatePct: 0,
+          presentAm: 0,
+          presentPm: 0,
+          schoolDays,
+          subjects: [],
+        });
+        continue;
+      }
       const finals = (student.finalGrades ?? [])
         .filter((f) => f.termId === termId)
         .filter((f) =>
@@ -262,9 +272,7 @@ export async function getAcademicsSummary(
             : true
         )
         .filter((f) => f.transmutedGrade != null && f.computedAverage != null);
-      // Every name on the advisory roster (registered profile or enlisted
-      // roster entry) is listed — account or grade status never excludes
-      // anyone. Students without encoded grades get an empty subject list.
+
       const hasGrades = finals.length > 0;
 
       const subjects: StudentSubjectDTO[] = finals.map((f) => {
@@ -285,14 +293,11 @@ export async function getAcademicsSummary(
           )
         : 0;
 
-      // Pass/fail only counts students with encoded grades.
       if (hasGrades) {
         if (overallAverage >= 75) gradeAcc.passed += 1;
         else gradeAcc.failed += 1;
       }
 
-      // Live risk level via the shared engine (do NOT trust the stale stored
-      // riskLevel column — must match the Risk board/students pages).
       const liveLevel = levelFromFlags(
         computeRiskFactors({
           finalGrades: finals.map((f) => ({
@@ -300,12 +305,11 @@ export async function getAcademicsSummary(
             transmutedGrade: f.transmutedGrade,
           })),
           attendance: student.attendanceRecords,
+          attendanceTotal: sectionTotals.get(section.id),
           anecdotalCount: student.anecdotalCount,
           enrolled,
         })
       );
-      const atRisk = liveLevel === "High" || liveLevel === "Moderate";
-
       const amRecords = student.attendanceRecords.filter((a) => a.session === "AM");
       const pmRecords = student.attendanceRecords.filter((a) => a.session === "PM");
       const presentAm = amRecords.filter((a) => a.status === "present").length;
@@ -319,6 +323,7 @@ export async function getAcademicsSummary(
         studentId: student.userId,
         lrn: student.lrn,
         name: student.fullName,
+        mascot: student.mascot,
         riskLevel: liveLevel,
         overallAverage,
         attendanceRatePct,
@@ -328,9 +333,6 @@ export async function getAcademicsSummary(
         subjects,
       });
 
-      // Academic Excellence (DO 15, s. 2026): only students with encoded
-      // grades, every subject grade locked/finalized, and the student is not
-      // High risk.
       if (hasGrades) {
         const allLocked = finals.every(
           (f) => f.lockStatus === "locked" || f.lockStatus === "adviser_approved" || f.finalizedAt != null
@@ -348,9 +350,7 @@ export async function getAcademicsSummary(
             });
           }
         } else if (!allLocked && liveLevel !== "High") {
-          // Potential engine: current raw partial grades already meet the
-          // award rule, so the student can still reach the award list once
-          // remaining grades are locked.
+
           const lowestSubject = subjects.reduce(
             (min, s) => Math.min(min, s.transmutedGrade),
             Infinity
@@ -375,9 +375,6 @@ export async function getAcademicsSummary(
 
     passFailMap.set(grade, gradeAcc);
 
-    // Section aggregates only cover students with encoded grades, so
-    // gradeless roster members never drag averages or pass rates. Sections
-    // are always listed, even when nobody has grades yet.
     const graded = students.filter((s) => s.subjects.length > 0);
     const avgTransmuted =
       graded.length > 0
@@ -397,6 +394,7 @@ export async function getAcademicsSummary(
       sectionId: section.id,
       section: section.name,
       grade,
+      shared,
       avgTransmuted,
       passPct,
       failPct,
@@ -414,7 +412,6 @@ export async function getAcademicsSummary(
         Number(a.grade.replace(/\D/g, "")) - Number(b.grade.replace(/\D/g, ""))
     );
 
-  // DO 15, s. 2026: awardees are listed alphabetically.
   const honorRollPreview = honorRollPool
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -429,4 +426,149 @@ export async function getAcademicsSummary(
     honorRollPreview,
     potentialHonorRoll,
   };
+}
+
+/** Hover-card stats for one learner — live, term-scoped, sharing-gated. */
+export interface StudentHoverStatsDTO {
+  studentId: string;
+  name: string;
+  termLabel: string;
+  schoolYear: string;
+  /** Adviser has connected/synced data (shareStudentData ON). */
+  connected: boolean;
+  generalAverage: number | null;
+  gradedSubjects: number;
+  attendance: { present: number; total: number; pct: number | null };
+  anecdoteCount: number;
+}
+
+/**
+ * Per-student snapshot behind the principal academics hover card.
+ *
+ * Term resolution mirrors the summary: the requested term wins, otherwise the
+ * active school year's first term, otherwise any term of the active year.
+ * Nothing is served unless the adviser has switched data sharing ON — the
+ * principal sees the "adviser not sharing" state instead of live numbers.
+ */
+export async function getStudentHoverStats(
+  rawId: string,
+  scope?: { schoolYearId?: string | null; termId?: string | null },
+): Promise<StudentHoverStatsDTO> {
+  const isRoster = rawId.startsWith("roster:");
+  const rosterId = isRoster ? rawId.slice("roster:".length) : null;
+
+  const [student, term] = await Promise.all([
+    isRoster
+      ? prisma.studentRoster.findUnique({
+          where: { id: rosterId! },
+          select: {
+            fullName: true,
+            sectionId: true,
+            section: {
+              select: {
+                adviser: {
+                  select: { staffProfile: { select: { shareStudentData: true } } },
+                },
+              },
+            },
+          },
+        })
+      : prisma.studentProfile.findUnique({
+          where: { userId: rawId },
+          select: {
+            sectionId: true,
+            user: { select: { fullName: true } },
+            section: {
+              select: {
+                adviser: {
+                  select: { staffProfile: { select: { shareStudentData: true } } },
+                },
+              },
+            },
+          },
+        }),
+    resolveHoverTerm(scope),
+  ]);
+
+  const name = isRoster
+    ? (student as { fullName?: string } | null)?.fullName ?? "Student"
+    : (student as { user?: { fullName?: string } } | null)?.user?.fullName ?? "Student";
+  const connected =
+    (student as { section?: { adviser?: { staffProfile?: { shareStudentData?: boolean } | null } | null } | null } | null)
+      ?.section?.adviser?.staffProfile?.shareStudentData ?? false;
+  const sectionId = (student as { sectionId?: string | null } | null)?.sectionId ?? null;
+
+  const termLabel = term ? `Term ${term.termNumber}` : "No active term";
+  const schoolYear = term?.schoolYear.name ?? "No active school year";
+
+  const base: StudentHoverStatsDTO = {
+    studentId: rawId,
+    name,
+    termLabel,
+    schoolYear,
+    connected,
+    generalAverage: null,
+    gradedSubjects: 0,
+    attendance: { present: 0, total: 0, pct: null },
+    anecdoteCount: 0,
+  };
+
+  if (!connected || !term) return base;
+
+  const owner = isRoster ? { rosterId } : { studentId: rawId };
+  const [grades, attendance, anecdoteCount, totals] = await Promise.all([
+    prisma.finalGrade.findMany({
+      where: { ...owner, termId: term.id, transmutedGrade: { not: null } },
+      select: { transmutedGrade: true },
+    }),
+    prisma.attendanceRecord.findMany({
+      where: { ...owner, termId: term.id },
+      select: { status: true },
+    }),
+    prisma.anecdotalRecord.count({ where: { ...owner, termId: term.id } }),
+    // The denominator is the whole section's term, anchored at the TERM START
+    // DATE — not at this learner's add date. A classmate added mid-term must
+    // read the same /N as everyone else (their pre-join meetups simply count
+    // as missed), otherwise two classmates show different totals for the same
+    // school days. Same helper the risk engine uses.
+    sectionId
+      ? sectionAttendanceTotals([sectionId], term.id)
+      : Promise.resolve(new Map<string, number>()),
+  ]);
+
+  const values = grades
+    .map((g) => g.transmutedGrade)
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  const present = attendance.filter((a) => a.status === "present").length;
+  // Never report fewer meetups than the learner actually has marks in.
+  const total = Math.max(sectionId ? totals.get(sectionId) ?? 0 : 0, attendance.length);
+
+  return {
+    ...base,
+    generalAverage: values.length > 0 ? round1(values.reduce((a, b) => a + b, 0) / values.length) : null,
+    gradedSubjects: values.length,
+    attendance: { present, total, pct: total > 0 ? round1((present / total) * 100) : null },
+    anecdoteCount,
+  };
+}
+
+async function resolveHoverTerm(scope?: { schoolYearId?: string | null; termId?: string | null }) {
+  const select = { id: true, termNumber: true, schoolYear: { select: { name: true } } } as const;
+  if (scope?.termId) {
+    const term = await prisma.term.findUnique({ where: { id: scope.termId }, select });
+    if (term) return term;
+  }
+  if (scope?.schoolYearId) {
+    const term = await prisma.term.findFirst({
+      where: { schoolYearId: scope.schoolYearId },
+      orderBy: { termNumber: "asc" },
+      select,
+    });
+    if (term) return term;
+  }
+  return prisma.term.findFirst({
+    where: { schoolYear: { isActive: true } },
+    orderBy: { termNumber: "asc" },
+    select,
+  });
 }

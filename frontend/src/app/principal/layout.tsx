@@ -3,47 +3,37 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTheme } from "@/components/providers";
+import { logout } from "@/lib/api/client";
 import { PrincipalSidebar } from "@/components/principal-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import { UserRound } from "lucide-react";
+import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
+import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { PrincipalBell } from "./components/PrincipalBell";
 import { usePrincipalRealtime } from "@/lib/realtime/principalChannel";
-import { GradeModeProvider } from "./grade-mode-context";
 import {
   PrincipalPaletteGate,
   usePrincipalProfileSettings,
-} from "./settings/components/profile-settings-data";
+} from "@/services/settings/profile-settings";
 import styles from "./principal.module.css";
 
 function PrincipalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  // Live inbox: a toast pops on the current page the moment something lands
-  // (e.g. a master teacher sends slots for review), plus the bell and the
-  // approval queue refresh. Single channel per mount.
+
+  const { collapsed: sidebarCollapsed } =
+    useCollapsibleSidebar("zentra.principal.sidebar.collapsed");
+
   usePrincipalRealtime();
   const profile = usePrincipalProfileSettings();
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted && resolvedTheme === "dark";
-
   const handleLogout = () => {
+
+    void logout();
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
       .forEach((key) => window.localStorage.removeItem(key));
@@ -58,15 +48,14 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
           <span className={styles.brandText}>Zentra</span>
         </Link>
 
+        <AppBreadcrumbs role="Principal" />
+
         <div className={styles.spacer} />
 
         <ActiveTermBadge />
 
         <div className={styles.search}>
-          {/* Lightweight search field (was cmdk Command with no results list
-              — same look, no dead dependency weight). Filters ADM/audit/risk
-              tables via their own search inputs; this shell field stays
-              visual-only until a global palette ships. */}
+
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -78,13 +67,24 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
 
         <PrincipalBell />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={styles.avatarButton}
-              aria-label="Account menu"
-            >
+        <KanbanAccountMenu
+          settingsHref="/principal/settings"
+          onLogout={handleLogout}
+        >
+          <button
+            type="button"
+            className={styles.avatarButton}
+            aria-label="Account menu"
+          >
+            {profile.data?.mascot ? (
+              <span className="flex size-8 items-center justify-center overflow-hidden rounded-full border border-border bg-muted/40">
+                <StudentMascot
+                  name={profile.data.fullName || "You"}
+                  character={profile.data.mascot}
+                  size={32}
+                />
+              </span>
+            ) : (
               <Avatar size="sm">
                 {profile.data?.photoUrl ? (
                   <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
@@ -93,68 +93,16 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
                   <UserRound className={styles.avatarIcon} />
                 </AvatarFallback>
               </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className={styles.accountMenu}>
-            <DropdownMenuLabel>Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className={styles.accountItem}
-              onSelect={(event) => {
-                event.preventDefault();
-                router.push("/principal/settings");
-              }}
-            >
-              <Settings className={styles.accountIcon} />
-              <span>Settings</span>
-            </DropdownMenuItem>
-            <div className={styles.accountGroup}>
-              <div className={styles.accountGroupLabel}>
-                <span>System Preference</span>
-              </div>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setTheme("light");
-                }}
-              >
-                <Sun className={styles.accountIcon} />
-                <span>Light</span>
-                {!isDark ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setTheme("dark");
-                }}
-              >
-                <Moon className={styles.accountIcon} />
-                <span>Dark</span>
-                {isDark ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className={styles.accountItem}
-              onSelect={(event) => {
-                event.preventDefault();
-                handleLogout();
-              }}
-            >
-              <LogOut className={styles.accountIcon} />
-              <span>Logout</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            )}
+          </button>
+        </KanbanAccountMenu>
       </header>
-      <PrincipalSidebar />
-      <div className={`${styles.shell} ${styles.shellWithRail}`}>
+      <PrincipalSidebar collapsed={sidebarCollapsed} />
+      <div
+        className={`${styles.shell} ${styles.shellWithRail} ${
+          sidebarCollapsed ? styles.shellWithRailCollapsed : ""
+        }`}
+      >
         <main className={styles.main}>{children}</main>
       </div>
     </div>
@@ -166,9 +114,5 @@ export default function PrincipalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <GradeModeProvider>
-      <PrincipalShell>{children}</PrincipalShell>
-    </GradeModeProvider>
-  );
+  return <PrincipalShell>{children}</PrincipalShell>;
 }

@@ -4,8 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ChevronLeft,
-  ChevronRight,
   UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,61 +19,98 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { markSelfNotified } from "@/lib/realtime/recordKeeperChannel";
 import { formatGrade, formatSection } from "@/lib/utils";
-import { LrnVerifyButton } from "../../accounts/components/LrnVerifyButton";
+import { LrnVerifyDialog } from "../../accounts/components/LrnVerifyDialog";
+import { RecordKeeperEmptyState } from "../../components/RecordKeeperEmptyCard";
 import type { PendingStudentsResponse } from "../../accounts/components/types";
 import { formatRelativeTime } from "../../accounts/components/types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import styles from "./OverviewApprovals.module.css";
+import styles from "@/components/registry/overview/OverviewApprovals.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
-// Same pending-students table as the Accounts page: identical query key +
-// fetcher (one shared cache entry — both views can never disagree), identical
-// column set and backend order (no client re-sort), same verify-and-approve
-// action. Preview pager matches the Accounts page size.
-const PAGE_SIZE = 8;
-
-async function fetchPendingStudents() {
+async function fetchPendingStudents(signal?: AbortSignal) {
   return apiClient
-    .get<PendingStudentsResponse>("/api/auth/pending", { params: { role: "student" } })
+    .get<PendingStudentsResponse>("/api/auth/pending", {
+      params: { role: "student", page: 1, pageSize: PAGE_SIZE },
+      signal,
+    })
     .then((res) => res.data);
 }
 
 export function OverviewApprovals() {
   const router = useRouter();
   const qc = useQueryClient();
-  const [page, setPage] = React.useState(1);
+  const dock = useDock();
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["record-keeper-pending-students"],
-    queryFn: fetchPendingStudents,
+    queryKey: ["record-keeper-pending-students", "preview"],
+    queryFn: ({ signal }) => fetchPendingStudents(signal),
+    staleTime: 30_000,
   });
 
   const goAccounts = React.useCallback(() => {
     router.push("/record-keeper/accounts");
   }, [router]);
 
-  // Backend order (requested oldest-first) — exactly as the Accounts page
-  // renders it. No client re-sort so the two tables stay identical.
   const pendingStudents = data?.students ?? [];
+  const total = data?.total ?? pendingStudents.length;
+  const pageRows = pendingStudents;
+  const start = total === 0 ? 0 : 1;
+  const end = Math.min(PAGE_SIZE, total);
+  const hasRecords = total > 0;
+  const isEmpty = !isPending && !isError && !hasRecords;
 
   const act = useMutation({
-    mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
+    mutationFn: ({ id, approve, reason }: { id: string; approve: boolean; reason?: string }) =>
       apiClient.post(
         approve ? `/api/auth/approve/${id}` : `/api/auth/reject/${id}`,
-        approve ? {} : { reason: "Rejected by record keeper" }
+        approve ? {} : { reason: reason ?? "" }
       ),
-    onSuccess: (_data, { id, approve }) => {
-      // Self-receipt lands in our own bell (badge bumps live); suppress its
-      // echo toast — the toast below already confirmed the action.
+    onMutate: async ({ id, approve }) => {
+      // Optimistic removal with rollback on error.
+      await qc.cancelQueries({ queryKey: ["record-keeper-pending-students"] });
+      const previous = qc.getQueriesData({ queryKey: ["record-keeper-pending-students"] });
+      qc.setQueriesData<PendingStudentsResponse>(
+        { queryKey: ["record-keeper-pending-students"] },
+        (old) =>
+          old && Array.isArray(old.students)
+            ? { ...old, students: old.students.filter((s) => s.id !== id) }
+            : old,
+      );
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "generic",
+          title: approve ? "Approving account" : "Rejecting account",
+          description: "Pending student",
+        });
+      } catch {
+        taskId = null;
+      }
+      return { previous, taskId };
+    },
+    onSuccess: (_data, { id, approve }, context) => {
+
       markSelfNotified(id);
+      if (context?.taskId) {
+        dock.completeTask(context.taskId, approve ? "Account approved." : "Account rejected.");
+      }
       toast.success({
         title: approve ? "Approved" : "Rejected",
         description: approve ? "The student account is now active." : "The account request was rejected.",
       });
     },
-    onError: () => {
-      toast.error({ title: "Action failed", description: "Could not process this account." });
+    onError: (err, _vars, context) => {
+      void err;
+      for (const [key, data] of context?.previous ?? []) {
+        qc.setQueryData(key, data);
+      }
+      if (context?.taskId) {
+        dock.failTask(context.taskId, "Could not process this account. Changes were rolled back.");
+      }
+      toast.error({ title: "Action failed", description: "Could not process this account. Changes were rolled back." });
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["record-keeper-pending-students"] });
@@ -83,38 +118,31 @@ export function OverviewApprovals() {
       qc.invalidateQueries({ queryKey: ["record-keeper-account-breakdown"] });
       qc.invalidateQueries({ queryKey: ["record-keeper-overview"] });
       qc.invalidateQueries({ queryKey: ["record-keeper-notifications"] });
-      setPage(1);
     },
   });
 
-  const total = pendingStudents.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageRows = pendingStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
-  const hasRecords = pendingStudents.length > 0;
-
   return (
-    <section className={assign.card} aria-labelledby="overview-pending-approvals">
+    <section className={assign.card} aria-labelledby={isEmpty ? undefined : "overview-pending-approvals"}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h2 id="overview-pending-approvals" className="text-base font-semibold">
-            Pending Approvals
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Approvals and follow-ups that need record keeper attention this term.
-          </p>
+      {!isEmpty && (
+        <div className={`${styles.header} relative`}>
+          <div className={styles.headerText}>
+            <h2 id="overview-pending-approvals" className="text-base font-semibold">
+              Pending Approvals
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Approvals and follow-ups that need record keeper attention this term.
+            </p>
+          </div>
+          <div className={styles.headerActions}>
+            <Button variant="link" size="sm" className={styles.viewAll} onClick={goAccounts}>
+              View all
+            </Button>
+          </div>
         </div>
-        <div className={styles.headerActions}>
-          <Button variant="link" size="sm" className={styles.viewAll} onClick={goAccounts}>
-            View all
-          </Button>
-        </div>
-      </div>
+      )}
       <div className={`${styles.content} relative`}>
         {isPending ? (
           <div className={styles.tableWrap}>
@@ -123,15 +151,11 @@ export function OverviewApprovals() {
         ) : isError ? (
           <p className={styles.empty}>Could not load overview figures.</p>
         ) : !hasRecords ? (
-          <div className={styles.emptyBlock}>
-            <span className={styles.emptyIcon} aria-hidden>
-              <UserCheck />
-            </span>
-            <p className={styles.emptyTitle}>All caught up</p>
-            <p className={styles.emptyHint}>
-              No pending student enrollments in the G7–10 band.
-            </p>
-          </div>
+          <RecordKeeperEmptyState
+            icon={UserCheck}
+            title="All caught up"
+            hint="No pending student enrollments in the G7–10 band."
+          />
         ) : (
           <div className={styles.tableWrap}>
             <Table aria-label="Pending student accounts">
@@ -167,9 +191,12 @@ export function OverviewApprovals() {
                         </Badge>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <LrnVerifyButton
+                        <LrnVerifyDialog
                           student={s}
                           onApprove={() => act.mutateAsync({ id: s.id, approve: true }).then(() => undefined)}
+                          onReject={(reason) =>
+                            act.mutateAsync({ id: s.id, approve: false, reason }).then(() => undefined)
+                          }
                           approving={act.isPending}
                         />
                       </TableCell>
@@ -180,31 +207,14 @@ export function OverviewApprovals() {
           </div>
         )}
       </div>
-      {hasRecords && (
+      {hasRecords && total > PAGE_SIZE && (
         <div className={`${styles.footer} relative`}>
           <span className={styles.footerInfo}>
-            {total > 0 ? `${start}–${end} of ${total}` : "0 of 0"}
+            {`Showing ${start}–${end} of ${total}`} —{" "}
+            <button type="button" className={styles.viewAll} onClick={goAccounts}>
+              View all
+            </button>
           </span>
-          <div className={styles.footerActions}>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage <= 1 || total === 0}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeft aria-hidden />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage >= totalPages || total === 0}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          </div>
         </div>
       )}
     </section>

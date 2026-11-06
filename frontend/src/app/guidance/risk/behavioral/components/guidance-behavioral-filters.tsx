@@ -14,7 +14,7 @@ import {
 import type {
   GuidanceAnecdotalCategory,
   GuidanceAnecdotalSummary,
-} from "../../../anecdotal/components/guidance-anecdotal-data";
+} from "@/services/guidance/anecdotal.types";
 import styles from "./guidance-behavioral-filters.module.css";
 
 export type BehavioralCategoryFilter = "all" | GuidanceAnecdotalCategory;
@@ -40,10 +40,6 @@ function label(value: BehavioralCategoryFilter): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-/**
- * Search + category dropdown — same DropdownMenu filter language as the
- * interventions and alerts pages (no Select component).
- */
 export function GuidanceBehavioralFilters({
   query,
   onQueryChange,

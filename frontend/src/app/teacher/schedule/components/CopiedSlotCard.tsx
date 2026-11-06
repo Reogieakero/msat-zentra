@@ -17,9 +17,6 @@ type Props = {
   onClear: () => void;
 };
 
-// Copied-slot indicator: same grid-card shell as the assign grid (glow,
-// hover, radius) with an amber alert identity — amber-tinted border via
-// inline style so it survives the card hover state, amber icon circle.
 export function CopiedSlotCard({ copied, onClear }: Props) {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;

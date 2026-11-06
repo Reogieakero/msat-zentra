@@ -1,0 +1,66 @@
+/* Side-flyout content for a booked parent meeting. */
+
+.body {
+  --amber: oklch(0.769 0.188 70.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.25rem;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.rowLabel {
+  flex-shrink: 0;
+  width: 4.25rem;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.rowValue {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+/* Booked = blue pill, matching the case-card pills. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid color-mix(in oklch, oklch(0.72 0.14 245), transparent 50%);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, oklch(0.72 0.14 245), transparent 88%);
+  color: oklch(0.72 0.14 245);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.invitees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.hint {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}

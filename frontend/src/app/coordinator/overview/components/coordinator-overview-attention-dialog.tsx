@@ -1,16 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import type { AttentionItem } from "./coordinator-overview-helpers";
 import styles from "./coordinator-overview-attention-dialog.module.css";
 
@@ -32,14 +26,18 @@ export function CoordinatorOverviewAttentionDialog({
   onRetry,
 }: CoordinatorOverviewAttentionDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent style={{ maxWidth: "32rem" }}>
-        <DialogHeader>
-          <DialogTitle>Needs attention</DialogTitle>
-          <DialogDescription>
-            Actionable items across your desk, newest workflow first.
-          </DialogDescription>
-        </DialogHeader>
+    <KanbanOverlay
+      open={open}
+      onClose={onClose}
+      width="sm"
+      title="Needs attention"
+      icon={
+        <span className="text-primary" aria-hidden>
+          <TriangleAlert size={14} />
+        </span>
+      }
+      description="Actionable items across your desk, newest workflow first."
+    >
         {attentionError ? (
           <div className={styles.inlineError} role="alert">
             <p className={styles.inlineErrorText}>
@@ -93,7 +91,6 @@ export function CoordinatorOverviewAttentionDialog({
             </li>
           ))}
         </ul>
-      </DialogContent>
-    </Dialog>
+    </KanbanOverlay>
   );
 }

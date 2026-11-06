@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { GuidanceAnecdotalRecord } from "../../../anecdotal/components/guidance-anecdotal-data";
+import type { GuidanceAnecdotalRecord } from "@/services/guidance/anecdotal.types";
 import styles from "./guidance-behavioral-cards.module.css";
 
 function capitalize(value: string): string {
@@ -24,10 +24,6 @@ interface GuidanceBehavioralCardsProps {
   records: GuidanceAnecdotalRecord[];
 }
 
-/**
- * Behavioral signal feed as cards — identity header, labeled detail grid,
- * and status badges. Category + tier only, never the clinical write-up.
- */
 export function GuidanceBehavioralCards({ records }: GuidanceBehavioralCardsProps) {
   return (
     <ul className={styles.grid}>

@@ -25,14 +25,9 @@ interface ClinicFormDropdownProps {
   onChange: (value: string) => void;
   placeholder: string;
   options: ClinicFormDropdownOption[];
-  /** Short lists fit without scrolling. */
   scrollable?: boolean;
 }
 
-/**
- * Single-select dropdown built on DropdownMenu (this project does not use
- * the Select UI). Same string contract: value in, value out.
- */
 export function ClinicFormDropdown({
   id,
   label,

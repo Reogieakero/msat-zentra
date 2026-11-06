@@ -43,8 +43,12 @@ export type StudentProfileMinAggregateOutputType = {
   gender: string | null
   address: string | null
   photoUrl: string | null
+  mascot: string | null
   riskCount: number | null
   riskLevel: $Enums.RiskLevel | null
+  academicFlag: boolean | null
+  attendanceFlag: boolean | null
+  behavioralFlag: boolean | null
   createdAt: Date | null
 }
 
@@ -57,8 +61,12 @@ export type StudentProfileMaxAggregateOutputType = {
   gender: string | null
   address: string | null
   photoUrl: string | null
+  mascot: string | null
   riskCount: number | null
   riskLevel: $Enums.RiskLevel | null
+  academicFlag: boolean | null
+  attendanceFlag: boolean | null
+  behavioralFlag: boolean | null
   createdAt: Date | null
 }
 
@@ -71,8 +79,12 @@ export type StudentProfileCountAggregateOutputType = {
   gender: number
   address: number
   photoUrl: number
+  mascot: number
   riskCount: number
   riskLevel: number
+  academicFlag: number
+  attendanceFlag: number
+  behavioralFlag: number
   createdAt: number
   _all: number
 }
@@ -95,8 +107,12 @@ export type StudentProfileMinAggregateInputType = {
   gender?: true
   address?: true
   photoUrl?: true
+  mascot?: true
   riskCount?: true
   riskLevel?: true
+  academicFlag?: true
+  attendanceFlag?: true
+  behavioralFlag?: true
   createdAt?: true
 }
 
@@ -109,8 +125,12 @@ export type StudentProfileMaxAggregateInputType = {
   gender?: true
   address?: true
   photoUrl?: true
+  mascot?: true
   riskCount?: true
   riskLevel?: true
+  academicFlag?: true
+  attendanceFlag?: true
+  behavioralFlag?: true
   createdAt?: true
 }
 
@@ -123,8 +143,12 @@ export type StudentProfileCountAggregateInputType = {
   gender?: true
   address?: true
   photoUrl?: true
+  mascot?: true
   riskCount?: true
   riskLevel?: true
+  academicFlag?: true
+  attendanceFlag?: true
+  behavioralFlag?: true
   createdAt?: true
   _all?: true
 }
@@ -224,8 +248,12 @@ export type StudentProfileGroupByOutputType = {
   gender: string | null
   address: string | null
   photoUrl: string | null
+  mascot: string | null
   riskCount: number
   riskLevel: $Enums.RiskLevel
+  academicFlag: boolean
+  attendanceFlag: boolean
+  behavioralFlag: boolean
   createdAt: Date
   _count: StudentProfileCountAggregateOutputType | null
   _avg: StudentProfileAvgAggregateOutputType | null
@@ -261,8 +289,12 @@ export type StudentProfileWhereInput = {
   gender?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
+  mascot?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntFilter<"StudentProfile"> | number
   riskLevel?: Prisma.EnumRiskLevelFilter<"StudentProfile"> | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
+  attendanceFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
+  behavioralFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
   createdAt?: Prisma.DateTimeFilter<"StudentProfile"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   section?: Prisma.XOR<Prisma.SectionNullableScalarRelationFilter, Prisma.SectionWhereInput> | null
@@ -279,6 +311,7 @@ export type StudentProfileWhereInput = {
   riskSnapshots?: Prisma.RiskSnapshotListRelationFilter
   sf10Records?: Prisma.Sf10RecordListRelationFilter
   gradeFlags?: Prisma.GradeFlagListRelationFilter
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionListRelationFilter
 }
 
 export type StudentProfileOrderByWithRelationInput = {
@@ -290,8 +323,12 @@ export type StudentProfileOrderByWithRelationInput = {
   gender?: Prisma.SortOrderInput | Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   photoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  mascot?: Prisma.SortOrderInput | Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
   section?: Prisma.SectionOrderByWithRelationInput
@@ -308,6 +345,7 @@ export type StudentProfileOrderByWithRelationInput = {
   riskSnapshots?: Prisma.RiskSnapshotOrderByRelationAggregateInput
   sf10Records?: Prisma.Sf10RecordOrderByRelationAggregateInput
   gradeFlags?: Prisma.GradeFlagOrderByRelationAggregateInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionOrderByRelationAggregateInput
 }
 
 export type StudentProfileWhereUniqueInput = Prisma.AtLeast<{
@@ -322,8 +360,12 @@ export type StudentProfileWhereUniqueInput = Prisma.AtLeast<{
   gender?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
+  mascot?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntFilter<"StudentProfile"> | number
   riskLevel?: Prisma.EnumRiskLevelFilter<"StudentProfile"> | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
+  attendanceFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
+  behavioralFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
   createdAt?: Prisma.DateTimeFilter<"StudentProfile"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   section?: Prisma.XOR<Prisma.SectionNullableScalarRelationFilter, Prisma.SectionWhereInput> | null
@@ -340,6 +382,7 @@ export type StudentProfileWhereUniqueInput = Prisma.AtLeast<{
   riskSnapshots?: Prisma.RiskSnapshotListRelationFilter
   sf10Records?: Prisma.Sf10RecordListRelationFilter
   gradeFlags?: Prisma.GradeFlagListRelationFilter
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionListRelationFilter
 }, "userId" | "lrn">
 
 export type StudentProfileOrderByWithAggregationInput = {
@@ -351,8 +394,12 @@ export type StudentProfileOrderByWithAggregationInput = {
   gender?: Prisma.SortOrderInput | Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   photoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  mascot?: Prisma.SortOrderInput | Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.StudentProfileCountOrderByAggregateInput
   _avg?: Prisma.StudentProfileAvgOrderByAggregateInput
@@ -373,8 +420,12 @@ export type StudentProfileScalarWhereWithAggregatesInput = {
   gender?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
+  mascot?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntWithAggregatesFilter<"StudentProfile"> | number
   riskLevel?: Prisma.EnumRiskLevelWithAggregatesFilter<"StudentProfile"> | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolWithAggregatesFilter<"StudentProfile"> | boolean
+  attendanceFlag?: Prisma.BoolWithAggregatesFilter<"StudentProfile"> | boolean
+  behavioralFlag?: Prisma.BoolWithAggregatesFilter<"StudentProfile"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"StudentProfile"> | Date | string
 }
 
@@ -385,8 +436,12 @@ export type StudentProfileCreateInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -403,6 +458,7 @@ export type StudentProfileCreateInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateInput = {
@@ -414,8 +470,12 @@ export type StudentProfileUncheckedCreateInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -430,6 +490,7 @@ export type StudentProfileUncheckedCreateInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUpdateInput = {
@@ -439,8 +500,12 @@ export type StudentProfileUpdateInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -457,6 +522,7 @@ export type StudentProfileUpdateInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateInput = {
@@ -468,8 +534,12 @@ export type StudentProfileUncheckedUpdateInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -484,6 +554,7 @@ export type StudentProfileUncheckedUpdateInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateManyInput = {
@@ -495,8 +566,12 @@ export type StudentProfileCreateManyInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
 }
 
@@ -507,8 +582,12 @@ export type StudentProfileUpdateManyMutationInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -521,8 +600,12 @@ export type StudentProfileUncheckedUpdateManyInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -540,8 +623,12 @@ export type StudentProfileCountOrderByAggregateInput = {
   gender?: Prisma.SortOrder
   address?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -558,8 +645,12 @@ export type StudentProfileMaxOrderByAggregateInput = {
   gender?: Prisma.SortOrder
   address?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -572,8 +663,12 @@ export type StudentProfileMinOrderByAggregateInput = {
   gender?: Prisma.SortOrder
   address?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
+  mascot?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
+  academicFlag?: Prisma.SortOrder
+  attendanceFlag?: Prisma.SortOrder
+  behavioralFlag?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -642,6 +737,10 @@ export type IntFieldUpdateOperationsInput = {
 
 export type EnumRiskLevelFieldUpdateOperationsInput = {
   set?: $Enums.RiskLevel
+}
+
+export type BoolFieldUpdateOperationsInput = {
+  set?: boolean
 }
 
 export type StudentProfileCreateNestedOneWithoutParentLinksInput = {
@@ -852,6 +951,22 @@ export type StudentProfileUpdateOneRequiredWithoutAdmProfilesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudentProfileUpdateToOneWithWhereWithoutAdmProfilesInput, Prisma.StudentProfileUpdateWithoutAdmProfilesInput>, Prisma.StudentProfileUncheckedUpdateWithoutAdmProfilesInput>
 }
 
+export type StudentProfileCreateNestedOneWithoutAdvisoryModuleSubmissionsInput = {
+  create?: Prisma.XOR<Prisma.StudentProfileCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentProfileUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  connectOrCreate?: Prisma.StudentProfileCreateOrConnectWithoutAdvisoryModuleSubmissionsInput
+  connect?: Prisma.StudentProfileWhereUniqueInput
+}
+
+export type StudentProfileUpdateOneWithoutAdvisoryModuleSubmissionsNestedInput = {
+  create?: Prisma.XOR<Prisma.StudentProfileCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentProfileUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  connectOrCreate?: Prisma.StudentProfileCreateOrConnectWithoutAdvisoryModuleSubmissionsInput
+  upsert?: Prisma.StudentProfileUpsertWithoutAdvisoryModuleSubmissionsInput
+  disconnect?: Prisma.StudentProfileWhereInput | boolean
+  delete?: Prisma.StudentProfileWhereInput | boolean
+  connect?: Prisma.StudentProfileWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StudentProfileUpdateToOneWithWhereWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentProfileUpdateWithoutAdvisoryModuleSubmissionsInput>, Prisma.StudentProfileUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+}
+
 export type StudentProfileCreateNestedOneWithoutSf10RecordsInput = {
   create?: Prisma.XOR<Prisma.StudentProfileCreateWithoutSf10RecordsInput, Prisma.StudentProfileUncheckedCreateWithoutSf10RecordsInput>
   connectOrCreate?: Prisma.StudentProfileCreateOrConnectWithoutSf10RecordsInput
@@ -889,8 +1004,12 @@ export type StudentProfileCreateWithoutUserInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutStudentInput
@@ -906,6 +1025,7 @@ export type StudentProfileCreateWithoutUserInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutUserInput = {
@@ -916,8 +1036,12 @@ export type StudentProfileUncheckedCreateWithoutUserInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -932,6 +1056,7 @@ export type StudentProfileUncheckedCreateWithoutUserInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutUserInput = {
@@ -957,8 +1082,12 @@ export type StudentProfileUpdateWithoutUserInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutStudentNestedInput
@@ -974,6 +1103,7 @@ export type StudentProfileUpdateWithoutUserInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutUserInput = {
@@ -984,8 +1114,12 @@ export type StudentProfileUncheckedUpdateWithoutUserInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -1000,6 +1134,7 @@ export type StudentProfileUncheckedUpdateWithoutUserInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutParentLinksInput = {
@@ -1009,8 +1144,12 @@ export type StudentProfileCreateWithoutParentLinksInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -1026,6 +1165,7 @@ export type StudentProfileCreateWithoutParentLinksInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutParentLinksInput = {
@@ -1037,8 +1177,12 @@ export type StudentProfileUncheckedCreateWithoutParentLinksInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -1052,6 +1196,7 @@ export type StudentProfileUncheckedCreateWithoutParentLinksInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutParentLinksInput = {
@@ -1077,8 +1222,12 @@ export type StudentProfileUpdateWithoutParentLinksInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -1094,6 +1243,7 @@ export type StudentProfileUpdateWithoutParentLinksInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutParentLinksInput = {
@@ -1105,8 +1255,12 @@ export type StudentProfileUncheckedUpdateWithoutParentLinksInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -1120,6 +1274,7 @@ export type StudentProfileUncheckedUpdateWithoutParentLinksInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutSectionInput = {
@@ -1129,8 +1284,12 @@ export type StudentProfileCreateWithoutSectionInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutStudentInput
@@ -1146,6 +1305,7 @@ export type StudentProfileCreateWithoutSectionInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutSectionInput = {
@@ -1156,8 +1316,12 @@ export type StudentProfileUncheckedCreateWithoutSectionInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -1172,6 +1336,7 @@ export type StudentProfileUncheckedCreateWithoutSectionInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutSectionInput = {
@@ -1212,8 +1377,12 @@ export type StudentProfileScalarWhereInput = {
   gender?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
+  mascot?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntFilter<"StudentProfile"> | number
   riskLevel?: Prisma.EnumRiskLevelFilter<"StudentProfile"> | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
+  attendanceFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
+  behavioralFlag?: Prisma.BoolFilter<"StudentProfile"> | boolean
   createdAt?: Prisma.DateTimeFilter<"StudentProfile"> | Date | string
 }
 
@@ -1224,8 +1393,12 @@ export type StudentProfileCreateWithoutStudentGradesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -1241,6 +1414,7 @@ export type StudentProfileCreateWithoutStudentGradesInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutStudentGradesInput = {
@@ -1252,8 +1426,12 @@ export type StudentProfileUncheckedCreateWithoutStudentGradesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -1267,6 +1445,7 @@ export type StudentProfileUncheckedCreateWithoutStudentGradesInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutStudentGradesInput = {
@@ -1292,8 +1471,12 @@ export type StudentProfileUpdateWithoutStudentGradesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -1309,6 +1492,7 @@ export type StudentProfileUpdateWithoutStudentGradesInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutStudentGradesInput = {
@@ -1320,8 +1504,12 @@ export type StudentProfileUncheckedUpdateWithoutStudentGradesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -1335,6 +1523,7 @@ export type StudentProfileUncheckedUpdateWithoutStudentGradesInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutFinalGradesInput = {
@@ -1344,8 +1533,12 @@ export type StudentProfileCreateWithoutFinalGradesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -1361,6 +1554,7 @@ export type StudentProfileCreateWithoutFinalGradesInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutFinalGradesInput = {
@@ -1372,8 +1566,12 @@ export type StudentProfileUncheckedCreateWithoutFinalGradesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -1387,6 +1585,7 @@ export type StudentProfileUncheckedCreateWithoutFinalGradesInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutFinalGradesInput = {
@@ -1412,8 +1611,12 @@ export type StudentProfileUpdateWithoutFinalGradesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -1429,6 +1632,7 @@ export type StudentProfileUpdateWithoutFinalGradesInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutFinalGradesInput = {
@@ -1440,8 +1644,12 @@ export type StudentProfileUncheckedUpdateWithoutFinalGradesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -1455,6 +1663,7 @@ export type StudentProfileUncheckedUpdateWithoutFinalGradesInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutGradeFlagsInput = {
@@ -1464,8 +1673,12 @@ export type StudentProfileCreateWithoutGradeFlagsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -1481,6 +1694,7 @@ export type StudentProfileCreateWithoutGradeFlagsInput = {
   parentLinks?: Prisma.ParentStudentLinkCreateNestedManyWithoutStudentInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutGradeFlagsInput = {
@@ -1492,8 +1706,12 @@ export type StudentProfileUncheckedCreateWithoutGradeFlagsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -1507,6 +1725,7 @@ export type StudentProfileUncheckedCreateWithoutGradeFlagsInput = {
   parentLinks?: Prisma.ParentStudentLinkUncheckedCreateNestedManyWithoutStudentInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutGradeFlagsInput = {
@@ -1532,8 +1751,12 @@ export type StudentProfileUpdateWithoutGradeFlagsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -1549,6 +1772,7 @@ export type StudentProfileUpdateWithoutGradeFlagsInput = {
   parentLinks?: Prisma.ParentStudentLinkUpdateManyWithoutStudentNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutGradeFlagsInput = {
@@ -1560,8 +1784,12 @@ export type StudentProfileUncheckedUpdateWithoutGradeFlagsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -1575,6 +1803,7 @@ export type StudentProfileUncheckedUpdateWithoutGradeFlagsInput = {
   parentLinks?: Prisma.ParentStudentLinkUncheckedUpdateManyWithoutStudentNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutAttendanceRecordsInput = {
@@ -1584,8 +1813,12 @@ export type StudentProfileCreateWithoutAttendanceRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -1601,6 +1834,7 @@ export type StudentProfileCreateWithoutAttendanceRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutAttendanceRecordsInput = {
@@ -1612,8 +1846,12 @@ export type StudentProfileUncheckedCreateWithoutAttendanceRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -1627,6 +1865,7 @@ export type StudentProfileUncheckedCreateWithoutAttendanceRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutAttendanceRecordsInput = {
@@ -1652,8 +1891,12 @@ export type StudentProfileUpdateWithoutAttendanceRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -1669,6 +1912,7 @@ export type StudentProfileUpdateWithoutAttendanceRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutAttendanceRecordsInput = {
@@ -1680,8 +1924,12 @@ export type StudentProfileUncheckedUpdateWithoutAttendanceRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -1695,6 +1943,7 @@ export type StudentProfileUncheckedUpdateWithoutAttendanceRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutAnecdotalRecordsInput = {
@@ -1704,8 +1953,12 @@ export type StudentProfileCreateWithoutAnecdotalRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -1721,6 +1974,7 @@ export type StudentProfileCreateWithoutAnecdotalRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutAnecdotalRecordsInput = {
@@ -1732,8 +1986,12 @@ export type StudentProfileUncheckedCreateWithoutAnecdotalRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -1747,6 +2005,7 @@ export type StudentProfileUncheckedCreateWithoutAnecdotalRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutAnecdotalRecordsInput = {
@@ -1772,8 +2031,12 @@ export type StudentProfileUpdateWithoutAnecdotalRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -1789,6 +2052,7 @@ export type StudentProfileUpdateWithoutAnecdotalRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutAnecdotalRecordsInput = {
@@ -1800,8 +2064,12 @@ export type StudentProfileUncheckedUpdateWithoutAnecdotalRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -1815,6 +2083,7 @@ export type StudentProfileUncheckedUpdateWithoutAnecdotalRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutReferralsInput = {
@@ -1824,8 +2093,12 @@ export type StudentProfileCreateWithoutReferralsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -1841,6 +2114,7 @@ export type StudentProfileCreateWithoutReferralsInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutReferralsInput = {
@@ -1852,8 +2126,12 @@ export type StudentProfileUncheckedCreateWithoutReferralsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -1867,6 +2145,7 @@ export type StudentProfileUncheckedCreateWithoutReferralsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutReferralsInput = {
@@ -1892,8 +2171,12 @@ export type StudentProfileUpdateWithoutReferralsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -1909,6 +2192,7 @@ export type StudentProfileUpdateWithoutReferralsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutReferralsInput = {
@@ -1920,8 +2204,12 @@ export type StudentProfileUncheckedUpdateWithoutReferralsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -1935,6 +2223,7 @@ export type StudentProfileUncheckedUpdateWithoutReferralsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutInterventionsInput = {
@@ -1944,8 +2233,12 @@ export type StudentProfileCreateWithoutInterventionsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -1961,6 +2254,7 @@ export type StudentProfileCreateWithoutInterventionsInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutInterventionsInput = {
@@ -1972,8 +2266,12 @@ export type StudentProfileUncheckedCreateWithoutInterventionsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -1987,6 +2285,7 @@ export type StudentProfileUncheckedCreateWithoutInterventionsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutInterventionsInput = {
@@ -2012,8 +2311,12 @@ export type StudentProfileUpdateWithoutInterventionsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -2029,6 +2332,7 @@ export type StudentProfileUpdateWithoutInterventionsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutInterventionsInput = {
@@ -2040,8 +2344,12 @@ export type StudentProfileUncheckedUpdateWithoutInterventionsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -2055,6 +2363,7 @@ export type StudentProfileUncheckedUpdateWithoutInterventionsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutHealthRecordsInput = {
@@ -2064,8 +2373,12 @@ export type StudentProfileCreateWithoutHealthRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -2081,6 +2394,7 @@ export type StudentProfileCreateWithoutHealthRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutHealthRecordsInput = {
@@ -2092,8 +2406,12 @@ export type StudentProfileUncheckedCreateWithoutHealthRecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -2107,6 +2425,7 @@ export type StudentProfileUncheckedCreateWithoutHealthRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutHealthRecordsInput = {
@@ -2132,8 +2451,12 @@ export type StudentProfileUpdateWithoutHealthRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -2149,6 +2472,7 @@ export type StudentProfileUpdateWithoutHealthRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutHealthRecordsInput = {
@@ -2160,8 +2484,12 @@ export type StudentProfileUncheckedUpdateWithoutHealthRecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -2175,6 +2503,7 @@ export type StudentProfileUncheckedUpdateWithoutHealthRecordsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutHomeVisitationsInput = {
@@ -2184,8 +2513,12 @@ export type StudentProfileCreateWithoutHomeVisitationsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -2201,6 +2534,7 @@ export type StudentProfileCreateWithoutHomeVisitationsInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutHomeVisitationsInput = {
@@ -2212,8 +2546,12 @@ export type StudentProfileUncheckedCreateWithoutHomeVisitationsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -2227,6 +2565,7 @@ export type StudentProfileUncheckedCreateWithoutHomeVisitationsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutHomeVisitationsInput = {
@@ -2252,8 +2591,12 @@ export type StudentProfileUpdateWithoutHomeVisitationsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -2269,6 +2612,7 @@ export type StudentProfileUpdateWithoutHomeVisitationsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutHomeVisitationsInput = {
@@ -2280,8 +2624,12 @@ export type StudentProfileUncheckedUpdateWithoutHomeVisitationsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -2295,6 +2643,7 @@ export type StudentProfileUncheckedUpdateWithoutHomeVisitationsInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutAdmProfilesInput = {
@@ -2304,8 +2653,12 @@ export type StudentProfileCreateWithoutAdmProfilesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -2321,6 +2674,7 @@ export type StudentProfileCreateWithoutAdmProfilesInput = {
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutAdmProfilesInput = {
@@ -2332,8 +2686,12 @@ export type StudentProfileUncheckedCreateWithoutAdmProfilesInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -2347,6 +2705,7 @@ export type StudentProfileUncheckedCreateWithoutAdmProfilesInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutAdmProfilesInput = {
@@ -2372,8 +2731,12 @@ export type StudentProfileUpdateWithoutAdmProfilesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -2389,6 +2752,7 @@ export type StudentProfileUpdateWithoutAdmProfilesInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutAdmProfilesInput = {
@@ -2400,8 +2764,12 @@ export type StudentProfileUncheckedUpdateWithoutAdmProfilesInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -2415,6 +2783,147 @@ export type StudentProfileUncheckedUpdateWithoutAdmProfilesInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
+}
+
+export type StudentProfileCreateWithoutAdvisoryModuleSubmissionsInput = {
+  lrn: string
+  gradeLevel: $Enums.GradeLevel
+  birthdate?: Date | string | null
+  gender?: string | null
+  address?: string | null
+  photoUrl?: string | null
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  createdAt?: Date | string
+  user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
+  section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutStudentInput
+  studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutStudentInput
+  finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutStudentInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutStudentInput
+  referrals?: Prisma.ReferralCreateNestedManyWithoutStudentInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutStudentInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutStudentInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutStudentInput
+  admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutStudentInput
+  parentLinks?: Prisma.ParentStudentLinkCreateNestedManyWithoutStudentInput
+  riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
+  sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+}
+
+export type StudentProfileUncheckedCreateWithoutAdvisoryModuleSubmissionsInput = {
+  userId: string
+  lrn: string
+  gradeLevel: $Enums.GradeLevel
+  sectionId?: string | null
+  birthdate?: Date | string | null
+  gender?: string | null
+  address?: string | null
+  photoUrl?: string | null
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  createdAt?: Date | string
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
+  studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
+  finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutStudentInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutStudentInput
+  referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutStudentInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutStudentInput
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutStudentInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutStudentInput
+  admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutStudentInput
+  parentLinks?: Prisma.ParentStudentLinkUncheckedCreateNestedManyWithoutStudentInput
+  riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
+  sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+}
+
+export type StudentProfileCreateOrConnectWithoutAdvisoryModuleSubmissionsInput = {
+  where: Prisma.StudentProfileWhereUniqueInput
+  create: Prisma.XOR<Prisma.StudentProfileCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentProfileUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+}
+
+export type StudentProfileUpsertWithoutAdvisoryModuleSubmissionsInput = {
+  update: Prisma.XOR<Prisma.StudentProfileUpdateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentProfileUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+  create: Prisma.XOR<Prisma.StudentProfileCreateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentProfileUncheckedCreateWithoutAdvisoryModuleSubmissionsInput>
+  where?: Prisma.StudentProfileWhereInput
+}
+
+export type StudentProfileUpdateToOneWithWhereWithoutAdvisoryModuleSubmissionsInput = {
+  where?: Prisma.StudentProfileWhereInput
+  data: Prisma.XOR<Prisma.StudentProfileUpdateWithoutAdvisoryModuleSubmissionsInput, Prisma.StudentProfileUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput>
+}
+
+export type StudentProfileUpdateWithoutAdvisoryModuleSubmissionsInput = {
+  lrn?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
+  section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutStudentNestedInput
+  studentGrades?: Prisma.StudentGradeUpdateManyWithoutStudentNestedInput
+  finalGrades?: Prisma.FinalGradeUpdateManyWithoutStudentNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutStudentNestedInput
+  referrals?: Prisma.ReferralUpdateManyWithoutStudentNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutStudentNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutStudentNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutStudentNestedInput
+  admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutStudentNestedInput
+  parentLinks?: Prisma.ParentStudentLinkUpdateManyWithoutStudentNestedInput
+  riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
+  sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+}
+
+export type StudentProfileUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput = {
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  lrn?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
+  studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
+  finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutStudentNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutStudentNestedInput
+  referrals?: Prisma.ReferralUncheckedUpdateManyWithoutStudentNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutStudentNestedInput
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutStudentNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutStudentNestedInput
+  admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutStudentNestedInput
+  parentLinks?: Prisma.ParentStudentLinkUncheckedUpdateManyWithoutStudentNestedInput
+  riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
+  sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutSf10RecordsInput = {
@@ -2424,8 +2933,12 @@ export type StudentProfileCreateWithoutSf10RecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -2441,6 +2954,7 @@ export type StudentProfileCreateWithoutSf10RecordsInput = {
   parentLinks?: Prisma.ParentStudentLinkCreateNestedManyWithoutStudentInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutSf10RecordsInput = {
@@ -2452,8 +2966,12 @@ export type StudentProfileUncheckedCreateWithoutSf10RecordsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -2467,6 +2985,7 @@ export type StudentProfileUncheckedCreateWithoutSf10RecordsInput = {
   parentLinks?: Prisma.ParentStudentLinkUncheckedCreateNestedManyWithoutStudentInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutSf10RecordsInput = {
@@ -2492,8 +3011,12 @@ export type StudentProfileUpdateWithoutSf10RecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -2509,6 +3032,7 @@ export type StudentProfileUpdateWithoutSf10RecordsInput = {
   parentLinks?: Prisma.ParentStudentLinkUpdateManyWithoutStudentNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutSf10RecordsInput = {
@@ -2520,8 +3044,12 @@ export type StudentProfileUncheckedUpdateWithoutSf10RecordsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -2535,6 +3063,7 @@ export type StudentProfileUncheckedUpdateWithoutSf10RecordsInput = {
   parentLinks?: Prisma.ParentStudentLinkUncheckedUpdateManyWithoutStudentNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateWithoutRiskSnapshotsInput = {
@@ -2544,8 +3073,12 @@ export type StudentProfileCreateWithoutRiskSnapshotsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutStudentProfileInput
   section?: Prisma.SectionCreateNestedOneWithoutStudentsInput
@@ -2561,6 +3094,7 @@ export type StudentProfileCreateWithoutRiskSnapshotsInput = {
   parentLinks?: Prisma.ParentStudentLinkCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileUncheckedCreateWithoutRiskSnapshotsInput = {
@@ -2572,8 +3106,12 @@ export type StudentProfileUncheckedCreateWithoutRiskSnapshotsInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutStudentInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutStudentInput
@@ -2587,6 +3125,7 @@ export type StudentProfileUncheckedCreateWithoutRiskSnapshotsInput = {
   parentLinks?: Prisma.ParentStudentLinkUncheckedCreateNestedManyWithoutStudentInput
   sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutStudentInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutStudentInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type StudentProfileCreateOrConnectWithoutRiskSnapshotsInput = {
@@ -2612,8 +3151,12 @@ export type StudentProfileUpdateWithoutRiskSnapshotsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   section?: Prisma.SectionUpdateOneWithoutStudentsNestedInput
@@ -2629,6 +3172,7 @@ export type StudentProfileUpdateWithoutRiskSnapshotsInput = {
   parentLinks?: Prisma.ParentStudentLinkUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutRiskSnapshotsInput = {
@@ -2640,8 +3184,12 @@ export type StudentProfileUncheckedUpdateWithoutRiskSnapshotsInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -2655,6 +3203,7 @@ export type StudentProfileUncheckedUpdateWithoutRiskSnapshotsInput = {
   parentLinks?: Prisma.ParentStudentLinkUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileCreateManySectionInput = {
@@ -2665,8 +3214,12 @@ export type StudentProfileCreateManySectionInput = {
   gender?: string | null
   address?: string | null
   photoUrl?: string | null
+  mascot?: string | null
   riskCount?: number
   riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: Date | string
 }
 
@@ -2677,8 +3230,12 @@ export type StudentProfileUpdateWithoutSectionInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutStudentProfileNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutStudentNestedInput
@@ -2694,6 +3251,7 @@ export type StudentProfileUpdateWithoutSectionInput = {
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateWithoutSectionInput = {
@@ -2704,8 +3262,12 @@ export type StudentProfileUncheckedUpdateWithoutSectionInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutStudentNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutStudentNestedInput
@@ -2720,6 +3282,7 @@ export type StudentProfileUncheckedUpdateWithoutSectionInput = {
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutStudentNestedInput
   sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutStudentNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type StudentProfileUncheckedUpdateManyWithoutSectionInput = {
@@ -2730,8 +3293,12 @@ export type StudentProfileUncheckedUpdateManyWithoutSectionInput = {
   gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -2754,6 +3321,7 @@ export type StudentProfileCountOutputType = {
   riskSnapshots: number
   sf10Records: number
   gradeFlags: number
+  advisoryModuleSubmissions: number
 }
 
 export type StudentProfileCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2770,6 +3338,7 @@ export type StudentProfileCountOutputTypeSelect<ExtArgs extends runtime.Types.Ex
   riskSnapshots?: boolean | StudentProfileCountOutputTypeCountRiskSnapshotsArgs
   sf10Records?: boolean | StudentProfileCountOutputTypeCountSf10RecordsArgs
   gradeFlags?: boolean | StudentProfileCountOutputTypeCountGradeFlagsArgs
+  advisoryModuleSubmissions?: boolean | StudentProfileCountOutputTypeCountAdvisoryModuleSubmissionsArgs
 }
 
 /**
@@ -2873,6 +3442,13 @@ export type StudentProfileCountOutputTypeCountGradeFlagsArgs<ExtArgs extends run
   where?: Prisma.GradeFlagWhereInput
 }
 
+/**
+ * StudentProfileCountOutputType without action
+ */
+export type StudentProfileCountOutputTypeCountAdvisoryModuleSubmissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdvisoryModuleSubmissionWhereInput
+}
+
 
 export type StudentProfileSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   userId?: boolean
@@ -2883,8 +3459,12 @@ export type StudentProfileSelect<ExtArgs extends runtime.Types.Extensions.Intern
   gender?: boolean
   address?: boolean
   photoUrl?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.StudentProfile$sectionArgs<ExtArgs>
@@ -2901,6 +3481,7 @@ export type StudentProfileSelect<ExtArgs extends runtime.Types.Extensions.Intern
   riskSnapshots?: boolean | Prisma.StudentProfile$riskSnapshotsArgs<ExtArgs>
   sf10Records?: boolean | Prisma.StudentProfile$sf10RecordsArgs<ExtArgs>
   gradeFlags?: boolean | Prisma.StudentProfile$gradeFlagsArgs<ExtArgs>
+  advisoryModuleSubmissions?: boolean | Prisma.StudentProfile$advisoryModuleSubmissionsArgs<ExtArgs>
   _count?: boolean | Prisma.StudentProfileCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studentProfile"]>
 
@@ -2913,8 +3494,12 @@ export type StudentProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   gender?: boolean
   address?: boolean
   photoUrl?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.StudentProfile$sectionArgs<ExtArgs>
@@ -2929,8 +3514,12 @@ export type StudentProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   gender?: boolean
   address?: boolean
   photoUrl?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.StudentProfile$sectionArgs<ExtArgs>
@@ -2945,12 +3534,16 @@ export type StudentProfileSelectScalar = {
   gender?: boolean
   address?: boolean
   photoUrl?: boolean
+  mascot?: boolean
   riskCount?: boolean
   riskLevel?: boolean
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
   createdAt?: boolean
 }
 
-export type StudentProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "lrn" | "gradeLevel" | "sectionId" | "birthdate" | "gender" | "address" | "photoUrl" | "riskCount" | "riskLevel" | "createdAt", ExtArgs["result"]["studentProfile"]>
+export type StudentProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "lrn" | "gradeLevel" | "sectionId" | "birthdate" | "gender" | "address" | "photoUrl" | "mascot" | "riskCount" | "riskLevel" | "academicFlag" | "attendanceFlag" | "behavioralFlag" | "createdAt", ExtArgs["result"]["studentProfile"]>
 export type StudentProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.StudentProfile$sectionArgs<ExtArgs>
@@ -2967,6 +3560,7 @@ export type StudentProfileInclude<ExtArgs extends runtime.Types.Extensions.Inter
   riskSnapshots?: boolean | Prisma.StudentProfile$riskSnapshotsArgs<ExtArgs>
   sf10Records?: boolean | Prisma.StudentProfile$sf10RecordsArgs<ExtArgs>
   gradeFlags?: boolean | Prisma.StudentProfile$gradeFlagsArgs<ExtArgs>
+  advisoryModuleSubmissions?: boolean | Prisma.StudentProfile$advisoryModuleSubmissionsArgs<ExtArgs>
   _count?: boolean | Prisma.StudentProfileCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type StudentProfileIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2996,6 +3590,7 @@ export type $StudentProfilePayload<ExtArgs extends runtime.Types.Extensions.Inte
     riskSnapshots: Prisma.$RiskSnapshotPayload<ExtArgs>[]
     sf10Records: Prisma.$Sf10RecordPayload<ExtArgs>[]
     gradeFlags: Prisma.$GradeFlagPayload<ExtArgs>[]
+    advisoryModuleSubmissions: Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     userId: string
@@ -3006,8 +3601,12 @@ export type $StudentProfilePayload<ExtArgs extends runtime.Types.Extensions.Inte
     gender: string | null
     address: string | null
     photoUrl: string | null
+    mascot: string | null
     riskCount: number
     riskLevel: $Enums.RiskLevel
+    academicFlag: boolean
+    attendanceFlag: boolean
+    behavioralFlag: boolean
     createdAt: Date
   }, ExtArgs["result"]["studentProfile"]>
   composites: {}
@@ -3418,6 +4017,7 @@ export interface Prisma__StudentProfileClient<T, Null = never, ExtArgs extends r
   riskSnapshots<T extends Prisma.StudentProfile$riskSnapshotsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentProfile$riskSnapshotsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RiskSnapshotPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sf10Records<T extends Prisma.StudentProfile$sf10RecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentProfile$sf10RecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$Sf10RecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   gradeFlags<T extends Prisma.StudentProfile$gradeFlagsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentProfile$gradeFlagsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GradeFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  advisoryModuleSubmissions<T extends Prisma.StudentProfile$advisoryModuleSubmissionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentProfile$advisoryModuleSubmissionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3455,8 +4055,12 @@ export interface StudentProfileFieldRefs {
   readonly gender: Prisma.FieldRef<"StudentProfile", 'String'>
   readonly address: Prisma.FieldRef<"StudentProfile", 'String'>
   readonly photoUrl: Prisma.FieldRef<"StudentProfile", 'String'>
+  readonly mascot: Prisma.FieldRef<"StudentProfile", 'String'>
   readonly riskCount: Prisma.FieldRef<"StudentProfile", 'Int'>
   readonly riskLevel: Prisma.FieldRef<"StudentProfile", 'RiskLevel'>
+  readonly academicFlag: Prisma.FieldRef<"StudentProfile", 'Boolean'>
+  readonly attendanceFlag: Prisma.FieldRef<"StudentProfile", 'Boolean'>
+  readonly behavioralFlag: Prisma.FieldRef<"StudentProfile", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"StudentProfile", 'DateTime'>
 }
     
@@ -4187,6 +4791,30 @@ export type StudentProfile$gradeFlagsArgs<ExtArgs extends runtime.Types.Extensio
   take?: number
   skip?: number
   distinct?: Prisma.GradeFlagScalarFieldEnum | Prisma.GradeFlagScalarFieldEnum[]
+}
+
+/**
+ * StudentProfile.advisoryModuleSubmissions
+ */
+export type StudentProfile$advisoryModuleSubmissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdvisoryModuleSubmission
+   */
+  select?: Prisma.AdvisoryModuleSubmissionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdvisoryModuleSubmission
+   */
+  omit?: Prisma.AdvisoryModuleSubmissionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdvisoryModuleSubmissionInclude<ExtArgs> | null
+  where?: Prisma.AdvisoryModuleSubmissionWhereInput
+  orderBy?: Prisma.AdvisoryModuleSubmissionOrderByWithRelationInput | Prisma.AdvisoryModuleSubmissionOrderByWithRelationInput[]
+  cursor?: Prisma.AdvisoryModuleSubmissionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdvisoryModuleSubmissionScalarFieldEnum | Prisma.AdvisoryModuleSubmissionScalarFieldEnum[]
 }
 
 /**

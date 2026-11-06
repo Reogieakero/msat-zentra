@@ -47,6 +47,8 @@ export interface RiskSnapshotStudent {
   factors: RiskFactors;
   subjectGrades: SubjectGrade[];
   intervention: InterventionLink | null;
+  /** Learner's own profile mascot — the character the adviser's list shows. */
+  mascot?: string | null;
 }
 
 export interface InterventionStudentsResult {
@@ -59,13 +61,17 @@ export interface InterventionStudentsResult {
 
 export type RiskFactorKey = "Academic" | "Attendance" | "Behavioral";
 
-export type GradeMode = "raw" | "final";
-
 export interface StudentFilters {
   riskLevel?: RiskLevelKey | "all";
   hasIntervention?: boolean;
   factor?: RiskFactorKey | "all";
-  gradeMode?: GradeMode;
+  q?: string;
+  section?: string;
+  outcomeStatus?: OutcomeStatus;
+  /** Plan state: ongoing only when guidance has booked a session. */
+  plan?: "ongoing" | "none";
+  /** Queue order requested from the API. */
+  sort?: "risk" | "detected";
 }
 
 export interface StaffOption {

@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CaseHistoryDialog } from "../components/CaseHistoryDialog";
 import { useCoordinatorReferrals } from "./components/use-coordinator-referrals";
 import { CoordinatorReferralsSkeleton } from "./components/coordinator-referrals-skeleton";
-import { CoordinatorReferralsTable } from "./components/coordinator-referrals-table";
+import { CoordinatorReferralsBoard } from "./components/coordinator-referrals-board";
 import { CoordinatorReferralsRail } from "./components/coordinator-referrals-rail";
 import { CoordinatorReferralsPager } from "./components/coordinator-referrals-pager";
 import { CoordinatorReferralsCaseSheet } from "./components/coordinator-referrals-case-sheet";
@@ -25,9 +25,6 @@ function CoordinatorReferralsPageInner() {
   const openedFor = React.useRef<string | null>(null);
   const { rows, isInitialLoading, selected, setSelected } = r;
 
-  // Deep-link from the overview forwards table (?highlight=<rowId>):
-  // open the matching case file once its page loads. No-ops when the id
-  // is not on the current page so filters/pagination stay untouched.
   React.useEffect(() => {
     if (!highlight || openedFor.current === highlight) return;
     if (isInitialLoading || selected) return;
@@ -38,10 +35,6 @@ function CoordinatorReferralsPageInner() {
     }
   }, [highlight, rows, isInitialLoading, selected, setSelected]);
 
-  // Auto-ask endorsement: opening the case file on a certified-but-
-  // unforwarded case pops the forward confirm every visit until the case is
-  // endorsed. Dismissing stays dismissed for this sheet opening (the flip
-  // guard only refires on a newly selected row).
   const autoForwardEligible =
     r.selected !== null &&
     r.selected.stage === "certification" &&
@@ -55,17 +48,14 @@ function CoordinatorReferralsPageInner() {
   }
 
   return (
-    <section className={styles.page} aria-label="Referrals">
-      <div className={styles.contentSingle}>
-        {!r.referralsError ? (
-          <CoordinatorReferralsRail
-            stageCounts={r.stageCounts}
-            totalReferred={r.totalReferred}
-            isLoading={r.isInitialLoading}
-          />
-        ) : null}
-        <div className={styles.main}>
-          <CoordinatorReferralsTable
+    <section
+      className={styles.page}
+      aria-label="Referrals"
+      aria-busy={r.isInitialLoading || undefined}
+    >
+      <div className={styles.body}>
+        <div className={styles.mainCol}>
+          <CoordinatorReferralsBoard
             rows={r.rows}
             isInitialLoading={r.isInitialLoading}
             isSyncing={r.isSyncing}
@@ -74,19 +64,16 @@ function CoordinatorReferralsPageInner() {
             total={r.total}
             query={r.query}
             onQueryChange={r.setQuery}
-            elig={r.elig}
-            onEligChange={r.setElig}
-            eligMenuLabel={r.eligMenuLabel}
             hasActiveFilters={r.hasActiveFilters}
             onClear={r.clearFilters}
             bookPendingId={r.bookPendingId}
+            now={r.now}
             onRetry={r.refetchReferrals}
             onHistory={r.setHistoryTarget}
             onBook={r.bookForRow}
           />
-          {/* During initial load the table skeleton below already reserves the
-              pager space, so nothing renders here (no duplicated skeleton). */}
-          {!r.isInitialLoading && !r.referralsError ? (
+
+          {!r.isInitialLoading && !r.referralsError && r.total > 0 ? (
             <CoordinatorReferralsPager
               total={r.total}
               start={r.start}
@@ -97,9 +84,14 @@ function CoordinatorReferralsPageInner() {
             />
           ) : null}
         </div>
+
+        <CoordinatorReferralsRail
+          stageCounts={r.stageCounts}
+          totalReferred={r.totalReferred}
+          isLoading={r.isInitialLoading}
+        />
       </div>
 
-      {/* Case file */}
       <CaseHistoryDialog
         target={r.historyTarget}
         onClose={() => r.setHistoryTarget(null)}
@@ -122,7 +114,6 @@ function CoordinatorReferralsPageInner() {
         bookPendingId={r.bookPendingId}
       />
 
-      {/* Advance confirm */}
       <CoordinatorReferralsAdvanceDialog
         target={r.advanceTarget}
         pending={r.advancePending}
@@ -130,26 +121,19 @@ function CoordinatorReferralsPageInner() {
         onConfirm={r.confirmAdvance}
       />
 
-      {/* Forward confirm */}
       <CoordinatorReferralsForwardDialog
         target={r.forwardTarget}
-        pending={r.forwardPending}
         onClose={() => r.setForwardTarget(null)}
         onConfirm={r.confirmForward}
       />
 
-      {/* Create profile */}
       <CoordinatorReferralsCreateDialog
         target={r.createTarget}
         scopeLabel={r.scopeLabel}
         onClose={() => r.setCreateTarget(null)}
         onConfirm={r.confirmCreate}
-        pending={r.createPending}
-        canConfirm={r.canCreate}
       />
 
-      {/* Book parent meeting — shared booking dialog (same as nurse/guidance).
-          Modal only, never opens the case sheet. */}
       <CoordinatorReferralsBookDialog
         open={r.bookOpen}
         selected={r.bookTarget ?? r.selected}
@@ -161,7 +145,6 @@ function CoordinatorReferralsPageInner() {
         onSubmit={(fields) => r.confirmBook(fields)}
       />
 
-      {/* Record meeting outcome */}
       <CoordinatorReferralsOutcomeDialog
         target={r.outcomeTarget}
         attended={r.outcomeAttended}
@@ -185,7 +168,7 @@ export default function CoordinatorReferralsPage() {
     <React.Suspense
       fallback={
         <section className={styles.page} aria-label="Referrals">
-          <CoordinatorReferralsSkeleton rows={10} />
+          <CoordinatorReferralsSkeleton rows={9} />
         </section>
       }
     >

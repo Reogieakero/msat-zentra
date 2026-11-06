@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
-import { AcademicsHeader } from "./components/AcademicsHeader";
 import { KpiStrip } from "./components/KpiStrip";
 import { SubjectTrendChart } from "./components/SubjectTrendChart";
 import { SubjectSectionBreakdown } from "./components/SubjectSectionBreakdown";
@@ -17,6 +16,7 @@ import {
   type AttentionItem,
   type BackendAcademicSummary,
   type CellData,
+  type UngradedStudent,
 } from "./components/types";
 import shell from "../components/heatmap.module.css";
 
@@ -25,18 +25,14 @@ function isBelow75(avg: number, subjectCount: number): boolean {
 }
 
 export default function PrincipalAcademicHeatmapsPage() {
-  // Grade-level filter persists across reloads. Data is always the live
-  // (raw, unlocked-included) snapshot — no raw/final toggle on this page.
   const [gradeFilter, setGradeFilter] = usePersistentState<string>(
     "academic-heatmap:grade",
-    ALL_GRADES
+    "Grade 7"
   );
 
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termId = activeTerm?.termId ?? null;
-  const { data, isPending, dataUpdatedAt } = useQuery({
-    // Term-scoped live (raw) snapshot. No polling — the principal realtime
-    // channel invalidates this exact key on grade saves.
+  const { data, isPending } = useQuery({
     queryKey: ["academic-insights", "live", termId],
     queryFn: async () => {
       const res = await apiClient.get<BackendAcademicSummary>("/api/academics", {
@@ -46,6 +42,7 @@ export default function PrincipalAcademicHeatmapsPage() {
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+    enabled: termReady,
   });
 
   const sections = React.useMemo(() => {
@@ -71,6 +68,32 @@ export default function PrincipalAcademicHeatmapsPage() {
         .length,
     [gradedStudents]
   );
+  const sharedStudents = React.useMemo(
+    () =>
+      sections
+        .filter((s) => s.shared === true)
+        .reduce((n, s) => n + s.students.length, 0),
+    [sections]
+  );
+  const ungradedStudents = React.useMemo<UngradedStudent[]>(() => {
+    const rows: UngradedStudent[] = [];
+    for (const section of sections) {
+      if (section.shared !== true) continue;
+      for (const student of section.students) {
+        if (student.subjects.length > 0) continue;
+        rows.push({
+          studentId: student.studentId,
+          name: student.name,
+          lrn: student.lrn,
+          mascot: student.mascot,
+          section: section.section,
+          grade: section.grade,
+        });
+      }
+    }
+    return rows.sort((a, b) => a.name.localeCompare(b.name));
+  }, [sections]);
+  const ungraded = ungradedStudents.length;
   const riskySections = React.useMemo(
     () =>
       sections.filter((s) =>
@@ -79,9 +102,6 @@ export default function PrincipalAcademicHeatmapsPage() {
     [sections]
   );
 
-  // Subject catalog (same Subject.name column the grades use, so names match
-  // exactly). Ungraded subjects never appear in the grades payload, so without
-  // this the axis only shows subjects teachers have already encoded.
   const { data: catalog } = useQuery({
     queryKey: ["academic-subject-catalog"],
     queryFn: async () => {
@@ -95,8 +115,6 @@ export default function PrincipalAcademicHeatmapsPage() {
 
   const subjects = React.useMemo(() => {
     const set = new Set<string>();
-    // Catalog names for the in-scope grade(s) — every offered subject shows on
-    // the axis even before any grade is encoded.
     const wanted =
       gradeFilter === ALL_GRADES
         ? null
@@ -104,7 +122,6 @@ export default function PrincipalAcademicHeatmapsPage() {
     for (const c of catalog ?? []) {
       if (wanted == null || c.gradeLevel === wanted) set.add(c.name);
     }
-    // Graded names (union — covers anything missing from the catalog).
     for (const s of sections) {
       if (gradeFilter !== ALL_GRADES && s.grade !== gradeFilter) continue;
       for (const st of s.students) {
@@ -160,22 +177,21 @@ export default function PrincipalAcademicHeatmapsPage() {
     return items.sort((a, b) => a.avg - b.avg).slice(0, 8);
   }, [sections, subjects, cellByKey]);
 
-  // Distinct grade levels present in the live snapshot, sorted G7 → G12.
   const grades = React.useMemo(() => {
     const set = new Set(sections.map((s) => s.grade));
     return Array.from(set).sort((a, b) => gradeSortKey(a) - gradeSortKey(b));
   }, [sections]);
 
-  // Drop a persisted filter that no longer exists in the live data.
+  // Keep the trend filter on a grade that exists in the current data — but
+  // the "All grades" sentinel is a valid choice and must survive the sweep.
   React.useEffect(() => {
-    if (gradeFilter !== ALL_GRADES && grades.length > 0 && !grades.includes(gradeFilter)) {
-      setGradeFilter(ALL_GRADES);
+    if (grades.length === 0) return;
+    if (gradeFilter === ALL_GRADES) return;
+    if (!grades.includes(gradeFilter)) {
+      setGradeFilter(grades.includes("Grade 7") ? "Grade 7" : grades[0]);
     }
   }, [grades, gradeFilter, setGradeFilter]);
 
-  // Transient inspection: subject point selected in the trend chart. Adjusted
-  // during render (never in an effect): cleared on grade change or when the
-  // subject leaves the in-scope list.
   const [selectedSubject, setSelectedSubject] = React.useState<string | null>(null);
   const [prevGradeFilter, setPrevGradeFilter] = React.useState(gradeFilter);
   if (prevGradeFilter !== gradeFilter) {
@@ -185,8 +201,6 @@ export default function PrincipalAcademicHeatmapsPage() {
     setSelectedSubject(null);
   }
 
-  // Section ranking for the selected subject — sliced from the same
-  // section×subject averages above, worst average first.
   const breakdown = React.useMemo<AttentionItem[]>(() => {
     if (!selectedSubject) return [];
     const items: AttentionItem[] = [];
@@ -209,18 +223,15 @@ export default function PrincipalAcademicHeatmapsPage() {
   return (
     <div className={shell.shell}>
       <div className={shell.layout}>
-        <section className={shell.page}>
-          <AcademicsHeader
-            grades={grades}
-            gradeFilter={gradeFilter}
-            onGradeFilterChange={setGradeFilter}
-            dataUpdatedAt={dataUpdatedAt}
-          />
+        <section className={shell.page} aria-busy={isPending || undefined}>
           <KpiStrip
             below={below}
             gradedTotal={gradedStudents.length}
             riskySections={riskySections}
             sectionCount={sections.length}
+            ungraded={ungraded}
+            ungradedStudents={ungradedStudents}
+            sharedTotal={sharedStudents}
             isPending={isPending}
           />
           <SubjectTrendChart
@@ -228,6 +239,7 @@ export default function PrincipalAcademicHeatmapsPage() {
             subjects={subjects}
             grades={grades}
             gradeFilter={gradeFilter}
+            onGradeFilterChange={setGradeFilter}
             isPending={isPending}
             selectedSubject={selectedSubject}
             onSelectSubject={setSelectedSubject}
@@ -240,7 +252,7 @@ export default function PrincipalAcademicHeatmapsPage() {
               onClear={() => setSelectedSubject(null)}
             />
           ) : null}
-          <NeedsAttentionList items={attention} isPending={isPending} />
+          <NeedsAttentionList items={attention} isPending={isPending} isNoData={sections.length === 0} />
         </section>
       </div>
     </div>

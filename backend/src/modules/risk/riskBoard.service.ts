@@ -1,12 +1,12 @@
 import { prisma } from "../../lib/prisma.js";
+import { Prisma } from "../../generated/prisma/client.js";
 import type { RiskLevel, OutcomeStatus } from "../../generated/prisma/client.js";
 import {
-  computeRiskFactors,
-  levelFromFlags,
   resolveActiveTermId,
   type GradeMode,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import { gradeLabel } from "../../lib/grades.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
 export interface RiskBoardResult {
@@ -15,6 +15,15 @@ export interface RiskBoardResult {
     highRiskStudents: number;
   };
   levelDistribution: { level: RiskLevel; count: number }[];
+  byGrade: { grade: string; High: number; Moderate: number; Low: number; total: number }[];
+  bySection: {
+    section: string;
+    gradeLevel: string;
+    High: number;
+    Moderate: number;
+    Low: number;
+    total: number;
+  }[];
   factorTotals: { Academic: number; Attendance: number; Behavioral: number };
   interventionOutcome: {
     ongoing: number;
@@ -29,13 +38,11 @@ export interface RiskBoardResult {
   }[];
 }
 
-// PLAN.md §6.3 — principal board overview (O4). Aggregates the session's
-// active school year student risk state plus per-term snapshots for the trend
-// line. `gradeMode` selects whether the academic factor uses final
-// (transmuted) or raw computed averages.
+// Real-time unified: gradeMode is ignored (kept for backwards compat).
 export async function getRiskBoard(
-  gradeMode: GradeMode = "final",
+  _gradeMode?: GradeMode,
   scope?: TermScopeInput,
+  admOnly = false,
 ): Promise<RiskBoardResult> {
   const schoolYearId =
     scope?.schoolYearId ??
@@ -46,142 +53,352 @@ export async function getRiskBoard(
       })
     )?.id;
 
-  const terms: {
-    id: string;
-    termNumber: number;
-    schoolYear: { name: string };
-  }[] = schoolYearId
-    ? await prisma.term.findMany({
-        where: { schoolYearId },
-        orderBy: { termNumber: "asc" },
-        select: { id: true, termNumber: true, schoolYear: { select: { name: true } } },
-      })
-    : [];
-
-  // Live risk recompute uses the session's active term (same source of
-  // truth as the heatmap/students endpoints) so the board never drifts.
   const activeTermId = scope?.termId ?? (await resolveActiveTermId());
 
-  const [profileStudents, rosterStudents] = await Promise.all([
-    prisma.studentProfile.findMany({
-      where: schoolYearId ? { section: { schoolYearId } } : undefined,
-      select: {
-        lrn: true,
-        section: { select: { id: true } },
-        finalGrades: {
-          where: { termId: activeTermId ?? undefined },
-          select: { computedAverage: true, transmutedGrade: true },
-        },
-        attendanceRecords: {
-          where: { termId: activeTermId ?? undefined },
-          // subjectId drives the engine's dual-mode attendance rule
-          // (subject-era rows vs legacy AM/PM rows).
-          select: { status: true, subjectId: true },
-        },
-        anecdotalRecords: { where: { termId: activeTermId ?? undefined }, select: { id: true } },
-      },
-    }),
-    // Enlisted students without accounts count on equal footing.
-    prisma.studentRoster.findMany({
-      where: schoolYearId ? { schoolYearId } : undefined,
-      select: {
-        lrn: true,
-        sectionId: true,
-        finalGrades: {
-          where: { termId: activeTermId ?? undefined },
-          select: { computedAverage: true, transmutedGrade: true },
-        },
-        attendanceRecords: {
-          where: { termId: activeTermId ?? undefined },
-          select: { status: true, subjectId: true },
-        },
-        anecdotalRecords: { where: { termId: activeTermId ?? undefined }, select: { id: true } },
-      },
-    }),
-  ]);
-  const registeredLrns = new Set(profileStudents.map((s) => s.lrn));
+  // The principal's ADM desk scopes the board to learners who actually have an
+  // ADM case (any stage — endorsed to the principal or still with the
+  // coordinator), never the general school-wide risk population. The ADM
+  // dashboard the desk renders above this board counts cases school-wide
+  // (every term), so the learner set here must not be term-filtered either —
+  // otherwise a term with no new cases shows an empty risk board even though
+  // the desk lists active cases filed in another term.
+  let admStudentIds: Set<string> | null = null;
+  if (admOnly) {
+    const admProfiles = await prisma.admLearnerProfile.findMany({
+      select: { studentId: true },
+    });
+    admStudentIds = new Set(admProfiles.map((p) => p.studentId));
+  }
 
-  const headcounts = await sectionHeadcounts(
-    Array.from(
-      new Set(
-        [
-          ...profileStudents.map((s) => s.section?.id),
-          ...rosterStudents.map((r) => r.sectionId),
-        ].filter((id): id is string => !!id),
-      ),
-    ),
-  );
-
-  // Level distribution + factor totals are derived live from the shared
-  // engine (risk.ts) — the same source of truth as the students list,
-  // overview, and teacher advisory paths — and never trust stale stored
-  // riskLevel columns.
   let academic = 0;
   let attendance = 0;
   let behavioral = 0;
   let high = 0;
   let moderate = 0;
   let low = 0;
-  const candidates = [
-    ...profileStudents.map((s) => ({
-      finalGrades: s.finalGrades,
-      attendanceRecords: s.attendanceRecords,
-      anecdotalCount: s.anecdotalRecords.length,
-      enrolled: headcounts.get(s.section?.id ?? "") ?? 0,
-    })),
-    ...rosterStudents
-      .filter((r) => !registeredLrns.has(r.lrn))
-      .map((r) => ({
-        finalGrades: r.finalGrades,
-        attendanceRecords: r.attendanceRecords,
-        anecdotalCount: r.anecdotalRecords.length,
-        enrolled: headcounts.get(r.sectionId ?? "") ?? 0,
-      })),
-  ];
-  for (const s of candidates) {
-    const flags = computeRiskFactors({
-      finalGrades: s.finalGrades,
-      gradeMode,
-      attendance: s.attendanceRecords,
-      anecdotalCount: s.anecdotalCount,
-      enrolled: s.enrolled,
-    });
-    if (flags.academicFlag) academic++;
-    if (flags.attendanceFlag) attendance++;
-    if (flags.behavioralFlag) behavioral++;
+  const byGradeMap = new Map<string, { High: number; Moderate: number; Low: number }>();
+  const bySectionMap = new Map<string, { High: number; Moderate: number; Low: number }>();
+  const sectionNameById = new Map<string, string>();
+  const sectionGradeById = new Map<string, string>();
+  const addGrade = (grade: string, level: string, n: number) => {
+    const e = byGradeMap.get(grade) ?? { High: 0, Moderate: 0, Low: 0 };
+    if (level === "High") e.High += n;
+    else if (level === "Moderate") e.Moderate += n;
+    else e.Low += n;
+    byGradeMap.set(grade, e);
+  };
+  const addSection = (sectionId: string, level: string, n: number) => {
+    const e = bySectionMap.get(sectionId) ?? { High: 0, Moderate: 0, Low: 0 };
+    if (level === "High") e.High += n;
+    else if (level === "Moderate") e.Moderate += n;
+    else e.Low += n;
+    bySectionMap.set(sectionId, e);
+  };
 
-    const level = levelFromFlags(flags);
-    if (level === "High") high++;
-    else if (level === "Moderate") moderate++;
-    else low++;
+  {
+    // Real-time unified live computation (EITHER avg < 75). The ADM desk uses
+    // an explicit learner set, so annual section scoping is redundant there.
+    const yearProfile: any = admOnly
+      ? {}
+      : schoolYearId
+        ? { student: { section: { schoolYearId } } }
+        : {};
+    const yearRoster: any = schoolYearId ? { roster: { schoolYearId } } : {};
+    const termScope: any = activeTermId ? { termId: activeTermId } : {};
+    const [
+      gradeAvgsP,
+      gradeAvgsR,
+      subTotalP,
+      subTotalR,
+      subPresentP,
+      subPresentR,
+      allPresentP,
+      allPresentR,
+      anecdP,
+      anecdR,
+      profKeys,
+      rosterKeys,
+    ] = await Promise.all([
+      prisma.finalGrade.groupBy({
+        by: ["studentId"],
+        where: { ...termScope, studentId: { not: null }, ...yearProfile },
+        _avg: { computedAverage: true, transmutedGrade: true },
+      }),
+      prisma.finalGrade.groupBy({
+        by: ["rosterId"],
+        where: { ...termScope, rosterId: { not: null }, ...yearRoster },
+        _avg: { computedAverage: true, transmutedGrade: true },
+      }),
+      prisma.attendanceRecord.groupBy({
+        by: ["studentId"],
+        where: { ...termScope, studentId: { not: null }, subjectId: { not: null }, ...yearProfile },
+        _count: { _all: true },
+      }),
+      prisma.attendanceRecord.groupBy({
+        by: ["rosterId"],
+        where: { ...termScope, rosterId: { not: null }, subjectId: { not: null }, ...yearRoster },
+        _count: { _all: true },
+      }),
+      prisma.attendanceRecord.groupBy({
+        by: ["studentId"],
+        where: { ...termScope, studentId: { not: null }, subjectId: { not: null }, status: "present", ...yearProfile },
+        _count: { _all: true },
+      }),
+      prisma.attendanceRecord.groupBy({
+        by: ["rosterId"],
+        where: { ...termScope, rosterId: { not: null }, subjectId: { not: null }, status: "present", ...yearRoster },
+        _count: { _all: true },
+      }),
+      prisma.attendanceRecord.groupBy({
+        by: ["studentId"],
+        where: { ...termScope, studentId: { not: null }, status: "present", ...yearProfile },
+        _count: { _all: true },
+      }),
+      prisma.attendanceRecord.groupBy({
+        by: ["rosterId"],
+        where: { ...termScope, rosterId: { not: null }, status: "present", ...yearRoster },
+        _count: { _all: true },
+      }),
+      prisma.anecdotalRecord.groupBy({
+        by: ["studentId"],
+        where: { ...termScope, studentId: { not: null }, ...yearProfile },
+        _count: { _all: true },
+      }),
+      prisma.anecdotalRecord.groupBy({
+        by: ["rosterId"],
+        where: { ...termScope, rosterId: { not: null }, ...yearRoster },
+        _count: { _all: true },
+      }),
+      prisma.studentProfile.findMany({
+        where: admOnly
+          ? admStudentIds
+            ? { userId: { in: [...admStudentIds] } }
+            : { userId: { in: [] } }
+          : {
+              ...(schoolYearId ? { section: { schoolYearId } } : {}),
+              ...(admStudentIds ? { userId: { in: [...admStudentIds] } } : {}),
+            },
+        select: { userId: true, lrn: true, gradeLevel: true, sectionId: true },
+      }),
+      admOnly
+        ? Promise.resolve([])
+        : prisma.studentRoster.findMany({
+            where: schoolYearId ? { schoolYearId } : undefined,
+            select: { id: true, lrn: true, gradeLevel: true, sectionId: true },
+          }),
+    ]);
+    const countBy = (groups: any[], getKey: (g: any) => string | null) => {
+      const m = new Map<string, number>();
+      for (const g of groups) {
+        const k = getKey(g);
+        if (k) m.set(k, g._count._all);
+      }
+      return m;
+    };
+    const avgBy = (
+      groups: any[],
+      getKey: (g: any) => string | null,
+      getAvg: (g: any) => number | null,
+    ) => {
+      const m = new Map<string, number>();
+      for (const g of groups) {
+        const k = getKey(g);
+        const v = getAvg(g);
+        if (k && v != null) m.set(k, v);
+      }
+      return m;
+    };
+    const registeredLrns = new Set(profKeys.map((s) => s.lrn));
+    const sectionIds = Array.from(
+      new Set(
+        [...profKeys.map((s) => s.sectionId), ...rosterKeys.map((r) => r.sectionId)].filter(
+          (id): id is string => !!id,
+        ),
+      ),
+    );
+    const headcounts = await sectionHeadcounts(sectionIds);
+    const sectionMeta = sectionIds.length
+      ? await prisma.section.findMany({
+          where: { id: { in: sectionIds } },
+          select: {
+            id: true,
+            name: true,
+            gradeLevel: true,
+            adviser: {
+              select: { staffProfile: { select: { shareStudentData: true } } },
+            },
+          },
+        })
+      : [];
+    const connectedSectionIds = new Set<string>();
+    for (const s of sectionMeta) {
+      sectionNameById.set(s.id, s.name);
+      sectionGradeById.set(s.id, gradeLabel(s.gradeLevel));
+      if (s.adviser?.staffProfile?.shareStudentData) connectedSectionIds.add(s.id);
+    }
+    const gradeByKey = new Map<string, string>();
+    const sectionByKey = new Map<string, string>();
+    for (const s of profKeys) {
+      gradeByKey.set(s.userId, gradeLabel(s.gradeLevel));
+      if (s.sectionId) sectionByKey.set(s.userId, s.sectionId);
+    }
+    for (const r of rosterKeys) {
+      if (registeredLrns.has(r.lrn)) continue;
+      gradeByKey.set(`roster:${r.id}`, gradeLabel(r.gradeLevel));
+      if (r.sectionId) sectionByKey.set(`roster:${r.id}`, r.sectionId);
+    }
+    const rawAvgMap = new Map<string, number>([
+      ...avgBy(gradeAvgsP, (g) => g.studentId, (g) => g._avg.computedAverage),
+      ...avgBy(gradeAvgsR, (g) => (g.rosterId ? `roster:${g.rosterId}` : null), (g) => g._avg.computedAverage),
+    ]);
+    const finalAvgMap = new Map<string, number>([
+      ...avgBy(gradeAvgsP, (g) => g.studentId, (g) => g._avg.transmutedGrade),
+      ...avgBy(gradeAvgsR, (g) => (g.rosterId ? `roster:${g.rosterId}` : null), (g) => g._avg.transmutedGrade),
+    ]);
+    const subTotal = new Map<string, number>([
+      ...countBy(subTotalP, (g) => g.studentId),
+      ...countBy(subTotalR, (g) => (g.rosterId ? `roster:${g.rosterId}` : null)),
+    ]);
+    const subPresent = new Map<string, number>([
+      ...countBy(subPresentP, (g) => g.studentId),
+      ...countBy(subPresentR, (g) => (g.rosterId ? `roster:${g.rosterId}` : null)),
+    ]);
+    const allPresent = new Map<string, number>([
+      ...countBy(allPresentP, (g) => g.studentId),
+      ...countBy(allPresentR, (g) => (g.rosterId ? `roster:${g.rosterId}` : null)),
+    ]);
+    const anecdCount = new Map<string, number>([
+      ...countBy(anecdP, (g) => g.studentId),
+      ...countBy(anecdR, (g) => (g.rosterId ? `roster:${g.rosterId}` : null)),
+    ]);
+    const rawKeys = new Set<string>([
+      ...profKeys.map((s) => s.userId),
+      ...rosterKeys.filter((r) => !registeredLrns.has(r.lrn)).map((r) => `roster:${r.id}`),
+    ]);
+    for (const key of rawKeys) {
+      // Adviser data gate: a learner only reaches the board when their class
+      // adviser has claimed the section and switched student-data sharing ON.
+      // The principal's ADM desk is exempt — an ADM case is already visible to
+      // the principal in full, so gating its risk signals on the adviser's
+      // sharing switch would blank the desk for every unshared section.
+      const sectionId = sectionByKey.get(key);
+      if (!admOnly && (!sectionId || !connectedSectionIds.has(sectionId))) continue;
+      const rawAvg = rawAvgMap.get(key);
+      const finalAvg = finalAvgMap.get(key);
+      const academicFlag =
+        (rawAvg != null && rawAvg < 75) || (finalAvg != null && finalAvg < 75);
+      const subT = subTotal.get(key) ?? 0;
+      let attendanceFlag: boolean;
+      if (subT > 0) {
+        attendanceFlag = (subPresent.get(key) ?? 0) / subT < 0.8;
+      } else {
+        const enrolled = headcounts.get(sectionByKey.get(key) ?? "") ?? 0;
+        attendanceFlag = enrolled > 0 && (allPresent.get(key) ?? 0) / enrolled < 0.8;
+      }
+      const behavioralFlag = (anecdCount.get(key) ?? 0) >= 1;
+      if (academicFlag) academic++;
+      if (attendanceFlag) attendance++;
+      if (behavioralFlag) behavioral++;
+
+      const rawCount =
+        (academicFlag ? 1 : 0) + (attendanceFlag ? 1 : 0) + (behavioralFlag ? 1 : 0);
+      const level = rawCount >= 2 ? "High" : rawCount === 1 ? "Moderate" : "Low";
+      if (level === "High") high++;
+      else if (level === "Moderate") moderate++;
+      else low++;
+      addGrade(gradeByKey.get(key) ?? "—", level, 1);
+      if (sectionId) addSection(sectionId, level, 1);
+    }
   }
 
-  // Total at-risk flags = sum of triggered factors across all students.
   const totalAtRiskFlags = academic + attendance + behavioral;
 
-  const trend = await Promise.all(
-    terms.map(async (t) => {
-      const snaps = await prisma.riskSnapshot.groupBy({
-        by: ["riskLevel"],
-        where: { termId: t.id },
-        _count: { _all: true },
-      });
-      const snapMap = new Map<RiskLevel, number>();
-      for (const s of snaps) snapMap.set(s.riskLevel, s._count._all);
-      return {
-        term: `${t.schoolYear.name.split(" ")[0]} T${t.termNumber}`,
-        high: snapMap.get("High") ?? 0,
-        moderate: snapMap.get("Moderate") ?? 0,
-        low: snapMap.get("Low") ?? 0,
-      };
-    })
-  );
+  // Weekly progression inside the selected term: one bar group per week of
+  // the term. Each learner counts once per week — their latest snapshot in
+  // that week — so repeating hourly sweeps don't inflate the bars.
+  const trend: RiskBoardResult["trend"] = [];
+  if (activeTermId) {
+    const [termRow, snapshots] = await Promise.all([
+      prisma.term.findUnique({
+        where: { id: activeTermId },
+        select: { startDate: true, endDate: true },
+      }),
+      prisma.riskSnapshot.findMany({
+        where: {
+          termId: activeTermId,
+          ...(admStudentIds ? { studentId: { in: [...admStudentIds] } } : {}),
+        },
+        select: {
+          snapshotDate: true,
+          riskLevel: true,
+          studentId: true,
+          rosterId: true,
+        },
+        orderBy: { snapshotDate: "asc" },
+      }),
+    ]);
+
+    if (snapshots.length > 0) {
+      const WEEK_MS = 7 * 86_400_000;
+      const nowMs = Date.now();
+      const firstMs = snapshots[0].snapshotDate.getTime();
+      const startMs = Math.min(termRow?.startDate?.getTime() ?? firstMs, firstMs);
+      const endMs = Math.max(
+        firstMs,
+        Math.min(termRow?.endDate?.getTime() ?? nowMs, nowMs),
+      );
+      const bucketCount = Math.max(1, Math.ceil((endMs - startMs) / WEEK_MS));
+      const buckets: Map<string, RiskLevel>[] = Array.from(
+        { length: bucketCount },
+        () => new Map<string, RiskLevel>(),
+      );
+
+      for (const snap of snapshots) {
+        const idx = Math.floor((snap.snapshotDate.getTime() - startMs) / WEEK_MS);
+        if (idx < 0 || idx >= bucketCount) continue;
+        const key = snap.studentId ?? (snap.rosterId ? `roster:${snap.rosterId}` : null);
+        if (!key) continue;
+        buckets[idx].set(key, snap.riskLevel);
+      }
+
+      for (let i = 0; i < bucketCount; i++) {
+        const bucketStart = new Date(startMs + i * WEEK_MS);
+        const month = String(bucketStart.getMonth() + 1).padStart(2, "0");
+        const day = String(bucketStart.getDate()).padStart(2, "0");
+        let highCount = 0;
+        let moderateCount = 0;
+        let lowCount = 0;
+        for (const level of buckets[i].values()) {
+          if (level === "High") highCount++;
+          else if (level === "Moderate") moderateCount++;
+          else lowCount++;
+        }
+        trend.push({
+          term: `${month}/${day}`,
+          high: highCount,
+          moderate: moderateCount,
+          low: lowCount,
+        });
+      }
+    }
+  }
+  // A trimester is ~13–14 weeks; cap the chart so long holiday gaps don't
+  // squeeze the bars into unreadable slivers.
+  let visibleTrend = trend.slice(-14);
+
+  // The engine writes RiskSnapshot rows on its hourly sweep; before its first
+  // run in a term there is no time series. Fall back to the live computed
+  // levels so the ADM desk still shows its learners instead of an empty board.
+  if (visibleTrend.length === 0 && high + moderate + low > 0) {
+    visibleTrend = [{ term: "Now", high, moderate, low }];
+  }
 
   const interventionGroups = await prisma.intervention.groupBy({
     by: ["outcomeStatus"],
-    where: schoolYearId
-      ? { student: { section: { schoolYearId } } }
-      : undefined,
+    where: {
+      ...(schoolYearId ? { student: { section: { schoolYearId } } } : {}),
+      ...(admStudentIds ? { studentId: { in: [...admStudentIds] } } : {}),
+    },
     _count: { _all: true },
   });
   const outcomeMap = new Map<OutcomeStatus, number>();
@@ -191,6 +408,27 @@ export async function getRiskBoard(
     resolved: outcomeMap.get("resolved") ?? 0,
     unresolved: outcomeMap.get("unresolved") ?? 0,
   };
+
+  const byGrade = [...byGradeMap.entries()]
+    .map(([grade, v]) => ({ grade, ...v, total: v.High + v.Moderate + v.Low }))
+    .sort((a, b) => Number(a.grade.replace(/\D/g, "")) - Number(b.grade.replace(/\D/g, "")));
+
+  const bySection = [...bySectionMap.entries()]
+    .map(([sectionId, v]) => ({
+      section: sectionNameById.get(sectionId) ?? sectionId,
+      gradeLevel: sectionGradeById.get(sectionId) ?? "",
+      ...v,
+      total: v.High + v.Moderate + v.Low,
+    }))
+    .sort((a, b) => {
+      const gradeDiff =
+        Number(a.gradeLevel.replace(/\D/g, "")) - Number(b.gradeLevel.replace(/\D/g, ""));
+      if (gradeDiff !== 0) return gradeDiff;
+      return a.section.localeCompare(b.section, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+    });
 
   return {
     kpis: {
@@ -202,13 +440,15 @@ export async function getRiskBoard(
       { level: "Moderate", count: moderate },
       { level: "Low", count: low },
     ],
+    byGrade,
+    bySection,
     factorTotals: {
       Academic: academic,
       Attendance: attendance,
       Behavioral: behavioral,
     },
     interventionOutcome,
-    trend: trend.length > 0 ? trend : [{ term: "No terms", high: 0, moderate: 0, low: 0 }],
+    trend: visibleTrend,
   };
 }
 
@@ -218,10 +458,54 @@ export interface RiskTrendResult {
   trend: { date: string; term: string; high: number; moderate: number; low: number }[];
 }
 
-// School-year/term-scoped risk trend for the Risk Trend chart. When no
-// schoolYearId is given it defaults to the active year. When a specific term
-// is selected the trend is day-by-day (snapshots grouped by date within that
-// term); otherwise it's one point per term across the school year.
+/**
+ * Learners the principal may see: only those in sections whose adviser has
+ * claimed the section and switched student-data sharing ON.
+ */
+async function connectedLearnerIds(yearId: string): Promise<{
+  studentIds: string[];
+  rosterIds: string[];
+}> {
+  const sections = await prisma.section.findMany({
+    where: {
+      schoolYearId: yearId,
+      adviser: { staffProfile: { shareStudentData: true } },
+    },
+    select: { id: true },
+  });
+  const sectionIds = sections.map((s) => s.id);
+  if (sectionIds.length === 0) return { studentIds: [], rosterIds: [] };
+
+  const [profiles, rosters] = await Promise.all([
+    prisma.studentProfile.findMany({
+      where: { sectionId: { in: sectionIds } },
+      select: { userId: true },
+    }),
+    prisma.studentRoster.findMany({
+      where: { sectionId: { in: sectionIds } },
+      select: { id: true },
+    }),
+  ]);
+
+  return {
+    studentIds: profiles.map((p) => p.userId),
+    rosterIds: rosters.map((r) => r.id),
+  };
+}
+
+function connectedOwnerFilter({
+  studentIds,
+  rosterIds,
+}: {
+  studentIds: string[];
+  rosterIds: string[];
+}) {
+  return [
+    ...(studentIds.length > 0 ? [{ studentId: { in: studentIds } }] : []),
+    ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
+  ];
+}
+
 export async function getRiskTrend(
   schoolYearId?: string,
   termId?: string
@@ -245,8 +529,14 @@ export async function getRiskTrend(
     const validTerm = term && term.schoolYearId === yearId ? term : null;
 
     if (validTerm) {
+      const connected = await connectedLearnerIds(yearId);
+      const ownerFilter = connectedOwnerFilter(connected);
+      if (ownerFilter.length === 0) {
+        return { schoolYearId: yearId, termId: validTerm.id, trend: [] };
+      }
+
       const snaps = await prisma.riskSnapshot.findMany({
-        where: { termId: validTerm.id },
+        where: { termId: validTerm.id, OR: ownerFilter },
         select: { snapshotDate: true, riskLevel: true },
       });
 
@@ -277,9 +567,6 @@ export async function getRiskTrend(
         end = new Date(`${keys[keys.length - 1]}T00:00:00`);
       }
 
-      // A term's schedule can extend into the future; the daily series must
-      // stop at "today" so we never emit zero-filled future days (which made
-      // the trailing "Last 7 days" bucket land on empty days).
       if (end.getTime() > nowMs) end = new Date(nowMs);
 
       const trend: {
@@ -320,11 +607,19 @@ export async function getRiskTrend(
       })
     : [];
 
+  const connected = yearId
+    ? await connectedLearnerIds(yearId)
+    : { studentIds: [], rosterIds: [] };
+  const ownerFilter = connectedOwnerFilter(connected);
+  if (yearId && terms.length > 0 && ownerFilter.length === 0) {
+    return { schoolYearId: yearId, termId: null, trend: [] };
+  }
+
   const trend = await Promise.all(
     terms.map(async (t) => {
       const snaps = await prisma.riskSnapshot.groupBy({
         by: ["riskLevel"],
-        where: { termId: t.id },
+        where: { termId: t.id, OR: ownerFilter },
         _count: { _all: true },
       });
       const map = new Map<RiskLevel, number>();
@@ -349,7 +644,6 @@ export async function getRiskTrend(
   };
 }
 
-// List of school years (with their terms) for the Risk Trend filters.
 export async function getSchoolsForRisk() {
   const now = Date.now();
   const years = await prisma.schoolYear.findMany({
@@ -366,9 +660,7 @@ export async function getSchoolsForRisk() {
       },
     },
   });
-  // isCurrent = the school year whose span contains the current date, so the
-  // Risk Trend front-end defaults to the year matching today regardless of the
-  // isActive flag.
+
   return years.map((y) => ({
     id: y.id,
     name: y.name,

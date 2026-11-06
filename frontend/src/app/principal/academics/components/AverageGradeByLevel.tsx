@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { type SectionSummary } from "../academics-data";
+import { type SectionSummary } from "@/services/principal/academics";
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./AverageGradeByLevel.module.css";
 import shared from "../academics.module.css";
@@ -26,7 +26,7 @@ export function AverageGradeByLevel({
     const subjMap = new Map<string, number[]>();
     for (const s of scoped) {
       if (activeSectionId && s.sectionId !== activeSectionId) continue;
-      for (const st of s.students) {
+      for (const st of s.students ?? []) {
         for (const sub of st.subjects) {
           const arr = subjMap.get(sub.subject) ?? [];
           arr.push(sub.transmutedGrade);

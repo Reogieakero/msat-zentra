@@ -1,7 +1,6 @@
 "use client";
 
-import * as React from "react";
-import { Image as ImageIcon, MoreHorizontal } from "lucide-react";
+import { Eye, Image as ImageIcon, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type DocEntry, entryStatusLabel, entryStatusVariant } from "./documentaries-utils";
+import { Pagination } from "@/components/shared/pagination";
 import { formatDate } from "../../referrals/components/nurse-referrals-format";
 import type { SortKey } from "./documentaries-utils";
 import styles from "./NurseDocumentariesList.module.css";
@@ -33,10 +33,7 @@ export function DocumentaryTable({
   filtered,
   pageRows,
   total,
-  start,
-  end,
   safePage,
-  totalPages,
   onSort,
   onPageChange,
   onOpenDetails,
@@ -133,7 +130,10 @@ export function DocumentaryTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className={styles.moreMenu}>
-                          <DropdownMenuItem onSelect={() => onOpenDetails(entry)}>View details</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => onOpenDetails(entry)}>
+                            <Eye aria-hidden />
+                            View details
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -145,14 +145,11 @@ export function DocumentaryTable({
         )}
       </div>
 
-      <div className={styles.pager}>
-        <p className={styles.range}>Showing {start}–{end} of {total}</p>
-        <div className={styles.pagerButtons}>
-          <Button size="xs" variant="outline" disabled={safePage <= 1} onClick={() => onPageChange(Math.max(1, safePage - 1))}>Previous</Button>
-          <span className={styles.pageLabel} aria-live="polite">Page {safePage} of {totalPages}</span>
-          <Button size="xs" variant="outline" disabled={safePage >= totalPages} onClick={() => onPageChange(safePage + 1)}>Next</Button>
-        </div>
-      </div>
+      <Pagination
+        currentPage={safePage}
+        totalItems={total}
+        onPageChange={onPageChange}
+      />
     </>
   );
 }

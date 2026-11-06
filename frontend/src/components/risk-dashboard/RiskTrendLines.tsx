@@ -23,12 +23,6 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   fontSize: 12,
 };
 
-/**
- * Weekly referral lines per category over the trailing 12 weeks — one
- * primary-ink line per top category, oldest week left. Replaces the
- * section × category matrix as the main panel visual; section spread
- * still surfaces through the hotspot card.
- */
 export function RiskTrendLines({
   trend,
   interpretation,
@@ -36,10 +30,8 @@ export function RiskTrendLines({
 }: {
   trend: CategoryTrend;
   interpretation: string;
-  /** Saved settings hex — wins over the probed runtime palette. */
   primary?: string | null;
 }) {
-  // Live primary-ink steps — one per series, darkest first.
   const shades = usePrimaryScale(Math.max(trend.series.length, 1), primary);
   const points = React.useMemo(
     () =>

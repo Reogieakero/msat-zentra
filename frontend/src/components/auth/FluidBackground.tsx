@@ -41,8 +41,6 @@ export function FluidBackground({
 }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
-  // Track the actual `.dark` class on <html> so the fluid background reacts to
-  // theme switches reliably (the custom theme provider toggles that class).
   const [isDark, setIsDark] = React.useState(false);
   React.useEffect(() => {
     const root = document.documentElement;
@@ -53,8 +51,6 @@ export function FluidBackground({
     return () => observer.disconnect();
   }, []);
 
-  // When no explicit hue is provided, fall back to the user's persisted choice
-  // so every fluid background across the app shares the same color.
   const [storedHue, setStoredHue] = React.useState<FluidHue>("green");
   React.useEffect(() => {
     try {
@@ -63,7 +59,7 @@ export function FluidBackground({
         setStoredHue(stored);
       }
     } catch {
-      /* ignore unavailable storage */
+
     }
   }, []);
 
@@ -79,9 +75,6 @@ export function FluidBackground({
       buildFluidConfig(isDark, activeHue),
     );
 
-    // The canvas sits behind the UI (pointer-events: none), so it never
-    // receives its own mouse/touch events. Forward cursor movement from the
-    // window so the fluid follows the user across the whole screen.
     const forwardMove = (clientX: number, clientY: number) => {
       canvas.dispatchEvent(
         new MouseEvent("mousemove", { clientX, clientY, bubbles: false }),
@@ -111,5 +104,3 @@ export function FluidBackground({
     />
   );
 }
-
-

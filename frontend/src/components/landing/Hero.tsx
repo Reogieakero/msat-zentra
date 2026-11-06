@@ -1,154 +1,82 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, LayoutDashboard, Users, ClipboardList, Bell, Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowUpRight, Sparkles } from "lucide-react";
+import type { Palette } from "./palette";
+import { LivingOrb } from "./LivingOrb";
 import styles from "./Hero.module.css";
-import { startFluidBackground, defaultFluidConfig, FluidConfig } from "@/lib/fluid/fluidBackground";
 
-function buildFluidConfig(dark: boolean): FluidConfig {
-  return {
-    ...defaultFluidConfig,
-    TRANSPARENT: false,
-    BACK_COLOR: dark ? { r: 10, g: 10, b: 10 } : { r: 250, g: 250, b: 249 },
-    COLORFUL: false,
-    RANDOM_COLORS: false,
-    SPLAT_HUE: 0.42,
-    SUNRAYS: false,
-    SHADING: false,
-    DENSITY_DISSIPATION: 1.0,
-    VELOCITY_DISSIPATION: 1.2,
-    CURL: 6,
-    SPLAT_RADIUS: 0.35,
-  };
-}
-
-export function Hero() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Track the actual `.dark` class on <html> so the fluid background switches
-  // to the black back-color reliably when dark mode is toggled.
-  const [isDark, setIsDark] = useState(false);
-  useEffect(() => {
-    const root = document.documentElement;
-    const sync = () => setIsDark(root.classList.contains("dark"));
-    sync();
-    const observer = new MutationObserver(sync);
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    const stop = startFluidBackground(
-      canvas,
-      buildFluidConfig(isDark)
-    );
-    return stop;
-  }, [isDark]);
-
+export function Hero({ palette }: { palette: Palette }) {
   return (
     <section id="overview" className={styles.hero}>
-      <canvas ref={canvasRef} className={styles.bg} aria-hidden />
-      <div className={styles.scrim} aria-hidden />
-      <div className={styles.tint} aria-hidden />
-      <div className={styles.grid}>
-        <div className={styles.left}>
-          <div className={styles.eyebrowRow}>
-            <span className={styles.eyebrowRule} aria-hidden="true" />
-            <p className={styles.eyebrow}>Mati School of Arts and Trades</p>
-          </div>
-          <h1 className={styles.title}>
-            One record, <span className={styles.titleAccent}>every learner signal.</span>
-          </h1>
-          <p className={styles.lede}>
-            Grading, attendance, anecdotal records, and early-intervention risk —
-            unified for teachers, guidance, and school leadership.
+      <div className={styles.aurora} aria-hidden="true">
+        <span className={styles.blobMint} />
+        <span className={styles.blobViolet} />
+        <span className={styles.blobDeep} />
+      </div>
+      <div className={styles.grain} aria-hidden="true" />
+      <LivingOrb palette={palette} />
+
+      <div className={styles.frame}>
+        <div className={styles.headlineWrap}>
+          <p className={styles.kicker}>
+            <span className={styles.kickerDot} aria-hidden="true" />
+            Zentra · Mati School of Arts and Trades
           </p>
-          <div className={styles.ctaBlock}>
-            <Button asChild size="lg">
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button asChild variant="ghost" size="lg">
-              <Link href="#how">
-                See how it works
-                <ArrowRight size={16} />
-              </Link>
-            </Button>
+          <h1 className={styles.title}>
+            <span className={styles.lineMask}>
+              <span className={styles.line} style={{ ["--line-delay" as string]: "120ms" }}>
+                Every learner,
+              </span>
+            </span>
+            <span className={styles.lineMask}>
+              <span
+                className={`${styles.line} ${styles.titleAccent}`}
+                style={{ ["--line-delay" as string]: "260ms" }}
+              >
+                in focus.
+              </span>
+            </span>
+          </h1>
+          <p className={styles.sub}>
+            A living record of grades, attendance, well-being, and intervention — read
+            in motion, answered early.
+          </p>
+        </div>
+
+        <div className={styles.bottom}>
+          <div className={styles.signal}>
+            <p className={styles.signalText}>
+              It reads every signal — grades, attendance, anecdotes — and answers
+              before a term slips away.
+            </p>
+            <p className={styles.tags}>
+              <span>[ Learner records ]</span>
+              <span aria-hidden="true">·</span>
+              <span>[ Early intervention ]</span>
+              <span aria-hidden="true">·</span>
+              <span>[ ADM ]</span>
+            </p>
           </div>
-          <div className={styles.links}>
-            <Link href="#modules" className={styles.textLink}>
-              Explore modules
-            </Link>
-            <Link href="#roles" className={styles.textLink}>
-              See the roles
-            </Link>
-            <Link href="#security" className={styles.textLink}>
-              How we keep it confidential
-            </Link>
+
+          <div className={styles.aside}>
+            <p className={styles.asideText}>
+              One system of record for teachers, guidance, health, ADM, and school
+              leadership. Ten workspaces, one shared truth.
+            </p>
+            <div className={styles.actions}>
+              <Link href="/login" className={styles.primary}>
+                Open workspace
+                <ArrowUpRight size={16} aria-hidden="true" />
+              </Link>
+              <Link href="#modules" className={styles.iconButton} aria-label="Explore modules">
+                <Sparkles size={18} aria-hidden="true" />
+              </Link>
+            </div>
           </div>
         </div>
 
-        <div className={styles.right}>
-          <div className={styles.browser}>
-            <div className={styles.browserBar}>
-              <span className={styles.dot} />
-              <span className={styles.dot} />
-              <span className={styles.dot} />
-              <span className={styles.browserUrl}>msat.edu/workspace</span>
-            </div>
-            <div className={styles.browserBody}>
-              <aside className={styles.sidebar}>
-                <Link href="#overview" className={`${styles.sideItem} ${styles.sideActive}`} aria-label="Dashboard">
-                  <LayoutDashboard size={18} />
-                </Link>
-                <Link href="#roles" className={styles.sideItem} aria-label="Students">
-                  <Users size={18} />
-                </Link>
-                <Link href="#modules" className={styles.sideItem} aria-label="Records">
-                  <ClipboardList size={18} />
-                </Link>
-                <Link href="#security" className={styles.sideItem} aria-label="Alerts">
-                  <Bell size={18} />
-                </Link>
-                <Link href="#how" className={styles.sideItem} aria-label="Settings">
-                  <Settings size={18} />
-                </Link>
-              </aside>
-              <div className={styles.canvasArea}>
-                <div className={styles.cardRow}>
-                  <div className={styles.statCard}>
-                    <span className={styles.statLabel}>Attendance</span>
-                    <span className={styles.statValue}>96%</span>
-                  </div>
-                  <div className={styles.statCard}>
-                    <span className={styles.statLabel}>At-risk</span>
-                    <span className={styles.statValue}>7</span>
-                  </div>
-                </div>
-                <div className={styles.chart}>
-                  <span className={styles.bar} style={{ height: "40%" }} />
-                  <span className={styles.bar} style={{ height: "70%" }} />
-                  <span className={styles.bar} style={{ height: "55%" }} />
-                  <span className={styles.bar} style={{ height: "85%" }} />
-                  <span className={styles.bar} style={{ height: "60%" }} />
-                  <span className={styles.bar} style={{ height: "95%" }} />
-                  <span className={styles.bar} style={{ height: "48%" }} />
-                </div>
-                <div className={styles.timeline}>
-                  <span className={styles.tNode} />
-                  <span className={styles.tLine} />
-                  <span className={styles.tNode} />
-                  <span className={styles.tLine} />
-                  <span className={styles.tNode} />
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className={styles.scrollCue} aria-hidden="true">
+          <span className={styles.scrollLine} />
+          <span>Scroll to explore</span>
         </div>
       </div>
     </section>

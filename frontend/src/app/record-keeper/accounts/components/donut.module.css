@@ -1,8 +1,9 @@
 .wrap {
-  display: flex;
-  flex-direction: column;
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .svg {
@@ -10,8 +11,17 @@
 }
 
 .center {
+  position: absolute;
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--foreground);
   font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.tooltipSwatch {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
 }

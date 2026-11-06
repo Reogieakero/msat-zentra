@@ -1,0 +1,33 @@
+/* Subjects column — fits exactly three subject cards (3 x 5.5rem card +
+   2 x 0.5rem gap ≈ 17.5rem); taller sets scroll. The thin amber thumb is
+   invisible until the list itself is hovered / focused, matching the
+   shared .zentra-scroll tint used by other kanban lists. */
+.subjectsScroll {
+  max-height: 17.5rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.subjectsScroll:hover,
+.subjectsScroll:focus-within {
+  scrollbar-color: color-mix(in oklch, #f59e0b 55%, transparent) transparent;
+}
+
+.subjectsScroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.subjectsScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.subjectsScroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.subjectsScroll:hover::-webkit-scrollbar-thumb,
+.subjectsScroll:focus-within::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, #f59e0b 55%, transparent);
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { folderNameSchema } from "../src/modules/anecdotal/anecdotal.routes.js";
+import { folderNameSchema } from "../src/modules/anecdotal/anecdotal.schemas.js";
 
 describe("Anecdotal folder names", () => {
   it("accepts a normal name", () => {

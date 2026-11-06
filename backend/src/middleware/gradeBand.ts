@@ -2,37 +2,35 @@ import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../lib/errors.js";
 import { prisma } from "../lib/prisma.js";
 import type { GradeLevel } from "../generated/prisma/client.js";
+import { bandAllowed, bandForGrade, isBandRole } from "../lib/roles.js";
 
-const BAND_7_10: GradeLevel[] = ["G7", "G8", "G9", "G10"];
-const BAND_11_12: GradeLevel[] = ["G11", "G12"];
-
-function bandFor(grade: GradeLevel): "7-10" | "11-12" {
-  return BAND_7_10.includes(grade) ? "7-10" : "11-12";
-}
-
-// Enforces grade-banded authority for record_keeper (7-10) and registrar (11-12).
-// `resolveStudentId` returns the student whose grade band is being acted on.
-export function gradeBandGuard(resolveStudentId: (req: Request) => string | Promise<string>) {
+export function gradeBandGuard(
+  resolveStudentId: (req: Request) => string | Promise<string>,
+  options?: {
+    /**
+     * Let the request through when the target's grade can't be resolved at
+     * all (a sign-up whose LRN isn't in any roster yet). Account rejection
+     * passes this so either desk can clear bogus sign-ups; approval keeps the
+     * hard 404 because it must provision a grade/section from the roster.
+     */
+    allowUnresolved?: boolean;
+  },
+) {
   return async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) return next(new AppError(401, "UNAUTHORIZED", "Authentication required"));
-    if (req.user.role !== "record_keeper" && req.user.role !== "registrar") return next();
+    if (!isBandRole(req.user.role)) return next();
 
     try {
       const studentId = await resolveStudentId(req);
 
-      // Roster enlistments (`roster:<id>`, no account yet) resolve their band
-      // straight from the roster entry.
       if (studentId.startsWith("roster:")) {
         const entry = await prisma.studentRoster.findUnique({
           where: { id: studentId.slice("roster:".length) },
           select: { gradeLevel: true },
         });
         if (!entry) return next(new AppError(404, "STUDENT_NOT_FOUND", "Student profile not found"));
-        const band = bandFor(entry.gradeLevel);
-        const allowed =
-          (req.user.role === "record_keeper" && band === "7-10") ||
-          (req.user.role === "registrar" && band === "11-12");
-        if (!allowed) {
+        const band = bandForGrade(entry.gradeLevel);
+        if (!bandAllowed(req.user.role, band)) {
           return next(new AppError(403, "GRADE_BAND_FORBIDDEN", `Role not authorized for grade band ${band}`));
         }
         return next();
@@ -45,7 +43,6 @@ export function gradeBandGuard(resolveStudentId: (req: Request) => string | Prom
 
       let grade: GradeLevel | null | undefined = profile?.gradeLevel;
       if (!grade) {
-        // Pending students have no profile yet; derive band from the roster LRN.
         const user = await prisma.user.findUnique({
           where: { id: studentId },
           select: { lrn: true },
@@ -58,13 +55,13 @@ export function gradeBandGuard(resolveStudentId: (req: Request) => string | Prom
           grade = roster?.gradeLevel;
         }
       }
-      if (!grade) return next(new AppError(404, "STUDENT_NOT_FOUND", "Student profile not found"));
+      if (!grade) {
+        if (options?.allowUnresolved) return next();
+        return next(new AppError(404, "STUDENT_NOT_FOUND", "Student profile not found"));
+      }
 
-      const band = bandFor(grade);
-      const allowed =
-        (req.user.role === "record_keeper" && band === "7-10") ||
-        (req.user.role === "registrar" && band === "11-12");
-      if (!allowed) {
+      const band = bandForGrade(grade);
+      if (!bandAllowed(req.user.role, band)) {
         return next(new AppError(403, "GRADE_BAND_FORBIDDEN", `Role not authorized for grade band ${band}`));
       }
       next();

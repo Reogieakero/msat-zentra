@@ -4,8 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ChevronLeft,
-  ChevronRight,
   MoreHorizontal,
   UserCheck,
 } from "lucide-react";
@@ -26,13 +24,11 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchRegistrarOverview } from "./overview-data";
+import { RegistrarEmptyState } from "../../components/RegistrarEmptyCard";
+import { fetchRegistrarOverview } from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import styles from "./OverviewApprovals.module.css";
-
-// Overview preview pager: 10 rows per page (registrar overview standard).
-// The full queue with server search lives on the Accounts page.
-const PAGE_SIZE = 10;
+import styles from "@/components/registry/overview/OverviewApprovals.module.css";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 export function OverviewApprovals() {
   const router = useRouter();
@@ -41,6 +37,7 @@ export function OverviewApprovals() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["registrar-overview"],
     queryFn: fetchRegistrarOverview,
+    staleTime: 30_000,
   });
 
   const goAccounts = React.useCallback(() => {
@@ -57,30 +54,31 @@ export function OverviewApprovals() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRows = pendingStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
   const hasRecords = (data?.pendingStudents ?? []).length > 0;
+  const isEmpty = !isPending && !isError && !hasRecords;
 
   return (
-    <section className={assign.card} aria-labelledby="overview-pending-approvals">
+    <section className={assign.card} aria-labelledby={isEmpty ? undefined : "overview-pending-approvals"}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h2 id="overview-pending-approvals" className="text-base font-semibold">
-            Pending Approvals
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Approvals and follow-ups that need registrar attention this term.
-          </p>
+      {!isEmpty && (
+        <div className={`${styles.header} relative`}>
+          <div className={styles.headerText}>
+            <h2 id="overview-pending-approvals" className="text-base font-semibold">
+              Pending Approvals
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Approvals and follow-ups that need registrar attention this term.
+            </p>
+          </div>
+          <div className={styles.headerActions}>
+            <Button variant="link" size="sm" className={styles.viewAll} onClick={goAccounts}>
+              View all
+            </Button>
+          </div>
         </div>
-        <div className={styles.headerActions}>
-          <Button variant="link" size="sm" className={styles.viewAll} onClick={goAccounts}>
-            View all
-          </Button>
-        </div>
-      </div>
+      )}
       <div className={`${styles.content} relative`}>
         {isPending ? (
           <div className={styles.tableWrap}>
@@ -89,15 +87,11 @@ export function OverviewApprovals() {
         ) : isError ? (
           <p className={styles.empty}>Could not load overview figures.</p>
         ) : !hasRecords ? (
-          <div className={styles.emptyBlock}>
-            <span className={styles.emptyIcon} aria-hidden>
-              <UserCheck />
-            </span>
-            <p className={styles.emptyTitle}>All caught up</p>
-            <p className={styles.emptyHint}>
-              No pending student enrollments in the G11–12 band.
-            </p>
-          </div>
+          <RegistrarEmptyState
+            icon={UserCheck}
+            title="All caught up"
+            hint="No pending student enrollments in the G11–12 band."
+          />
         ) : (
           <div className={styles.tableWrap}>
             <Table>
@@ -153,31 +147,11 @@ export function OverviewApprovals() {
         )}
       </div>
       {hasRecords && (
-        <div className={`${styles.footer} relative`}>
-          <span className={styles.footerInfo}>
-            {total > 0 ? `${start}–${end} of ${total}` : "0 of 0"}
-          </span>
-          <div className={styles.footerActions}>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage <= 1 || total === 0}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeft aria-hidden />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage >= totalPages || total === 0}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={safePage}
+          totalItems={total}
+          onPageChange={setPage}
+        />
       )}
     </section>
   );

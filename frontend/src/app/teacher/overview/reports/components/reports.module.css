@@ -1,0 +1,598 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0 0 0.5rem;
+  width: 100%;
+  min-width: 0;
+  /* Every report surface uses Inter, whatever the shell applies above it. */
+  font-family: var(--font-inter), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: 0.5rem;
+  background: var(--card, #fff);
+  padding: 0.875rem 1rem;
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.cardSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.heading h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.heading p {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+/* --- kanban stat boards (same chrome as the other role overviews) --- */
+.statBoard {
+  min-width: 0;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.statColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.625rem;
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: var(--radius-xl, 0.75rem);
+  background-color: color-mix(in oklch, var(--muted, #f3f4f6) 60%, transparent);
+  transition:
+    transform 170ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 170ms ease,
+    box-shadow 170ms ease;
+}
+
+.statColumn:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary, #2563eb) 32%, var(--border, #e5e5e5));
+  box-shadow: 0 8px 20px -16px color-mix(in oklch, var(--primary, #2563eb) 55%, transparent);
+}
+
+:global(.dark) .statColumn {
+  background-color: color-mix(in oklch, var(--muted, #262626) 20%, transparent);
+}
+
+.statIcon {
+  display: inline-flex;
+  color: var(--muted-foreground);
+}
+
+.statCard {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: var(--radius-lg, 0.5rem);
+  background-color: var(--card, #fff);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground, #111), transparent 95%);
+}
+
+.statTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.statValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Text-valued columns keep the same number-first size as numeric columns so
+   every column in the board reads with one weight. */
+.statValueText {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.valuePositive {
+  color: rgb(22 163 74);
+}
+
+.valueWarn {
+  color: rgb(202 138 4);
+}
+
+.valueDanger {
+  color: rgb(220 38 38);
+}
+
+.valueMuted {
+  color: var(--muted-foreground);
+}
+
+.statMascot {
+  display: inline-flex;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: 9999px;
+  background-color: color-mix(in oklch, var(--muted, #f3f4f6) 40%, transparent);
+}
+
+.statHint {
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.statAction {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+/* Solid 32px desk button — primary tokens flip with the theme. */
+.statBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--primary-foreground);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 0.375rem);
+  background-color: var(--primary);
+  cursor: pointer;
+  transition: filter 140ms ease-out;
+}
+
+.statBtn:hover {
+  filter: brightness(0.92);
+  text-decoration: none;
+}
+
+.statBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+@media (max-width: 1180px) {
+  .statGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .statGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 460px) {
+  .statGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Columns cascade in so the strip settles instead of popping. */
+@keyframes stat-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.statGrid > .statColumn {
+  animation: stat-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.statGrid > .statColumn:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.statGrid > .statColumn:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+.statGrid > .statColumn:nth-child(4) {
+  animation-delay: 0.18s;
+}
+
+.statGrid > .statColumn:nth-child(5) {
+  animation-delay: 0.24s;
+}
+
+.statGrid > .statColumn:nth-child(6) {
+  animation-delay: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statGrid > .statColumn {
+    animation: none;
+  }
+
+  .statColumn {
+    transition: none;
+  }
+
+  .statColumn:hover {
+    transform: none;
+  }
+}
+
+/* --- tables --- */
+.tableWrap {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.table th {
+  text-align: left;
+  vertical-align: middle;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  padding: 0.375rem 0.5rem;
+  border-bottom: 1px solid var(--border, #e5e5e5);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--border, #e5e5e5) 60%, transparent);
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.classCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.classNameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.className {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.classMeta {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+/* --- distribution bars --- */
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr) 5.5rem;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.75rem;
+}
+
+.barLabel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.barLabel strong {
+  font-weight: 600;
+}
+
+.barLabel span {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.barTrack {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--muted, #f3f4f6);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary, #2563eb);
+}
+
+/* Case activity chart — amber palette only. */
+.barFillAmber {
+  background: #f59e0b;
+}
+
+:global(.dark) .barFillAmber {
+  background: #fbbf24;
+}
+
+.barGroupTitle {
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* --- case activity donut --- */
+.activityBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.donutWrap {
+  position: relative;
+  min-width: 0;
+}
+
+.donutCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.donutValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #b45309;
+  font-variant-numeric: tabular-nums;
+}
+
+:global(.dark) .donutValue {
+  color: #fbbf24;
+}
+
+.donutLabel {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.activityLegend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activityLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  font-size: 0.75rem;
+}
+
+.legendSwatch {
+  flex: none;
+  height: 0.5rem;
+  width: 0.5rem;
+  border-radius: 9999px;
+}
+
+.legendLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barValue {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --- two-column panels --- */
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+/* --- list rows --- */
+.listRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid color-mix(in oklch, var(--border, #e5e5e5) 60%, transparent);
+  font-size: 0.8125rem;
+  min-width: 0;
+}
+
+.listRow:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.listRowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.listRowMain strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listRowMeta {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.riskCell {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.empty {
+  margin: 0;
+  padding: 1.25rem 0.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.error {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+/* --- teaching load --- */
+.loadGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid color-mix(in oklch, var(--border, #e5e5e5) 60%, transparent);
+}
+
+.loadGroup:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.loadSection {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.loadSubject {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.loadToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.loadToggle:hover .cardTitle {
+  color: var(--primary, #2563eb);
+}

@@ -175,13 +175,13 @@ tr[data-bad] .rate {
 .trendUp {
   width: 1rem;
   height: 1rem;
-  color: var(--success, #16a34a);
+  color: #22c55e;
 }
 
 .trendDown {
   width: 1rem;
   height: 1rem;
-  color: var(--destructive);
+  color: #ef4444;
 }
 
 .trendFlat {

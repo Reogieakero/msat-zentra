@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import type { RiskLevel } from "../../generated/prisma/client.js";
-import { computeRiskFactors, levelFromFlags, type GradeMode } from "../../services/risk.js";
+import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals, type GradeMode } from "../../services/risk.js";
+import { sectionHeadcounts } from "../../services/enrollment.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
@@ -17,99 +18,23 @@ export interface HeatmapResult {
   factorTotals: Record<RiskFactor, number>;
 }
 
-async function sectionFactors(
-  sectionId: string,
-  termId: string,
-  gradeMode: GradeMode = "final"
-): Promise<Record<RiskFactor, number>> {
-  const [students, rosterEntries] = await Promise.all([
-    prisma.studentProfile.findMany({
-      where: { sectionId },
-      select: {
-        userId: true,
-        lrn: true,
-        finalGrades: {
-          where: { termId },
-          select: { computedAverage: true, transmutedGrade: true },
-        },
-        attendanceRecords: { where: { termId }, select: { status: true } },
-        anecdotalRecords: { where: { termId }, select: { id: true } },
-      },
-    }),
-    // Enlisted students without accounts — same factor rules, no account needed.
-    prisma.studentRoster.findMany({
-      where: { sectionId },
-      select: {
-        id: true,
-        lrn: true,
-        finalGrades: {
-          where: { termId },
-          select: { computedAverage: true, transmutedGrade: true },
-        },
-        attendanceRecords: { where: { termId }, select: { status: true } },
-        anecdotalRecords: { where: { termId }, select: { id: true } },
-      },
-    }),
-  ]);
-  const registeredLrns = new Set(students.map((s) => s.lrn));
-  const rosterOnly = rosterEntries.filter((r) => !registeredLrns.has(r.lrn));
-
-  type FactorStudent = {
-    finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
-    attendanceRecords: { status: string }[];
-    anecdotalCount: number;
-  };
-  const cohort: FactorStudent[] = [
-    ...students.map((s) => ({
-      finalGrades: s.finalGrades,
-      attendanceRecords: s.attendanceRecords,
-      anecdotalCount: s.anecdotalRecords.length,
-    })),
-    ...rosterOnly.map((r) => ({
-      finalGrades: r.finalGrades,
-      attendanceRecords: r.attendanceRecords,
-      anecdotalCount: r.anecdotalRecords.length,
-    })),
-  ];
-
-  // Enrolled headcount = every student in the section (matches the Attendance
-  // system's enrolledBySection denominator).
-  const enrolled = cohort.length;
-
-  let academic = 0;
-  let attendance = 0;
-  let behavioral = 0;
-
-  const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
-    gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;
-
-  for (const s of cohort) {
-    const avg =
-      s.finalGrades.length > 0
-        ? s.finalGrades.reduce((sum, g) => sum + (gradeOf(g) ?? 0), 0) /
-          s.finalGrades.length
-        : 100;
-    if (avg < 75) academic++;
-
-    const present = s.attendanceRecords.filter((a) => a.status === "present").length;
-    if (enrolled > 0 && present / enrolled < 0.8) attendance++;
-
-    if (s.anecdotalCount > 0) behavioral++;
-  }
-
-  return { Academic: academic, Attendance: attendance, Behavioral: behavioral };
-}
-
-// All sections × risk-factor counts for the session's active board (O4, status-only).
+// Real-time unified: gradeMode is ignored (kept for backwards compat).
+// Always computes live from FinalGrade/Attendance/Anecdotal for the active term
+// using the same EITHER-avg<75 rule as getRiskStudents.
 export async function getRiskHeatmap(
   termId: string,
-  gradeMode: GradeMode = "final",
+  _gradeMode?: GradeMode,
   schoolYearId?: string | null,
 ): Promise<HeatmapResult> {
   const sections = await prisma.section.findMany({
-    where: schoolYearId
-      ? { schoolYearId }
-      : { schoolYear: { isActive: true } },
+    where: {
+      ...(schoolYearId
+        ? { schoolYearId }
+        : { schoolYear: { isActive: true } }),
+      // Adviser data gate: only sections whose adviser has claimed the section
+      // and switched student-data sharing ON contribute to the heatmap.
+      adviser: { staffProfile: { shareStudentData: true } },
+    },
     orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
     select: { id: true, name: true, gradeLevel: true },
   });
@@ -120,17 +45,13 @@ export async function getRiskHeatmap(
     Behavioral: 0,
   };
 
-  // Bulk mode: 2 queries total (profiles + roster for ALL sections),
-  // grouped in JS — instead of 2×N per-section round-trips. Same factor
-  // rules as sectionFactors() (kept for the single-section drill-down).
   const sectionIds = sections.map((s) => s.id);
-  const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
-    gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;
 
   const [allProfiles, allRoster] = await Promise.all([
     sectionIds.length
       ? prisma.studentProfile.findMany({
           where: { sectionId: { in: sectionIds } },
+          take: 5000,
           select: {
             lrn: true,
             sectionId: true,
@@ -138,7 +59,7 @@ export async function getRiskHeatmap(
               where: { termId },
               select: { computedAverage: true, transmutedGrade: true },
             },
-            attendanceRecords: { where: { termId }, select: { status: true } },
+            attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
             anecdotalRecords: { where: { termId }, select: { id: true } },
           },
         })
@@ -146,6 +67,7 @@ export async function getRiskHeatmap(
     sectionIds.length
       ? prisma.studentRoster.findMany({
           where: { sectionId: { in: sectionIds } },
+          take: 5000,
           select: {
             lrn: true,
             sectionId: true,
@@ -153,18 +75,21 @@ export async function getRiskHeatmap(
               where: { termId },
               select: { computedAverage: true, transmutedGrade: true },
             },
-            attendanceRecords: { where: { termId }, select: { status: true } },
+            attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
             anecdotalRecords: { where: { termId }, select: { id: true } },
           },
         })
       : Promise.resolve([]),
   ]);
 
+  const headcounts = await sectionHeadcounts(sectionIds);
+  const sectionTotals = await sectionAttendanceTotals(sectionIds, termId);
+
   type BulkRow = {
     lrn: string;
     sectionId: string | null;
     finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
-    attendanceRecords: { status: string }[];
+    attendanceRecords: { status: string; subjectId: string | null }[];
     anecdotalRecords: { id: string }[];
   };
   const bySection = new Map<string, { profiles: BulkRow[]; roster: BulkRow[] }>();
@@ -180,32 +105,21 @@ export async function getRiskHeatmap(
     const bucket = bySection.get(sec.id) ?? { profiles: [], roster: [] };
     const registeredLrns = new Set(bucket.profiles.map((s) => s.lrn));
     const rosterOnly = bucket.roster.filter((r) => !registeredLrns.has(r.lrn));
-    const cohort = [
-      ...bucket.profiles.map((s) => ({
-        finalGrades: s.finalGrades,
-        attendanceRecords: s.attendanceRecords,
-        anecdotalCount: s.anecdotalRecords.length,
-      })),
-      ...rosterOnly.map((r) => ({
-        finalGrades: r.finalGrades,
-        attendanceRecords: r.attendanceRecords,
-        anecdotalCount: r.anecdotalRecords.length,
-      })),
-    ];
-    const enrolled = cohort.length;
+    const enrolled = headcounts.get(sec.id) ?? bucket.profiles.length + rosterOnly.length;
     let academic = 0;
     let attendance = 0;
     let behavioral = 0;
-    for (const s of cohort) {
-      const avg =
-        s.finalGrades.length > 0
-          ? s.finalGrades.reduce((sum, g) => sum + (gradeOf(g) ?? 0), 0) /
-            s.finalGrades.length
-          : 100;
-      if (avg < 75) academic++;
-      const present = s.attendanceRecords.filter((a) => a.status === "present").length;
-      if (enrolled > 0 && present / enrolled < 0.8) attendance++;
-      if (s.anecdotalCount > 0) behavioral++;
+    for (const s of [...bucket.profiles, ...rosterOnly]) {
+      const flags = computeRiskFactors({
+        finalGrades: s.finalGrades,
+        attendance: s.attendanceRecords,
+        attendanceTotal: sectionTotals.get(sec.id),
+        anecdotalCount: s.anecdotalRecords.length,
+        enrolled,
+      });
+      if (flags.academicFlag) academic++;
+      if (flags.attendanceFlag) attendance++;
+      if (flags.behavioralFlag) behavioral++;
     }
     const factors = { Academic: academic, Attendance: attendance, Behavioral: behavioral };
     factorTotals.Academic += factors.Academic;
@@ -229,26 +143,24 @@ export interface HeatmapStudent {
   factor: RiskFactor;
 }
 
-// Per-section x factor at-risk student list (principal only). Enlisted
-// students without accounts are included with live-computed risk levels.
 export async function getSectionFactorStudents(
   sectionId: string,
   factor: RiskFactor,
   termId: string,
-  gradeMode: GradeMode = "final"
+  _gradeMode?: GradeMode,
 ): Promise<HeatmapStudent[]> {
+  const { sectionHeadcounts } = await import("../../services/enrollment.js");
   const [students, rosterEntries] = await Promise.all([
     prisma.studentProfile.findMany({
       where: { sectionId },
       select: {
         lrn: true,
-        riskLevel: true,
         user: { select: { fullName: true } },
         finalGrades: {
           where: { termId },
           select: { computedAverage: true, transmutedGrade: true },
         },
-        attendanceRecords: { where: { termId }, select: { status: true } },
+        attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
         anecdotalRecords: { where: { termId }, select: { id: true } },
       },
     }),
@@ -261,67 +173,63 @@ export async function getSectionFactorStudents(
           where: { termId },
           select: { computedAverage: true, transmutedGrade: true },
         },
-        attendanceRecords: { where: { termId }, select: { status: true } },
+        attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
         anecdotalRecords: { where: { termId }, select: { id: true } },
       },
     }),
   ]);
   const registeredLrns = new Set(students.map((s) => s.lrn));
+  const headcounts = await sectionHeadcounts([sectionId]);
+  const enrolled = headcounts.get(sectionId) ?? students.length + rosterEntries.length;
+  const sectionTotals = await sectionAttendanceTotals([sectionId], termId);
+  const attendanceTotal = sectionTotals.get(sectionId);
 
   type FactorStudent = {
     lrn: string;
     name: string;
     riskLevel: RiskLevel;
-    finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
-    attendanceRecords: { status: string }[];
-    anecdotalCount: number;
+    flags: { academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean };
   };
-  const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
-    gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;
 
   const cohort: FactorStudent[] = [
-    ...students.map((s) => ({
-      lrn: s.lrn,
-      name: s.user.fullName,
-      riskLevel: s.riskLevel,
-      finalGrades: s.finalGrades,
-      attendanceRecords: s.attendanceRecords,
-      anecdotalCount: s.anecdotalRecords.length,
-    })),
+    ...students.map((s) => {
+      const flags = computeRiskFactors({
+        finalGrades: s.finalGrades,
+        attendance: s.attendanceRecords,
+        attendanceTotal,
+        anecdotalCount: s.anecdotalRecords.length,
+        enrolled,
+      });
+      return {
+        lrn: s.lrn,
+        name: s.user.fullName,
+        riskLevel: levelFromFlags(flags),
+        flags,
+      };
+    }),
     ...rosterEntries
       .filter((r) => !registeredLrns.has(r.lrn))
       .map((r) => {
         const flags = computeRiskFactors({
           finalGrades: r.finalGrades,
           attendance: r.attendanceRecords,
+          attendanceTotal,
           anecdotalCount: r.anecdotalRecords.length,
-          enrolled: 1,
+          enrolled,
         });
         return {
           lrn: r.lrn,
           name: r.fullName,
           riskLevel: levelFromFlags(flags),
-          finalGrades: r.finalGrades,
-          attendanceRecords: r.attendanceRecords,
-          anecdotalCount: r.anecdotalRecords.length,
+          flags,
         };
       }),
   ];
 
   const matches = (s: FactorStudent): boolean => {
-    const avg =
-      s.finalGrades.length > 0
-        ? s.finalGrades.reduce((sum, g) => sum + (gradeOf(g) ?? 0), 0) /
-          s.finalGrades.length
-        : 100;
-    const present = s.attendanceRecords.filter((a) => a.status === "present").length;
-    const total = s.attendanceRecords.length;
-    const attFlag = total > 0 && present / total < 0.8;
-    const anecFlag = s.anecdotalCount > 0;
-
-    if (factor === "Academic") return avg < 75;
-    if (factor === "Attendance") return attFlag;
-    return anecFlag;
+    if (factor === "Academic") return s.flags.academicFlag;
+    if (factor === "Attendance") return s.flags.attendanceFlag;
+    return s.flags.behavioralFlag;
   };
 
   return cohort

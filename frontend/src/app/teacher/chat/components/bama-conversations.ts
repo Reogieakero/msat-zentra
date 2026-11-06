@@ -1,14 +1,9 @@
-/**
- * Bama chat history. Conversations are grouped by helper type (grade flag
- * or anecdotal record) and persist in localStorage — UI sessions only,
- * never a source of truth.
- */
-
-export type BamaChatType = "grade-flag" | "anecdotal";
+export type BamaChatType = "grade-flag" | "anecdotal" | "sf10-access";
 
 export const BAMA_CHAT_TYPES: { key: BamaChatType; label: string }[] = [
   { key: "grade-flag", label: "Grade Flag" },
   { key: "anecdotal", label: "Anecdotal Record" },
+  { key: "sf10-access", label: "SF10 Access" },
 ];
 
 export interface BamaMessage {
@@ -16,8 +11,6 @@ export interface BamaMessage {
   from: "assistant" | "user";
   text: string;
   at: number;
-  // Guided-flow widgets (anecdotal chats): pickers, option buttons,
-  // date picker, review card, filed card. Plain data only — persisted.
   question?: {
     type: "student" | "class" | "category" | "tier" | "datetime";
     options: { value: string; label: string }[];
@@ -25,6 +18,8 @@ export interface BamaMessage {
   };
   preview?: BamaRecordCard;
   detail?: BamaRecordCard & { recordId: string };
+  sf10Preview?: Sf10RequestCard;
+  sf10Detail?: Sf10RequestCard & { requestId: string };
 }
 
 export interface BamaRecordCard {
@@ -42,6 +37,16 @@ export interface BamaRecordCard {
   filedOn: string;
 }
 
+export interface Sf10RequestCard {
+  section: string;
+  gradeLevel: string;
+  studentCount: number;
+  studentNames: string[];
+  lrns: string[];
+  reason: string;
+  filedOn: string;
+}
+
 export interface BamaConversation {
   id: string;
   title: string;
@@ -49,7 +54,6 @@ export interface BamaConversation {
   createdAt: number;
   updatedAt: number;
   messages: BamaMessage[];
-  /** Set once its anecdotal record is filed — the thread becomes read-only. */
   filed?: boolean;
 }
 
@@ -75,7 +79,7 @@ export function createConversation(type: BamaChatType, title = "New chat"): Bama
 }
 
 function isValidType(value: unknown): value is BamaChatType {
-  return value === "grade-flag" || value === "anecdotal";
+  return value === "grade-flag" || value === "anecdotal" || value === "sf10-access";
 }
 
 function isValidMessage(m: unknown): m is BamaMessage {
@@ -146,7 +150,6 @@ export function saveBamaStore(store: BamaStore): void {
       })
     );
   } catch {
-    // Storage unavailable — history simply won't persist.
   }
 }
 
@@ -162,12 +165,10 @@ export function maxMessageId(conversations: BamaConversation[]): number {
 
 let messageId = Date.now();
 
-/** Next unique chat message id (module-scoped so dialogs + thread agree). */
 export function nextMessageId(): number {
   return messageId++;
 }
 
-/** Reseed the id counter (e.g. after loading persisted chats). */
 export function syncMessageId(n: number): void {
   messageId = Math.max(messageId, n);
 }

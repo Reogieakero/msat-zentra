@@ -5,12 +5,6 @@ import { Card } from "@/components/ui/card";
 import type { RiskDesk, SectionMatrixRow } from "./risk-dashboard-data";
 import styles from "./RiskHeatmap.module.css";
 
-/**
- * Section × category matrix over a desk — status-only case counts,
- * no identities. Darker cells mean more cases from that section in that
- * category. Mirrors the principal board's intensity buckets so the views
- * agree on what "dark" means.
- */
 function cellColor(count: number): string {
   if (count <= 0) return "var(--hm-0)";
   if (count <= 3) return "var(--hm-1)";

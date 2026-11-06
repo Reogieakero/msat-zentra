@@ -1,39 +1,27 @@
 "use client";
 
-import * as React from "react";
-import { CardModal } from "@/components/ui/CardModal";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { RiskBadge } from "./RiskBadge";
-import type { StudentRow } from "../academics-data";
-import type { GradeMode } from "../../grade-mode-context";
+import type { StudentRow } from "@/services/principal/academics";
 import styles from "./GradeBreakdownDrawer.module.css";
 import shared from "../academics.module.css";
 
 interface Props {
   student: StudentRow | null;
-  gradeMode: GradeMode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function GradeBreakdownDrawer({
-  student,
-  gradeMode,
-  open,
-  onOpenChange,
-}: Props) {
-  const showTransmuted = gradeMode === "final";
+export function GradeBreakdownDrawer({ student, open, onOpenChange }: Props) {
   return (
-    <CardModal
+    <KanbanOverlay
       open={open}
       onClose={() => onOpenChange(false)}
-      size="lg"
+      width="lg"
       title={student?.name ?? "Grade breakdown"}
       description={
-        student
-          ? `LRN ${student.lrn} · ${showTransmuted ? "Final grade breakdown" : "Raw partial grades"} (view-only, not yet finalized)`
-          : undefined
+        student ? `LRN ${student.lrn} · Final grade breakdown (view-only, not yet finalized)` : undefined
       }
-      watchKey={student?.studentId}
     >
       {student && (
           <>
@@ -125,9 +113,7 @@ export function GradeBreakdownDrawer({
                   </table>
                 </div>
                 <p className={styles.note}>
-                  {showTransmuted
-                    ? "Partial grades are transmuted to the final 0–100 scale (not yet locked or finalized)."
-                    : "Showing raw partial grades only (transmutation hidden in raw mode)."}
+                  Partial grades are transmuted to the final 0–100 scale (not yet locked or finalized).
                 </p>
               </div>
 
@@ -151,6 +137,6 @@ export function GradeBreakdownDrawer({
             </div>
           </>
         )}
-    </CardModal>
+    </KanbanOverlay>
   );
 }

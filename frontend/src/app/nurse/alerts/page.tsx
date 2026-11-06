@@ -1,57 +1,116 @@
 "use client";
 
 import * as React from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { NurseReferralsTable } from "./components/NurseReferralsTable";
-import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
+import { BellRing, Loader2 } from "lucide-react";
+import { NurseEmptyCard } from "../components/NurseEmptyCard";
 import {
-  fetchNurseAlerts,
-  fetchNurseRiskLevels,
-  type NurseAlertsPage,
-  type NurseRiskLevel,
-} from "./components/nurse-alerts-data";
+  NurseAlertsBoard,
+  NurseAlertsBoardSkeleton,
+  type TypeTrack,
+} from "./components/NurseAlertsBoard";
+import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
+import { fetchNurseRiskLevels } from "@/services/nurse/risk.service";
+import type {
+  NurseAlertsPage,
+  NurseRiskLevel,
+} from "@/services/nurse/nurse.types";
 import { useNurseInvalidate } from "../overview/components/use-nurse-mutation";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/nurse-alerts.module.css";
+import pageStyles from "../pages.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 
-const NURSE_ALERTS_PAGE_SIZE = 15;
+const NURSE_ALERTS_PAGE_SIZE = PAGE_SIZE;
 
 export default function NurseAlertsPage() {
+  return (
+    <React.Suspense>
+      <NurseAlertsPageInner />
+    </React.Suspense>
+  );
+}
+
+function NurseAlertsPageInner() {
+  const searchParams = useSearchParams();
   const invalidateNurse = useNurseInvalidate();
-  const { activeTerm } = useTerm();
+  const queryClient = useQueryClient();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [query, setQuery] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  // Debounced 300ms so server queries fire after the user pauses typing.
-  const debounced = useDebouncedValue(query.trim(), 300);
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "track"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const trackRaw = pager.extras.track;
+  const track: TypeTrack =
+    trackRaw === "adm" || trackRaw === "clinic" ? trackRaw : "";
+
+  const query = useDebouncedValue(queryInput.trim(), 300);
+  const debounced = query;
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debounced || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced]);
 
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<NurseAlertsPage>({
-      queryKey: ["nurse-alerts", page, debounced, termKey],
+      queryKey: ["nurse-alerts", page, debounced, track, termKey],
       queryFn: ({ signal }) =>
         fetchNurseAlerts({
           q: debounced || undefined,
+          track: track || undefined,
           page,
           pageSize: NURSE_ALERTS_PAGE_SIZE,
           signal,
         }),
-      // Page turns reuse the previous page so they never flash skeletons.
-      placeholderData: keepPreviousData,
+
+      // Pagination (page/track changes) shows the kanban skeleton until its own
+      // payload lands; a same-page search refresh keeps the previous rows so
+      // typing doesn't flash the whole board. The next page is prefetched
+      // below, so most page flips resolve straight from cache.
+      placeholderData: (previousData, previousQuery) => {
+        const key = previousQuery?.queryKey;
+        const samePage = key?.[1] === page;
+        const sameTrack = (key?.[3] ?? "") === track;
+        return previousData && samePage && sameTrack ? previousData : undefined;
+      },
       staleTime: 60_000,
+      enabled: termReady,
     });
 
-  // Derived, never setState-in-effect: the server clamps too, this keeps
-  // the pager truthful while a filter shrinks the list under the cursor.
+  // Warm the next page's cache as soon as a page resolves — low-latency pager.
+  React.useEffect(() => {
+    if (!data || !termReady) return;
+    const next = page + 1;
+    if (next > (data.totalPages ?? 1)) return;
+    void queryClient.prefetchQuery({
+      queryKey: ["nurse-alerts", next, debounced, track, termKey],
+      queryFn: ({ signal }) =>
+        fetchNurseAlerts({
+          q: debounced || undefined,
+          track: track || undefined,
+          page: next,
+          pageSize: NURSE_ALERTS_PAGE_SIZE,
+          signal,
+        }),
+      staleTime: 60_000,
+    });
+  }, [data, page, queryClient, debounced, track, termKey, termReady]);
+
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(page, totalPages);
 
-  // Live rule-based risk level per student behind these cases (account id
-  // or roster id — the endpoint serves both).
   const studentIds = React.useMemo(
     () => [
       ...new Set(
@@ -72,43 +131,14 @@ export default function NurseAlertsPage() {
     queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     staleTime: 300_000,
-    enabled: studentIds.length > 0,
+    enabled: termReady && studentIds.length > 0,
   });
   const riskLoading = studentIds.length > 0 && (riskPending || riskFetching);
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelPanelDesc} />
-            </div>
-            <div className={styles.skelPanelActions}>
-              <Skeleton className={styles.skelSearch} />
-              <Skeleton className={styles.skelDrop} />
-            </div>
-          </div>
-          <div className="relative overflow-x-auto rounded-md border p-2">
-            <div className={styles.skelThead} aria-hidden="true">
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <Skeleton key={i} className={styles.skelTheadCell} />
-              ))}
-            </div>
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <Skeleton key={i} className={styles.skelRow} />
-            ))}
-          </div>
-          <div className="relative flex items-center justify-end gap-2">
-            <Skeleton className={styles.skelRange} />
-            <Skeleton className={styles.skelBtn} />
-            <Skeleton className={styles.skelBtn} />
-          </div>
-        </div>
+      <section className={styles.page} aria-busy="true" aria-label="Loading referred cases">
+        <NurseAlertsBoardSkeleton />
       </section>
     );
   }
@@ -137,15 +167,22 @@ export default function NurseAlertsPage() {
     );
   }
 
-  // Background refetch: keep data visible, show a subtle indicator.
-  // Risk levels load independently — the table renders with "—" shimmer
-  // state instead of blocking, and surfaces retry on failure.
   const refreshing = isFetching && !isPending;
+  // unfilteredTotal already carries the track filter, so a type filter that
+  // matches nothing must NOT collapse to the centered empty card — the board
+  // (with its filter icons) has to stay on screen to be clearable.
+  const isTrueEmpty =
+    (data.unfilteredTotal ?? data.total) === 0 &&
+    data.total === 0 &&
+    debounced === "" &&
+    track === "";
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
-      {/* Floating pill — never shifts the table. */}
-      {refreshing ? <NurseRefreshBadge label="Refreshing cases…" /> : null}
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label="Referred cases"
+    >
       {riskError && studentIds.length > 0 ? (
         <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
           Risk levels couldn&apos;t load.{" "}
@@ -159,25 +196,38 @@ export default function NurseAlertsPage() {
           </button>
         </p>
       ) : null}
-      <NurseReferralsTable
-        alerts={Array.isArray(data.alerts) ? data.alerts : []}
-        riskByStudent={riskByStudent ?? {}}
-        riskLoading={riskLoading}
-        query={query}
-        onQueryChange={(v) => {
-          setQuery(v);
-          setPage(1);
-        }}
-        page={safePage}
-        totalPages={totalPages}
-        total={data.total}
-        unfilteredTotal={data.unfilteredTotal}
-        onPageChange={setPage}
-        serverPaged
-        onChanged={() => {
-          invalidateNurse();
-        }}
-      />
+      {isTrueEmpty ? (
+        <NurseEmptyCard
+          icon={BellRing}
+          title="No referred cases"
+          hint="New ADM and clinic cases will appear here."
+          label="Referred cases"
+          centered
+          layout="fit"
+        />
+      ) : (
+        <NurseAlertsBoard
+          alerts={Array.isArray(data.alerts) ? data.alerts : []}
+          riskByStudent={riskByStudent ?? {}}
+          riskLoading={riskLoading}
+          query={queryInput}
+          onQueryChange={(v) => {
+            setQueryInput(v);
+          }}
+          track={track}
+          onTrackChange={(next) => {
+            pager.setFilters({ track: next || undefined });
+          }}
+          page={safePage}
+          total={data.total}
+          unfilteredTotal={data.unfilteredTotal}
+          onPageChange={setPage}
+          serverPaged
+          onChanged={() => {
+            invalidateNurse();
+          }}
+        />
+      )}
     </section>
   );
 }

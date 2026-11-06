@@ -7,36 +7,38 @@ import {
   AdmReviewDialog as SharedAdmReviewDialog,
   type AdmReviewDraft,
 } from "@/components/adm-review/AdmReviewDialog";
-import {
-  reviewNurseAdmCase,
-  scheduleClinicSession,
-  type NurseQueueRow,
-} from "./nurse-overview-data";
+import { reviewNurseAdmCase } from "@/services/nurse/referrals.service";
+import { scheduleClinicSession } from "@/services/nurse/sessions.service";
+import type { NurseQueueRow } from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "./use-nurse-mutation";
 
-/**
- * ADM consultation review for cases the adviser routed to the nurse —
- * shared review UI, nurse wiring: review here, then Create referral opens
- * the fill-up form sheet in place (no navigation) via onCreateReferral.
- * Reject (turn down) closes the case straight from this dialog.
- * "Start handling" stays clinic-only — this dialog is the nurse's
- * pipeline path for ADM cases.
- *
- * Book-session and reject run through useNurseMutation so the buttons get
- * action-specific pending state, success toasts fire only after the backend
- * confirms, and errors reset loading + surface inline (shared dialog) without
- * duplicate toasts.
- */
 export function NurseAdmReviewDialog({
   row,
   onChanged,
   onCreateReferral,
+  open: controlledOpen,
+  onClose: controlledOnClose,
 }: {
   row: NurseQueueRow;
   onChanged: () => void;
   onCreateReferral: (draft: { recommendation: string; scheduledAt?: string }) => void;
+  /** Controlled visibility — pass together with `onClose` when the parent
+      owns the trigger (e.g. a row's kebab menu). The built-in trigger button
+      only renders in uncontrolled mode. */
+  open?: boolean;
+  onClose?: () => void;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+
+  function setOpen(next: boolean) {
+    if (isControlled) {
+      if (!next) controlledOnClose?.();
+      return;
+    }
+    setInternalOpen(next);
+  }
 
   const bookMutation = useNurseMutation({
     mutationFn: (scheduledAt: string) =>
@@ -63,10 +65,13 @@ export function NurseAdmReviewDialog({
   });
 
   async function bookSessionOnly(scheduledAt: string) {
+    // Close at once — the shared Dock reports the booking until it settles.
+    setOpen(false);
     await bookMutation.mutateAsync(scheduledAt);
   }
 
   async function decideReject(recommendation: string) {
+    setOpen(false);
     await rejectMutation.mutateAsync(recommendation);
   }
 
@@ -83,15 +88,17 @@ export function NurseAdmReviewDialog({
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="xs"
-        style={{ height: "32px" }}
-        onClick={() => setOpen(true)}
-        disabled={busy}
-      >
-        Review ADM case
-      </Button>
+      {!isControlled && (
+        <Button
+          variant="outline"
+          size="xs"
+          style={{ height: "32px" }}
+          onClick={() => setOpen(true)}
+          disabled={busy}
+        >
+          Review ADM case
+        </Button>
+      )}
 
       <SharedAdmReviewDialog
         open={open}
@@ -105,10 +112,11 @@ export function NurseAdmReviewDialog({
         sectionLine={`${row.section} · ${row.grade}`}
         observed={row.anecdotal?.observedAt ?? "—"}
         category={row.anecdotal?.category ?? row.category}
-        referred={
+        referred={row.date}
+        waiting={
           row.waitingDays !== null && row.waitingDays > 0
-            ? `${row.date} · waiting ${row.waitingDays}d`
-            : row.date
+            ? `waiting ${row.waitingDays}d`
+            : undefined
         }
         anecdotalId={row.anecdotalId}
         description={

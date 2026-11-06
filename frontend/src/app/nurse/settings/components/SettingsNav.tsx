@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Brush,
   KeyRound,
   Palette,
   UserRound,
@@ -14,13 +13,10 @@ export interface SettingsSectionLink {
   Icon: LucideIcon;
 }
 
-/* Nurse settings sections — preferences only. Teacher-only entries
-   (Adviser, Master Teacher) are intentionally excluded. */
 export function nurseSettingsSections(): SettingsSectionLink[] {
   return [
     { id: "section-profile", label: "Profile", Icon: UserRound },
     { id: "section-appearance", label: "Appearance", Icon: Palette },
-    { id: "section-palette", label: "Palette", Icon: Brush },
     { id: "section-password", label: "Password", Icon: KeyRound },
   ];
 }

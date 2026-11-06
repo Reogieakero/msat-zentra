@@ -25,6 +25,22 @@
   min-width: 0;
 }
 
+/* Main stack + icon-only KPI rail on the right (same interaction as the
+   teacher attendance / schedule gutters). */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 .duo {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -41,5 +57,57 @@
 @media (max-width: 1100px) {
   .duo {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Entrance motion -------------------------------------------------------
+   The overview settles in on load: the KPI strip first, then each paired row
+   cascades left-to-right, and the icon rail trails. Opacity + transform only
+   (compositor-friendly), fill "backwards" so no transform lingers after the
+   run, and skipped entirely for reduced motion.
+   Slow-motion timing by request: ~1.1s glide per card with a wide stagger,
+   so the whole settle reads as one deliberate slow pan instead of a snap. */
+@keyframes overview-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stack > *:not(.duo),
+.duo > *,
+.layout > aside {
+  animation: overview-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.stack > *:not(.duo) {
+  animation-delay: 0.05s;
+}
+
+.duo > *:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.duo + .duo > *:nth-child(1) {
+  animation-delay: 0.3s;
+}
+
+.duo + .duo > *:nth-child(2) {
+  animation-delay: 0.45s;
+}
+
+.layout > aside {
+  animation-delay: 0.6s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stack > *:not(.duo),
+  .duo > *,
+  .layout > aside {
+    animation: none;
   }
 }

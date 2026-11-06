@@ -2,14 +2,6 @@ import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
-/**
- * Tops up StudentRoster so every real grade section (G7-A … G12-x) has
- * exactly 20 enlisted students. Roster-only (no login accounts created).
- * - Skips non-grade sections (e.g. BAMA, sfd) — likely test sections.
- * - Idempotent: deterministic topup20_* ids + skipDuplicates, safe to rerun.
- * - Usage: `npx tsx prisma/seed-section-20.ts [--dry-run]`
- */
-
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 const DRY = process.argv.includes("--dry-run");
 const TARGET = 20;
@@ -21,9 +13,10 @@ const FIRST = [
 ];
 const LAST = [
   "Santos", "Reyes", "Cruz", "Garcia", "Mendoza", "Torres", "Flores",
-  "Ramos", "Diaz", "Castillo", "Manalo", "Bautista", "Villanueva",
-  "Ocampo", "Aquino", "Gonzales", "Ferrer", "Salazar", "Mercado", "Aguilar",
-];
+   "Ramos", "Diaz", "Castillo", "Manalo", "Bautista", "Villanueva",
+   "Ocampo", "Aquino", "Gonzales", "Ferrer", "Salazar", "Mercado", "Aguilar",
+ ];
+const MI20 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const isGradeSection = (name: string) => /^G(7|8|9|10|11|12)-/i.test(name.trim());
 
 async function main() {
@@ -60,10 +53,9 @@ async function main() {
         const fn = FIRST[(have + rows.length) % FIRST.length];
         const ln = LAST[(have * 3 + rows.length * 7) % LAST.length];
         rows.push({
-          // Short id: 60-char truncation of long deterministic ids collides.
           id: `topup20_${s.id.slice(0, 8)}_${have + rows.length + 1}`,
           lrn,
-          fullName: `${fn} ${ln}`,
+          fullName: `${fn} ${MI20[(have + rows.length * 3) % MI20.length]}. ${ln}`,
           gradeLevel: s.gradeLevel,
           sectionId: s.id,
           schoolYearId: s.schoolYearId,

@@ -1,34 +1,78 @@
 import { Router } from "express";
+import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
+import { cache } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
+import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../lib/pagination.js";
 
 const router = Router();
 
-router.get("/", requireAuth, async (req, res, next) => {
+const notificationsQuerySchema = z.object({
+  type: z.string().trim().max(80).optional(),
+  unreadOnly: z.enum(["0", "1", "true", "false"]).optional(),
+  since: z.string().trim().max(30).optional(),
+  take: z.coerce.number().int().min(1).max(50).optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional().default(PAGE_SIZE),
+});
+
+router.get(
+  "/",
+  requireAuth,
+  validate("query", notificationsQuerySchema),
+  cache({ tags: [CACHE_TAGS.notifications], ttl: CACHE_TTLS.dashboard }),
+  etag(),
+  async (req, res, next) => {
   try {
+    const q = req.query as Record<string, unknown>;
     const where: any = { userId: req.user!.id };
-    if (req.query.type) where.type = String(req.query.type);
-    // Lightweight poll support: the desk realtime polls only need fresh
-    // rows. `?unreadOnly=1` skips already-read inbox history and `?take=N`
-    // caps the payload (default 50, max 100); `?since=ISO` returns rows
-    // created after the timestamp. Legacy callers without params keep the
-    // exact previous shape (latest 50, read + unread).
-    if (req.query.unreadOnly === "1" || req.query.unreadOnly === "true") {
+    if (typeof q.type === "string" && q.type) where.type = q.type;
+
+    if (q.unreadOnly === "1" || q.unreadOnly === "true") {
       where.isRead = false;
     }
-    if (typeof req.query.since === "string" && req.query.since.trim()) {
-      const since = new Date(req.query.since.trim());
+    if (typeof q.since === "string" && q.since.trim()) {
+      const since = new Date(q.since.trim());
       if (!Number.isNaN(since.getTime())) where.createdAt = { gt: since };
     }
-    const rawTake = Number(req.query.take);
+    // Paginated slice (15/page); legacy `take` (≤50) preserved for badge polls.
+    const rawTake = Number(q.take);
+    const pageSize = Math.max(1, Math.min(Number(q.pageSize) || PAGE_SIZE, MAX_PAGE_SIZE));
     const take =
-      Number.isFinite(rawTake) && rawTake > 0
-        ? Math.min(Math.floor(rawTake), 100)
-        : 50;
+      Number.isFinite(rawTake) && rawTake > 0 ? Math.min(Math.floor(rawTake), 50) : pageSize;
+    const page = Math.max(1, Number(q.page) || 1);
+    const skip = (page - 1) * take;
     const notes = await prisma.notification.findMany({
-      where, orderBy: { createdAt: "desc" }, take,
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+      select: {
+        id: true,
+        userId: true,
+        type: true,
+        message: true,
+        isRead: true,
+        createdAt: true,
+        sourceTable: true,
+        sourceId: true,
+      },
     });
     res.json(notes);
+  } catch (e) { next(e); }
+});
+
+// True unread total for the bell badge. The list endpoint is paged (15/page),
+// so counting within a fetched page under-reports when there are many unread.
+router.get("/unread-count", requireAuth, async (req, res, next) => {
+  try {
+    const count = await prisma.notification.count({
+      where: { userId: req.user!.id, isRead: false },
+    });
+    res.json({ count });
   } catch (e) { next(e); }
 });
 

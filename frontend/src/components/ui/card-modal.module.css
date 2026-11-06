@@ -35,7 +35,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 1rem;
+  border-radius: 20px;
   border: 1px solid var(--border);
   background-color: var(--card);
   color: var(--card-foreground);
@@ -100,7 +100,7 @@
 }
 
 .md {
-  max-width: 32rem;
+  max-width: 560px;
 }
 
 .lg {
@@ -179,6 +179,19 @@
 
 .body::-webkit-scrollbar {
   display: none;
+}
+
+/* Fixed footer below the scroll body — always visible, flush with the
+   card's bottom corners. */
+.footer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.875rem 1.25rem;
+  border-top: 1px solid var(--border);
+  background-color: var(--card);
 }
 
 /* Floating scroll-down hint pill — absolute bottom-center so it never

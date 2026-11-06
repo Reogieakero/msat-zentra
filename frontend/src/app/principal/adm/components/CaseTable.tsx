@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isAwaitingSignature, canReturn, stageLabel, type AdmCase } from "../adm";
 import { FormIcon } from "./FormIcon";

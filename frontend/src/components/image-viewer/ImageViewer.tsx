@@ -15,23 +15,13 @@ export interface ViewerImage {
 interface ImageViewerProps {
   files: ViewerImage[];
   index: number;
-  /** Student name shown in the header. */
   title: string;
-  /** LRN · section line under the title. */
   subtitle?: string;
-  /** Resolve relative storage URLs (defaults to the URL as-is). */
   resolveHref?: (fileUrl: string) => string;
   onIndexChange: (index: number) => void;
   onClose: () => void;
 }
 
-/**
- * Shared fullscreen image viewer — same gallery on the nurse health-records
- * desk and the guidance interventions desk. Arrow-key navigation, counter,
- * and a z-index above dialogs so it covers everything. Portaled to
- * document.body so it never lands as a DOM child of a <table> section when
- * opened from a table row (a <div> inside <tbody> breaks hydration).
- */
 export function ImageViewer({
   files,
   index,
@@ -44,8 +34,6 @@ export function ImageViewer({
   const count = files.length;
   const safeIndex = count === 0 ? 0 : Math.min(Math.max(index, 0), count - 1);
   const current = files[safeIndex];
-  // Portal target is client-only — false through SSR/first paint so the
-  // server HTML and the first client render agree, true afterwards.
   const mounted = React.useSyncExternalStore(
     () => () => {},
     () => true,

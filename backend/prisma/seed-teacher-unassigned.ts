@@ -5,7 +5,6 @@ import argon2 from "argon2";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Teacher with no advisory section and no subject assignments yet.
 const EMAIL = "teacher.noload@zentra.test";
 const FULL_NAME = "Ms. Unassigned Teacher";
 const PASSWORD = "Zentra2025!";
@@ -32,7 +31,6 @@ async function main() {
     create: { userId: teacher.id, employeeId: EMPLOYEE_ID, isAdviser: false, department: "Academic" },
   });
 
-  // Verify the requested starting state: no advisory, no subjects.
   const [advised, assignments] = await Promise.all([
     prisma.section.count({ where: { adviserId: teacher.id } }),
     prisma.teacherSubjectAssignment.count({ where: { teacherId: teacher.id } }),

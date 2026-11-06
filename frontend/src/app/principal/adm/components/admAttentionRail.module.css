@@ -1,0 +1,58 @@
+/* ADM report layout — main kanban stack plus the icon-only attention rail on
+   the right, matching /principal/overview. */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* Board entrance — same lift + settle as the risk/academics pages, one beat
+   apart so the report rows cascade in instead of popping all at once. */
+@keyframes adm-board-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.stack > * {
+  animation: adm-board-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.stack > *:nth-child(2) {
+  animation-delay: 0.07s;
+}
+
+.stack > *:nth-child(3) {
+  animation-delay: 0.14s;
+}
+
+.stack > *:nth-child(4) {
+  animation-delay: 0.21s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stack > * {
+    animation: none;
+  }
+}

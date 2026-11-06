@@ -6,9 +6,6 @@ import {
   nurseNotificationTitle,
 } from "@/lib/notifications/label";
 
-/* Nurse inbox bell — the shared bell (latest 5 + "View all" overlay, same
-   as the teacher desk) with nurse-scoped titles and targets. Realtime
-   invalidation keeps the count live without manual refresh. */
 export function NurseNotificationsBell() {
   return (
     <NotificationsBell

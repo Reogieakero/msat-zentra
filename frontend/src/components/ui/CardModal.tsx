@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { ScrollDownHint } from "./scroll-down-hint";
 import { FireParticles } from "./fire-particles";
@@ -15,19 +16,14 @@ interface CardModalProps {
   description?: React.ReactNode;
   size?: CardModalSize;
   children: React.ReactNode;
-  /* Identity for the scroll hint to re-check overflow when async content
-     swaps (e.g. loading skeleton → loaded preview). */
   watchKey?: unknown;
-  /* When false, X / overlay-click / Escape are all disabled so a
-     processing action (e.g. approving) cannot be dismissed mid-flight.
-     Defaults to true. */
   dismissable?: boolean;
+  /** Fixed footer rendered below the scroll body — always visible. */
+  footer?: React.ReactNode;
+  /** Focus this element on open instead of the card container. */
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
-/* Card modal — a dedicated modal card (overlay + glowing card), separate
-   from the dialog UI component. Monochrome palette only. Closes on
-   overlay click and Escape, locks body scroll while open, and moves
-   focus into the card. */
 export function CardModal({
   open,
   onClose,
@@ -37,12 +33,22 @@ export function CardModal({
   children,
   watchKey,
   dismissable = true,
+  initialFocusRef,
+  footer,
 }: CardModalProps) {
   const cardRef = React.useRef<HTMLDivElement | null>(null);
   const bodyRef = React.useRef<HTMLDivElement | null>(null);
+  // Portal to document.body so no transformed/filtered ancestor can hijack
+  // this fixed overlay as its containing block (hover-lift panels caused a
+  // visible jump). Mounted flag guards server prerender (no document there).
+  const [mounted, setMounted] = React.useState(false);
 
-  /* Fire particles across the overlay background, rising bottom → top
-     behind the card (shared FireParticles, 48 for fullscreen scale). */
+  React.useEffect(() => {
+    // Mounted flag guards the document.body portal during prerender.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
   React.useEffect(() => {
     if (!open || !dismissable) return;
     const onKey = (e: KeyboardEvent) => {
@@ -56,15 +62,15 @@ export function CardModal({
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    cardRef.current?.focus();
+    (initialFocusRef?.current ?? cardRef.current)?.focus();
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [open ]);
+  }, [open, initialFocusRef ]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
       className={styles.overlay}
       onMouseDown={(e) => {
@@ -103,6 +109,7 @@ export function CardModal({
         <div ref={bodyRef} className={styles.body}>
           {children}
         </div>
+        {footer ? <div className={styles.footer}>{footer}</div> : null}
         <ScrollDownHint
           scrollRef={bodyRef}
           watchKey={watchKey}
@@ -110,6 +117,7 @@ export function CardModal({
           className={styles.scrollHint}
         />
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

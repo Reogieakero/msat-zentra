@@ -1,0 +1,161 @@
+export interface TeacherClassRow {
+  id: string;
+  subject: string;
+  subjectCode: string;
+  gradeLevel: string;
+  section: string;
+  studentCount: number;
+}
+
+export interface TeacherKpiRow {
+  classCount: number;
+  pendingAssessments: number;
+  openFlags: number;
+  studentCount: number;
+}
+
+export interface TeacherActivityRow {
+  action: string;
+  target: string;
+  when: string;
+}
+
+export interface AdvisoryStatusRow {
+  studentId: string;
+  name: string;
+  lrn: string;
+  /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
+  mascot: string | null;
+  section: string;
+  riskLevel: "Low" | "Moderate" | "High";
+  flag: "academic" | "attendance" | "behavioral" | "none";
+  flags: ("academic" | "attendance" | "behavioral")[];
+  snapshotDate: string | null;
+}
+
+export interface SubjectAssessmentRow {
+  id: string;
+  subject: string;
+  subjectId?: string;
+  gradeLevel: string;
+  section: string;
+  sectionId?: string;
+  type: "WW" | "PT" | "E";
+  title: string;
+  dueDate: string;
+  status: string;
+  scored?: number;
+  students?: number;
+}
+
+export interface ClassAverageRow {
+  subject: string;
+  gradeLevel: string;
+  section: string;
+  average: number;
+  assessed: number;
+  students: number;
+}
+
+export interface AdvisorySectionInfo {
+  id: string;
+  name: string;
+  gradeLevel: string;
+}
+
+export interface ClassStudentRow {
+  studentId: string;
+  name: string;
+  lrn: string;
+  /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
+  mascot: string | null;
+  sectionId: string;
+  section: string;
+
+  subjects: string[];
+  riskLevel: "Low" | "Moderate" | "High";
+
+  flags: ("academic" | "attendance")[];
+  snapshotDate: string | null;
+}
+
+export interface TeacherOverviewData {
+  teacherName: string;
+  isAdviser: boolean;
+  isMasterTeacher: boolean;
+  isMasterTeacherSenior: boolean;
+  masterTeacherEligible: boolean;
+  masterTeacherSeniorEligible: boolean;
+  masterTeacherTaken: boolean;
+  masterTeacherHolderName: string | null;
+  masterTeacherSeniorTaken: boolean;
+  masterTeacherSeniorHolderName: string | null;
+  shareStudentData?: boolean;
+  shareUpdatedAt?: string | null;
+  advisorySection: AdvisorySectionInfo | null;
+  kpi: TeacherKpiRow;
+  atRiskFactors: {
+    academic: number;
+    attendance: number;
+    behavioral: number;
+  };
+  atRiskStudents: number;
+  classes: TeacherClassRow[];
+  classStudents: ClassStudentRow[];
+  recentActivity: TeacherActivityRow[];
+  advisory: {
+    students: AdvisoryStatusRow[];
+  };
+  subjectClasses: {
+    assessments: SubjectAssessmentRow[];
+    standings: ClassAverageRow[];
+  };
+}
+
+export interface TeacherOverviewCritical {
+  teacherName: string;
+  isAdviser: boolean;
+  isMasterTeacher: boolean;
+  isMasterTeacherSenior: boolean;
+  masterTeacherEligible: boolean;
+  masterTeacherSeniorEligible: boolean;
+  masterTeacherTaken: boolean;
+  masterTeacherHolderName: string | null;
+  masterTeacherSeniorTaken: boolean;
+  masterTeacherSeniorHolderName: string | null;
+  shareStudentData?: boolean;
+  shareUpdatedAt?: string | null;
+  advisorySection: AdvisorySectionInfo | null;
+  kpi: TeacherKpiRow;
+  atRiskFactors: {
+    academic: number;
+    attendance: number;
+    behavioral: number;
+  };
+  atRiskStudents: number;
+  classes: TeacherClassRow[];
+  classStudents: ClassStudentRow[];
+  classStudentsTotal: number;
+  classAtRiskFactors: {
+    academic: number;
+    attendance: number;
+  };
+  advisory: {
+    students: AdvisoryStatusRow[];
+  };
+  advisoryTotal: number;
+}
+
+export interface TeacherOverviewSecondary {
+  assessments: SubjectAssessmentRow[];
+  standings: ClassAverageRow[];
+  recentActivity: TeacherActivityRow[];
+  pendingAssessments: number;
+  openFlags: number;
+}
+
+export interface TeacherOverviewGradebook {
+  classes: TeacherClassRow[];
+  assessments: SubjectAssessmentRow[];
+  standings: ClassAverageRow[];
+}

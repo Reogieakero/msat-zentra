@@ -2,29 +2,25 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { logout } from "@/lib/api/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "@/components/providers";
 import { NurseSidebar } from "@/components/nurse-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
-import { NURSE_REFERRAL_DRAFT_KEY } from "./overview/components/nurse-overview-data";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import { UserRound } from "lucide-react";
+import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
+import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
+import { NURSE_REFERRAL_DRAFT_KEY } from "@/services/nurse/referrals.service";
 import { useNurseRealtime } from "@/lib/realtime/nurseChannel";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { NurseNotificationsBell } from "./components/nurse-notifications-bell";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
 import {
   NursePaletteGate,
   useNurseProfileSettings,
-} from "./settings/components/profile-settings-data";
+} from "@/services/settings/profile-settings";
 import styles from "./nurse.module.css";
 
 function NurseShell({ children }: { children: React.ReactNode }) {
@@ -32,19 +28,19 @@ function NurseShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const { allowed } = useRoleGuard(["nurse"]);
   useNurseRealtime(allowed);
-  const { resolvedTheme, setTheme } = useTheme();
   const profile = useNurseProfileSettings();
-
-  const isDark = resolvedTheme === "dark";
+  const { collapsed: sidebarCollapsed } =
+    useCollapsibleSidebar("zentra.nurse.sidebar.collapsed");
 
   const handleLogout = () => {
-    // Drop all cached queries so the next account on this device never sees
-    // the previous nurse's student data (QueryClient outlives SPA logout).
+
+    void logout();
+
     queryClient.clear();
     try {
       window.sessionStorage.removeItem(NURSE_REFERRAL_DRAFT_KEY);
     } catch {
-      /* storage unavailable — nothing cached to clear */
+
     }
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
@@ -52,9 +48,6 @@ function NurseShell({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
-  // Block sensitive desk content until the role check passes. Backend stays
-  // authoritative; this avoids flashing another role's cached data while the
-  // redirect to /login or /errors/403 lands.
   if (!allowed) {
     return (
       <div className={styles.wrapper}>
@@ -72,19 +65,32 @@ function NurseShell({ children }: { children: React.ReactNode }) {
           <span className={styles.brandText}>Zentra</span>
         </Link>
 
+        <AppBreadcrumbs role="School Nurse" />
+
         <div className={styles.spacer} />
 
         <ActiveTermBadge />
 
         <NurseNotificationsBell />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={styles.avatarButton}
-              aria-label="Account menu"
-            >
+        <KanbanAccountMenu
+          settingsHref="/nurse/settings"
+          onLogout={handleLogout}
+        >
+          <button
+            type="button"
+            className={styles.avatarButton}
+            aria-label="Account menu"
+          >
+            {profile.data?.mascot ? (
+              <span className="flex size-8 items-center justify-center overflow-hidden rounded-full border border-border bg-muted/40">
+                <StudentMascot
+                  name={profile.data.fullName || "You"}
+                  character={profile.data.mascot}
+                  size={32}
+                />
+              </span>
+            ) : (
               <Avatar size="sm">
                 {profile.data?.photoUrl ? (
                   <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
@@ -93,72 +99,17 @@ function NurseShell({ children }: { children: React.ReactNode }) {
                   <UserRound className={styles.avatarIcon} />
                 </AvatarFallback>
               </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className={styles.accountMenu}
-          >
-            <DropdownMenuLabel>Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className={styles.accountItem}
-              onSelect={(event) => {
-                event.preventDefault();
-                router.push("/nurse/settings");
-              }}
-            >
-              <Settings className={styles.accountIcon} />
-              <span>Settings</span>
-            </DropdownMenuItem>
-            <div className={styles.accountGroup}>
-              <div className={styles.accountGroupLabel}>
-                <span>System Preference</span>
-              </div>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setTheme("light");
-                }}
-              >
-                <Sun className={styles.accountIcon} />
-                <span>Light</span>
-                {!isDark ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setTheme("dark");
-                }}
-              >
-                <Moon className={styles.accountIcon} />
-                <span>Dark</span>
-                {isDark ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className={styles.accountItem}
-              onSelect={(event) => {
-                event.preventDefault();
-                handleLogout();
-              }}
-            >
-              <LogOut className={styles.accountIcon} />
-              <span>Logout</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            )}
+          </button>
+        </KanbanAccountMenu>
       </header>
       <NursePaletteGate />
-      <NurseSidebar />
-      <div className={`${styles.shell} ${styles.shellWithRail}`}>
+      <NurseSidebar collapsed={sidebarCollapsed} />
+      <div
+        className={`${styles.shell} ${styles.shellWithRail} ${
+          sidebarCollapsed ? styles.shellWithRailCollapsed : ""
+        }`}
+      >
         <main className={styles.main}>{children}</main>
       </div>
       <BookingReminderStack desk="nurse" />

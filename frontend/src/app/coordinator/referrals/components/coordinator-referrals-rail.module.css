@@ -1,94 +1,41 @@
-/* Referrals insight cards — horizontal row above the queue table (2 across
-   on desktop, stacked below it). Cards stretch to equal height. */
+/* Icon-rail flyout menu — smooth open/close, same ease and top-right origin
+   as the nurse / coordinator-overview rails. */
+.railMenu {
+  transform-origin: top right;
+  transition:
+    opacity 180ms ease-out,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 180ms;
+}
 
-.rail {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  align-items: stretch;
+.railMenuOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+}
+
+.railMenuClosed {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Stage donut chart — amber slices, total in the ring, compact legend. */
+.donutRow {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
   min-width: 0;
 }
 
-@media (max-width: 1100px) {
-  .rail {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .rail {
-    grid-template-columns: 1fr;
-  }
-}
-
-.card {
+.donutWrap {
   position: relative;
-  overflow: visible;
+  width: 7rem;
+  min-width: 7rem;
 }
 
-.glowClip {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  pointer-events: none;
-}
-
-.cardGlow {
-  position: absolute;
-  inset: auto -25% -50% -25%;
-  height: 75%;
-  background: radial-gradient(
-    ellipse at center,
-    color-mix(in oklch, var(--primary), transparent 80%),
-    transparent 70%
-  );
-  filter: blur(24px);
-  pointer-events: none;
-}
-
-.sectionTitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.sectionDesc {
-  margin: 0.125rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-}
-
-/* Body fills the card below the header and centers its content, so short
-   cards (e.g. Queue snapshot) sit centered instead of top-aligned. */
-.cardBody {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-/* Queue snapshot donut — legend left, donut right (wraps stacked on
-   narrow cards). */
-.snapSplit {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.snapDonutWrap {
-  position: relative;
-  flex: 0 0 auto;
-  width: 120px;
-  height: 120px;
-  margin-left: auto;
-}
-
-.snapDonutCenter {
+.donutCenter {
   position: absolute;
   inset: 0;
   display: flex;
@@ -98,65 +45,64 @@
   pointer-events: none;
 }
 
-.snapDonutValue {
-  font-size: 1.25rem;
+.donutTotal {
+  font-size: 1.125rem;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  line-height: 1;
   color: var(--foreground);
+  font-variant-numeric: tabular-nums;
 }
 
-.snapDonutCaption {
-  font-size: 0.6875rem;
+.donutLabel {
+  font-size: 0.625rem;
   color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.snapLegend {
+.donutLegend {
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.25rem;
-  flex: 1 1 8rem;
+  min-width: 0;
+  font-size: 0.75rem;
+}
+
+.donutLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   min-width: 0;
 }
 
-.snapLegendItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-}
-
-.snapLegendLabel {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.snapLegendDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
+.donutSwatch {
+  width: 0.5rem;
+  height: 0.5rem;
   flex-shrink: 0;
+  border-radius: 2px;
 }
 
-.snapLegendCount {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+.donutLegendName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--foreground);
 }
 
-.snapTotal {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
+.donutLegendValue {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--foreground);
   font-variant-numeric: tabular-nums;
 }
 
-/* Intake workflow */
+/* Intake workflow steps */
 .steps {
   display: flex;
   flex-direction: column;
@@ -181,8 +127,8 @@
   width: 1.375rem;
   height: 1.375rem;
   border-radius: 9999px;
-  background-color: color-mix(in oklch, var(--primary), transparent 88%);
-  color: var(--primary);
+  background-color: color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 88%);
+  color: oklch(0.769 0.188 70.08);
   font-size: 0.75rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -203,4 +149,10 @@
 .stepHint {
   font-size: 0.75rem;
   color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .railMenu {
+    transition: none;
+  }
 }

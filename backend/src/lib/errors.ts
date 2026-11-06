@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { logger } from "./pino.js";
 
 export class AppError extends Error {
   status: number;
@@ -22,9 +23,7 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
       error: { code: err.code, message: err.message, fields: err.fields },
     });
   }
-  // Prisma known request errors -> meaningful HTTP statuses instead of 500.
-  // P2002 unique violation (e.g. double-submit) -> 409, P2003 FK violation
-  // (e.g. bad adviserId) -> 400, P2025 record-not-found -> 404.
+
   if (err && typeof err === "object" && "code" in err) {
     const code = String((err as { code?: unknown }).code ?? "");
     if (code === "P2002") {
@@ -45,7 +44,7 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
       });
     }
   }
-  // Zod validation errors
+
   if (err && typeof err === "object" && "issues" in err) {
     const issues = (err as { issues: { path: (string | number)[]; message: string }[] }).issues;
     const fields: Record<string, string[]> = {};
@@ -55,10 +54,7 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     }
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid input", fields } });
   }
-  // Database connectivity failures (pooler down, wrong port, network blip)
-  // -> 503 so clients know the failure is transient and retryable, instead
-  // of a raw stack trace + generic 500. Covers Prisma P1001/P1008/P1017 and
-  // raw driver codes surfaced through the pg adapter (ETIMEDOUT, etc.).
+
   if (err && typeof err === "object" && "code" in err) {
     const connCode = String((err as { code?: unknown }).code ?? "");
     if (
@@ -71,12 +67,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
       connCode === "EHOSTUNREACH" ||
       connCode === "ECONNRESET"
     ) {
-      console.error(err);
+      logger.error(err);
       return res.status(503).json({
         error: { code: "DB_UNAVAILABLE", message: "Database temporarily unavailable. Please try again." },
       });
     }
   }
-  console.error(err);
+  logger.error(err);
   return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
 }

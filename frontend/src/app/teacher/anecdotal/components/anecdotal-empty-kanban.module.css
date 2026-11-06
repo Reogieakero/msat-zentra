@@ -1,0 +1,80 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+/* Kanban board — 2x2 starter actions + legend, mirroring the
+   teacher overview quick-action board (Enter Scores pattern). */
+.kanbanGrid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+  align-items: stretch;
+}
+
+/* Staggered slow-mo rise-in, same as the advisory students
+   subject cards (advisory-insight-board `board-card-in`). */
+.kanbanGrid > div {
+  animation: board-card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.kanbanGrid > div:nth-child(1) { animation-delay: 0.03s; }
+.kanbanGrid > div:nth-child(2) { animation-delay: 0.12s; }
+.kanbanGrid > div:nth-child(3) { animation-delay: 0.21s; }
+.kanbanGrid > div:nth-child(n + 4) { animation-delay: 0.3s; }
+
+@keyframes board-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 1280px) {
+  .kanbanGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .kanbanGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanbanGrid {
+    transition: none;
+  }
+  .kanbanGrid > div {
+    animation: none;
+  }
+}

@@ -1,33 +1,32 @@
-// School-day shape for the master-teacher setup timetable. Everything flows
-// sequentially from the class start time: 8 subject periods with a lunch row
-// after one of them and optional recess rows after theirs. Clock times are
-// derived — the table re-renders from whatever is configured here. When a
-// recess shares its period with lunch, lunch renders first.
-
 export interface RecessConfig {
   enabled: boolean;
-  /** 1-based period the recess follows (1–4 morning, 5–8 afternoon). */
   afterPeriod: number;
-  /** Break length in minutes. */
   mins: number;
 }
 
 export interface LunchConfig {
-  /** 1-based period lunch follows (1–8). */
   afterPeriod: number;
-  /** Lunch length in minutes. */
   mins: number;
 }
 
+export interface WorkloadConfig {
+  maxDailyPeriods: number;
+  maxWeeklyPeriods: number;
+}
+
 export interface DayConfig {
-  /** "HH:MM" 24h — real start of classes. */
   startTime: string;
-  /** Minutes per subject period. */
   periodMins: number;
   lunch: LunchConfig;
   morningRecess: RecessConfig;
   afternoonRecess: RecessConfig;
+  workload?: WorkloadConfig;
 }
+
+export const DEFAULT_WORKLOAD: WorkloadConfig = {
+  maxDailyPeriods: 6,
+  maxWeeklyPeriods: 30,
+};
 
 export const DEFAULT_DAY_CONFIG: DayConfig = {
   startTime: "07:30",
@@ -35,7 +34,17 @@ export const DEFAULT_DAY_CONFIG: DayConfig = {
   lunch: { afterPeriod: 4, mins: 90 },
   morningRecess: { enabled: false, afterPeriod: 2, mins: 15 },
   afternoonRecess: { enabled: false, afterPeriod: 6, mins: 15 },
+  workload: { ...DEFAULT_WORKLOAD },
 };
+
+export function workloadOf(config: DayConfig | null | undefined): WorkloadConfig {
+  return {
+    maxDailyPeriods:
+      typeof config?.workload?.maxDailyPeriods === "number" ? config.workload.maxDailyPeriods : DEFAULT_WORKLOAD.maxDailyPeriods,
+    maxWeeklyPeriods:
+      typeof config?.workload?.maxWeeklyPeriods === "number" ? config.workload.maxWeeklyPeriods : DEFAULT_WORKLOAD.maxWeeklyPeriods,
+  };
+}
 
 export type TimetableRow =
   | { kind: "period"; periodIndex: number; startMin: number; endMin: number }

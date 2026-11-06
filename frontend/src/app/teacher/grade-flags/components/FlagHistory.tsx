@@ -13,13 +13,16 @@ import { FlagDetailDialog } from "./FlagDetailDialog";
 import { ResolveFlagDialog } from "./ResolveFlagDialog";
 import {
   STATUS_LABELS,
-  fetchFlags,
-  formatAge,
   type FlagStatus,
   type GradeFlagRow,
-} from "./grade-flags-data";
+} from "@/services/teacher/gradeFlags.types";
+import {
+  fetchFlags,
+  formatAge,
+} from "@/services/teacher/gradeFlags.service";
 import { initialsOfTeacher } from "./history-helpers";
 import styles from "./FlagHistory.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 type Mode = "raised-by-me" | "against-me" | "advisees";
 type StatusFilter = "all" | FlagStatus;
@@ -69,27 +72,21 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
     invalidateTeacher.flags();
   };
 
-  // Grouped board view: bounded full-scope fetches feed the client-side
-  // grouping (a grouped board cannot page server-side meaningfully).
-  // Tab-gated: only the visible tab fetches — mounting no longer fires
-  // three 100-row reads (notably `advisees` for non-advisers).
   const mineQuery = useQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "mine", termKey],
-    queryFn: ({ signal }) => fetchFlags("mine", { pageSize: 100, signal }),
+    queryFn: ({ signal }) => fetchFlags("mine", { pageSize: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,
     enabled: mode === "raised-by-me",
   });
   const againstQuery = useQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "against-me", termKey],
-    queryFn: ({ signal }) => fetchFlags("against-me", { pageSize: 100, signal }),
+    queryFn: ({ signal }) => fetchFlags("against-me", { pageSize: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,
     enabled: mode === "against-me",
   });
-  // Advisership for the tab comes from the small shared sections query
-  // (cached with Settings) — not from the heavy advisees flags fetch, which
-  // runs only when its tab is visible.
+
   const sectionsQuery = useQuery<{ sections: { advisedByMe: boolean }[] }>({
-    queryKey: ["teacher-settings-adviser-sections"],
+    queryKey: ["teacher-settings-adviser-sections", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{
         sections: { advisedByMe: boolean }[];
@@ -101,15 +98,12 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
   });
   const adviseeQuery = useQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "advisees", termKey],
-    queryFn: ({ signal }) => fetchFlags("advisees", { pageSize: 100, signal }),
+    queryFn: ({ signal }) => fetchFlags("advisees", { pageSize: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,
     retry: false,
     enabled: mode === "advisees",
   });
 
-  // Mode-aware: inactive tabs are disabled (idle-pending), so only the
-  // visible tab drives loading/error. Cached tab data stays instant via
-  // placeholderData on revisit.
   const activeQuery =
     mode === "raised-by-me"
       ? mineQuery

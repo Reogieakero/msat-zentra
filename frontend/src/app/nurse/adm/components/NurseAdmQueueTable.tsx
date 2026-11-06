@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { deriveActionStatus } from "../../overview/components/nurse-overview-data";
+import { deriveActionStatus } from "@/services/nurse/labels";
 import {
   formatActionTime,
   latestActionOf,
@@ -11,7 +11,7 @@ import {
   ACTION_STATUS_VARIANT,
   actionIconFor,
   statusVariant,
-} from "../../alerts/components/NurseReferralsTable";
+} from "../../alerts/components/NurseAlertsBoard";
 import {
   AdmQueueTable,
   type AdmQueueRowVM,
@@ -24,17 +24,9 @@ import { NurseAdmReferralFormSheet } from "../../referrals/components/NurseAdmRe
 import type {
   NurseAlertItem,
   NurseRiskLevel,
-} from "../../alerts/components/nurse-alerts-data";
+} from "@/services/nurse/nurse.types";
 import styles from "./nurse-adm.module.css";
 
-/**
- * ADM cases needing nurse action — the shared ADM queue table fed by the
- * nurse adapter: nurse-scope rows mapped onto the shared list, nurse
- * actions (forward, review, referral form) injected per row. Terminal
- * rows (resolved, dismissed) are excluded here — they stay visible in the
- * alerts list and count in the reports above; this section is the working
- * set only.
- */
 export function NurseAdmQueueTable({
   queue,
   riskByStudent,
@@ -88,9 +80,7 @@ export function NurseAdmQueueTable({
     (id: string) => {
       const row = byId.get(id);
       if (!row) return null;
-      // Same deep-links as the alerts table — the ADM page auto-scrolls
-      // to and highlights the case, overlaying the filled referral form
-      // when asked.
+
       const seeMoreHref = `/nurse/referrals/adm?highlight=${row.id}`;
       const viewFormHref = `${seeMoreHref}&form=1`;
       return (

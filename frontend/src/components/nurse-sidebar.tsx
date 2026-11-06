@@ -9,7 +9,6 @@ import {
   Inbox,
   Stethoscope,
   HeartPulse,
-  Flame,
   Send,
   Settings,
   type LucideIcon,
@@ -17,6 +16,7 @@ import {
 
 import styles from "./nurse-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
 type NavItem = {
@@ -31,15 +31,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// School Nurse nav — Referrals are split into two dedicated pages (ADM
-// Cases and Clinic Matters) so the reader never needs the old case-type
-// filter; each page locks to its own type. Referrals Report covers the
-// whole desk (clinic + ADM insights and reports) with the ADM review
-// queue below.
-//
-// Shared-concept convention (same label + icon across desks):
-// Overview=LayoutDashboard, Alerts=BellRing, ADM Cases=Inbox,
-// Risk Dashboard=Flame. Referrals Report=Send lives under Insights.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -81,11 +72,6 @@ const NAV: NavGroup[] = [
         href: "/nurse/adm",
         icon: Send,
       },
-      {
-        title: "Risk Dashboard",
-        href: "/nurse/risk",
-        icon: Flame,
-      },
     ],
   },
   {
@@ -100,8 +86,6 @@ const NAV: NavGroup[] = [
   },
 ];
 
-// Sidebar rail (same pattern as the teacher desk): a branched left rail on
-// desktop plus the flattened tab bar for small screens. No top navbar.
 const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
 function useIsActive() {
@@ -177,23 +161,42 @@ function NurseNavbar({ tabs }: { tabs: NavItem[] }) {
   );
 }
 
-export function NurseSidebar() {
+export function NurseSidebar({
+  collapsed = true,
+}: {
+  collapsed?: boolean;
+} = {}) {
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const isActive = useIsActive();
+  const activeHref = TABS.find((t) => isActive(t.href))?.href ?? "/nurse/overview";
 
   return (
     <>
-      <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Nurse sections">
-        <div ref={railScrollRef} className={styles.railScroll}>
-          <NurseRail groups={NAV} />
-        </div>
-        <div className={styles.railHintWrap}>
-          <ScrollDownHint
-            scrollRef={railScrollRef}
-            watchKey="nurse-nav"
-            label="Scroll for more"
-            className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+      <aside
+        className={`${styles.rail} ${styles.railDesktop} ${collapsed ? styles.railCollapsed : ""}`}
+        aria-label="Nurse sections"
+      >
+        {collapsed ? (
+          <SidebarIconRail
+            groups={NAV}
+            ariaLabel="Nurse sections, icon only"
+            activeHref={activeHref}
           />
-        </div>
+        ) : (
+          <>
+            <div ref={railScrollRef} className={styles.railScroll}>
+              <NurseRail groups={NAV} />
+            </div>
+            <div className={styles.railHintWrap}>
+              <ScrollDownHint
+                scrollRef={railScrollRef}
+                watchKey="nurse-nav"
+                label="Scroll for more"
+                className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+              />
+            </div>
+          </>
+        )}
       </aside>
       <div className={styles.tabsMobile}>
         <NurseNavbar tabs={TABS} />

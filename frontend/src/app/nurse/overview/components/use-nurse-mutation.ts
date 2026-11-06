@@ -1,21 +1,11 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { markSelfNotified } from "@/lib/realtime/nurseChannel";
-import { apiErrorMessage } from "./nurse-overview-data";
+import { apiErrorMessage } from "@/lib/api/errors";
 
-/**
- * Shared nurse-desk mutation helper.
- *
- * Every nurse mutation follows the same production lifecycle:
- *   idle → pending (button disabled + spinner) → success (toast + targeted
- *   invalidation) OR error (inline message + error toast) → settled.
- *
- * Centralizing the invalidation keys here prevents drift: every nurse
- * mutation refreshes exactly the four nurse queries and nothing else —
- * no whole-app refetch, no stale desk after a write.
- */
 export const NURSE_QUERY_KEYS = [
   ["nurse-alerts"],
   ["nurse-overview"],
@@ -25,14 +15,6 @@ export const NURSE_QUERY_KEYS = [
   ["nurse-notifications"],
 ] as const;
 
-/**
- * Scoped invalidation: a mutation (or realtime event) only refetches the
- * queries it can actually change. Previously every nurse write and every
- * realtime event invalidated all six prefixes — one session booking
- * refetched overview + alerts + referrals + risk + notifications. The
- * default (no scope) preserves the old all-keys behavior so existing call
- * sites stay correct; pass scopes to narrow.
- */
 export type NurseScope = "alerts" | "overview" | "risk" | "notifications";
 
 const NURSE_SCOPE_KEYS: Record<NurseScope, readonly (readonly string[])[]> = {
@@ -64,34 +46,94 @@ interface NurseMutationOptions<TData, TVariables> {
   successTitle: string;
   successDescription?: (variables: TVariables, data: TData) => string;
   errorFallback: string;
-  /** When true, suppress the error toast (caller shows inline error only). */
+
   silentError?: boolean;
   onSuccessExtra?: (data: TData, variables: TVariables) => void;
-  /** Referral id this write acts on — confirmed writes suppress their own
-      realtime echo toast for 30s (bell row still lands). Falls back to
-      `data.id` when the mutation resolves one. */
+
+  /**
+   * Runs on failure in addition to the shared error handling — e.g. to fail a
+   * Dock task that the caller handed the request to. Mutation-level callbacks
+   * fire even after the component unmounts (unlike `mutate` per-call options),
+   * so an action may close its overlay at submit and still report here.
+   */
+  onErrorExtra?: (err: Error, variables: TVariables) => void;
+
   sourceId?: string | ((variables: TVariables) => string);
-  /** Narrow the post-success refetch (default: all nurse keys, the previous
-      behavior). Most case writes only move queue/overview/risk state. */
+
   scopes?: NurseScope | NurseScope[];
+
+  /**
+   * Skip the automatic scope invalidation on success — for actions that
+   * patch every cached copy themselves, so the page never visibly refetches.
+   */
+  skipInvalidate?: boolean;
+
+  /**
+   * Optional optimistic patch applied to every cached query under `scopes`
+   * (page keys are prefixed, e.g. ["nurse-overview", "preview", termKey])
+   * before the mutation runs. Snapshots are restored on error (rollback)
+   * and the keys are invalidated on success unless `skipInvalidate`.
+   */
+  optimisticUpdate?: (old: unknown, variables: TVariables) => unknown;
+
+  /**
+   * Report the request to the shared Dock. On by default so every nurse
+   * action surfaces in the bottom-right; callers that already own a Dock
+   * task (custom kind/labels) opt out with `dock: false`.
+   */
+  dock?: boolean;
+
+  /** Optional completion line shown in the Dock (falls back to the title). */
+  dockMessage?: (variables: TVariables, data: TData) => string | undefined;
 }
 
-/**
- * useMutation pre-wired for the nurse desk: success toast only after the
- * server confirms, error toast (sanitized, never raw SQL/Prisma) on failure,
- * and targeted nurse-query invalidation. The caller still owns inline error
- * display via `mutation.error` + `apiErrorMessage`.
- */
 export function useNurseMutation<TData = unknown, TVariables = void>(
   options: NurseMutationOptions<TData, TVariables>
 ) {
   const queryClient = useQueryClient();
+  const dock = useDock();
   const invalidate = () => invalidateNurseQueries(queryClient, options.scopes);
-  return useMutation<TData, Error, TVariables>({
+  const scopeKeys = (
+    !options.scopes
+      ? NURSE_QUERY_KEYS
+      : (Array.isArray(options.scopes) ? options.scopes : [options.scopes]).flatMap(
+          (s) => NURSE_SCOPE_KEYS[s],
+        )
+  ).map((k) => [...k]);
+  return useMutation<TData, Error, TVariables, { snapshots: [QueryKey, unknown][]; taskId: string | null }>({
     mutationFn: async (variables) => options.mutationFn(variables),
-    onSuccess: (data, variables) => {
-      // Per-sourceId self-suppression: the confirmed id skips its realtime
-      // echo toast for 30s (bell row still lands, lists still invalidate).
+    onMutate: async (variables) => {
+      const snapshots: [QueryKey, unknown][] = [];
+      if (options.optimisticUpdate) {
+        for (const key of scopeKeys) {
+          await queryClient.cancelQueries({ queryKey: key });
+          // Patch every cached query under the scope key (page keys are
+          // prefixed) and snapshot each one so rollback restores the exact
+          // entries — `setQueryData` on the bare scope key would instead
+          // create a phantom entry nothing reads.
+          const matches = queryClient.getQueryCache().findAll({ queryKey: key });
+          for (const query of matches) {
+            snapshots.push([query.queryKey, query.state.data]);
+          }
+          for (const query of matches) {
+            queryClient.setQueryData(query.queryKey, (old: unknown) =>
+              options.optimisticUpdate!(old, variables),
+            );
+          }
+        }
+      }
+      let taskId: string | null = null;
+      if (options.dock !== false) {
+        try {
+          taskId = dock.startTask({ kind: "generic", title: options.successTitle, description: "Nurse desk" });
+        } catch {
+          taskId = null;
+        }
+      }
+      return { snapshots, taskId };
+    },
+    onSuccess: (data, variables, context) => {
+
       const fromData =
         typeof data === "string"
           ? data
@@ -107,7 +149,10 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
             ? fromData
             : null;
       if (sourceId) markSelfNotified(sourceId);
-      invalidate();
+      if (!options.skipInvalidate) invalidate();
+      if (context?.taskId) {
+        dock.completeTask(context.taskId, options.dockMessage?.(variables, data));
+      }
       toast.success({
         title: options.successTitle,
         ...(options.successDescription
@@ -116,16 +161,19 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
       });
       options.onSuccessExtra?.(data, variables);
     },
-    // Pessimistic: rows stay put with their spinner until the server
-    // confirms — only the success refetch above moves/removes them. No
-    // onSettled blanket refetch: it doubled every mutation's network cost
-    // (success invalidated, then settled invalidated again) and refetched
-    // on error when nothing changed.
-    onError: (err) => {
+
+    onError: (err, variables, context) => {
+      for (const [key, snapshot] of context?.snapshots ?? []) {
+        queryClient.setQueryData(key, snapshot);
+      }
+      options.onErrorExtra?.(err, variables);
+      if (context?.taskId) {
+        dock.failTask(context.taskId, apiErrorMessage(err, options.errorFallback));
+      }
       if (!options.silentError) {
         toast.error({
           title: "Update failed",
-          description: apiErrorMessage(err, options.errorFallback),
+          description: `${apiErrorMessage(err, options.errorFallback)} Changes were rolled back.`,
         });
       }
     },

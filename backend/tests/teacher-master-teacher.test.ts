@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { gradeToNumber, isMasterTeacherEligible } from "../src/modules/teacher/teacher.routes.js";
+import { gradeToNumber } from "../src/modules/teacher/teacher.repository.js";
+import { isMasterTeacherEligible } from "../src/services/teacher/settings.service.js";
 
 describe("Master Teacher eligibility (grades 7–10)", () => {
   it("accepts grades 7–10 in enum or numeric form", () => {
@@ -16,6 +17,14 @@ describe("Master Teacher eligibility (grades 7–10)", () => {
 
   it("allows declaration when nothing is assigned yet", () => {
     expect(isMasterTeacherEligible([])).toBe(true);
+  });
+
+  it("scopes the senior seat to grades 11–12", () => {
+    expect(isMasterTeacherEligible(["G11"], "11-12")).toBe(true);
+    expect(isMasterTeacherEligible(["G11", "G12"], "11-12")).toBe(true);
+    expect(isMasterTeacherEligible(["G10"], "11-12")).toBe(false);
+    expect(isMasterTeacherEligible(["G7", "G12"], "11-12")).toBe(false);
+    expect(isMasterTeacherEligible([], "11-12")).toBe(true);
   });
 
   it("parses grade numbers from enum labels", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import type { AdmCaseRow, AdmEligibility } from "../../components/coordinator-data";
+import type { AdmCaseRow, AdmEligibility } from "@/services/coordinator/coordinator.types";
 
 export const STAGE_OPTIONS = [
   { value: "all", label: "All stages" },

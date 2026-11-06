@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { GuidanceReferralStatus } from "./guidance-referrals-data";
+import type { GuidanceReferralStatus } from "@/services/guidance/guidance.types";
 import styles from "./guidance-referrals-filters.module.css";
 
 export type StatusFilter = "" | GuidanceReferralStatus;

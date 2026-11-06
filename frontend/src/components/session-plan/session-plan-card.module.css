@@ -218,3 +218,28 @@
   border-color: #b91c1c !important;
   color: #ffffff !important;
 }
+
+/* Red cancel action — theme --destructive is monochrome ink, so tint it red
+   explicitly (beats the destructive-variant utilities on the menu item). */
+.cancelItem,
+.cancelItem:focus,
+.cancelItem[data-highlighted] {
+  color: #dc2626 !important;
+}
+
+.cancelItem:focus,
+.cancelItem[data-highlighted] {
+  color: #b91c1c !important;
+  background-color: color-mix(in oklch, #dc2626, transparent 92%) !important;
+}
+
+:global(.dark) .cancelItem,
+:global(.dark) .cancelItem:focus,
+:global(.dark) .cancelItem[data-highlighted] {
+  color: #fca5a5 !important;
+}
+
+:global(.dark) .cancelItem:focus,
+:global(.dark) .cancelItem[data-highlighted] {
+  background-color: color-mix(in oklch, #dc2626, transparent 82%) !important;
+}

@@ -28,10 +28,13 @@
 
 .cellMain {
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--foreground);
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .cellSub {
@@ -141,4 +144,357 @@
   .spin {
     animation: none;
   }
+}
+
+/* ── Kanban board ─────────────────────────────────────────────────────── */
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.count {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  margin: 0;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  flex-wrap: nowrap;
+}
+
+.searchGroup {
+  width: 20rem;
+  max-width: 100%;
+  flex: 0 1 auto;
+}
+
+@media (max-width: 639px) {
+  .headerActions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .searchGroup {
+    width: 100%;
+  }
+}
+
+.filterDot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.optionDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* Card grid — 5 across on wide desks, stepping down as width shrinks. */
+.deviceGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .deviceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .deviceGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .deviceGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .deviceGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* Device card — muted outer shell (certification folder) holding an inner
+   white panel for the learner + device details. */
+.deviceCard {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background-color: color-mix(in oklch, var(--muted), transparent 40%);
+  overflow: hidden;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+  animation: device-card-in 220ms ease-out backwards;
+}
+
+.deviceCard:hover {
+  border-color: color-mix(in oklch, #f59e0b, transparent 55%);
+  box-shadow: 0 8px 20px -14px color-mix(in oklch, var(--foreground), transparent 60%);
+}
+
+.deviceCardHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: -0.625rem -0.625rem 0;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.deviceTop {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.deviceIdentity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Inner card — the pill content sits on its own elevated panel. */
+.deviceCardBody {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: var(--card);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+/* Hover/click info board shown from the card's Details button. */
+.infoCard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  border-radius: 0.75rem;
+  background-color: color-mix(in oklch, var(--muted), transparent 40%);
+}
+
+.infoHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.infoName {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.infoBody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: var(--card);
+}
+
+.infoLabel {
+  margin: 0.125rem 0 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.infoNotePill {
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+
+/* Red 10px warning: the learner's ADM case is complete but still holds a device. */
+.returnWarning {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0.125rem 0 0;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #dc2626;
+}
+
+:global(.dark) .returnWarning {
+  color: #f87171;
+}
+
+/* ADM stage pill — amber while in progress, green once complete. */
+.stagePillAmber {
+  border-color: color-mix(in oklch, #f59e0b, transparent 55%);
+  background-color: color-mix(in oklch, #f59e0b, transparent 85%);
+  color: color-mix(in srgb, #b45309 80%, var(--foreground));
+}
+
+:global(.dark) .stagePillAmber {
+  color: #fbbf24;
+}
+
+.stagePillGreen {
+  border-color: color-mix(in oklch, #22c55e, transparent 55%);
+  background-color: color-mix(in oklch, #22c55e, transparent 85%);
+  color: color-mix(in srgb, #15803d 80%, var(--foreground));
+}
+
+:global(.dark) .stagePillGreen {
+  color: #4ade80;
+}
+
+.deviceChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.deviceActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+@keyframes device-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.deviceGrid > .deviceCard:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.deviceGrid > .deviceCard:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deviceCard {
+    animation: none;
+  }
+}
+
+/* Error state + loading mirrors. */
+.stateCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background-color: var(--card);
+  padding: 1.125rem;
+}
+
+.stateTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.stateDesc {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.skeletonShell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeletonHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.skelCard {
+  width: 100%;
+  height: 6.5rem;
+  border-radius: var(--radius-md);
 }

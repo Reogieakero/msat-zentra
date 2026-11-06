@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-
+import { useQueryClient } from "@tanstack/react-query";
 import { AuditToolbar, type ActorScope } from "./components/AuditToolbar";
 import { AuditTable } from "./components/AuditTable";
 import { AuditSkeleton } from "./components/AuditSkeleton";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
+import { PrincipalEmptyState } from "../components/PrincipalEmptyCard";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth/useSession";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -13,45 +14,75 @@ import { toast } from "@/components/ui/sonner";
 import {
   fetchAuditEntries,
   exportAuditCsv,
+} from "@/services/principal/audit.service";
+import type {
   AuditActionType,
+  AuditEntry,
   AuditRole,
-} from "./audit-data";
-import type { AuditEntry } from "./audit-data";
+} from "@/services/principal/audit.types";
 import styles from "./page.module.css";
-import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
-import assign from "../academics/assign/components/section-assignments.module.css";
-
-const PAGE_SIZE = 25;
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { usePaginatedQuery } from "@/lib/api/usePaginatedQuery";
+import { useSearchParams } from "next/navigation";
 
 export default function PrincipalAuditPage() {
+  return (
+    <React.Suspense>
+      <PrincipalAuditPageInner />
+    </React.Suspense>
+  );
+}
+
+function PrincipalAuditPageInner() {
   const session = useSession();
   const currentUserId = session?.sub ?? "";
+  const searchParams = useSearchParams();
 
-  const [entries, setEntries] = React.useState<AuditEntry[]>([]);
-  const [total, setTotal] = React.useState(0);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [actionType, setActionType] = React.useState<AuditActionType | "all">(
+    (searchParams.get("actionType") as AuditActionType | null) ?? "all",
+  );
+  const [actorRole, setActorRole] = React.useState<AuditRole | "all">(
+    (searchParams.get("actorRole") as AuditRole | null) ?? "all",
+  );
+  const [actorScope, setActorScope] = React.useState<ActorScope>(
+    (searchParams.get("scope") as ActorScope | null) ?? "all",
+  );
+  const [sourceTable, setSourceTable] = React.useState<string | "all">(
+    searchParams.get("sourceTable") ?? "all",
+  );
+  const [query, setQuery] = React.useState(searchParams.get("q") ?? "");
 
-  const [actionType, setActionType] = React.useState<AuditActionType | "all">("all");
-  const [actorRole, setActorRole] = React.useState<AuditRole | "all">("all");
-  const [actorScope, setActorScope] = React.useState<ActorScope>("all");
-  const [sourceTable, setSourceTable] = React.useState<string | "all">("all");
-  const [query, setQuery] = React.useState("");
-  // Debounced 300ms (matches ADM referrals) so typing doesn't fan out requests.
   const debouncedQuery = useDebouncedValue(query, 300);
   const [exporting, setExporting] = React.useState(false);
-  const [page, setPage] = React.useState(1);
-  // Union of every source table seen across all fetched pages (trimmed,
-  // exact-value deduped). The dropdown options stay stable while paging
-  // instead of reshuffling to each page's 25 rows — and near-duplicate
-  // variants (case/whitespace) can never appear twice.
-  const [knownTables, setKnownTables] = React.useState<string[]>([]);
+  const queryClient = useQueryClient();
 
-  const load = React.useCallback(
-    (abort?: AbortSignal) => {
-      setLoading(true);
-      setError(null);
-      fetchAuditEntries(
+  const filters = React.useMemo(
+    () => ({
+      actionType,
+      actorRole,
+      actorScope,
+      sourceTable,
+      q: debouncedQuery || undefined,
+      userId: actorScope === "me" ? currentUserId : undefined,
+    }),
+    [actionType, actorRole, actorScope, sourceTable, debouncedQuery, currentUserId],
+  );
+
+  // Total is unknown until the first fetch; the pager clamps once it arrives.
+  const pager = useUrlPager(0, {}, { extraParams: ["q", "actionType", "actorRole", "scope", "sourceTable"] });
+  const page = pager.page;
+
+  const auditQuery = usePaginatedQuery<AuditEntry>({
+    module: "principal",
+    resource: "audit",
+    page,
+    pageSize: PAGE_SIZE,
+    filters: filters as Record<string, unknown>,
+    preset: "semi",
+    fetcher: async (signal) => {
+      const res = await fetchAuditEntries(
         {
           actionType,
           actorRole,
@@ -61,48 +92,45 @@ export default function PrincipalAuditPage() {
           page,
           pageSize: PAGE_SIZE,
         },
-        abort,
-      )
-        .then((res) => {
-          setEntries(res.entries);
-          setTotal(res.total);
-          setKnownTables((prev) => {
-            const next = new Set(prev);
-            for (const e of res.entries) {
-              const t = e.sourceTable?.trim();
-              if (t) next.add(t);
-            }
-            return next.size === prev.length &&
-              prev.every((t) => next.has(t))
-              ? prev
-              : Array.from(next).sort((a, b) => a.localeCompare(b));
-          });
-        })
-        .catch((err: unknown) => {
-          if ((err as { name?: string })?.name === "CanceledError") return;
-          const status = (err as { response?: { status?: number } })?.response?.status;
-          setError(
-            status
-              ? `Failed to load audit log (HTTP ${status})`
-              : "Failed to load audit log",
-          );
-          console.error("[/api/audit] fetch failed:", err);
-        })
-        .finally(() => setLoading(false));
+        signal,
+      );
+      return {
+        data: res.entries,
+        total: res.total,
+        page: res.page,
+        pageSize: PAGE_SIZE,
+        totalPages: Math.max(1, Math.ceil(res.total / PAGE_SIZE)),
+      };
     },
-    [actionType, actorRole, sourceTable, actorScope, currentUserId, debouncedQuery, page],
-  );
+  });
 
-  React.useEffect(() => {
-    const ctrl = new AbortController();
-    // Async data fetch on filter/page change — setState happens inside the
-    // promise chain, not synchronously in the effect body.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(ctrl.signal);
-    return () => ctrl.abort();
-  }, [load]);
+  const entries: AuditEntry[] = auditQuery.data?.data ?? [];
+  const total = auditQuery.data?.total ?? 0;
+  const loading = auditQuery.isPending;
+  const error = auditQuery.isError
+    ? (() => {
+        const status = (auditQuery.error as { response?: { status?: number } })?.response?.status;
+        return status ? `Failed to load audit log (HTTP ${status})` : "Failed to load audit log";
+      })()
+    : null;
 
-  const handleRetry = () => load();
+  const knownTables = React.useMemo(() => {
+    const tables = new Set<string>();
+    const cached = queryClient.getQueriesData<{ data?: AuditEntry[] }>({
+      queryKey: ["principal", "audit"],
+    });
+    for (const [, data] of cached) {
+      for (const entry of data?.data ?? []) {
+        const name = entry.sourceTable?.trim();
+        if (name) tables.add(name);
+      }
+    }
+    return Array.from(tables).sort((a, b) => a.localeCompare(b));
+  }, [queryClient, auditQuery.dataUpdatedAt]);
+
+  const handleRetry = () => {
+    void auditQuery.refetch();
+  };
   const handleExport = () => {
     if (exporting) return;
     setExporting(true);
@@ -131,129 +159,105 @@ export default function PrincipalAuditPage() {
   const totalCount = total;
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
-  const start = totalCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, totalCount);
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: debouncedQuery || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery]);
 
   return (
-    <section className={styles.page}>
-      <PrincipalPageHeader
+    <section className={styles.page} aria-busy={loading || undefined}>
+      <KanbanBoard
         title="Audit Log"
-        description="School-wide record of sensitive actions. Immutable — entries cannot be edited or deleted."
-      />
-
-      <section aria-label="Audit entries" className="flex min-w-0 flex-col gap-3">
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className={styles.sectionTitle}>Audit Entries</h2>
-              <p className={styles.sectionDesc} aria-live="polite">
-                {totalCount === 0
-                  ? "No audit entries on record."
-                  : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school.`}
-              </p>
-            </div>
-            <AuditToolbar
-              actionType={actionType}
-              onActionTypeChange={(v) => {
-                setActionType(v);
-                setPage(1);
-              }}
-              actorRole={actorRole}
-              onActorRoleChange={(v) => {
-                setActorRole(v);
-                setPage(1);
-              }}
-              actorScope={actorScope}
-              onActorScopeChange={(v) => {
-                setActorScope(v);
-                setPage(1);
-              }}
-              sourceTable={sourceTable}
-              onSourceTableChange={(v) => {
-                setSourceTable(v);
-                setPage(1);
-              }}
-              sourceTables={knownTables}
-              query={query}
-              onQueryChange={(v) => {
-                setQuery(v);
-                setPage(1);
-              }}
-              onExport={handleExport}
-              exporting={exporting}
-            />
+        icon={<ShieldCheck size={14} aria-hidden="true" />}
+        count={totalCount}
+        description={
+          totalCount === 0
+            ? "Immutable record of sensitive actions — entries cannot be edited or deleted."
+            : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school. Immutable — entries cannot be edited or deleted.`
+        }
+        headerToolbar={
+          <AuditToolbar
+            actionType={actionType}
+            onActionTypeChange={(v) => {
+              setActionType(v);
+              pager.setFilters({ actionType: v === "all" ? undefined : v });
+            }}
+            actorRole={actorRole}
+            onActorRoleChange={(v) => {
+              setActorRole(v);
+              pager.setFilters({ actorRole: v === "all" ? undefined : v });
+            }}
+            actorScope={actorScope}
+            onActorScopeChange={(v) => {
+              setActorScope(v);
+              pager.setFilters({ scope: v === "all" ? undefined : v });
+            }}
+            sourceTable={sourceTable}
+            onSourceTableChange={(v) => {
+              setSourceTable(v);
+              pager.setFilters({ sourceTable: v === "all" ? undefined : v });
+            }}
+            sourceTables={knownTables}
+            query={query}
+            onQueryChange={(v) => {
+              setQuery(v);
+            }}
+            onExport={handleExport}
+            exporting={exporting}
+          />
+        }
+        footer={
+          <Pagination
+            currentPage={safePage}
+            totalItems={totalCount}
+            pageSize={PAGE_SIZE}
+            onPageChange={pager.setPage}
+          />
+        }
+      >
+        {error ? (
+          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+              aria-hidden="true"
+            >
+              <TriangleAlert size={24} className="text-muted-foreground" />
+            </span>
+            <p className="font-medium">Couldn&apos;t load the audit log</p>
+            <p className="max-w-sm text-sm text-muted-foreground">{error}</p>
+            <Button variant="outline" size="sm" onClick={handleRetry}>
+              Retry
+            </Button>
           </div>
-
-          {error ? (
-            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-                aria-hidden="true"
-              >
-                <TriangleAlert size={24} className="text-muted-foreground" />
-              </span>
-              <p className="font-medium">Couldn&apos;t load the audit log</p>
-              <p className="max-w-sm text-sm text-muted-foreground">{error}</p>
-              <Button variant="outline" size="sm" onClick={handleRetry}>
-                Retry
-              </Button>
-            </div>
-          ) : loading ? (
-            <div className="relative overflow-x-auto rounded-md border">
-              <AuditSkeleton rows={PAGE_SIZE} />
-            </div>
-          ) : entries.length === 0 ? (
-            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-                aria-hidden="true"
-              >
-                <ShieldCheck size={24} className="text-muted-foreground" />
-              </span>
-              <p className="font-medium">No audit entries</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                {query.trim()
-                  ? `No audit entries match "${query}".`
-                  : hasActiveFilters
-                    ? "No audit entries match the selected filters."
-                    : "Sensitive actions will appear here once recorded."}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="relative">
-                <AuditTable entries={entries} />
-              </div>
-              <div className="relative flex items-center justify-end space-x-2">
-                <div className="text-muted-foreground flex-1 text-sm">
-                  {`${start}–${end} of ${totalCount}`}
-                </div>
-                <div className="space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={safePage <= 1 || totalCount === 0}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={safePage >= pageCount || totalCount === 0}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
+        ) : loading ? (
+          <div className="relative overflow-x-auto rounded-md border">
+            <AuditSkeleton rows={PAGE_SIZE} />
+          </div>
+        ) : entries.length === 0 ? (
+          <PrincipalEmptyState
+            icon={ShieldCheck}
+            title="No audit entries"
+            hint={
+              query.trim()
+                ? `No audit entries match "${query}".`
+                : hasActiveFilters
+                  ? "No audit entries match the selected filters."
+                  : "Sensitive actions will appear here once recorded."
+            }
+          />
+        ) : (
+          <div className="relative">
+            <AuditTable entries={entries} />
+          </div>
+        )}
+      </KanbanBoard>
     </section>
   );
 }

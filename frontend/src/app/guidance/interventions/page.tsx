@@ -1,64 +1,139 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { HeartHandshake, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchGuidanceInterventions,
-  type GuidanceInterventionsData,
-} from "./components/guidance-interventions-data";
+import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
+import { fetchAllGuidanceInterventions, fetchGuidanceInterventions } from "@/services/guidance/interventions.service";
+import type {
+  GuidanceInterventionsData,
+  RiskLevelFilter,
+} from "@/services/guidance/interventions.types";
 import {
   GuidanceInterventionsTable,
 } from "./components/guidance-interventions-table";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/guidance-interventions.module.css";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
-const GUIDANCE_INTERVENTIONS_PAGE_SIZE = 15;
+// The board pages a 4×4 card grid; backend allow-lists 16 for this queue.
+const GUIDANCE_INTERVENTIONS_PAGE_SIZE = 16;
 
-export default function GuidanceInterventionsPage() {
-  const { activeTerm } = useTerm();
+function GuidanceInterventionsView({ highlightId }: { highlightId: string | null }) {
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [query, setQuery] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  // Debounced 300ms so server queries fire after the user pauses typing.
+  const landing = highlightId !== null;
+  const [query, setQueryInput] = React.useState("");
+  const [level, setLevelState] = React.useState<RiskLevelFilter>(landing ? "All" : "High");
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "level"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const [takeover, setTakeover] = React.useState(false);
+  const [locatedFor, setLocatedFor] = React.useState<string | null>(null);
+
   const debounced = useDebouncedValue(query.trim(), 300);
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  // Only react to actual search changes — `setPage` is re-created whenever the
+  // URL changes, so depending on its identity would fire this effect on every
+  // pagination and bounce the page back to 1.
+  const lastSyncedSearch = React.useRef(debounced);
+  React.useEffect(() => {
+    if (lastSyncedSearch.current === debounced) return;
+    lastSyncedSearch.current = debounced;
+    pager.setFilters({ q: debounced || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- guard above only lets real search changes through
+  }, [debounced]);
+
+  const setQuery = React.useCallback((value: string) => {
+    setQueryInput(value);
+  }, []);
+
+  const setLevel = React.useCallback(
+    (value: RiskLevelFilter) => {
+      setLevelState(value);
+      pager.setFilters({ level: value === "All" ? undefined : value });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const handleQueryChange = (value: string) => {
     setQuery(value);
+    setTakeover(true);
     setPage(1);
   };
 
-  const { data, isPending, isError, refetch, isRefetching, isFetching } =
-    useQuery<GuidanceInterventionsData>({
-      queryKey: ["guidance-interventions", page, debounced, termKey],
+  const handleLevelChange = (value: RiskLevelFilter) => {
+    setLevel(value);
+    setTakeover(true);
+    setPage(1);
+  };
+
+  const handlePageChange = (next: number) => {
+    setTakeover(true);
+    setPage(next);
+  };
+
+  const {
+    data,
+    isPending,
+    isError,
+    refetch,
+    isRefetching,
+    isPlaceholderData,
+  } = useQuery<GuidanceInterventionsData>({
+      queryKey: ["guidance-interventions", takeover || !landing ? page : 1, debounced, takeover || !landing ? level : "All", termKey],
       queryFn: ({ signal }) =>
         fetchGuidanceInterventions(
           {
             q: debounced || undefined,
-            level: "All",
+            level: takeover || !landing ? level : "All",
             outcome: "all",
-            page,
+            page: takeover || !landing ? page : 1,
             pageSize: GUIDANCE_INTERVENTIONS_PAGE_SIZE,
           },
           { signal }
         ),
-      // Page turns reuse the previous page so they never flash skeletons.
+
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
-  // Derived, never setState-in-effect: the server clamps too, this keeps
-  // the pager truthful while a filter shrinks the list under the cursor.
+  // Locate the highlighted student across the cohort (level=All) and jump
+  // to its server page. Runs once per highlight until the user takes over.
+  const locateQuery = useQuery({
+    queryKey: ["guidance-interventions-locate", highlightId, termKey],
+    queryFn: fetchAllGuidanceInterventions,
+    staleTime: 60_000,
+    enabled: termReady && landing && !takeover && !!highlightId && locatedFor !== highlightId,
+  });
+  React.useEffect(() => {
+    if (!landing || takeover || !highlightId || locatedFor === highlightId) return;
+    const all = locateQuery.data;
+    if (!all) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deep-link landing sync
+    setLocatedFor(highlightId);
+    const idx = all.findIndex((s) => s.studentKey === highlightId);
+    if (idx >= 0) {
+      setPage(Math.floor(idx / GUIDANCE_INTERVENTIONS_PAGE_SIZE) + 1);
+    }
+    setTakeover(true);
+  }, [landing, takeover, highlightId, locatedFor, locateQuery.data, setPage]);
+
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);
 
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={isPending || undefined}>
       {isPending ? (
-        <div aria-busy="true" className={styles.feed}>
+        <>
+          <div aria-busy="true" className={styles.feed}>
           <div className={styles.skelToolbar}>
             <div className={styles.skelHeadText}>
               <Skeleton className={styles.skelTitle} />
@@ -100,7 +175,8 @@ export default function GuidanceInterventionsPage() {
               <Skeleton className={styles.skelPageBtn} />
             </div>
           </div>
-        </div>
+          </div>
+        </>
       ) : isError || !data ? (
         <div className={styles.empty} role="alert">
           <p className={styles.emptyTitle}>We couldn&apos;t load the queue</p>
@@ -119,6 +195,14 @@ export default function GuidanceInterventionsPage() {
             {isRefetching ? "Loading…" : "Try again"}
           </Button>
         </div>
+      ) : (data.unfilteredTotal ?? data.total) === 0 && query.trim() === "" ? (
+        <GuidanceEmptyCard
+          icon={HeartHandshake}
+          title="No intervention cases"
+          hint="At-risk students needing guidance follow-up will appear here."
+          label="Intervention cases"
+          centered
+        />
       ) : (
         <GuidanceInterventionsTable
           summary={data.summary}
@@ -128,14 +212,31 @@ export default function GuidanceInterventionsPage() {
           total={data.total}
           totalPages={totalPages}
           unfilteredTotal={data.unfilteredTotal}
-          onPageChange={setPage}
+          onPageChange={handlePageChange}
           query={query}
           onQueryChange={handleQueryChange}
+          level={takeover || !landing ? level : "All"}
+          onLevelChange={handleLevelChange}
           onRetry={() => refetch()}
           isRetrying={isRefetching}
-          isNavigating={isFetching && !isPending}
+          isNavigating={isPlaceholderData}
+          highlightId={highlightId}
         />
       )}
     </section>
   );
+}
+
+export default function GuidanceInterventionsPage() {
+  return (
+    <React.Suspense fallback={<div className={styles.page} aria-busy="true" />}>
+      <GuidanceInterventionsPageInner />
+    </React.Suspense>
+  );
+}
+
+function GuidanceInterventionsPageInner() {
+  const params = useSearchParams();
+  const highlightId = params.get("highlight");
+  return <GuidanceInterventionsView key={highlightId ?? "none"} highlightId={highlightId} />;
 }

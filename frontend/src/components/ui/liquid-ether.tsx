@@ -569,6 +569,8 @@ export default function LiquidEther({
         this.props = props || {};
         this.uniforms = this.props.material?.uniforms;
       }
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       init(..._args: any[]) {
         this.scene = new THREE.Scene();
         this.camera = new THREE.Camera();
@@ -579,7 +581,7 @@ export default function LiquidEther({
           this.scene.add(this.plane);
         }
       }
-      update(..._args: any[]) {
+      update() {
         if (!Common.renderer || !this.scene || !this.camera) return;
         Common.renderer.setRenderTarget(this.props.output || null);
         Common.renderer.render(this.scene, this.camera);
@@ -1082,7 +1084,7 @@ export default function LiquidEther({
             Common.renderer.forceContextLoss();
           }
         } catch {
-          /* noop */
+
         }
       }
     }
@@ -1161,14 +1163,14 @@ export default function LiquidEther({
         try {
           resizeObserverRef.current.disconnect();
         } catch {
-          /* noop */
+
         }
       }
       if (intersectionObserverRef.current) {
         try {
           intersectionObserverRef.current.disconnect();
         } catch {
-          /* noop */
+
         }
       }
       if (webglRef.current) {

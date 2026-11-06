@@ -7,9 +7,9 @@ import { Check } from "lucide-react";
 import {
   REASON_LABELS,
   STATUS_LABELS,
-  formatAge,
   type GradeFlagRow,
-} from "./grade-flags-data";
+} from "@/services/teacher/gradeFlags.types";
+import { formatAge } from "@/services/teacher/gradeFlags.service";
 import styles from "./FlagDetailDialog.module.css";
 
 const STATUS_VARIANTS = {

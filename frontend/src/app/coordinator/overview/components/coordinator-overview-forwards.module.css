@@ -1,150 +1,291 @@
-/* Recent forwards data table — glow card shell, guidance grade-table
-   treatment: header row, bordered table wrap, interpretation footer. */
+/* Recent forwards — kanban board over a grid of case cards (no data table).
+   Each card is a hand-off: learner sprite, status, elapsed, and the
+   forwarded-by → adviser mascot chain. */
 
-.card {
-  position: relative;
-  overflow: visible;
-}
-
-.glowClip {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  pointer-events: none;
-}
-
-.cardGlow {
-  position: absolute;
-  inset: auto -25% -50% -25%;
-  height: 75%;
-  background: radial-gradient(
-    ellipse at center,
-    color-mix(in oklch, var(--primary), transparent 80%),
-    transparent 70%
-  );
-  filter: blur(24px);
-  pointer-events: none;
-}
-
-.sectionTitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.sectionDesc {
-  margin: 0.125rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-}
-
-.headerRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.caseGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
-  flex-wrap: wrap;
-  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
 }
 
-.tableWrap {
-  overflow-x: auto;
+@media (max-width: 1100px) {
+  .caseGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .caseGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.caseCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  position: relative;
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
+  transition:
+    transform 160ms ease-out,
+    border-color 160ms ease-out,
+    box-shadow 160ms ease-out;
 }
 
-/* Queue pager — "Showing X–Y of Z" + Previous / Page N of M / Next. */
-.pager {
+.caseCard:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 45%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 45%);
+}
+
+/* Rows cascade in on mount — same entrance as the nurse case board. */
+@keyframes case-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.caseGrid > .caseCard {
+  animation: case-card-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caseGrid > .caseCard {
+    animation: none;
+  }
+  .caseCard {
+    transition: none;
+  }
+  .caseCard:hover {
+    transform: none;
+  }
+}
+
+.caseHead {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
-  margin-top: 0.75rem;
-  position: relative;
+  min-width: 0;
 }
 
-.range {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.pagerButtons {
+.caseId {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 
-.pageLabel {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.skelTable {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.skelTable td {
-  padding: 0.25rem 0.5rem;
-}
-
-.cellMain {
+.caseName {
   margin: 0;
-  font-size: 0.8125rem;
+  min-width: 0;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--foreground);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.cellSub {
-  margin: 0.125rem 0 0;
+.caseLrn {
+  margin: 0;
   font-size: 0.75rem;
   color: var(--muted-foreground);
-  white-space: nowrap;
-}
-
-.cellTime {
-  margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--foreground);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.mono {
-  font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
 }
 
-.empty {
+.caseMeta {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.metaPill {
+  display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 2rem 1rem;
-  text-align: center;
-}
-
-.emptyTitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-.emptyHint {
-  margin: 0;
-  font-size: 0.8125rem;
+  padding: 0.125rem 0.4375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 500;
   color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The hand-off chain: forwarded-by desk → adviser, each with a sprite. */
+.caseChain {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.5rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--muted) 45%, transparent);
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.personMascot {
+  display: inline-flex;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background-color: var(--card);
+}
+
+.personText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.personRole {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.personName {
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chainArrow {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.caseFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+  margin-top: auto;
+  padding-top: 0.25rem;
+  border-top: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+}
+
+.latestAction {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.latestMain {
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.latestAt {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.cardMenuBtn {
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+/* Right side of the card foot: optional "Book schedule" CTA + the 3-dots. */
+.caseActions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+/* Loading skeleton mirrors the card grid. */
+.skelCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+}
+
+.skelHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skelAvatar {
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+
+.skelId {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.skelLine {
+  height: 0.75rem;
+  width: 60%;
+}
+
+.skelLineSm {
+  height: 0.625rem;
+  width: 40%;
+}
+
+.skelPill {
+  height: 1.25rem;
+  width: 45%;
+  border-radius: var(--radius-md);
+}
+
+.skelBlock {
+  height: 2.75rem;
+  width: 100%;
+  border-radius: var(--radius-md);
 }
 
 .errorBlock {
@@ -195,15 +336,12 @@
 }
 
 .interpretation {
-  /* auto top margin docks the line to the card bottom (see .body); the
-     top padding keeps today's minimum separation when content runs tall. */
-  margin: auto 0 0;
-  padding: 0.75rem 0 0 0.625rem;
+  margin: 0;
+  padding: 0.5rem 0 0 0.625rem;
   border-left: 2px solid color-mix(in oklch, var(--primary), transparent 35%);
   font-size: 0.8125rem;
   line-height: 1.5;
   color: var(--muted-foreground);
-  position: relative;
 }
 
 .interpretationLabel {
@@ -211,10 +349,8 @@
   color: var(--foreground);
 }
 
-/* Card body fills the remaining card height so the interpretation footer
-   below docks to the card bottom instead of floating under the table. */
-.body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+/* Amber data points inside the interpretation line — the desk accent. */
+.interpretNum {
+  color: oklch(0.769 0.188 70.08);
+  font-weight: 600;
 }

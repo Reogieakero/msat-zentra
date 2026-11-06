@@ -7,6 +7,12 @@
   padding: 1.25rem;
 }
 
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .title {
   margin: 0;
   font-size: 1rem;
@@ -22,24 +28,8 @@
 }
 
 .summary strong {
-  color: var(--foreground);
-  font-weight: 600;
-}
-
-.insight {
-  margin: 0;
-  padding: 0.625rem 0.75rem;
-  border-left: 3px solid var(--primary);
-  background-color: color-mix(in oklch, var(--primary), transparent 94%);
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--muted-foreground);
-  border-radius: 0 6px 6px 0;
-}
-
-.insight strong {
-  color: var(--foreground);
-  font-weight: 600;
+  color: #b45309;
+  font-weight: 700;
 }
 
 .list {
@@ -55,6 +45,30 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  animation: item-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.item:nth-child(1) {
+  animation-delay: 0.2s;
+}
+
+.item:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.item:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .swatch {
@@ -67,6 +81,7 @@
 .itemText {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.125rem;
   min-width: 0;
 }
@@ -78,6 +93,7 @@
 }
 
 .itemDetail {
+  max-width: 100%;
   font-size: 0.6875rem;
   color: var(--muted-foreground);
   white-space: nowrap;
@@ -88,8 +104,14 @@
 .itemValue {
   margin-left: auto;
   font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--foreground);
+  font-weight: 700;
+  color: #b45309;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    animation: none;
+  }
 }

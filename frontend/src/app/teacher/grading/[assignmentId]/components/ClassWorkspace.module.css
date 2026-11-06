@@ -35,8 +35,9 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 20rem;
-  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  /* 16px between the content column (search bar) and the icon rail. */
+  gap: 1rem;
   align-items: start;
   min-width: 0;
 }
@@ -46,6 +47,25 @@
   flex-direction: column;
   gap: 1.25rem;
   min-width: 0;
+}
+
+/* Right-side tool cards stay pinned while the score panel scrolls.
+   4rem clears the fixed 3rem desk topbar + 1rem gap. The max-height cap
+   only matters on short viewports — then the rail scrolls internally
+   instead of pushing the page. */
+.rail {
+  position: sticky;
+  top: 4rem;
+  align-self: start;
+  min-width: 0;
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
 }
 
 .viewHidden {
@@ -74,10 +94,38 @@
   .layout {
     grid-template-columns: minmax(0, 1fr);
   }
+  .rail {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
 }
 
 .errorText {
   margin: 0;
   font-size: 0.75rem;
   color: var(--destructive);
+}
+
+/* Inline weights swap — the empty board morphs into the editing board
+   in place (no overlay). Key change remounts and replays the motion. */
+.weightsSwap {
+  animation: weights-swap-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes weights-swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weightsSwap {
+    animation: none;
+  }
 }

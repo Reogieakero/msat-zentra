@@ -12,13 +12,13 @@ import {
   Files,
   ClipboardList,
   Send,
-  Flame,
   Settings,
   type LucideIcon,
 } from "lucide-react";
 
 import styles from "./guidance-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
 type NavItem = {
@@ -33,19 +33,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Guidance Counselor nav — branched left rail on desktop (same as the
-// nurse/teacher desks), flattened tab bar on small screens. Referrals are
-// split into two dedicated pages (ADM Cases and Counseling Cases) so the
-// reader never needs the track filter; each page locks to its own track.
-// Interventions live under Overview; Referrals Report covers the whole
-// desk (ADM + counseling insights and reports). Sub-routes (risk heatmap /
-// behavioral) stay under their parent tab via prefix matching, so no
-// submenu is needed.
-//
-// Shared-concept convention (same label + icon across desks):
-// Overview=LayoutDashboard, Alerts=BellRing, ADM Cases=Inbox,
-// Interventions=ClipboardList, Anecdotal Records=FilePenLine,
-// Referrals Report=Send, Risk Dashboard=Flame.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -93,11 +80,6 @@ const NAV: NavGroup[] = [
     label: "Insights",
     items: [
       { title: "Referrals Report", href: "/guidance/adm", icon: Send },
-      {
-        title: "Risk Dashboard",
-        href: "/guidance/risk",
-        icon: Flame,
-      },
     ],
   },
   {
@@ -112,9 +94,6 @@ const NAV: NavGroup[] = [
   },
 ];
 
-// GitHub-style tab bar: every section flattened into one row under the
-// topbar on small screens. Groups only group the source data, not the
-// rendered tabs.
 const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
 function useIsActive() {
@@ -190,23 +169,43 @@ function GuidanceRail({ groups }: { groups: NavGroup[] }) {
   );
 }
 
-export function GuidanceSidebar() {
+export function GuidanceSidebar({
+  collapsed = true,
+}: {
+  collapsed?: boolean;
+} = {}) {
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const isActive = useIsActive();
+  const activeHref =
+    TABS.find((t) => isActive(t.href))?.href ?? "/guidance/overview";
 
   return (
     <>
-      <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Guidance sections">
-        <div ref={railScrollRef} className={styles.railScroll}>
-          <GuidanceRail groups={NAV} />
-        </div>
-        <div className={styles.railHintWrap}>
-          <ScrollDownHint
-            scrollRef={railScrollRef}
-            watchKey="guidance-nav"
-            label="Scroll for more"
-            className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+      <aside
+        className={`${styles.rail} ${styles.railDesktop} ${collapsed ? styles.railCollapsed : ""}`}
+        aria-label="Guidance sections"
+      >
+        {collapsed ? (
+          <SidebarIconRail
+            groups={NAV}
+            ariaLabel="Guidance sections, icon only"
+            activeHref={activeHref}
           />
-        </div>
+        ) : (
+          <>
+            <div ref={railScrollRef} className={styles.railScroll}>
+              <GuidanceRail groups={NAV} />
+            </div>
+            <div className={styles.railHintWrap}>
+              <ScrollDownHint
+                scrollRef={railScrollRef}
+                watchKey="guidance-nav"
+                label="Scroll for more"
+                className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+              />
+            </div>
+          </>
+        )}
       </aside>
       <div className={styles.tabsMobile}>
         <GuidanceNavbar tabs={TABS} />

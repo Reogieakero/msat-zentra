@@ -3,9 +3,11 @@ import {
   computeRiskFactors,
   levelFromFlags,
   resolveActiveTermId,
+  sectionAttendanceTotals,
   type GradeMode,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import { gradeLabel } from "../../lib/grades.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
@@ -15,6 +17,8 @@ export interface RiskStudentRow {
   lrn: string;
   name: string;
   section: string;
+  gradeLevel: string;
+  mascot: string | null;
   riskLevel: string;
   riskCount: number;
   factors: Record<RiskFactor, boolean>;
@@ -29,16 +33,33 @@ export interface RiskStudentsResult {
 
 const LEVEL_RANK: Record<string, number> = { High: 3, Moderate: 2, Low: 1 };
 
-// Principal: full at-risk student list (status-only factors, no confidential
-// fields) for the session's active school year. Optional section filter.
-// `gradeMode` selects whether the academic factor uses final (transmuted) or
-// raw averages. Enlisted students without accounts are included on equal footing.
+export interface RiskStudentFilters {
+  riskLevel?: "High" | "Moderate" | "Low";
+  factor?: RiskFactor;
+}
+
+// Real-time unified: gradeMode is ignored (kept for backwards compat).
+// Always computes live from FinalGrade/Attendance/Anecdotal for the active term.
 export async function getRiskStudents(
   page: number,
   pageSize: number,
   section?: string,
-  gradeMode: GradeMode = "final",
+  _gradeMode?: GradeMode,
   scope?: TermScopeInput,
+  q?: string,
+  extra?: RiskStudentFilters,
+): Promise<RiskStudentsResult> {
+  const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
+  return getRiskStudentsLive(page, effPageSize, section, scope, q, extra);
+}
+
+async function getRiskStudentsLive(
+  page: number,
+  pageSize: number,
+  section?: string,
+  scope?: TermScopeInput,
+  q?: string,
+  extra?: RiskStudentFilters,
 ): Promise<RiskStudentsResult> {
   const termId = scope?.termId ?? (await resolveActiveTermId());
   const schoolYearId =
@@ -50,18 +71,49 @@ export async function getRiskStudents(
       })
     )?.id;
 
+  const needle = (q ?? "").trim();
+  const profileSearch: any = needle
+    ? {
+        OR: [
+          { user: { fullName: { contains: needle, mode: "insensitive" } } },
+          { lrn: { contains: needle, mode: "insensitive" } },
+          { section: { name: { contains: needle, mode: "insensitive" } } },
+        ],
+      }
+    : null;
+  const rosterSearch: any = needle
+    ? {
+        OR: [
+          { fullName: { contains: needle, mode: "insensitive" } },
+          { lrn: { contains: needle, mode: "insensitive" } },
+          { section: { name: { contains: needle, mode: "insensitive" } } },
+        ],
+      }
+    : null;
+
+  // Adviser data gate: only learners in sections whose adviser has claimed the
+  // section and switched student-data sharing ON reach the principal desk.
   const sectionMatch = {
     ...(schoolYearId ? { schoolYearId } : {}),
     ...(section ? { name: section } : {}),
+    adviser: { staffProfile: { shareStudentData: true } },
   };
 
   const [profiles, rosterEntries] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { section: sectionMatch },
+      where: {
+        AND: [
+          { section: sectionMatch },
+          ...(profileSearch ? [profileSearch] : []),
+        ],
+      },
       orderBy: { lrn: "asc" },
+      take: 5000,
       select: {
         userId: true,
         lrn: true,
+        gradeLevel: true,
+        mascot: true,
         section: { select: { id: true, name: true } },
         user: { select: { fullName: true } },
         finalGrades: {
@@ -70,8 +122,7 @@ export async function getRiskStudents(
         },
         attendanceRecords: {
           where: termId ? { termId } : undefined,
-          // subjectId drives the engine's dual-mode attendance rule
-          // (subject-era rows vs legacy AM/PM rows).
+
           select: { status: true, subjectId: true },
         },
         anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
@@ -79,14 +130,28 @@ export async function getRiskStudents(
     }),
     prisma.studentRoster.findMany({
       where: {
-        ...(schoolYearId ? { schoolYearId } : {}),
-        ...(section ? { section: { name: section } } : {}),
+        AND: [
+          {
+            ...(schoolYearId ? { schoolYearId } : {}),
+            ...(section ? { section: { name: section } } : {}),
+          },
+          {
+            section: {
+              ...(schoolYearId ? { schoolYearId } : {}),
+              adviser: { staffProfile: { shareStudentData: true } },
+            },
+          },
+          ...(rosterSearch ? [rosterSearch] : []),
+        ],
       },
       orderBy: { lrn: "asc" },
+      take: 5000,
       select: {
         id: true,
         lrn: true,
         fullName: true,
+        gradeLevel: true,
+        mascot: true,
         sectionId: true,
         section: { select: { name: true } },
         finalGrades: {
@@ -110,12 +175,18 @@ export async function getRiskStudents(
     ]),
   ) as string[];
   const headcounts = await sectionHeadcounts(sectionIds);
+  const sectionTotals = termId
+    ? await sectionAttendanceTotals(sectionIds, termId)
+    : new Map<string, number>();
 
   type Candidate = {
     studentId: string;
     lrn: string;
     name: string;
     section: string;
+    sectionId: string;
+    gradeLevel: string;
+    mascot: string | null;
     finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
     attendanceRecords: { status: string; subjectId: string | null }[];
     anecdotalCount: number;
@@ -127,6 +198,9 @@ export async function getRiskStudents(
       lrn: s.lrn,
       name: s.user.fullName,
       section: s.section?.name ?? "—",
+      sectionId: s.section?.id ?? "",
+      gradeLevel: gradeLabel(s.gradeLevel),
+      mascot: s.mascot,
       finalGrades: s.finalGrades,
       attendanceRecords: s.attendanceRecords,
       anecdotalCount: s.anecdotalRecords.length,
@@ -139,6 +213,9 @@ export async function getRiskStudents(
         lrn: r.lrn,
         name: r.fullName,
         section: r.section?.name ?? "—",
+        sectionId: r.sectionId,
+        gradeLevel: gradeLabel(r.gradeLevel),
+        mascot: r.mascot,
         finalGrades: r.finalGrades,
         attendanceRecords: r.attendanceRecords,
         anecdotalCount: r.anecdotalRecords.length,
@@ -147,13 +224,11 @@ export async function getRiskStudents(
   ];
 
   const students: RiskStudentRow[] = candidates.map((s) => {
-    // Single source of truth (risk.ts): the same engine the teacher
-    // advisory and overview paths use, so per-student levels agree across
-    // desks. Never trust the stored profile columns here.
+
     const flags = computeRiskFactors({
       finalGrades: s.finalGrades,
-      gradeMode,
       attendance: s.attendanceRecords,
+      attendanceTotal: sectionTotals.get(s.sectionId),
       anecdotalCount: s.anecdotalCount,
       enrolled: s.enrolled,
     });
@@ -167,6 +242,8 @@ export async function getRiskStudents(
       lrn: s.lrn,
       name: s.name,
       section: s.section,
+      gradeLevel: s.gradeLevel,
+      mascot: s.mascot,
       riskLevel: liveLevel,
       riskCount: liveCount,
       factors: {
@@ -181,10 +258,18 @@ export async function getRiskStudents(
     (a, b) => LEVEL_RANK[b.riskLevel] - LEVEL_RANK[a.riskLevel] || a.lrn.localeCompare(b.lrn),
   );
 
-  const total = students.length;
+  // Default to true at-risk only (High + Moderate). Explicit ?riskLevel=Low still works.
+  // Default to true at-risk only (High + Moderate). Explicit filter overrides.
+  const scoped = students.filter(
+    (s) =>
+      (extra?.riskLevel ? s.riskLevel === extra.riskLevel : s.riskLevel !== "Low") &&
+      (!extra?.factor || s.factors[extra.factor] === true),
+  );
+
+  const total = scoped.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(Math.max(page, 1), totalPages);
-  const slice = students.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const slice = scoped.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return { students: slice, total, page: safePage, pageSize };
 }

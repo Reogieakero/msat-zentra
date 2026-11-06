@@ -2,37 +2,50 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MousePointerClick } from "lucide-react";
+import { ArrowLeft, SearchIcon } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
-import { useGradeMode } from "../../grade-mode-context";
+import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { Pill } from "@/components/ui/pill";
+import { cn } from "@/lib/utils";
 import { SectionCardGrid } from "./SectionCardGrid";
 import { SectionStudentsTable } from "./SectionStudentsTable";
-import type { AcademicsMock } from "../academics-data";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import type { AcademicsMock } from "@/services/principal/academics";
 import styles from "./StudentsAcademicsGrid.module.css";
 
-/* Academics desk: a section card grid on top; the students data table
-   (teacher At-Risk Advisees pattern) renders only once a section card
-   is clicked/selected. */
+/**
+ * Two-view orchestrator: the section board, or one section's roster.
+ *
+ * Selecting a card swaps the whole board out for that section (the roster is
+ * the only thing worth reading once a section is chosen); "Show all sections"
+ * brings the board back. Each view is keyed so it remounts and plays its own
+ * entrance — the boards cascade back in rather than popping.
+ */
 export function StudentsAcademicsGrid() {
-  const { gradeMode } = useGradeMode();
   const [selectedSectionId, setSelectedSectionId] = React.useState<string | null>(null);
-  const tableRef = React.useRef<HTMLDivElement | null>(null);
+  const [query, setQuery] = React.useState("");
+  const detailRef = React.useRef<HTMLDivElement | null>(null);
+  const gridRef = React.useRef<HTMLDivElement | null>(null);
+  const hadSelection = React.useRef(false);
 
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
+  const schoolYearId = activeTerm?.schoolYearId ?? null;
   const {
     data,
     isPending,
     error: queryError,
   } = useQuery({
-    // Term-scoped shared summary (heatmaps/honor-roll select from their own
-    // keys; backend caches per term). No polling — realtime invalidates.
-    queryKey: ["academics", termId, gradeMode],
-    queryFn: async () =>
-      (await apiClient.get<AcademicsMock>("/api/academics", { params: { mode: gradeMode } })).data,
-    staleTime: 60_000,
+    queryKey: ["academics", termId, schoolYearId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<AcademicsMock>("/api/academics");
+      return {
+        ...data,
+        sections: (data.sections ?? []).map((s) => ({ ...s, students: s.students ?? [] })),
+      };
+    },
+    staleTime: 15_000,
     refetchOnWindowFocus: false,
   });
 
@@ -53,52 +66,76 @@ export function StudentsAcademicsGrid() {
     [sections, selectedSectionId],
   );
 
-  // Reveal the table below the grid when a card is picked.
+  // Every roster opens unfiltered, so a search never leaks across sections.
+  const selectSection = React.useCallback((id: string | null) => {
+    setQuery("");
+    setSelectedSectionId(id);
+  }, []);
+
+  // Opening a section pulls the roster into view; returning restores the board
+  // to the top so the cascade is actually seen. Reduced motion scrolls plainly.
   React.useEffect(() => {
-    if (!selectedSectionId || !tableRef.current) return;
+    const target = selectedSectionId ? detailRef.current : hadSelection.current ? gridRef.current : null;
+    hadSelection.current = Boolean(selectedSectionId);
+    if (!target) return;
     const smooth =
       typeof window !== "undefined" &&
       !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    tableRef.current.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+    target.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
   }, [selectedSectionId]);
 
   return (
     <section className={styles.section}>
       {error ? (
         <p className={styles.error}>{error}</p>
+      ) : selectedSection ? (
+        <div key={selectedSection.sectionId} ref={detailRef} className={styles.detail}>
+          <div className={styles.detailBar}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={styles.backBtn}
+              onClick={() => selectSection(null)}
+            >
+              <ArrowLeft data-icon="inline-start" aria-hidden />
+              Show all sections
+            </Button>
+            <span className={styles.detailHint}>
+              Viewing the roster for
+              <Pill tone="amber" label="Section">
+                {selectedSection.section}
+              </Pill>
+              <Pill tone="neutral" label="Grade level" className="tabular-nums">
+                {selectedSection.grade}
+              </Pill>
+              <Pill tone="blue" label="Students" className="tabular-nums">
+                {selectedSection.students?.length ?? 0}
+              </Pill>
+            </span>
+            <InputGroup className={cn(styles.detailSearch, "rounded-[16px]")}>
+              <InputGroupInput
+                placeholder="Filter students..."
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                aria-label="Filter students"
+              />
+              <InputGroupAddon>
+                <SearchIcon />
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+          <SectionStudentsTable section={selectedSection} query={query} />
+        </div>
       ) : (
-        <>
+        <div key="all-sections" ref={gridRef} className={styles.gridAnchor}>
           <SectionCardGrid
             sections={sections}
             loading={loading}
             selectedSectionId={selectedSectionId}
-            onSelectSection={setSelectedSectionId}
+            onSelectSection={selectSection}
           />
-          {selectedSection ? (
-            <div ref={tableRef} className={styles.tableAnchor}>
-              <SectionStudentsTable
-                section={selectedSection}
-                gradeMode={gradeMode}
-              />
-            </div>
-          ) : !loading && sections.length > 0 ? (
-            <div className={assign.card} aria-label="No section selected">
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className={styles.hintBody}>
-                <span className={styles.hintIconWrap} aria-hidden="true">
-                  <MousePointerClick className={styles.hintIcon} />
-                </span>
-                <p className={styles.hintTitle}>No section selected</p>
-                <p className={styles.hintText}>
-                  Select a section card above to view its students — averages
-                  compute live across all subjects.
-                </p>
-              </div>
-            </div>
-          ) : null}
-        </>
+        </div>
       )}
     </section>
   );

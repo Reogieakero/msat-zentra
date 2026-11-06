@@ -1,0 +1,479 @@
+import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../lib/errors.js";
+import { writeAudit } from "../../lib/audit.js";
+import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
+import { canTransition, evaluateAdmEligibility, type AdmStage } from "../adm.js";
+import { actorName, ensureAdmForm } from "../../modules/adm/adm.repository.js";
+import type { AdmContext } from "./adm.types.js";
+import { recomputeRisk } from "../risk.js";
+import { logger } from "../../lib/pino.js";
+
+const ROLE_FOR_STAGE: Record<AdmStage, string[]> = {
+  anecdotal: ["adviser"],
+  consultation: ["guidance_counselor", "nurse"],
+  meeting_parents: ["adm_coordinator"],
+  home_visitation: ["guidance_counselor"],
+  certification: ["adm_coordinator"],
+  // The coordinator endorses the prepared certification to the Principal
+  // (PATCH stage → principal_approval). The Principal signs via
+  // /principal-approve, which is a separate, guarded action.
+  principal_approval: ["principal", "adm_coordinator"],
+  enrollment_monitoring: ["adm_coordinator"],
+  completion: ["adm_coordinator"],
+};
+
+export async function advanceStage(ctx: AdmContext, profileId: string, target: AdmStage) {
+
+  const profile = await prisma.admLearnerProfile.findUnique({
+    where: { id: profileId },
+    include: {
+      student: { select: { user: { select: { fullName: true } } } },
+      referral: { select: { id: true, referredBy: true, consultReviewer: true } },
+      forms: { select: { formType: true, status: true } },
+      parentMeetings: { select: { attended: true } },
+      modules: { select: { submitted: true } },
+    },
+  });
+  if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
+  // Role gate runs before the no-op early return so an out-of-role caller can
+  // never read the case file through a same-stage PATCH.
+  const allowed = ROLE_FOR_STAGE[target] ?? [];
+  if (!allowed.includes(ctx.role)) {
+    throw new AppError(
+      403,
+      "FORBIDDEN_STAGE",
+      `Role ${ctx.role} cannot move a case to ${target}`
+    );
+  }
+  if (profile.stage === target) {
+    return profile;
+  }
+  if (!canTransition(profile.stage, target)) {
+    throw new AppError(
+      409,
+      "ADM_INVALID_TRANSITION",
+      `Cannot move from ${profile.stage} to ${target}`
+    );
+  }
+  // A case can only be completed once every released module is submitted —
+  // the coordinator must not close enrollment monitoring early. Enforced
+  // here so the rule holds for any caller, not just the board button.
+  if (target === "completion") {
+    const totalModules = profile.modules.length;
+    const submittedModules = profile.modules.filter((m) => m.submitted).length;
+    if (totalModules === 0 || submittedModules < totalModules) {
+      throw new AppError(
+        409,
+        "ADM_MODULES_INCOMPLETE",
+        "All modules must be submitted before this case can be completed"
+      );
+    }
+  }
+
+  const data: { stage: AdmStage; eligibilityStatus?: "pending" | "eligible" | "ineligible" } = {
+    stage: target,
+  };
+  if (
+    target === "certification" ||
+    target === "principal_approval" ||
+    target === "enrollment_monitoring" ||
+    target === "completion"
+  ) {
+    data.eligibilityStatus = evaluateAdmEligibility({
+      stage: target,
+      forms: profile.forms,
+      parentMeetings: profile.parentMeetings,
+    });
+  } else {
+
+    data.eligibilityStatus = "pending";
+  }
+  const updated = await prisma.admLearnerProfile.update({
+    where: { id: profile.id },
+    data,
+  });
+  await writeAudit({
+    userId: ctx.userId,
+    actionType: "adm_edit",
+    sourceTable: "adm_learner_profiles",
+    sourceId: profile.id,
+    reason: `ADM stage advanced to ${target}`,
+    oldValue: { stage: profile.stage },
+    newValue: { stage: target },
+  });
+
+  const studentName = profile.student?.user?.fullName ?? "your student";
+  const stageWords = target.replace(/_/g, " ");
+  const actor = await actorName(ctx.userId);
+  if (profile.referral && profile.referral.referredBy !== ctx.userId) {
+    void fanoutNotification({
+      userId: profile.referral.referredBy,
+      sourceTable: "referrals",
+      action: "status",
+      message:
+        target === "principal_approval"
+          ? `${actor} endorsed the ADM case for ${studentName} to the Principal.`
+          : `${actor} moved the ADM case for ${studentName} to ${stageWords}.`,
+      sourceId: profile.referral.id,
+    });
+  }
+
+  {
+    void fanoutToRole("adm_coordinator", {
+      sourceTable: "referrals",
+      action: "status",
+      message:
+        target === "principal_approval"
+          ? `ADM case endorsed to the Principal.`
+          : `ADM case moved to ${stageWords}.`,
+      sourceId: profile.referral?.id ?? profile.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        target === "principal_approval"
+          ? `${actor} endorsed the ADM case for ${studentName} to the Principal — sent to you, ${r.fullName}.`
+          : `${actor} moved the ADM case for ${studentName} to ${stageWords} — sent to you, ${r.fullName}.`,
+    });
+  }
+
+  // Tell the Nurse reviewer when the case they consulted on is closed out.
+  if (target === "completion" && profile.referral?.consultReviewer === "nurse") {
+    void fanoutToRole("nurse", {
+      sourceTable: "referrals",
+      action: "status",
+      message: `The ADM case for ${studentName} was completed.`,
+      sourceId: profile.referral.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} completed the ADM case for ${studentName} — ${r.fullName}, the consultation you endorsed is now closed.`,
+    });
+  }
+
+  void fanoutNotification({
+    userId: ctx.userId,
+    sourceTable: "adm_learner_profiles",
+    action: target === "principal_approval" ? "endorse_self" : "decide_self",
+    message:
+      target === "principal_approval"
+        ? `You endorsed ${studentName} to the Principal — principal_approval.`
+        : `You moved ${studentName} to ${stageWords} — ${target}.`,
+    sourceId: profile.id,
+  });
+  return updated;
+}
+
+export async function certify(ctx: AdmContext, profileId: string, recommendation: string) {
+  const profile = await prisma.admLearnerProfile.findUnique({
+    where: { id: profileId },
+    include: {
+      forms: { select: { formType: true, status: true } },
+      parentMeetings: { select: { attended: true } },
+      student: { select: { user: { select: { fullName: true } } } },
+      referral: {
+        select: {
+          id: true,
+          referredBy: true,
+          consultReviewer: true,
+          anecdotalRecordId: true,
+          homeVisitations: { select: { id: true }, take: 1 },
+        },
+      },
+    },
+  });
+  if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
+  if (
+    ["principal_approval", "enrollment_monitoring", "completion"].includes(
+      profile.stage,
+    )
+  ) {
+    throw new AppError(409, "ALREADY_CERTIFIED", "Certification already recorded for this case");
+  }
+  if (
+    !["anecdotal", "consultation", "meeting_parents", "home_visitation", "certification"].includes(
+      profile.stage,
+    )
+  ) {
+    throw new AppError(
+      409,
+      "NOT_AT_CERTIFICATION_STAGE",
+      `Certification needs a pre-approval case (stage: ${profile.stage})`,
+    );
+  }
+  if (!profile.parentMeetings.some((m) => m.attended)) {
+    throw new AppError(409, "MEETING_REQUIRED", "Record parent meeting attendance first");
+  }
+
+  const me = ctx.userId;
+  const updated = await prisma.$transaction(async (tx) => {
+    await ensureAdmForm(profile.id, "REFERRAL_FORM", "Referral form", me, tx);
+    if (profile.referral?.anecdotalRecordId) {
+      await ensureAdmForm(profile.id, "ANECDOTAL_REPORT", "Anecdotal report", me, tx);
+    }
+    await ensureAdmForm(profile.id, "MINUTES_OF_MEETING", "Minutes of meeting", me, tx);
+    if ((profile.referral?.homeVisitations?.length ?? 0) > 0) {
+      await ensureAdmForm(profile.id, "HV_FORM", "Home visitation form", me, tx);
+    }
+    await ensureAdmForm(profile.id, "CERTIFICATION", "ADM certification", me, tx);
+    const forms = await tx.admForm.findMany({
+      where: { admLearnerProfileId: profile.id },
+      select: { formType: true, status: true },
+    });
+    const eligibilityStatus = evaluateAdmEligibility({
+      stage: "principal_approval",
+      forms,
+      parentMeetings: profile.parentMeetings,
+    });
+    const prev = profile.certificationDetails;
+    const prevDetails =
+      prev && typeof prev === "object" && !Array.isArray(prev)
+        ? (prev as Record<string, unknown>)
+        : {};
+    return tx.admLearnerProfile.update({
+      where: { id: profile.id },
+      data: {
+        stage: "principal_approval",
+        eligibilityStatus,
+        returnedAt: null,
+        returnReason: null,
+        certificationDetails: {
+          ...prevDetails,
+          recommendation,
+          certifiedBy: ctx.userId,
+          certifiedAt: new Date().toISOString(),
+        },
+      },
+    });
+  });
+  await writeAudit({
+    userId: ctx.userId,
+    actionType: "adm_edit",
+    sourceTable: "adm_learner_profiles",
+    sourceId: profile.id,
+    reason: "ADM certification created and endorsed to Principal",
+    oldValue: { stage: profile.stage },
+    newValue: { stage: "principal_approval" },
+  });
+
+  const studentName = profile.student?.user?.fullName ?? "your student";
+  const actor = await actorName(ctx.userId);
+  if (profile.referral && profile.referral.referredBy !== ctx.userId) {
+    void fanoutNotification({
+      userId: profile.referral.referredBy,
+      sourceTable: "referrals",
+      action: "status",
+      message: `${actor} certified the ADM case for ${studentName} and endorsed it to the Principal.`,
+      sourceId: profile.referral.id,
+    });
+  }
+  void fanoutToRole("adm_coordinator", {
+    sourceTable: "referrals",
+    action: "status",
+    message: `ADM case certified and endorsed to the Principal.`,
+    sourceId: profile.referral?.id ?? profile.id,
+    excludeUserId: ctx.userId,
+    messageFor: (r) =>
+      `${actor} certified the ADM case for ${studentName} and endorsed it to the Principal — sent to you, ${r.fullName}.`,
+  });
+  if (profile.referral?.consultReviewer === "nurse") {
+    void fanoutToRole("nurse", {
+      sourceTable: "referrals",
+      action: "status",
+      message: `The ADM case for ${studentName} was certified and endorsed to the Principal.`,
+      sourceId: profile.referral.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} certified the ADM case for ${studentName} — ${r.fullName}, the consultation you endorsed is now with the Principal.`,
+    });
+  }
+  void fanoutNotification({
+    userId: ctx.userId,
+    sourceTable: "adm_learner_profiles",
+    action: "certify_self",
+    message: `You certified ${studentName} and endorsed the case to the Principal — principal_approval.`,
+    sourceId: profile.id,
+  });
+  return updated;
+}
+
+export async function principalApprove(ctx: AdmContext, profileId: string) {
+  const profile = await prisma.admLearnerProfile.findUnique({
+    where: { id: profileId },
+    include: {
+      student: { select: { user: { select: { fullName: true } } } },
+      referral: { select: { id: true, referredBy: true, status: true, consultReviewer: true } },
+    },
+  });
+  if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
+  if (profile.referral && (profile.referral.status === "dismissed" || profile.referral.status === "resolved")) {
+    throw new AppError(409, "REFERRAL_CLOSED", "This referral was cancelled/resolved — meetings can no longer be booked");
+  }
+  if (profile.approvedBy) throw new AppError(409, "ALREADY_APPROVED", "Already signed by principal");
+  if (profile.eligibilityStatus !== "eligible")
+    throw new AppError(409, "NOT_CERTIFIED", "Case must pass Recommendation & Certification before School Head approval");
+  if (profile.stage !== "principal_approval")
+    throw new AppError(409, "NOT_AT_SCHOOL_HEAD", "Case must be at School Head (Principal) Approval before signing");
+  // Same rule as the adviser's OCForm-01: a case is never final-signed with a
+  // typed name alone. The principal must have a drawn signature on file.
+  const staff = await prisma.staffProfile.findUnique({
+    where: { userId: ctx.userId },
+    select: { signatureImageUrl: true },
+  });
+  if (!staff?.signatureImageUrl) {
+    throw new AppError(
+      409,
+      "NO_SIGNATURE",
+      "Save your signature first, then sign this case.",
+    );
+  }
+  const updated = await prisma.$transaction(async (tx) => {
+    const signed = await tx.admLearnerProfile.update({
+      where: { id: profile.id },
+      data: { approvedBy: ctx.userId, approvedAt: new Date(), stage: "enrollment_monitoring", returnedAt: null, returnReason: null },
+    });
+    // Signing files the Principal signage folder for this case (the principal
+    // desk lists it with the rest of the linked forms). The drawn signature is
+    // the folder's file so the signed paperwork carries the actual ink.
+    await tx.admForm.create({
+      data: {
+        admLearnerProfileId: profile.id,
+        formType: "PRINCIPAL_SIGNAGE",
+        title: "Principal signage",
+        fileUrl: staff.signatureImageUrl,
+        status: "verified",
+        uploadedBy: ctx.userId,
+        notes: `Signed by the Principal on ${new Date().toISOString().slice(0, 10)}`,
+      },
+    });
+    return signed;
+  });
+  await writeAudit({ userId: ctx.userId, actionType: "adm_edit", sourceTable: "adm_learner_profiles", sourceId: profile.id, reason: "Principal final signature", oldValue: { approvedBy: null }, newValue: { approvedBy: ctx.userId } });
+
+  // The signature is the attendance-exemption switch — refresh the learner's
+  // risk now so stale absences stop flagging them before the hourly sweep.
+  await recomputeRisk(updated.studentId, updated.termId).catch((err) =>
+    logger.warn({ err }, "risk recompute after ADM approval failed"),
+  );
+
+  const studentName = profile.student?.user?.fullName ?? "your student";
+  const actor = await actorName(ctx.userId);
+  if (profile.referral && profile.referral.referredBy !== ctx.userId) {
+    void fanoutNotification({
+      userId: profile.referral.referredBy,
+      sourceTable: "referrals",
+      action: "status",
+      message: `${actor} signed the ADM case for ${studentName}.`,
+      sourceId: profile.referral.id,
+    });
+  }
+
+  {
+    void fanoutToRole("adm_coordinator", {
+      sourceTable: "referrals",
+      action: "status",
+      message: `ADM case for ${studentName} signed by the Principal — ready for enrollment monitoring.`,
+      sourceId: profile.referral?.id ?? profile.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} signed the ADM case for ${studentName} — sent to you, ${r.fullName}.`,
+    });
+  }
+  if (profile.referral?.consultReviewer === "nurse") {
+    void fanoutToRole("nurse", {
+      sourceTable: "referrals",
+      action: "status",
+      message: `The ADM case for ${studentName} was signed by the Principal.`,
+      sourceId: profile.referral.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} signed the ADM case for ${studentName} — ${r.fullName}, the consultation you endorsed is now approved.`,
+    });
+  }
+  return updated;
+}
+
+export async function principalReturn(ctx: AdmContext, profileId: string, reason: string) {
+  const trimmedReason = reason.trim();
+  if (!trimmedReason) {
+    throw new AppError(400, "REASON_REQUIRED", "Enter a reason for the revision");
+  }
+  const profile = await prisma.admLearnerProfile.findUnique({
+    where: { id: profileId },
+    include: {
+      student: { select: { user: { select: { fullName: true } } } },
+      referral: { select: { id: true, consultReviewer: true } },
+    },
+  });
+  if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
+  if (profile.stage !== "principal_approval" && !profile.approvedBy) {
+    throw new AppError(409, "NOT_AT_SCHOOL_HEAD", "Only cases at School Head (Principal) Approval can be returned");
+  }
+  const updated = await prisma.$transaction(async (tx) => {
+    // Returning a signed case withdraws the signature, so the signage folder
+    // goes with it — re-signing files a fresh one. Unsigned cases have nothing
+    // to withdraw; the coordinator just gets the case back for revision.
+    await tx.admForm.deleteMany({
+      where: { admLearnerProfileId: profile.id, formType: "PRINCIPAL_SIGNAGE" },
+    });
+    return tx.admLearnerProfile.update({
+      where: { id: profile.id },
+      data: {
+        approvedBy: null,
+        approvedAt: null,
+        eligibilityStatus: "pending",
+        // Back to the coordinator's certification desk: they revise the case,
+        // re-certify (which re-evaluates eligibility), then re-endorse it.
+        stage: "certification",
+        returnedAt: new Date(),
+        returnReason: trimmedReason,
+      },
+    });
+  });
+  await writeAudit({
+    userId: ctx.userId,
+    actionType: "adm_edit",
+    sourceTable: "adm_learner_profiles",
+    sourceId: profile.id,
+    reason: `Principal returned profile to ADM Coordinator for revision: ${trimmedReason}`,
+    oldValue: { approvedBy: profile.approvedBy, eligibilityStatus: profile.eligibilityStatus },
+    newValue: { approvedBy: null, eligibilityStatus: "pending", returnReason: trimmedReason },
+  });
+
+  // Returning the case withdraws the signature, so the attendance exemption
+  // ends here too — recompute now instead of waiting for the hourly sweep.
+  await recomputeRisk(profile.studentId, profile.termId).catch((err) =>
+    logger.warn({ err }, "risk recompute after ADM return failed"),
+  );
+
+  const studentName = profile.student?.user?.fullName ?? "your student";
+  const actor = await actorName(ctx.userId);
+  if (profile.preparedBy !== ctx.userId) {
+    void fanoutNotification({
+      userId: profile.preparedBy,
+      sourceTable: "referrals",
+      action: "status",
+      message: `${actor} returned the ADM case for ${studentName} for revision: ${trimmedReason}`,
+      sourceId: profile.referralId,
+    });
+  }
+
+  void fanoutToRole("adm_coordinator", {
+    sourceTable: "referrals",
+    action: "status",
+    message: `ADM case returned by the Principal for revision: ${trimmedReason}`,
+    sourceId: profile.referralId,
+    excludeUserId: ctx.userId,
+    messageFor: (r) =>
+      `${actor} returned the ADM case for ${studentName} for revision — ${r.fullName}, reason: ${trimmedReason}`,
+  });
+  if (profile.referral?.consultReviewer === "nurse") {
+    void fanoutToRole("nurse", {
+      sourceTable: "referrals",
+      action: "status",
+      message: `The ADM case for ${studentName} was returned by the Principal for revision: ${trimmedReason}`,
+      sourceId: profile.referral?.id ?? profile.referralId ?? profile.id,
+      excludeUserId: ctx.userId,
+      messageFor: (r) =>
+        `${actor} returned the ADM case for ${studentName} for revision — ${r.fullName}, reason: ${trimmedReason}`,
+    });
+  }
+  return updated;
+}

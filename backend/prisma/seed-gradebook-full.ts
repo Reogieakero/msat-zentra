@@ -2,19 +2,6 @@ import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
-/**
- * Full per-subject gradebook seed for the active term.
- * - 3 components per subject (Written Work 20 / Performance Task 40 / Exam 40).
- * - 2 assessments per component, owned by the section-subject teacher.
- * - Scores for EVERY roster student in each section offering the subject,
- *   with a realistic curve (~15% below 75 to feed at-risk views).
- * - FinalGrade per student x subject, averaged from their own scores
- *   (coherent with the academics/risk/honor-roll pages); mixed lockStatus.
- * - Idempotent: component/assignment upserts on their uniques; assessments
- *   skipped by (componentId, title); grades skip existing pairs.
- * - Usage: `npx tsx prisma/seed-gradebook-full.ts [--dry-run]`
- */
-
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 const DRY = process.argv.includes("--dry-run");
 
@@ -24,7 +11,6 @@ const COMPONENTS = [
   { type: "EXAM" as const, weight: 40, titles: ["Midterm", "Finals"], max: 100 },
 ];
 
-// Deterministic pseudo-random per (student, assessment) so reruns are stable.
 function hash01(key: string): number {
   let h = 2166136261;
   for (let i = 0; i < key.length; i++) {
@@ -33,7 +19,6 @@ function hash01(key: string): number {
   }
   return ((h >>> 0) % 10000) / 10000;
 }
-// Curve: ~70% strong (82-99), ~15% mid (75-81), ~15% weak (60-74).
 function pctFor(studentKey: string, asmKey: string): number {
   const r = hash01(`${studentKey}::${asmKey}`);
   if (r < 0.7) return 82 + r * (17 / 0.7);
@@ -47,8 +32,6 @@ function inTermDate(seed: number): Date {
 }
 
 async function main() {
-  // Active term; prefer the term that already holds grade components so new
-  // rows join the existing gradebook instead of forking a second one.
   const compTerms = await prisma.gradeComponent.groupBy({ by: ["termId"], _count: { _all: true } });
   let termId: string;
   if (compTerms.length > 0) {
@@ -85,7 +68,6 @@ async function main() {
     );
     if (gradeSections.length === 0) continue;
 
-    // 1. Components (upsert on unique).
     const compIds: { id: string; type: string; max: number }[] = [];
     let missingComps = 0;
     for (const c of COMPONENTS) {
@@ -122,7 +104,6 @@ async function main() {
       continue;
     }
 
-    // 2. Teacher assignment per section (upsert on unique), round-robin owner.
     for (const [gi, sec] of gradeSections.entries()) {
       const owner = teachers[(si + gi) % teachers.length];
       await prisma.teacherSubjectAssignment.upsert({
@@ -139,7 +120,6 @@ async function main() {
       });
     }
 
-    // 3. Assessments: 2 per component (skip existing titles).
     const existingTitles = new Set(
       (
         await prisma.assessment.findMany({
@@ -163,8 +143,6 @@ async function main() {
         });
       }
     }
-    // Short-id collisions across subjects are possible after the 60-char cut;
-    // fall back to uuid on conflict by inserting one by one ignoring dupes.
     const asmIdByKey = new Map<string, { id: string; max: number }>();
     for (const [ai, a] of asmRows.entries()) {
       const id = `${a.id}_${ai}`.slice(-60);
@@ -186,7 +164,6 @@ async function main() {
         stats.skipped++;
       }
     }
-    // Include pre-existing assessments of these components.
     const allAsm = await prisma.assessment.findMany({
       where: { gradeComponentId: { in: compIds.map((c) => c.id) } },
       select: { id: true, maxScore: true, gradeComponentId: true, title: true },
@@ -197,7 +174,6 @@ async function main() {
       }
     }
 
-    // 4. Scores for every roster student in each section.
     const gradeBatch: {
       id: string;
       assessmentId: string;
@@ -205,7 +181,6 @@ async function main() {
       rawScore: number;
       percentageScore: number;
     }[] = [];
-    // Per (student, subject) accumulator for coherent finals.
     const subjScores = new Map<string, number[]>();
     for (const sec of gradeSections) {
       for (const r of sec.rosterEntries) {
@@ -216,7 +191,6 @@ async function main() {
             if (!asm) continue;
             const pct = Math.round(pctFor(r.id, asm.id) * 10) / 10;
             gradeBatch.push({
-              // Subject-scoped id; roster SUFFIX (topup20_* ids share a prefix).
               id: `gb_g_${subj.code}_${c.type}_${title.replace(/\s/g, "")}_${r.id.slice(-8)}`.slice(0, 60),
               assessmentId: asm.id,
               rosterId: r.id,
@@ -230,7 +204,6 @@ async function main() {
         }
       }
     }
-    // Insert in chunks; skip pairs that already exist.
     const CHUNK = 1000;
     for (let i = 0; i < gradeBatch.length; i += CHUNK) {
       const chunk = gradeBatch.slice(i, i + CHUNK);
@@ -242,7 +215,6 @@ async function main() {
       });
       const taken = new Set(existing.map((e) => `${e.assessmentId}::${e.rosterId}`));
       const fresh = chunk.filter((g) => !taken.has(`${g.assessmentId}::${g.rosterId}`));
-      // De-dupe ids inside the chunk (60-char cut can collide).
       const seen = new Set<string>();
       const deduped = fresh.filter((g) => {
         if (seen.has(g.id)) return false;
@@ -250,7 +222,6 @@ async function main() {
         return true;
       });
       if (deduped.length > 0) {
-        // skipDuplicates guards cross-chunk id collisions from short ids.
         const res = await prisma.studentGrade.createMany({ data: deduped, skipDuplicates: true });
         stats.grades += res.count;
         stats.skipped += chunk.length - res.count;
@@ -259,7 +230,6 @@ async function main() {
       }
     }
 
-    // 5. FinalGrade per student x subject from their own scores.
     const finalBatch = [];
     let fi = 0;
     for (const [rosterId, pcts] of subjScores) {

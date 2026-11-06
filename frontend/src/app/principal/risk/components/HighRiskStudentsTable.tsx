@@ -4,7 +4,6 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   flexRender,
@@ -13,38 +12,28 @@ import {
 } from "@tanstack/react-table";
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  X,
+  ShieldCheck,
 } from "lucide-react";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
-import { useGradeMode } from "../../grade-mode-context";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
+import { riskTone } from "@/lib/labels/status-tone";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
   Table,
-  TableHeader,
   TableBody,
   TableRow,
-  TableHead,
   TableCell,
 } from "@/components/ui/table";
-import type { BackendStudent, RiskFactor } from "../students/api";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import type { BackendStudent, RiskFactor } from "@/services/principal/riskStudents.types";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import styles from "./HighRiskStudentsTable.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 const FACTOR_LABEL: Record<RiskFactor, string> = {
   Academic: "Academic",
@@ -52,106 +41,68 @@ const FACTOR_LABEL: Record<RiskFactor, string> = {
   Behavioral: "Behavioral",
 };
 
-const gradeNum = (name: string) => {
-  const m = String(name).match(/(\d+)/);
-  if (!m) return 0;
-  const n = parseInt(m[1], 10);
-  return Number.isNaN(n) ? 0 : n;
+// Amber = academic, green = attendance, blue = behavioral (teacher overview
+// palette), matching the shared Pill tones.
+const FACTOR_TONE: Record<RiskFactor, "amber" | "green" | "blue"> = {
+  Academic: "amber",
+  Attendance: "green",
+  Behavioral: "blue",
 };
 
-const PAGE_SIZE = 15;
+
 
 export function HighRiskStudentsTable() {
-  const { gradeMode } = useGradeMode();
   const [query, setQuery] = usePersistentState<string>(
     "zentra.risk.highRisk.search",
     ""
   );
-  const [sectionFilter, setSectionFilter] = usePersistentState<string>(
-    "zentra.risk.highRisk.section",
-    "all"
-  );
-  const [factorFilter, setFactorFilter] = usePersistentState<"all" | RiskFactor>(
-    "zentra.risk.highRisk.factor",
-    "all"
-  );
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [pageIndex, setPageIndex] = React.useState(0);
+  const [page, setPage] = React.useState(1);
+  const debouncedQuery = useDebouncedValue(query, 300);
 
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
-  const { data, isPending } = useQuery({
-    queryKey: ["risk-students", termId, gradeMode],
-    queryFn: async () => {
+  const schoolYearId = activeTerm?.schoolYearId ?? null;
+  const { data, isPending, isError, refetch } = useQuery({
+    queryKey: ["risk-students", "high", termId, schoolYearId, page, debouncedQuery],
+    queryFn: async ({ signal }) => {
+      const params: Record<string, string | number> = {
+        page,
+        pageSize: PAGE_SIZE,
+        riskLevel: "High",
+      };
+      if (debouncedQuery.trim()) params.q = debouncedQuery.trim();
       const res = await apiClient.get<{
         students: BackendStudent[];
         total: number;
-      }>("/api/risk/students", {
-        params: { pageSize: 50, gradeMode },
-      });
+        page: number;
+      }>("/api/risk/students", { params, signal });
       return res.data;
     },
-    staleTime: 60_000,
+    // Keep visited pages cached: back/forward navigation within the
+    // stale window serves instantly with no skeleton or refetch.
+    staleTime: 120_000,
+    gcTime: 600_000,
     refetchOnWindowFocus: false,
   });
 
-  const highRisk = React.useMemo(
-    () => (data?.students ?? []).filter((s) => s.riskLevel === "High"),
-    [data]
-  );
+  const rows = React.useMemo(() => data?.students ?? [], [data]);
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
 
-  const sections = React.useMemo(
-    () =>
-      Array.from(new Set(highRisk.map((s) => s.section)))
-        .filter((s) => s !== "—")
-        .sort((a, b) => gradeNum(a) - gradeNum(b) || a.localeCompare(b)),
-    [highRisk]
-  );
-
-  const gradeGroups = React.useMemo(() => {
-    const map = new Map<number, string[]>();
-    for (const s of sections) {
-      const g = gradeNum(s);
-      if (!map.has(g)) map.set(g, []);
-      map.get(g)!.push(s);
+  // If the result set shrinks under the current page (e.g. on page 3 of 45,
+  // then search to 10), step back to the last valid page so the requested
+  // page, the footer label, and the rows always agree.
+  React.useEffect(() => {
+    if (!isPending && totalPages >= 1 && page > totalPages) {
+      setPage(totalPages);
     }
-    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
-  }, [sections]);
-
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return highRisk.filter((s) => {
-      const matchesQuery =
-        !q ||
-        s.name.toLowerCase().includes(q) ||
-        s.lrn.toLowerCase().includes(q);
-      const matchesSection = sectionFilter === "all" || s.section === sectionFilter;
-      const matchesFactor = factorFilter === "all" || s.factors[factorFilter];
-      return matchesQuery && matchesSection && matchesFactor;
-    });
-  }, [highRisk, query, sectionFilter, factorFilter]);
-
-  const hasActiveFilters = sectionFilter !== "all" || factorFilter !== "all";
+  }, [isPending, totalPages, page]);
 
   const applySearch = (value: string) => {
     setQuery(value);
-    setPageIndex(0);
-  };
-
-  const applySection = (value: string) => {
-    setSectionFilter(value);
-    setPageIndex(0);
-  };
-
-  const applyFactor = (value: "all" | RiskFactor) => {
-    setFactorFilter(value);
-    setPageIndex(0);
-  };
-
-  const clearFilters = () => {
-    setSectionFilter("all");
-    setFactorFilter("all");
-    setPageIndex(0);
+    setPage(1);
   };
 
   const columns = React.useMemo<ColumnDef<BackendStudent>[]>(
@@ -165,8 +116,18 @@ export function HighRiskStudentsTable() {
         maxSize: 220,
         cell: ({ row }) => (
           <div className={styles.studentCell}>
-            <span className={styles.studentName}>{row.original.name}</span>
-            <span className={styles.studentLrn}>{row.original.lrn}</span>
+            <StudentMascot
+              name={row.original.name}
+              seed={row.original.lrn}
+              character={row.original.mascot ?? undefined}
+              size={30}
+            />
+            <div className={styles.studentMeta}>
+              <span className={styles.studentName}>{row.original.name}</span>
+              <Pill tone="neutral" label="LRN" className="w-fit">
+                {row.original.lrn}
+              </Pill>
+            </div>
           </div>
         ),
       },
@@ -178,7 +139,9 @@ export function HighRiskStudentsTable() {
         minSize: 160,
         maxSize: 160,
         cell: ({ row }) => (
-          <span className={styles.section}>{row.original.section}</span>
+          <Pill tone="amber" label="Section">
+            {row.original.section}
+          </Pill>
         ),
       },
       {
@@ -189,7 +152,9 @@ export function HighRiskStudentsTable() {
         minSize: 130,
         maxSize: 130,
         cell: ({ row }) => (
-          <Badge variant="red">{row.original.riskLevel}</Badge>
+          <Pill tone={riskTone(row.original.riskLevel)} label="Risk level">
+            {row.original.riskLevel}
+          </Pill>
         ),
       },
       {
@@ -205,16 +170,17 @@ export function HighRiskStudentsTable() {
         enableSorting: false,
         cell: ({ row }) => (
           <span className={styles.factors}>
-            {(Object.keys(row.original.factors) as RiskFactor[]).map((f) => (
-              <span
-                key={f}
-                className={`${styles.factorChip} ${
-                  row.original.factors[f] ? styles.factorOn : styles.factorOff
-                }`}
-              >
-                {FACTOR_LABEL[f]}
-              </span>
-            ))}
+            {(Object.keys(row.original.factors) as RiskFactor[])
+              .filter((f) => row.original.factors[f])
+              .map((f) => (
+                <Pill
+                  key={f}
+                  tone={FACTOR_TONE[f]}
+                  label={`${FACTOR_LABEL[f]} factor`}
+                >
+                  {FACTOR_LABEL[f]}
+                </Pill>
+              ))}
           </span>
         ),
       },
@@ -223,182 +189,89 @@ export function HighRiskStudentsTable() {
   );
 
   const table = useReactTable({
-    data: filtered,
+    data: rows,
     columns,
     getRowId: (row) => row.studentId,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    initialState: { pagination: { pageSize: PAGE_SIZE } },
-    state: { sorting, pagination: { pageIndex, pageSize: PAGE_SIZE } },
-    onPaginationChange: (updater) => {
-      const next =
-        typeof updater === "function"
-          ? updater({ pageIndex, pageSize: PAGE_SIZE })
-          : updater;
-      setPageIndex(next.pageIndex);
-    },
+    state: { sorting },
   });
 
-  const pageCount = table.getPageCount();
-  const safePageIndex = Math.min(pageIndex, Math.max(0, pageCount - 1));
-  const rows = table.getRowModel().rows;
-  const start = filtered.length === 0 ? 0 : safePageIndex * PAGE_SIZE + 1;
-  const end = Math.min((safePageIndex + 1) * PAGE_SIZE, filtered.length);
+  const tableRows = table.getRowModel().rows;
 
   return (
-    <div className={`${assign.card} ${styles.card}`}>
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h3 className="text-sm font-semibold">High Risk Students</h3>
-          <p className="text-sm text-muted-foreground">
-            Students flagged as high risk that need priority review —{" "}
-            {filtered.length} student{filtered.length === 1 ? "" : "s"}.
-          </p>
-        </div>
-        <div className={styles.headerActions}>
+    <KanbanBoard
+      title="High Risk Students"
+      icon={<ShieldCheck size={14} aria-hidden="true" />}
+      description={
+        <>
+          Students flagged as high risk that need priority review —{" "}
+          {total} student{total === 1 ? "" : "s"}.
+        </>
+      }
+      actions={
+        <>
+          <Pill tone="green" label="Data source">
+            Adviser-shared
+          </Pill>
           <div className={styles.searchWrap}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
-              className={styles.search}
+              className={`${styles.search} rounded-[16px]`}
               placeholder="Search name or LRN…"
               value={query}
               onChange={(e) => applySearch(e.target.value)}
               aria-label="Search high-risk students"
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`${styles.filterBtn} ${
-                  sectionFilter !== "all" ? styles.filterActive : ""
-                }`}
-              >
-                Section
-                {sectionFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={sectionFilter === "all"}
-                onCheckedChange={() => applySection("all")}
-              >
-                All sections
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {gradeGroups.length === 0 ? (
-                <DropdownMenuItem disabled>No sections</DropdownMenuItem>
-              ) : (
-                gradeGroups.map(([grade, secs]) => (
-                  <React.Fragment key={grade}>
-                    <DropdownMenuLabel>Grade {grade}</DropdownMenuLabel>
-                    {secs.map((s) => (
-                      <DropdownMenuCheckboxItem
-                        key={s}
-                        checked={sectionFilter === s}
-                        onCheckedChange={() => applySection(s)}
-                      >
-                        {s}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </React.Fragment>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`${styles.filterBtn} ${
-                  factorFilter !== "all" ? styles.filterActive : ""
-                }`}
-              >
-                Factor
-                {factorFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={factorFilter === "all"}
-                onCheckedChange={() => applyFactor("all")}
-              >
-                All factors
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {(Object.keys(FACTOR_LABEL) as RiskFactor[]).map((f) => (
-                <DropdownMenuCheckboxItem
-                  key={f}
-                  checked={factorFilter === f}
-                  onCheckedChange={() => applyFactor(f)}
-                >
-                  {FACTOR_LABEL[f]}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={styles.clearBtn}
-              onClick={clearFilters}
-            >
-              <X aria-hidden />
-              Clear
-            </Button>
-          )}
-        </div>
-      </div>
-
+        </>
+      }
+      footer={
+        <Pagination
+          currentPage={safePage}
+          totalItems={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      }
+      className={styles.card}
+    >
       <div className={`${styles.content} relative`}>
+        {isError && !isPending && rows.length === 0 ? (
+          <div className={styles.empty} role="alert">
+            <p>Couldn&apos;t load this page of high-risk students.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : !isPending && total === 0 && !debouncedQuery.trim() ? (
+          <PrincipalEmptyState
+            icon={ShieldCheck}
+            title="No high-risk students"
+            hint="No high-risk students in the active term. Flagged students will appear here once detected."
+          />
+        ) : (
         <div className="overflow-x-auto rounded-md border">
           <Table className="w-full table-fixed">
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      style={{ width: header.getSize() }}
-                      onClick={header.column.getToggleSortingHandler()}
-                      className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
             <TableBody>
               {isPending ? (
                 <SkeletonRows />
-              ) : rows.length === 0 ? (
+              ) : tableRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className={styles.empty}>
-                    {query.trim()
-                      ? `No high-risk students match “${query}”.`
-                      : hasActiveFilters
-                        ? "No high-risk students match the selected filters."
-                        : "No high-risk students."}
+                    {debouncedQuery.trim()
+                      ? `No high-risk students match “${debouncedQuery}”.`
+                      : "No high-risk students."}
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((row) => (
-                  <TableRow key={row.id}>
+                tableRows.map((row, index) => (
+                  <TableRow
+                    key={row.id}
+                    className={styles.rowIn}
+                    style={{ animationDelay: `${60 + Math.min(index, 11) * 45}ms` }}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
@@ -414,34 +287,9 @@ export function HighRiskStudentsTable() {
             </TableBody>
           </Table>
         </div>
+        )}
       </div>
-
-      <div className={`${styles.footer} relative`}>
-        <span className={styles.footerInfo}>
-          {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
-        </span>
-        <div className={styles.footerActions}>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!table.getCanPreviousPage() || filtered.length === 0}
-            onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-          >
-            <ChevronLeft aria-hidden />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!table.getCanNextPage() || filtered.length === 0}
-            onClick={() => setPageIndex((p) => p + 1)}
-          >
-            Next
-            <ChevronRight aria-hidden />
-          </Button>
-        </div>
-      </div>
-    </div>
+    </KanbanBoard>
   );
 }
 

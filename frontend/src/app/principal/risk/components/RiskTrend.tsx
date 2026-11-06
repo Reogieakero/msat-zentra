@@ -2,23 +2,9 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
-import { ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { TrendingUp } from "lucide-react";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import {
   ChartContainer,
   ChartTooltip,
@@ -30,34 +16,27 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useTerm } from "@/lib/term/TermContext";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import type { RiskTrendData } from "../riskBoard";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
+import type { RiskTrendData } from "@/services/principal/risk.types";
 import styles from "./RiskTrend.module.css";
 
-type SchoolYearOption = {
-  id: string;
-  name: string;
-  isActive: boolean;
-  isCurrent: boolean;
-  terms: { id: string; termNumber: number }[];
-};
-
-const LEVEL_FILL = {
-  high: "var(--primary)",
-  moderate: "color-mix(in oklch, var(--primary) 60%, var(--card))",
-  low: "color-mix(in oklch, var(--primary) 30%, var(--card))",
+const AMBER = {
+  high: "#b45309",
+  moderate: "#f59e0b",
+  low: "#fcd34d",
 } as const;
 
 const chartConfig = {
-  high: { label: "High risk", color: LEVEL_FILL.high },
-  moderate: { label: "Moderate", color: LEVEL_FILL.moderate },
-  low: { label: "Low risk", color: LEVEL_FILL.low },
+  high: { label: "High risk", color: AMBER.high },
+  moderate: { label: "Moderate", color: AMBER.moderate },
+  low: { label: "Low risk", color: AMBER.low },
 } satisfies ChartConfig;
 
 const SERIES = [
-  { key: "high", color: LEVEL_FILL.high },
-  { key: "moderate", color: LEVEL_FILL.moderate },
-  { key: "low", color: LEVEL_FILL.low },
+  { key: "low", label: "Low risk", color: AMBER.low },
+  { key: "moderate", label: "Moderate", color: AMBER.moderate },
+  { key: "high", label: "High risk", color: AMBER.high },
 ] as const;
 
 const RANGES = [
@@ -68,101 +47,26 @@ const RANGES = [
 
 type RangeKey = (typeof RANGES)[number]["value"];
 
-async function fetchSchools(): Promise<SchoolYearOption[]> {
-  const res = await apiClient.get<SchoolYearOption[]>("/api/risk/school-years");
-  return res.data;
-}
-
 export function RiskTrend() {
-  const gradId = React.useId().replace(/:/g, "");
-  // Session scope (Login → select → active term). The chart defaults to it;
-  // the dropdowns below are optional analytical browsing, never required.
-  const { activeTerm } = useTerm();
+  // Server-scoped: the trend follows the active school year/term. Daily vs
+  // per-term rows are inferred from the response, not from client state.
+  const { activeSchoolYear } = useTerm();
 
-  const [yearChoice, setYearChoice] = usePersistentState<string>(
-    "zentra.risk.trend.year",
-    "auto"
-  );
-  const [termChoice, setTermChoice] = usePersistentState<string>(
-    "zentra.risk.trend.term",
-    "auto"
-  );
   const [range, setRange] = usePersistentState<RangeKey>(
     "zentra.risk.trend.range",
     "all"
   );
 
-  // A scope switch (top-bar badge) resets the view back to the new scope.
-  const scopeKey = activeTerm ? `${activeTerm.schoolYearId}:${activeTerm.termId}` : "none";
-  const [prevScopeKey, setPrevScopeKey] = React.useState(scopeKey);
-  if (prevScopeKey !== scopeKey) {
-    setPrevScopeKey(scopeKey);
-    setYearChoice("auto");
-    setTermChoice("auto");
-  }
-
-  const { data: schoolYears = [] } = useQuery({
-    queryKey: ["risk-school-years"],
-    queryFn: fetchSchools,
-  });
-
-  const scopeYear = activeTerm
-    ? (schoolYears.find((y) => y.id === activeTerm.schoolYearId) ?? null)
-    : null;
-  const activeYear =
-    scopeYear ??
-    schoolYears.find((y) => y.isCurrent) ??
-    schoolYears.find((y) => y.isActive) ??
-    schoolYears[0] ??
-    null;
-
-  const chosenYear =
-    yearChoice === "auto"
-      ? activeYear
-      : (schoolYears.find((y) => y.id === yearChoice) ?? activeYear);
-
-  const terms = chosenYear?.terms ?? [];
-  const scopeTerm =
-    activeTerm && chosenYear?.id === activeTerm.schoolYearId
-      ? (terms.find((t) => t.id === activeTerm.termId) ?? null)
-      : null;
-  const chosenTerm =
-    termChoice === "all"
-      ? null
-      : termChoice === "auto"
-        ? (scopeTerm ?? chosenYear?.terms[0] ?? null)
-        : (terms.find((t) => t.id === termChoice) ?? chosenYear?.terms[0] ?? null);
-
-  const effectiveTermId = chosenTerm?.id;
-
   const { data, isPending } = useQuery({
-    // Key on the *resolved* ids (not the raw "auto" choices) so the query
-    // waits until a year/term is actually resolved and refires when the
-    // effective selection changes.
-    queryKey: ["risk-trend", chosenYear?.id, effectiveTermId ?? "none"],
+    queryKey: ["risk-trend"],
     queryFn: async () => {
-      const params: Record<string, string> = {};
-      if (chosenYear) params.schoolYearId = chosenYear.id;
-      if (effectiveTermId) params.termId = effectiveTermId;
-      const res = await apiClient.get<RiskTrendData>("/api/risk/trend", { params });
+      const res = await apiClient.get<RiskTrendData>("/api/risk/trend");
       return res.data;
     },
-    enabled: chosenYear !== null,
   });
 
-  const isDaily = effectiveTermId !== undefined;
-
-  const onYearChange = (value: string) => {
-    setYearChoice(value);
-    const year =
-      value === "auto"
-        ? activeYear
-        : (schoolYears.find((y) => y.id === value) ?? activeYear);
-    const first = year?.terms[0];
-    setTermChoice(first ? first.id : value === "auto" ? "auto" : "all");
-  };
-
   const trend = data?.trend ?? [];
+  const isDaily = trend.some((t) => Boolean(t.date));
   let chartData = trend.map((t) => ({
     date: t.date,
     term: t.term,
@@ -188,213 +92,113 @@ export function RiskTrend() {
 
   const hasData = chartData.length > 0;
 
+  const latest = chartData[chartData.length - 1];
+  const latestTotal = latest ? latest.high + latest.moderate + latest.low : 0;
+  const latestHighShare =
+    latest && latestTotal > 0 ? Math.round((latest.high / latestTotal) * 100) : 0;
+
+  const rangeControl = isDaily ? (
+    <div className={styles.rangeGroup} role="group" aria-label="Trend range">
+      {RANGES.map((r) => (
+        <button
+          key={r.value}
+          type="button"
+          className={`${styles.rangeBtn} ${range === r.value ? styles.rangeActive : ""}`}
+          aria-pressed={range === r.value}
+          onClick={() => setRange(r.value)}
+        >
+          {r.label}
+        </button>
+      ))}
+    </div>
+  ) : undefined;
+
   return (
-    <section className={styles.section}>
-      <div className={styles.head}>
-        <div className={styles.headText}>
-          <h2 className={styles.title}>Risk Trend</h2>
-          <p className={styles.subtitle}>
-            {isDaily
-              ? "Total for the selected term"
-              : "School-wide risk trend by term"}
-          </p>
-        </div>
-        <div className={styles.filters}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`${styles.filterBtn} ${
-                  yearChoice !== "auto" ? styles.filterActive : ""
-                }`}
-              >
-                School Year
-                {yearChoice !== "auto" && (
-                  <span className={styles.filterDot} aria-hidden />
-                )}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={yearChoice === "auto"}
-                onCheckedChange={() => onYearChange("auto")}
-              >
-                All (active scope)
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {schoolYears.length === 0 ? (
-                <DropdownMenuItem disabled>No school years</DropdownMenuItem>
-              ) : (
-                schoolYears.map((y) => (
-                  <DropdownMenuCheckboxItem
-                    key={y.id}
-                    checked={yearChoice === y.id}
-                    onCheckedChange={() => onYearChange(y.id)}
-                  >
-                    {y.name}
-                    {y.isActive ? " • Active" : ""}
-                  </DropdownMenuCheckboxItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <KanbanBoard
+      title="Risk History"
+      icon={<TrendingUp size={14} aria-hidden="true" />}
+      description={
+        isDaily
+          ? "Daily flagged learners shared by their advisers for the active term."
+          : "Flagged learners shared by their advisers, aggregated per term."
+      }
+      actions={
+        <>
+          <Pill tone="green" label="Data source">
+            Adviser-shared
+          </Pill>
+          {rangeControl}
+        </>
+      }
+    >
+      {!isPending && !hasData ? (
+        <PrincipalEmptyState
+          icon={TrendingUp}
+          title="No shared trend data yet"
+          hint="No risk history is available for adviser-shared learners in the active school year and term."
+        />
+      ) : isPending ? (
+        <div className={styles.skeleton} aria-hidden="true" />
+      ) : (
+        <>
+          <ChartContainer
+            config={chartConfig}
+            className={styles.chartContainer}
+            style={{ height: 300, width: "100%", aspectRatio: "auto" }}
+          >
+            <BarChart
+              accessibilityLayer
+              data={chartData}
+              margin={{ top: 8, right: 8, bottom: 4, left: 0 }}
+            >
+              <CartesianGrid vertical={false} stroke="var(--border)" />
+              <XAxis
+                dataKey="term"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={isDaily ? 24 : 0}
+                interval={isDaily ? "preserveStartEnd" : 0}
+              />
+              <YAxis
+                allowDecimals={false}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              {SERIES.map((s, index) => (
+                <Bar
+                  key={s.key}
+                  dataKey={s.key}
+                  name={s.label}
+                  stackId="risk"
+                  fill={`var(--color-${s.key})`}
+                  radius={s.key === "high" ? [4, 4, 0, 0] : undefined}
+                  isAnimationActive
+                  animationBegin={180 + index * 160}
+                  animationDuration={1000}
+                  animationEasing="ease-out"
+                />
+              ))}
+              <ChartLegend
+                verticalAlign="top"
+                align="right"
+                content={<ChartLegendContent />}
+              />
+            </BarChart>
+          </ChartContainer>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={styles.filterBtn}
-                disabled={terms.length === 0}
-              >
-                Term
-                {effectiveTermId !== undefined && (
-                  <span className={styles.filterDot} aria-hidden />
-                )}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={termChoice === "all"}
-                onCheckedChange={() => setTermChoice("all")}
-              >
-                All terms
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {terms.length === 0 ? (
-                <DropdownMenuItem disabled>No terms</DropdownMenuItem>
-              ) : (
-                terms.map((t) => (
-                  <DropdownMenuCheckboxItem
-                    key={t.id}
-                    checked={chosenTerm?.id === t.id}
-                    onCheckedChange={() => setTermChoice(t.id)}
-                  >
-                    Term {t.termNumber}
-                  </DropdownMenuCheckboxItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      <div className={`${assign.card} ${styles.card}`}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className={`${styles.cardHeader} relative`}>
-          <p className={styles.cardDesc}>
-            {isDaily
-              ? "Daily risk levels for the selected term"
-              : "Risk levels aggregated per term"}
-          </p>
-          <div className={styles.cardActions}>
-            {isDaily && (
-              <div className={styles.rangeGroup}>
-                {RANGES.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    className={`${styles.rangeBtn} ${
-                      range === r.value ? styles.rangeActive : ""
-                    }`}
-                    onClick={() => setRange(r.value)}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="relative">
-          {isPending ? (
-            <div className={styles.skeleton} />
-          ) : !hasData ? (
-            <p className={styles.empty}>
-              No risk trend data available for the selected school year and
-              term.
+          {latest ? (
+            <p className={styles.insight}>
+              Latest snapshot: <strong>{latestTotal}</strong> learners flagged,{" "}
+              <strong>{latest.high}</strong> high risk (
+              {latestHighShare}%).{" "}
+              {activeSchoolYear ? `Scoped to ${activeSchoolYear.name}.` : ""}
             </p>
-          ) : (
-            <div className={styles.chartBox}>
-              <ChartContainer
-                config={chartConfig}
-                className={styles.chartContainer}
-              >
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 8, right: 8, bottom: 8, left: 4 }}
-                >
-                  <defs>
-                      {SERIES.map((s) => (
-                      <linearGradient
-                        key={s.key}
-                        id={`${gradId}-${s.key}`}
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          style={{ stopColor: s.color }}
-                          stopOpacity={0.35}
-                        />
-                        <stop
-                          offset="95%"
-                          style={{ stopColor: s.color }}
-                          stopOpacity={0.02}
-                        />
-                      </linearGradient>
-                    ))}
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="var(--border)"
-                  />
-                  <XAxis
-                    dataKey="term"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    minTickGap={isDaily ? 24 : 0}
-                    interval={isDaily ? "preserveStartEnd" : 0}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tickLine={false}
-                    axisLine={false}
-                    width={28}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  {SERIES.map((s) => (
-                    <Area
-                      key={s.key}
-                      dataKey={s.key}
-                      name={s.key}
-                      type="monotone"
-                      strokeWidth={2}
-                      style={{ stroke: s.color }}
-                      fill={`url(#${gradId}-${s.key})`}
-                      dot={false}
-                    />
-                  ))}
-                  <ChartLegend
-                    verticalAlign="top"
-                    align="right"
-                    content={<ChartLegendContent />}
-                  />
-                </AreaChart>
-              </ChartContainer>
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
+          ) : null}
+        </>
+      )}
+    </KanbanBoard>
   );
 }

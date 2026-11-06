@@ -71,6 +71,13 @@ enum ComponentType {
   EXAM
 }
 
+/// Which learners an assessment counts for. ADM learners with a signed case
+/// are graded only from `adm` assessments; everyone else from `regular`.
+enum AssessmentAudience {
+  regular
+  adm
+}
+
 enum LockStatus {
   unlocked
   locked
@@ -155,6 +162,7 @@ enum AdmFormType {
   CERTIFICATION
   MINUTES_OF_MEETING
   HV_FORM
+  PRINCIPAL_SIGNAGE
 }
 
 
@@ -168,6 +176,11 @@ enum Sf10Status {
   attach
   available
   released
+}
+
+enum Sf10Desk {
+  registrar
+  record_keeper
 }
 
 enum ActionType {
@@ -264,6 +277,8 @@ model User {
   admModules          AdmModule[]
   admDevicesIssued    AdmDevice[]            @relation("DeviceIssuedBy")
   admFormsUploaded    AdmForm[]
+  advisoryModules     AdvisoryModule[]       @relation("AdvisoryModuleCreator")
+  advisoryModuleSubmissions AdvisoryModuleSubmission[] @relation("AdvisoryModuleRecorder")
   sf10Records         Sf10Record[]           @relation("Sf10VerifiedBy")
   sf10Validated       Sf10Record[]           @relation("Sf10ValidatedBy")
   sf10Versions        Sf10RecordVersion[]
@@ -282,6 +297,8 @@ model User {
   gradeFlagsRaised    GradeFlag[]            @relation("FlagRaisedBy")
   gradeFlagsOwned     GradeFlag[]            @relation("FlagOwner")
   gradeFlagsResolved  GradeFlag[]            @relation("FlagResolvedBy")
+  // Account approval + role-banded roster reads filter on (role, status).
+  @@index([role, status])
 }
 
 model StudentProfile {
@@ -293,8 +310,12 @@ model StudentProfile {
   gender       String?
   address      String?
   photoUrl     String?
+  mascot       String?
   riskCount    Int        @default(0)
   riskLevel    RiskLevel  @default(Low)
+  academicFlag Boolean @default(false)
+  attendanceFlag Boolean @default(false)
+  behavioralFlag Boolean @default(false)
   createdAt    DateTime   @default(now())
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -312,6 +333,7 @@ model StudentProfile {
   riskSnapshots     RiskSnapshot[]
   sf10Records       Sf10Record[]
   gradeFlags        GradeFlag[]
+  advisoryModuleSubmissions AdvisoryModuleSubmission[]
 }
 
 model ParentProfile {
@@ -339,19 +361,31 @@ model StaffProfile {
   employeeId   String  @unique
   department   String?
   isAdviser    Boolean @default(false)
-  // Master Teacher designation (grades 7–10 only). Self-declared by the
+  // Master Teacher designation (grades 7–10 seat). Self-declared by the
   // teacher from Settings; the update endpoint enforces the grade band.
   isMasterTeacher Boolean @default(false)
+  // Senior High Master Teacher seat (grades 11–12). Independent from the
+  // 7–10 seat — one holder per band, and a teacher may hold both.
+  isMasterTeacherSenior Boolean @default(false)
   handledGradeLevels GradeLevel[]
   // The teacher's one reusable drawn signature (PNG data URL), stamped onto
   // records via POST /api/anecdotal/:id/apply-signature.
   signatureImageUrl String?
   // Profile photo (PNG/JPEG data URL) shown across the teacher workspace.
   photoUrl String?
+  // Profile mascot (StudentMascot pool, e.g. "cat") picked from Settings.
+  // Takes precedence over photoUrl when set.
+  mascot String?
   // Workspace palette (hex, e.g. "#7c3aed") applied site-wide to cards,
   // buttons, and accents for this teacher. Null = theme default.
   primaryColor String?
   secondaryColor String?
+  // Student-data sharing consent (teacher Settings → Connect/Sync).
+  // OFF (false, default) = only the login teacher sees grades/attendance
+  // they encode. ON (true) = student's adviser, guidance, and allowed
+  // roles see in real-time. Principal/registrar/record_keeper bypass.
+  shareStudentData Boolean @default(false)
+  shareUpdatedAt DateTime?
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -422,6 +456,8 @@ model Section {
   gradeFlags GradeFlag[]
   timetableEntries SectionTimetableEntry[]
   rosterEntries StudentRoster[]
+  assessments Assessment[]
+  advisoryModules AdvisoryModule[]
   sf10AccessRequests AdviserSf10AccessRequest[]
   @@index([schoolYearId])
   @@index([gradeLevel])
@@ -439,6 +475,12 @@ model StudentRoster {
   gradeLevel   GradeLevel
   sectionId    String
   schoolYearId String
+  mascot       String?
+  riskCount    Int        @default(0)
+  riskLevel    RiskLevel  @default(Low)
+  academicFlag Boolean @default(false)
+  attendanceFlag Boolean @default(false)
+  behavioralFlag Boolean @default(false)
   section      Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
   attendanceRecords AttendanceRecord[]
@@ -448,10 +490,12 @@ model StudentRoster {
   finalGrades FinalGrade[]
   riskSnapshots RiskSnapshot[]
   interventions Intervention[]
+  advisoryModuleSubmissions AdvisoryModuleSubmission[]
   @@unique([lrn, schoolYearId])
   @@index([gradeLevel])
   @@index([sectionId])
   @@index([schoolYearId])
+  @@index([schoolYearId, riskLevel])
 }
 
 enum SubjectCategory {
@@ -627,13 +671,24 @@ model GradeComponent {
 model Assessment {
   id              String   @id @default(uuid())
   gradeComponentId String
+  // Section-subject scope: an assessment belongs to exactly one
+  // subject-section class (the section it was added from). Nullable so
+  // pre-scope rows stay visible everywhere (legacy shared); all new rows
+  // set this from the workspace assignment.
+  sectionId       String?
   title           String
   maxScore        Float
   dateGiven       DateTime
+  // Regular vs ADM grade input. Defaults to regular so pre-existing rows and
+  // ordinary classes are unaffected.
+  audience        AssessmentAudience @default(regular)
   createdBy       String
   createdAt       DateTime @default(now())
   gradeComponent  GradeComponent  @relation(fields: [gradeComponentId], references: [id], onDelete: Cascade)
+  section         Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   studentGrades   StudentGrade[]
+  @@index([sectionId])
+  @@index([sectionId, gradeComponentId])
 }
 
 model StudentGrade {
@@ -714,6 +769,8 @@ model GradeFlag {
   @@index([raisedBy])
   @@index([studentId])
   @@index([status])
+  // Flag queue reads scope to the active term.
+  @@index([termId, status, ownerId])
 }
 
 // ---------------------------------------------------------------------------
@@ -823,6 +880,9 @@ model AnecdotalRecord {
   @@index([studentId, termId])
   @@index([rosterId, termId])
   @@index([sectionId, termId])
+  // Anecdotal list reads filter by term + section ordered by recency.
+  @@index([termId, sectionId, observationDatetime])
+  @@index([observerId, termId])
 }
 
 // Teacher-owned collections of filed anecdotal records. Folders organize
@@ -859,6 +919,7 @@ model Referral {
   // reviewer may act on the case at the consultation stage; everyone else
   // sees it read-only. Null = legacy / non-ADM routing.
   consultReviewer   String?
+  consultReviewedAt DateTime?
   // Nurse ADM flow: the referral form (GCForm-03 fill-up) must be completed
   // on the dedicated form page before the case can be forwarded to the ADM
   // coordinator. Confirming the form sets this flag; forwarding requires it
@@ -898,6 +959,10 @@ model Referral {
   @@index([studentId])
   @@index([rosterId])
   @@index([termId])
+  // Paginated queue reads filter by term + desk + status together.
+  @@index([termId, referredToRole, status])
+  @@index([termId, status])
+  @@index([termId, referredToRole, consultReviewedAt])
 }
 
 // Guidance counseling work on one referral: scheduled talks with the
@@ -922,7 +987,7 @@ model CounselingSession {
   outcome      String?
   cancelReason String?
   createdBy    String
-  createdAt    DateTime @default(now())
+  createdAt   DateTime      @default(now())
   completedAt  DateTime?
   referral     Referral? @relation(fields: [referralId], references: [id], onDelete: Cascade)
   intervention Intervention? @relation(fields: [interventionId], references: [id], onDelete: Cascade)
@@ -931,6 +996,7 @@ model CounselingSession {
   @@index([referralId])
   @@index([interventionId])
   @@index([status])
+  @@index([status, scheduledAt])
 }
 
 // Documentation filed on one clinic/counseling session: photos (wound,
@@ -981,6 +1047,8 @@ model Intervention {
   @@index([outcomeStatus])
   @@index([approvalStatus])
   @@index([assignedTo, outcomeStatus])
+  // Stats + queue reads scope counts to the active term.
+  @@index([termId, approvalStatus, outcomeStatus])
 }
 // ---------------------------------------------------------------------------
 // 3.6 Specialist modules
@@ -1031,6 +1099,11 @@ model AdmLearnerProfile {
   preparedBy          String
   approvedBy          String?
   approvedAt          DateTime?
+  // Set when the Principal returns the case for revision; cleared when the
+  // coordinator re-certifies (or the case is signed again). Drives the
+  // "Returned" lane on the principal desk.
+  returnedAt          DateTime?
+  returnReason        String?
   certificationDetails Json?
   termId              String
   confidentialityLevel Confidentiality @default(restricted)
@@ -1119,7 +1192,15 @@ model AdmModule {
   dueDate             DateTime?
   submitted           Boolean          @default(false)
   submissionDate      DateTime?
+  // Adviser-pasted Google Drive (or any https) link to the uploaded module.
+  submissionUrl       String?
+  // Adviser-pasted link to the student's answered module (the submission).
+  studentSubmissionUrl String?
+  // Optional adviser note shown on the monitoring report.
+  remarks             String?
   recordedBy          String
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   admLearnerProfile   AdmLearnerProfile @relation(fields: [admLearnerProfileId], references: [id], onDelete: Cascade)
   recorder            User             @relation(fields: [recordedBy], references: [id])
 }
@@ -1157,13 +1238,88 @@ enum AdmFormStatus {
   verified
 }
 
+// ---------------------------------------------------------------------------
+// 3.6b Advisory modules (class-wide, not tied to an ADM case)
+// ---------------------------------------------------------------------------
+// The adviser releases a module once for the whole advisory section (name +
+// Google Drive link + release/due dates) so learners can see where to get it.
+// Submissions are recorded per learner by the adviser: a StudentProfile account
+// (studentId) or a roster-only learner (rosterId) — exactly one is set, the same
+// dual-identity rule used by StudentGrade/AttendanceRecord/Referral.
+// What the module is for. `general` is a post-only announcement (no learner
+// tracking); `adm` is released to every ADM learner in the section and its
+// submissions are tracked.
+enum AdvisoryModuleKind {
+  general
+  adm
+}
+
+model AdvisoryModule {
+  id           String   @id @default(uuid())
+  sectionId    String
+  kind         AdvisoryModuleKind @default(general)
+  moduleName   String
+  // Adviser-pasted link to the uploaded module (Google Drive or any https URL).
+  moduleUrl    String?
+  description  String?
+  // Posting the link releases the module; the date is set automatically.
+  releaseDate  DateTime?
+  dueDate      DateTime?
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  section      Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  creator      User     @relation("AdvisoryModuleCreator", fields: [createdBy], references: [id])
+  submissions  AdvisoryModuleSubmission[]
+  @@index([sectionId])
+}
+
+// How the learner handed the answered module in. Physical = the paper/module
+// was passed to the adviser in person (no link, no file).
+enum AdvisorySubmissionKind {
+  link
+  file
+  physical
+}
+
+model AdvisoryModuleSubmission {
+  id            String   @id @default(uuid())
+  moduleId      String
+  studentId     String?
+  rosterId      String?
+  // Adviser-pasted link to the learner's answered module.
+  submissionUrl String?
+  submissionKind AdvisorySubmissionKind @default(link)
+  // Optional uploaded copy (PDF/Word) of the answered module.
+  fileUrl       String?
+  fileName      String?
+  fileMimeType  String?
+  fileSize      Int?
+  submitted     Boolean  @default(false)
+  submittedAt   DateTime?
+  remarks       String?
+  recordedBy    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  module        AdvisoryModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  student       StudentProfile? @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  roster        StudentRoster? @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+  recorder      User           @relation("AdvisoryModuleRecorder", fields: [recordedBy], references: [id])
+  @@unique([moduleId, studentId])
+  @@unique([moduleId, rosterId])
+  @@index([moduleId])
+  @@index([studentId])
+  @@index([rosterId])
+}
+
 
 // ---------------------------------------------------------------------------
 // 3.7 Records & compliance
 // ---------------------------------------------------------------------------
 model Sf10Record {
   id                String      @id @default(uuid())
-  studentId         String      @unique
+  studentId         String
+  desk              Sf10Desk
   source            Sf10Source
   status            Sf10Status  @default(attach)
   uploadedFileUrl   String?
@@ -1181,6 +1337,8 @@ model Sf10Record {
   verifiedByUser    User?          @relation("Sf10VerifiedBy", fields: [verifiedBy], references: [id])
   validatedByUser   User?          @relation("Sf10ValidatedBy", fields: [validatedBy], references: [id])
   versions          Sf10RecordVersion[]
+
+  @@unique([studentId, desk])
 }
 
 model Sf10RecordVersion {
@@ -1209,6 +1367,7 @@ model AuditLog {
   @@index([sourceTable, sourceId, createdAt])
   @@index([actionType])
   @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 model RiskSnapshot {
@@ -1218,6 +1377,14 @@ model RiskSnapshot {
   studentId   String?
   rosterId    String?
   riskLevel   RiskLevel
+  riskLevelRaw RiskLevel?
+  riskLevelFinal RiskLevel?
+  academicFlag Boolean?
+  attendanceFlag Boolean?
+  behavioralFlag Boolean?
+  academicFlagRaw Boolean?
+  attendanceFlagRaw Boolean?
+  behavioralFlagRaw Boolean?
   riskCount   Int
   snapshotDate DateTime @default(now())
   termId      String
@@ -1227,6 +1394,12 @@ model RiskSnapshot {
   @@index([rosterId])
   @@index([studentId])
   @@index([termId, riskLevel])
+  @@index([termId, riskLevelRaw])
+  @@index([termId, riskLevelFinal])
+  @@index([termId, snapshotDate])
+  @@index([termId, academicFlag])
+  @@index([termId, attendanceFlag])
+  @@index([termId, behavioralFlag])
 }
 
 model ReportSnapshot {
@@ -1238,6 +1411,9 @@ model ReportSnapshot {
   payload      Json
   generatedAt  DateTime  @default(now())
   term         Term      @relation(fields: [termId], references: [id])
+  // Dashboard/report cache lookups by (reportType, scope, termId).
+  @@index([reportType, scope, termId])
+  @@index([termId])
 }
 
 // Adviser request for extra read access to their advisees' SF10 records (Grade
@@ -1250,6 +1426,26 @@ model AdviserSf10AccessRequest {
   sectionId      String
   gradeLevel     GradeLevel
   reason         String
+  // LRNs the adviser picked (checkboxes) at request time. Empty = whole section.
+  requestedLrns  String[]            @default([])
+  // Registry verification: the record-keeper/registrar must run the SF10 LRN
+  // check (attached vs missing) before approving. Re-runnable; latest run wins.
+  checkedAt      DateTime?
+  checkedBy      String?
+  checkSummary   Json?
+  // Desk-reported missing LRNs ("report as missing" per requested student):
+  // adviser notification + stored mark, independent of the approve/deny verdict.
+  reportedMissingLrns String[] @default([])
+  // Per-LRN report timestamps, keyed by LRN (ISO strings). Stamped when a
+  // per-student "report missing" confirms; mirrors approvedLrnAt.
+  reportedLrnAt  Json?
+  // Per-student approvals ("approve" per matched student / "approve all"
+  // matched): adviser notification + stored mark. Whole-request approval
+  // via decideAccess still grants everything, including reported rows.
+  approvedLrns String[] @default([])
+  // Per-LRN approval timestamps, keyed by LRN (ISO strings). Stamped when a
+  // per-student grant (or bulk grant) confirms; shown as the approve date.
+  approvedLrnAt Json?
   status         AccessRequestStatus @default(pending)
   decidedBy      String?
   decidedAt      DateTime?
@@ -1262,6 +1458,7 @@ model AdviserSf10AccessRequest {
   @@index([status])
   @@index([adviserId])
   @@index([sectionId])
+  @@index([sectionId, status])
 }
 
 // ---------------------------------------------------------------------------
@@ -1278,6 +1475,8 @@ model Notification {
   isRead      Boolean       @default(false)
   createdAt   DateTime      @default(now())
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Notification badge + paged list reads per user.
+  @@index([userId, isRead, createdAt])
 }
 
 // Operational (not part of the 30 domain tables): refresh token store
@@ -1288,4 +1487,7 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Revocation sweeps + per-user session reads.
+  @@index([userId])
+  @@index([expiresAt])
 }

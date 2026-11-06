@@ -6,8 +6,6 @@ import {
   teacherNotificationTitle,
 } from "@/lib/notifications/label";
 
-/* Teacher inbox bell — the shared bell with teacher-scoped targets
-   (schedule verdicts deep-link to the section's timetable). */
 export function TeacherNotificationsBell() {
   return (
     <NotificationsBell
@@ -15,9 +13,12 @@ export function TeacherNotificationsBell() {
       refreshKeys={[
         ["teacher-notifications"],
         ["teacher-overview"],
+        ["teacher-overview-secondary"],
         ["adm-my-cases"],
+        ["adm-monitoring"],
         ["myReferrals"],
         ["advisory-students"],
+        ["advisory-modules"],
         ["anecdotal-mine"],
         ["teacher-schedule"],
         ["grade-flags"],

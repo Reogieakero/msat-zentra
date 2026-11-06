@@ -3,8 +3,10 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { lockFinalGrade, useRefreshAcademic, type ClassStudent } from "../../components/grading-data";
+import { lockFinalGrade, lockErrorMessage, useRefreshAcademic } from "@/services/teacher/grading.service";
+import type { ClassStudent } from "@/services/teacher/grading.types";
 import { sileo } from "@/components/ui/sonner";
+import { formatSurnameFirst } from "@/lib/names";
 import styles from "./FinalsCard.module.css";
 
 type Props = {
@@ -33,10 +35,11 @@ export function FinalsCard({ assignmentId, students, onChanged }: Props) {
       await lockFinalGrade(finalId);
       onChanged();
       refreshAcademic();
-      sileo.success({ title: "Final grade locked", description: `${studentName}'s grade was submitted for adviser approval.` });
-    } catch {
-      setError("Failed to lock final grade.");
-      sileo.error({ title: "Could not lock final grade", description: "Try again." });
+      sileo.success({ title: "Final grade locked", description: `${studentName}'s final grade is now locked and waiting for adviser approval.` });
+    } catch (err) {
+      const message = lockErrorMessage(err);
+      setError(message);
+      sileo.error({ title: "Could not lock final grade", description: message });
     } finally {
       setLockingIds((prev) => ({ ...prev, [finalId]: false }));
     }
@@ -86,7 +89,12 @@ export function FinalsCard({ assignmentId, students, onChanged }: Props) {
               return (
                 <tr key={s.id}>
                   <th className={styles.stickyCol} scope="row">
-                    {s.name}
+                    {formatSurnameFirst(s.name)}
+                    {s.isAdm ? (
+                      <span className={styles.admChip} title="Signed ADM case — same weights, module evidence">
+                        ADM
+                      </span>
+                    ) : null}
                   </th>
                   <td>{f?.computedAverage != null ? f.computedAverage.toFixed(2) : "—"}</td>
                   <td>{f?.transmutedGrade != null ? f.transmutedGrade.toFixed(0) : "—"}</td>
@@ -100,7 +108,7 @@ export function FinalsCard({ assignmentId, students, onChanged }: Props) {
                           variant="outline"
                           disabled={!lockable || !!lockingIds[f.id]}
                           aria-busy={!!lockingIds[f.id] || undefined}
-                          onClick={() => void handleLock(f.id, s.name)}
+                          onClick={() => void handleLock(f.id, formatSurnameFirst(s.name))}
                         >
                           {lockingIds[f.id] ? (
                             <>

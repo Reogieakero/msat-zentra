@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import {
   Card,
@@ -16,10 +16,12 @@ import {
   submitSheet,
   useSheetContext,
   useSheetMarks,
-  initialsOf,
-  type SheetContext,
-  type SheetStatus,
-} from "./attendance-taking-data";
+} from "@/services/teacher/attendance.service";
+import { initialsOf } from "@/lib/utils";
+import type {
+  SheetContext,
+  SheetStatus,
+} from "@/services/teacher/attendance.types";
 import { sileo } from "@/components/ui/sonner";
 import { CardModal } from "@/components/ui/CardModal";
 import { SubmitConfirmDialog } from "./SubmitConfirmDialog";
@@ -40,8 +42,7 @@ interface AttendanceSheetProps {
   slot: number;
   subjectLabel: string;
   editable: boolean;
-  /** Explicit section roster (code-claimed flow). When provided, the sheet
-   *  reads students + section/term from it instead of the advisory context. */
+
   roster?: { ctx: SheetContext | null; pending: boolean; error: boolean };
 }
 
@@ -65,29 +66,43 @@ export function AttendanceSheet({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // A different date/subject/period is a different sheet — drop local state.
-  // (Render-phase reset: allowed because it is conditional on prop change.)
-  if (sheetKey !== `${date}|${subjectId ?? "none"}|${slot}`) {
-    setSheetKey(`${date}|${subjectId ?? "none"}|${slot}`);
-    setMarks({});
-    setQuery("");
-    setSubmitted(false);
-    setEditing(false);
-    setConfirmOpen(false);
-    setEditConfirmOpen(false);
-    setSubmitError(null);
-  }
+  // Render-phase setState here locked the main thread (Page Unresponsive →
+  // RESULT_CODE_HUNG) whenever props churned. Reset in an effect instead.
+  /* eslint-disable react-hooks/set-state-in-effect -- sheet-key reset must settle after paint; render-phase setState wedged the main thread */
+  useEffect(() => {
+    const nextKey = `${date}|${subjectId ?? "none"}|${slot}`;
+    if (sheetKey !== nextKey) {
+      setSheetKey(nextKey);
+      setMarks({});
+      setQuery("");
+      setSubmitted(false);
+      setEditing(false);
+      setConfirmOpen(false);
+      setEditConfirmOpen(false);
+      setSubmitError(null);
+    }
+  }, [date, subjectId, slot, sheetKey]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const contextQuery = useSheetContext();
   const effectiveCtx = roster ? roster.ctx : (contextQuery.data ?? null);
   const marksQuery = useSheetMarks(date, subjectId, slot, effectiveCtx?.sectionId ?? null);
 
   const students = useMemo(() => effectiveCtx?.students ?? [], [effectiveCtx]);
+  // Signed ADM cases are shown in their own group and never marked — the API
+  // refuses their marks too (409 ADM_EXEMPT_LEARNER).
+  const activeStudents = useMemo(
+    () => students.filter((s) => !s.admExempt),
+    [students],
+  );
+  const admStudents = useMemo(
+    () => students.filter((s) => s.admExempt),
+    [students],
+  );
   const serverMarks = useMemo(() => marksQuery.data ?? {}, [marksQuery.data]);
   const loading = (roster ? roster.pending : contextQuery.isPending) || marksQuery.isPending;
   const loadError = (roster ? roster.error : contextQuery.isError) || marksQuery.isError;
-  // Done persists across refresh: submitted sheets have server-side marks,
-  // so a sheet with existing marks opens on the done panel until edited.
+
   const serverSubmitted = Object.keys(serverMarks).length > 0;
   const showDone = !loading && (submitted || serverSubmitted) && !editing;
 
@@ -96,23 +111,23 @@ export function AttendanceSheet({
 
   const counts = useMemo(() => {
     const c: Record<SheetStatus, number> = { present: 0, absent: 0, late: 0, excused: 0 };
-    for (const s of students) c[statusOf(s.studentId)] += 1;
+    for (const s of activeStudents) c[statusOf(s.studentId)] += 1;
     return c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [marks, serverMarks, students, date, subjectId, slot]);
+  }, [marks, serverMarks, activeStudents, date, subjectId, slot]);
 
   const needle = query.trim().toLowerCase();
   const visibleStudents = useMemo(() => {
-    if (!needle) return students;
-    return students.filter(
+    if (!needle) return activeStudents;
+    return activeStudents.filter(
       (s) => s.name.toLowerCase().includes(needle) || s.lrn.includes(needle),
     );
-  }, [students, needle]);
+  }, [activeStudents, needle]);
 
   function setAll(status: SheetStatus) {
     setMarks((prev) => {
       const next = { ...prev };
-      for (const s of students) next[s.studentId] = status;
+      for (const s of activeStudents) next[s.studentId] = status;
       return next;
     });
     setSubmitted(false);
@@ -140,7 +155,7 @@ export function AttendanceSheet({
         subjectId,
         assignmentId,
         slot,
-        records: students.map((s) => ({ studentId: s.studentId, status: statusOf(s.studentId) })),
+        records: activeStudents.map((s) => ({ studentId: s.studentId, status: statusOf(s.studentId) })),
       });
       invalidateTeacher.marks();
       setConfirmOpen(false);
@@ -270,7 +285,11 @@ export function AttendanceSheet({
           </p>
         ) : visibleStudents.length === 0 ? (
           <p className={styles.empty}>
-            {needle ? `No advisees match "${query}".` : "No advisees."}
+            {needle
+              ? `No advisees match "${query}".`
+              : activeStudents.length === 0
+                ? "All advisees are ADM-exempt — nothing to mark on this sheet."
+                : "No advisees."}
           </p>
         ) : (
         <ul className={styles.rows}>
@@ -315,6 +334,37 @@ export function AttendanceSheet({
         </ul>
         )}
 
+        {admStudents.length > 0 ? (
+          <div className={styles.admGroup}>
+            <p className={styles.admTitle}>
+              ADM — home-based · {admStudents.length}
+            </p>
+            <p className={styles.admNote}>
+              Signed by the Principal. Seat-time attendance is not recorded;
+              engagement is tracked on the advisory modules desk.
+            </p>
+            <ul className={styles.rows}>
+              {admStudents.map((s) => (
+                <li key={s.studentId} className={styles.row}>
+                  <span className={styles.identity}>
+                    <span className={styles.avatar} aria-hidden>
+                      {initialsOf(s.name)}
+                    </span>
+                    <span className={styles.nameWrap}>
+                      <span className={styles.name}>
+                        {s.name}
+                        <span className={styles.admChip}>ADM</span>
+                      </span>
+                      <span className={styles.lrn}>{s.lrn}</span>
+                    </span>
+                  </span>
+                  <span className={styles.admLocked}>Exempt — not marked</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         {submitError ? (
           <p className={styles.submitError} role="alert">
             {submitError}
@@ -329,7 +379,8 @@ export function AttendanceSheet({
 
       <CardFooter className={styles.footer}>
         <span className={styles.footerInfo}>
-          {dateLabel} · {contextLabel} · {students.length} advisees ·{" "}
+          {dateLabel} · {contextLabel} · {activeStudents.length} advisees
+          {admStudents.length > 0 ? ` (+${admStudents.length} ADM)` : ""} ·{" "}
           {contextQuery.data?.sectionName ?? ""}
         </span>
         <Button

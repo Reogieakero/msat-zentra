@@ -7,17 +7,19 @@ import { useTerm } from "@/lib/term/TermContext";
 import {
   advisoryRosterKey,
   fetchAdvisoryRoster,
-} from "../../advisory/students/components/advisory-students-data";
+} from "@/services/teacher/advisory.service";
 import {
   ANEC_CATEGORY_LABELS,
   ANEC_TIER_LABELS,
-  createAnecdotalRecord,
-  fetchAnecdotalOptions,
   type AnecdotalCategory,
   type AnecdotalClassOption,
   type AnecdotalStudent,
   type AnecdotalTier,
-} from "../../anecdotal/components/anecdotal-data";
+} from "@/services/anecdotal/anecdotal.types";
+import {
+  createAnecdotalRecord,
+  fetchAnecdotalOptions,
+} from "@/services/anecdotal/records.service";
 import {
   nextMessageId,
   type BamaConversation,
@@ -32,6 +34,7 @@ import {
   type TextQuestion,
 } from "./bama-flow";
 import { sileo } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 
 interface UseAnecdotalFlowArgs {
   active: BamaConversation | null;
@@ -61,11 +64,10 @@ export interface AnecdotalFlow {
   dateInput: string;
   setDateInput: (next: string) => void;
   timeInput: string;
+  setTimeInput: (next: string) => void;
   studentQ: string;
   setStudentQ: (next: string) => void;
   filing: boolean;
-  confirmFiling: boolean;
-  setConfirmFiling: (next: boolean) => void;
   fileProgress: number;
   fileStage: string;
   flowError: string | null;
@@ -76,7 +78,6 @@ export interface AnecdotalFlow {
   handleCategoryPick: (value: AnecdotalCategory) => void;
   handleTierPick: (value: AnecdotalTier) => void;
   handleDatetimeConfirm: () => void;
-  setTimeParts: (hour: string | null, minute: string | null, ampm: string | null) => void;
   handleAnecSend: () => void;
   fileRecord: () => Promise<void>;
   resetFlowStates: () => void;
@@ -90,18 +91,6 @@ function filingStageFor(progress: number): string {
   return "Finishing…";
 }
 
-function splitTimeParts(timeInput: string): { hour: string; minute: string; ampm: string } {
-  const match = /^(\d{2}):(\d{2})$/.exec(timeInput);
-  if (!match) return { hour: "08", minute: "00", ampm: "AM" };
-  const h24 = parseInt(match[1], 10);
-  return {
-    hour: String(h24 % 12 || 12).padStart(2, "0"),
-    minute: match[2],
-    ampm: h24 < 12 ? "AM" : "PM",
-  };
-}
-
-/** Guided anecdotal filing engine for the active Bama chat. */
 export function useAnecdotalFlow({
   active,
   activeId,
@@ -117,7 +106,8 @@ export function useAnecdotalFlow({
   const [category, setCategory] = useState<AnecdotalCategory | null>(null);
   const [tier, setTier] = useState<AnecdotalTier | null>(null);
   const [textQuestion, setTextQuestion] = useState<TextQuestion | null>(null);
-  const [textInput, setTextInput] = useState("");
+
+  const [, setTextInput] = useState("");
   const [incident, setIncident] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
@@ -132,7 +122,6 @@ export function useAnecdotalFlow({
   const [askedDatetime, setAskedDatetime] = useState(false);
   const [previewShown, setPreviewShown] = useState(false);
   const [filing, setFiling] = useState(false);
-  const [confirmFiling, setConfirmFiling] = useState(false);
   const [fileProgress, setFileProgress] = useState(0);
   const [fileStage, setFileStage] = useState("");
   const [flowError, setFlowError] = useState<string | null>(null);
@@ -141,9 +130,15 @@ export function useAnecdotalFlow({
 
   const progressTimer = useRef<number | null>(null);
   const progressValue = useRef(0);
+  // Filing progress now lives in the single shared Dock — no fullscreen
+  // overlay. The task survives page jumps through the root provider.
+  const dock = useDock();
+  const dockRef = useRef(dock);
+  useEffect(() => {
+    dockRef.current = dock;
+  }, [dock]);
+  const fileTaskRef = useRef<string | null>(null);
 
-  // Post-mount store hydration — reading localStorage during render would
-  // hydrate different HTML than the server sent.
   /* eslint-disable react-hooks/set-state-in-effect -- client-only store hydration */
   useEffect(() => {
     setFlows(loadFlowStore());
@@ -187,9 +182,6 @@ export function useAnecdotalFlow({
     });
   }
 
-  // Restore filing progress when the active chat changes. The snapshot
-  // restore is inherently effect-driven (it reacts to chat switches, not
-  // render inputs).
   /* eslint-disable react-hooks/set-state-in-effect -- chat-switch snapshot restore + progress persistence */
   useEffect(() => {
     if (!hydrated) return;
@@ -217,7 +209,6 @@ export function useAnecdotalFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, hydrated]);
 
-  // Persist filing progress (covered by the block disable above).
   useEffect(() => {
     if (!hydrated || !activeId || active?.type !== "anecdotal") return;
     const snap = {
@@ -239,10 +230,7 @@ export function useAnecdotalFlow({
     queryKey: ["grade-flags", "options", termKey],
     queryFn: fetchAnecdotalOptions,
   });
-  // Advisory-only picker: when the login teacher advises sections, the
-  // student list narrows to those advisees (never the subject-handled
-  // union). Non-advisers (roster error/empty) keep the full handled list
-  // so the flow still works for subject teachers.
+
   const session = useSession();
   const advisoryQuery = useQuery({
     queryKey: advisoryRosterKey(session?.sub ?? null, termKey),
@@ -304,7 +292,6 @@ export function useAnecdotalFlow({
     );
   }
 
-  // ---- Guided flow: student → class → category → tier → date → answers ----
   function handleStudentPick(id: string) {
     const picked = students.find((s) => s.id === id) ?? null;
     if (!picked || studentId !== "") return;
@@ -408,15 +395,6 @@ export function useAnecdotalFlow({
     setAskedDatetime(true);
   }
 
-  function setTimeParts(hour: string | null, minute: string | null, ampm: string | null) {
-    const fallback = splitTimeParts(timeInput);
-    const h12 = hour !== null ? parseInt(hour, 10) : parseInt(fallback.hour, 10);
-    const min = minute ?? fallback.minute;
-    const ap = ampm ?? fallback.ampm;
-    const h24 = ap === "AM" ? h12 % 12 : (h12 % 12) + 12;
-    setTimeInput(`${String(h24).padStart(2, "0")}:${min}`);
-  }
-
   function handleDatetimeConfirm() {
     if (!dateInput || observationDate !== null) return;
     setObservationDate(dateInput);
@@ -430,8 +408,7 @@ export function useAnecdotalFlow({
     if (!hydrated || !active || active.type !== "anecdotal" || active.filed) return;
     if (textQuestion !== null || observationDate === null || incident !== "") return;
     if (active.messages.some((m) => m.from === "assistant" && m.text === TEXT_QUESTION_LABELS.incident)) return;
-    // Only fire for the conversation that actually answered the date —
-    // never leak the step into a freshly switched thread.
+
     if (!observationDate || !active.messages.some((m) => m.from === "user" && m.text.includes(observationDate))) return;
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setTextQuestion("incident");
@@ -444,8 +421,7 @@ export function useAnecdotalFlow({
   useEffect(() => {
     if (!hydrated || !textQuestion || !active || active.type !== "anecdotal" || active.filed) return;
     if (active.messages.some((m) => m.from === "assistant" && m.text === TEXT_QUESTION_LABELS[textQuestion])) return;
-    // The incident answer must live in this conversation's messages —
-    // never leak the next step into a freshly switched thread.
+
     if (incident === "" || !active.messages.some((m) => m.from === "user" && m.text === incident)) return;
     pushToActive([
       { id: nextMessageId(), from: "assistant", text: TEXT_QUESTION_LABELS[textQuestion], at: Date.now() },
@@ -497,8 +473,7 @@ export function useAnecdotalFlow({
 
   async function fileRecord() {
     if (filing || active?.filed) return;
-    // Name exactly what's missing instead of failing silently — same as
-    // the anecdotal page.
+
     if (!student) {
       setFlowError("Pick a student first.");
       return;
@@ -521,6 +496,15 @@ export function useAnecdotalFlow({
     }
     setFiling(true);
     setFlowError(null);
+    try {
+      fileTaskRef.current = dockRef.current.startTask({
+        kind: "anecdotal-file",
+        title: "Filing record",
+        description: `${student.name} · ${category}`,
+      });
+    } catch {
+      fileTaskRef.current = null;
+    }
     setFileProgress(4);
     setFileStage(filingStageFor(4));
     if (progressTimer.current !== null) window.clearInterval(progressTimer.current);
@@ -543,7 +527,6 @@ export function useAnecdotalFlow({
       const created = await createAnecdotalRecord({
         studentId: student.id,
         sectionId: selectedClass.sectionId,
-        termId: selectedClass.termId,
         observationDatetime: obsDateTime,
         descriptionOfIncident: note,
         descriptionOfLocation: location || "Classroom",
@@ -592,11 +575,17 @@ export function useAnecdotalFlow({
           return next;
         });
       }
-      // Teacher lists subscribe under these keys — refresh all so the new
-      // record appears in the repo, folders, and referral composer.
+
       queryClient.invalidateQueries({ queryKey: ["anecdotal"] });
       queryClient.invalidateQueries({ queryKey: ["anecdotal-mine"] });
       queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
+      try {
+        const taskId = fileTaskRef.current;
+        fileTaskRef.current = null;
+        if (taskId) dockRef.current.completeTask(taskId, `${name} · ${categoryLabel}`);
+      } catch {
+        /* ignore */
+      }
       sileo.success({ title: "Anecdotal record filed", description: `${name} · ${categoryLabel}.` });
     } catch (err) {
       const message =
@@ -605,6 +594,13 @@ export function useAnecdotalFlow({
             "Could not file this record.")
           : "Could not file this record.";
       setFlowError(message);
+      try {
+        const taskId = fileTaskRef.current;
+        fileTaskRef.current = null;
+        if (taskId) dockRef.current.failTask(taskId, message);
+      } catch {
+        /* ignore */
+      }
       sileo.error({ title: "Could not file record", description: message });
       setFileProgress(0);
       setFileStage("");
@@ -619,7 +615,7 @@ export function useAnecdotalFlow({
 
   function handleAnecSend() {
     if (filing || !active || active.filed) return;
-    // Answering a text question.
+
     if (textQuestion !== null) {
       const value = draft.trim();
       if (!value || !student) return;
@@ -633,7 +629,7 @@ export function useAnecdotalFlow({
       setTextQuestion(NEXT_QUESTION[textQuestion]);
       return;
     }
-    // Nothing to answer — file when everything is ready.
+
     if (canFile) void fileRecord();
   }
 
@@ -670,11 +666,10 @@ export function useAnecdotalFlow({
     dateInput,
     setDateInput,
     timeInput,
+    setTimeInput,
     studentQ,
     setStudentQ,
     filing,
-    confirmFiling,
-    setConfirmFiling,
     fileProgress,
     fileStage,
     flowError,
@@ -685,7 +680,6 @@ export function useAnecdotalFlow({
     handleCategoryPick,
     handleTierPick,
     handleDatetimeConfirm,
-    setTimeParts,
     handleAnecSend,
     fileRecord,
     resetFlowStates,

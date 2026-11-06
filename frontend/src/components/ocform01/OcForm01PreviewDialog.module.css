@@ -5,6 +5,7 @@
   margin: 0 0 0.625rem;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
   font-size: 0.8125rem;
   color: var(--muted-foreground);
@@ -12,4 +13,31 @@
 
 .dangerBtn {
   color: var(--destructive);
+}
+
+/* Image-export box: visible preview of the printable sheet with exactly
+   16px gutters on all sides. html-to-image captures this node as PNG/JPG,
+   so the download matches what is shown — no extra white, nothing cut. */
+.exportWrap {
+  background: #ffffff;
+  color: #000000;
+  padding: 16px;
+  max-width: 852px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.exportWrap > :global(.ocform01-print-sheet) {
+  margin: 0;
+  max-width: none;
+  width: 100%;
+}
+
+@media print {
+  .exportWrap {
+    padding: 0;
+    max-width: none;
+    margin: 0;
+    background: transparent;
+  }
 }

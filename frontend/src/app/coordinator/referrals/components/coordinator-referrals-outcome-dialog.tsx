@@ -1,24 +1,17 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { ClipboardCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import {
   meetingInviteeLabel,
   venueLabel,
-  type AdmMeeting,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/labels";
+import type { AdmMeeting } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-referrals-outcome-dialog.module.css";
 
 interface CoordinatorReferralsOutcomeDialogProps {
@@ -59,26 +52,55 @@ export function CoordinatorReferralsOutcomeDialog({
     );
   }
   return (
-    <Dialog
+    <KanbanOverlay
       open={target !== null}
-      onOpenChange={(open) => {
-        // Locked while saving — X/backdrop/Escape can't drop the flight.
-        if (!open && !pending) onClose();
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Record meeting outcome</DialogTitle>
-          <DialogDescription>
-            {target ? (
-              <>
-                {venueLabel(target.venue)} on {target.meetingDatetime.slice(0, 10)}.
-                Attended meetings log minutes; missed ones route the case to home
-                visitation.
-              </>
+      onClose={onClose}
+      dismissable={!pending}
+      width="md"
+      title="Record meeting outcome"
+      icon={
+        <span className="text-primary" aria-hidden>
+          <ClipboardCheck size={14} />
+        </span>
+      }
+      description={
+        target
+          ? `${venueLabel(target.venue)} on ${target.meetingDatetime.slice(0, 10)}. Attended meetings log minutes; missed ones route the case to home visitation.`
+          : undefined
+      }
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-6 px-3 text-xs"
+            onClick={onClose}
+            disabled={pending}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            className="h-6 px-3 text-xs"
+            disabled={pending}
+            aria-busy={pending || undefined}
+            onClick={onConfirm}
+            autoFocus
+          >
+            {pending ? (
+              <Loader2
+                className="animate-spin"
+                style={{ width: "0.875rem", height: "0.875rem" }}
+                aria-hidden="true"
+              />
             ) : null}
-          </DialogDescription>
-        </DialogHeader>
+            {pending ? "Saving…" : "Save outcome"}
+          </Button>
+        </div>
+      }
+    >
         <div className={styles.formGrid}>
           <label
             className={styles.checkRow}
@@ -140,22 +162,6 @@ export function CoordinatorReferralsOutcomeDialog({
             />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={pending}>
-            Cancel
-          </Button>
-          <Button
-            disabled={pending}
-            aria-busy={pending || undefined}
-            onClick={onConfirm}
-          >
-            {pending ? (
-              <Loader2 className={styles.spin} aria-hidden="true" />
-            ) : null}
-            {pending ? "Saving…" : "Save outcome"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </KanbanOverlay>
   );
 }

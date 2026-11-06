@@ -1,16 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { CalendarClock, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import {
   ClinicDatePicker,
   ClinicTimePicker,
@@ -23,7 +23,6 @@ interface RescheduleSessionDialogProps {
   onSubmit: (scheduledAt: string) => void;
   description?: string;
   busy?: boolean;
-  /** Save failure from the caller's API call (shown under validation errors). */
   serverError?: string | null;
   submitLabel?: string;
   keepLabel?: string;
@@ -41,10 +40,6 @@ function toScheduledAt(date: string, time: string): string | null {
   return `${date}T${time}:00`;
 }
 
-/**
- * Shared move-session modal — picks the new date and time. The caller
- * performs the save.
- */
 export function RescheduleSessionDialog({
   open,
   onClose,
@@ -60,8 +55,6 @@ export function RescheduleSessionDialog({
   const [time, setTime] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fresh form every time the modal opens — synced during render, never
-  // in an effect.
   const openKey = open ? idPrefix : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {
@@ -87,7 +80,6 @@ export function RescheduleSessionDialog({
     <Dialog
       open
       onOpenChange={(next) => {
-        // Locked while the move is in flight.
         if (!next && !busy) {
           onClose();
           setError(null);
@@ -95,42 +87,77 @@ export function RescheduleSessionDialog({
       }}
     >
       <DialogContent
-        className={styles.dialogScrollHidden}
+        showCloseButton={false}
+        className={`${styles.dialogScrollHidden} sm:max-w-md`}
         aria-busy={busy || undefined}
       >
-        <DialogHeader>
-          <DialogTitle>Move session</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <div className={styles.formGrid}>
-          <ClinicDatePicker
-            id={`${idPrefix}-date`}
-            label="Date"
-            value={date}
-            onChange={setDate}
-            min={todayKey()}
-          />
-          <ClinicTimePicker
-            id={`${idPrefix}-time`}
-            label="Time"
-            value={time}
-            onChange={setTime}
-          />
-        </div>
-        {error || serverError ? (
-          <div className={styles.errorBlock} role="alert">
-            <p className={styles.errorText}>{error ?? serverError}</p>
+        {/* Title/description live on the kanban board below (the sr-only pair
+            keeps the dialog labelled for screen readers). */}
+        <DialogTitle className="sr-only">Move session</DialogTitle>
+        <DialogDescription className="sr-only">{description}</DialogDescription>
+        <KanbanBoard
+          className="bg-card"
+          title="Move session"
+          icon={<CalendarClock className="size-3.5" aria-hidden="true" />}
+          description={description}
+          actions={
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="size-6"
+                aria-label="Close"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </Button>
+            </DialogClose>
+          }
+          footer={
+            <div className="-mx-2.5 -mb-2.5 flex flex-col-reverse gap-2 border-t border-border px-3.5 py-2.5 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                className="h-6 px-2.5 text-xs"
+                onClick={onClose}
+                disabled={busy}
+              >
+                {keepLabel}
+              </Button>
+              <Button
+                className="h-6 px-2.5 text-xs"
+                onClick={save}
+                disabled={busy}
+                aria-busy={busy || undefined}
+              >
+                {busy ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                ) : null}
+                {busy ? "Moving…" : submitLabel}
+              </Button>
+            </div>
+          }
+        >
+          <div className={styles.formGrid}>
+            <ClinicDatePicker
+              id={`${idPrefix}-date`}
+              label="Date"
+              value={date}
+              onChange={setDate}
+              min={todayKey()}
+            />
+            <ClinicTimePicker
+              id={`${idPrefix}-time`}
+              label="Time"
+              value={time}
+              onChange={setTime}
+            />
           </div>
-        ) : null}
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={busy}>
-            {keepLabel}
-          </Button>
-          <Button onClick={save} disabled={busy} aria-busy={busy || undefined}>
-            {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            {busy ? "Moving…" : submitLabel}
-          </Button>
-        </DialogFooter>
+          {error || serverError ? (
+            <div className={styles.errorBlock} role="alert">
+              <p className={styles.errorText}>{error ?? serverError}</p>
+            </div>
+          ) : null}
+        </KanbanBoard>
       </DialogContent>
     </Dialog>
   );

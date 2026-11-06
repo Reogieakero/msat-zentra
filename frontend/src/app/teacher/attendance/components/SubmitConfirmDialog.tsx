@@ -3,7 +3,7 @@
 import { CardModal } from "@/components/ui/CardModal";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import type { SheetStatus } from "./attendance-taking-data";
+import type { SheetStatus } from "@/services/teacher/attendance.types";
 import styles from "./SubmitConfirmDialog.module.css";
 
 interface SubmitConfirmDialogProps {

@@ -1,16 +1,14 @@
 "use client";
 
-import * as React from "react";
 import { ChevronRight, FileText, Pencil, Plus } from "lucide-react";
-import {
-  gradeLabel,
-  type ClassAssignment,
-  type ClassComponent,
-} from "../../components/grading-data";
+import { gradeLabel } from "@/services/teacher/grading.compute";
+import type {
+  ClassAssignment,
+  ClassComponent,
+} from "@/services/teacher/grading.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 
-/* Donut of the WW / PT / E shares (0–100 scale). */
-function WeightsDonut({ ww, pt, exam }: { ww: number; pt: number; exam: number }) {
+export function WeightsDonut({ ww, pt, exam }: { ww: number; pt: number; exam: number }) {
   const total = ww + pt + exam;
   const segs = [
     { value: ww, color: "#3b82f6" },

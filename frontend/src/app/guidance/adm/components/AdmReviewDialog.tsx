@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
 import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
 import {
   AdmReviewDialog as SharedAdmReviewDialog,
@@ -11,12 +12,10 @@ import {
   bookAdmConsultationSession,
   listAdmConsultationSessions,
   reviewAdmConsultation,
-} from "./guidance-adm-data";
-import { dismissReferral } from "../../referrals/components/guidance-referrals-data";
+} from "@/services/guidance/adm.service";
+import { dismissReferral } from "@/services/guidance/referrals.service";
 import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
 
-/* Case identity for the intake summary (Name / LRN / Section / Observed /
-   Referred) — passed by both callers from their row data. */
 export interface AdmReviewCaseInfo {
   lrn?: string;
   section?: string;
@@ -26,12 +25,6 @@ export interface AdmReviewCaseInfo {
   date?: string;
 }
 
-/**
- * ADM consultation review for cases the adviser routed to guidance —
- * shared review UI, guidance wiring. Create referral hands the typed
- * recommendation to the caller, which opens the fill-up form sheet in
- * place (no navigation).
- */
 export function AdmReviewDialog({
   referralId,
   student,
@@ -41,10 +34,7 @@ export function AdmReviewDialog({
   onClose,
   onChanged,
   onCreateReferral,
-  // "queue" = ADM consultation queue (/guidance/adm): reject goes through
-  // the consultation review. "desk" = ADM-type row on /guidance/referrals
-  // (already ADM-flagged on the guidance desk): reject dismisses the case
-  // directly instead.
+
   mode = "queue",
 }: {
   referralId: string;
@@ -58,13 +48,10 @@ export function AdmReviewDialog({
   mode?: "queue" | "desk";
 }) {
   const invalidateGuidance = useGuidanceInvalidate();
-  // Sessions already booked on the case — fetched silently, only to guard
-  // the one-active-session rule (they render on the page list).
+  const dock = useDock();
+
   const [bookedScheduled, setBookedScheduled] = React.useState(false);
 
-  // Reset the guard every time the dialog opens (or retargets a new case),
-  // synced during render — never in an effect. The session-list fetch below
-  // stays in an effect: only async work lives there.
   const openKey = open ? referralId : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {
@@ -89,27 +76,39 @@ export function AdmReviewDialog({
   }, [open, referralId]);
 
   function refreshAll() {
-    // Confirmed server-side: suppress the realtime echo, bump every
-    // guidance query (notifications included) via the shared invalidator.
+
     markSelfNotified(referralId);
     invalidateGuidance();
     onChanged();
   }
 
   async function bookSessionOnly(scheduledAt: string) {
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "adm-book",
+        title: "Booking ADM consultation",
+        description: `${student} · ${new Date(scheduledAt).toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        })}`,
+      });
+    } catch {
+      taskId = null;
+    }
     try {
       await bookAdmConsultationSession(referralId, { scheduledAt });
     } catch {
+      if (taskId) dock.failTask(taskId, "Could not book the session.");
       toast.error({
         title: "Could not book the session",
         description: "The session was not saved. Check your connection and try again.",
       });
       throw new Error("book-failed");
     }
-    toast.success({
-      title: "Session booked",
-      description: `${student}'s case stays pending until you decide.`,
-    });
+    if (taskId) dock.completeTask(taskId, "Session booked — the case stays pending until you decide.");
     try {
       const rows = await listAdmConsultationSessions(referralId);
       setBookedScheduled(rows.some((s) => s.status === "scheduled"));
@@ -120,30 +119,37 @@ export function AdmReviewDialog({
   }
 
   async function decideReject(recommendation: string) {
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "generic",
+        title: "Rejecting from ADM",
+        description: `${student}'s case`,
+      });
+    } catch {
+      taskId = null;
+    }
     try {
       if (mode === "desk") {
-        // Desk rows are already ADM-flagged — rejecting closes the case
-        // directly (same outcome, no consultation endpoint involved).
+
         await dismissReferral(referralId, recommendation);
       } else {
         await reviewAdmConsultation(referralId, { recommendation, outcome: "reject" });
       }
     } catch {
+      if (taskId) dock.failTask(taskId, "Could not reject the case.");
       toast.error({
         title: "Could not reject the case",
         description: "The rejection did not go through. Check your connection and try again.",
       });
       throw new Error("reject-failed");
     }
-    toast.success({
-      title: "Rejected from ADM",
-      description: `${student}'s case was closed with your recommendation kept on record.`,
-    });
+    if (taskId) dock.completeTask(taskId, "Case rejected — the recommendation is kept on record.");
     refreshAll();
   }
 
   function goToReferralForm(draft: AdmReviewDraft) {
-    // Info, not success: the case is only endorsed after the form confirms.
+
     toast.info({
       title: "Referral form opened",
       description: "Confirm the form to endorse the case to the ADM coordinator.",

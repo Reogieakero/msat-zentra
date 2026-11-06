@@ -8,13 +8,12 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import {
-  CERT_STATUS_META,
-  type CertStatus,
-  type CertSummary,
-} from "./coordinator-certifications-data";
-import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
-import { useCoordinatorProfileSettings } from "../../settings/components/profile-settings-data";
+import { CERT_STATUS_META } from "@/services/coordinator/certifications.service";
+import type {
+  CertStatus,
+  CertSummary,
+} from "@/services/coordinator/certifications.types";
+import { AMBER_RAMP } from "../../overview/components/coordinator-overview-helpers";
 import styles from "./coordinator-certifications-charts.module.css";
 
 const TOOLTIP_STYLE: React.CSSProperties = {
@@ -43,31 +42,34 @@ function interpretSummary(summary: CertSummary): string {
   return `${summary.total} certification${summary.total === 1 ? "" : "s"} — all signed by the Principal. Monitoring continues on the Enrolled page.`;
 }
 
-export function CoordinatorCertificationsCharts({ summary }: { summary: CertSummary }) {
-  // Donut slices wear the coordinator's own saved palette hex —
-  // deterministic (no probe timing): darkest (pure primary) first,
-  // stepping toward the card surface. Concrete rgb fills because SVG
-  // attributes can't resolve CSS vars. Falls back to the runtime probe
-  // only when no saved palette exists yet.
-  const { data: profile } = useCoordinatorProfileSettings();
-  const scale = usePrimaryScale(ORDER.length, profile?.primaryColor ?? null);
+export function CoordinatorCertificationsCharts({
+  summary,
+  bare = false,
+}: {
+  summary: CertSummary;
+  /** Render only the chart body — the rail flyout already supplies the title. */
+  bare?: boolean;
+}) {
   const rows = ORDER.map((status, i) => ({
     status,
     label: CERT_STATUS_META[status].label,
     count: summary[status],
-    color: scale[i % scale.length],
+    color: AMBER_RAMP[i % AMBER_RAMP.length],
   }));
 
   return (
-    /* Shell-less block — the page wraps the whole left panel in one
-       shared glow card, so this renders title + content only. */
-    <div className={styles.block} aria-label="Certifications by status">
-      <div>
-        <h3 className={styles.sectionTitle}>Certifications by status</h3>
-        <p className={styles.sectionDesc}>
-          Every certification you issued — live counts.
-        </p>
-      </div>
+    <div
+      className={styles.block}
+      aria-label={bare ? "Certifications by status" : undefined}
+    >
+      {bare ? null : (
+        <div>
+          <h3 className={styles.sectionTitle}>Certifications by status</h3>
+          <p className={styles.sectionDesc}>
+            Every certification you issued — live counts.
+          </p>
+        </div>
+      )}
       <div className={styles.body}>
         {summary.total === 0 ? (
           <div className={styles.emptyWrap}>

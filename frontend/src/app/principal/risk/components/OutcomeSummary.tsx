@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { RiskBoardData } from "../riskBoard";
+import type { RiskBoardData } from "@/services/principal/risk.types";
 import styles from "./outcome-summary.module.css";
 
 const OUTCOME_META = [

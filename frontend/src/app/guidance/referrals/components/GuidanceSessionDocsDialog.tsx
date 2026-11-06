@@ -3,45 +3,23 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   deleteSessionAttachment,
   sessionAttachmentError,
   uploadSessionAttachments,
-  type CounselingSessionAttachment,
-  type CounselingSessionItem,
-} from "./guidance-referrals-data";
+} from "@/services/guidance/sessions.service";
+import type {
+  CounselingSessionAttachment,
+  CounselingSessionItem,
+} from "@/services/guidance/guidance.types";
 import { useGuidanceMutation } from "../../overview/components/use-guidance-mutation";
 import styles from "./GuidanceReferralDialogs.module.css";
 
-/* Live clock for the docs lock — ticks every second while open so the
-   unlock flips exactly when the session time arrives. */
-function useNowTick(active: boolean): number {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    if (!active) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [active]);
-  return now;
-}
+import { useActiveNowTick } from "@/lib/clock";
 
-/**
- * Optional documentation on one counseling session: view filed photos,
- * attach more, or remove a wrong upload. Same logic as the nurse booked
- * sessions — filing unlocks once the session time arrives (viewing stays
- * allowed), and docs never gate Done. Available on open cases from the
- * session list ("Docs" button).
- */
 export function SessionDocsDialog({
   referralId,
   session,
@@ -57,7 +35,7 @@ export function SessionDocsDialog({
 }) {
   const [docs, setDocs] = React.useState<CounselingSessionAttachment[]>(session.attachments ?? []);
   const [error, setError] = React.useState<string | null>(null);
-  const now = useNowTick(open);
+  const now = useActiveNowTick(open);
   const uploadMutation = useGuidanceMutation({
     mutationFn: (picked: File[]) =>
       uploadSessionAttachments(referralId, session.id, picked),
@@ -67,6 +45,11 @@ export function SessionDocsDialog({
       `${added.length} photo${added.length === 1 ? "" : "s"} attached to this session.`,
     errorFallback: "Could not upload the photos. Try again.",
     silentError: true,
+    dock: {
+      title: "Uploading session photos",
+      description: (picked: File[]) =>
+        `${picked.length} photo${picked.length === 1 ? "" : "s"} being filed.`,
+    },
     onSuccessExtra: (added) => {
       setDocs((prev) => [...prev, ...added]);
       setError(null);
@@ -80,6 +63,10 @@ export function SessionDocsDialog({
     successDescription: () => "The photo was removed from this session.",
     errorFallback: "Could not remove that photo. Try again.",
     silentError: true,
+    dock: {
+      title: "Removing session photo",
+      description: "Updating the session documentation.",
+    },
     onSuccessExtra: (_data, id) => {
       setDocs((prev) => prev.filter((d) => d.id !== id));
       setError(null);
@@ -95,8 +82,6 @@ export function SessionDocsDialog({
 
   if (!open) return null;
 
-  // Documentation unlocks once the session time arrives — viewing stays
-  // allowed, but new uploads wait for an ongoing/completed session.
   const docsLocked =
     session.status === "scheduled" &&
     new Date(session.scheduledAt).getTime() > now;
@@ -124,14 +109,30 @@ export function SessionDocsDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next && !uploading && !removeMutation.isPending) { onClose(); setError(null); } }}>
-      <DialogContent aria-busy={(uploading || removeMutation.isPending) || undefined}>
-        <DialogHeader>
-          <DialogTitle>Session documentation</DialogTitle>
-          <DialogDescription>
-            Optional photos for this session — JPG/PNG/WEBP, 5 MB each.
-          </DialogDescription>
-        </DialogHeader>
+    <KanbanOverlay
+      open={open}
+      onClose={() => {
+        if (uploading || removeMutation.isPending) return;
+        onClose();
+        setError(null);
+      }}
+      dismissable={!uploading && !removeMutation.isPending}
+      busy={uploading || removeMutation.isPending}
+      width="lg"
+      title="Session documentation"
+      description="Optional photos for this session — JPG/PNG/WEBP, 5 MB each."
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={uploading || removeMutation.isPending}
+          >
+            Done
+          </Button>
+        </div>
+      }
+    >
         {docsLocked ? (
           <div className={styles.errorBlock} role="alert">
             <p className={styles.errorText}>
@@ -193,16 +194,6 @@ export function SessionDocsDialog({
             </p>
           ) : null}
           {displayError ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{displayError}</p></div>) : null}
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={uploading || removeMutation.isPending}
-          >
-            Done
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </KanbanOverlay>
   );
 }

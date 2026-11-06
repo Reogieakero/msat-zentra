@@ -1,26 +1,36 @@
 "use client";
 
-import { OverviewAction } from "./components/OverviewAction";
+import { useQuery } from "@tanstack/react-query";
+import { useTerm } from "@/lib/term/TermContext";
+import { fetchOverview } from "@/services/principal/overview.service";
 import { OverviewRisk } from "./components/OverviewRisk";
 import { OverviewPopulation } from "./components/OverviewPopulation";
-import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
+import { PrincipalOverviewStats } from "./components/PrincipalOverviewStats";
+import { PrincipalOverviewRail } from "./components/PrincipalOverviewRail";
 import styles from "./components/overview.module.css";
 
 export default function PrincipalOverviewPage() {
+  const { activeTerm, termReady } = useTerm();
+  const { isPending } = useQuery({
+    queryKey: ["overview", activeTerm?.termId ?? null],
+    queryFn: fetchOverview,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    enabled: termReady,
+  });
+  const loading = isPending || !termReady;
   return (
-    <section className={styles.page}>
-      <PrincipalPageHeader
-        title="Overview"
-        description="School health at a glance — risk, enrollment, and actions that need you."
-      />
+    <section className={styles.page} aria-busy={loading || undefined}>
       <div className={styles.layout}>
-        <div className={styles.main}>
+        <div className={styles.stack}>
+          <PrincipalOverviewStats />
+
           <OverviewRisk />
 
           <OverviewPopulation />
-
-          <OverviewAction />
         </div>
+
+        <PrincipalOverviewRail />
       </div>
     </section>
   );

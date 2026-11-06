@@ -7,7 +7,8 @@ import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import kanbanStyles from "@/app/teacher/schedule/components/subject-kanban.module.css";
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -23,10 +24,6 @@ interface TeacherCodeClaimProps {
   description: string;
 }
 
-/* Teacher-code claim card — the teacher enters the code next to their name
-   in the master teacher's teacher list, linking their login to that catalog
-   row (subjects + timeslots attach). Shared by teacher/classes and
-   teacher/attendance. Section-grid card design, centered in the viewport. */
 export function TeacherCodeClaim({ title, description }: TeacherCodeClaimProps) {
   const queryClient = useQueryClient();
   const [code, setCode] = useState("");
@@ -44,6 +41,14 @@ export function TeacherCodeClaim({ title, description }: TeacherCodeClaimProps) 
       setClaimError(null);
       void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-me"] });
       void queryClient.invalidateQueries({ queryKey: ["teacher-my-slots"] });
+      // Merged entry: linking also entered the term, so refresh the
+      // term-gated pages (classes, grading, attendance) together.
+      void queryClient.invalidateQueries({ queryKey: ["teacher-overview"] });
+      void queryClient.invalidateQueries({ queryKey: ["teacher-overview-gradebook"] });
+      void queryClient.invalidateQueries({ queryKey: ["teacher-overview-secondary"] });
+      void queryClient.invalidateQueries({ queryKey: ["offered-subjects"] });
+      void queryClient.invalidateQueries({ queryKey: ["attendance-section-roster"] });
+      void queryClient.invalidateQueries({ queryKey: ["teacher-grading-class"] });
       toast.success({
         title: "Teacher code linked",
         description: `Your classes now follow ${data.teacherName.name}'s scheduled subjects and timeslots.`,
@@ -68,47 +73,53 @@ export function TeacherCodeClaim({ title, description }: TeacherCodeClaimProps) 
 
   return (
     <div className={emptyStyles.emptyWrap}>
-      <div className={assign.card} style={{ width: "100%", maxWidth: "28rem" }}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className="relative flex flex-col items-center text-center">
-          <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
-            <KeyRound size={32} className="text-primary" />
-          </span>
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <p className="mt-1 max-w-md text-sm text-muted-foreground">{description}</p>
-          <div className="mt-4 flex w-full flex-col gap-2">
-            <Input
-              placeholder="Teacher code (e.g. MS-101)…"
-              value={code}
-              onChange={(e) => {
-                setCode(e.target.value);
-                setClaimError(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleClaim();
-              }}
-              aria-label="Teacher code"
-              className="text-center uppercase"
-            />
+      <div className={`${kanbanStyles.column} mx-auto w-full max-w-md`}>
+        <KanbanBoard
+          title={title}
+          icon={
+            <span className="text-amber-500" aria-hidden>
+              <KeyRound size={14} />
+            </span>
+          }
+          description={description}
+        >
+          <div className="flex flex-col px-1 py-1">
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                placeholder="TEACHER CODE (E.G. MS-101)..."
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setClaimError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleClaim();
+                }}
+                aria-label="Teacher code"
+                className="h-6 min-w-0 flex-1 rounded-lg text-center text-xs uppercase placeholder:text-[12px]"
+              />
+              <Button
+                onClick={handleClaim}
+                disabled={claim.isPending}
+                className="h-6 shrink-0 rounded-lg bg-black px-3 text-xs text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+              >
+                {claim.isPending ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" aria-hidden />
+                    <span aria-live="polite">Linking…</span>
+                  </>
+                ) : (
+                  "Link code"
+                )}
+              </Button>
+            </div>
             {claimError ? (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="mt-2 text-center text-sm text-destructive">
                 {claimError}
               </p>
             ) : null}
-            <Button onClick={handleClaim} disabled={claim.isPending}>
-              {claim.isPending ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" aria-hidden />
-                  <span aria-live="polite">Linking…</span>
-                </>
-              ) : (
-                "Link code"
-              )}
-            </Button>
           </div>
-        </div>
+        </KanbanBoard>
       </div>
     </div>
   );

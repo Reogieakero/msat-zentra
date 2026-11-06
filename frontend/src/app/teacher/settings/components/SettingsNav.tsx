@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  Brush,
   GraduationCap,
   KeyRound,
   Palette,
+  RefreshCw,
   UserRound,
   Users,
   type LucideIcon,
@@ -22,13 +22,13 @@ export function settingsSections(masterTeacherEligible: boolean): SettingsSectio
   const links: SettingsSectionLink[] = [
     { id: "section-profile", label: "Profile", Icon: UserRound },
     { id: "section-adviser", label: "Adviser", Icon: Users },
+    { id: "section-sync", label: "Sync", Icon: RefreshCw },
   ];
   if (masterTeacherEligible) {
     links.push({ id: "section-master-teacher", label: "Master Teacher", Icon: GraduationCap });
   }
   links.push(
     { id: "section-appearance", label: "Appearance", Icon: Palette },
-    { id: "section-palette", label: "Palette", Icon: Brush },
     { id: "section-password", label: "Password", Icon: KeyRound },
   );
   return links;
@@ -49,9 +49,6 @@ interface SettingsNavProps {
   onSelect: (id: string) => void;
 }
 
-/* Branched icon dock (reactbits branched-menu language): hovering an icon
-   fans a curved branch with its label out to the side; the active item
-   keeps its branch open. Staggered spring-ish motion, CSS only. */
 export function BranchedNav({ links, activeId, onSelect }: SettingsNavProps) {
   return (
     <nav aria-label="Settings sections" className={styles.dock}>

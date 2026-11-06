@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   REASON_LABELS,
-  resolveFlag,
   type GradeFlagRow,
-} from "./grade-flags-data";
+} from "@/services/teacher/gradeFlags.types";
+import { resolveFlag } from "@/services/teacher/gradeFlags.service";
 import { sileo } from "@/components/ui/sonner";
 import styles from "./ResolveFlagDialog.module.css";
 
@@ -57,7 +57,7 @@ export function ResolveFlagDialog({ flag, onClose, onResolved }: ResolveFlagDial
     <CardModal
       open={flag !== null}
       onClose={() => {
-        // Locked while resolving — closes only on server confirmation.
+
         if (submitting) return;
         close();
       }}

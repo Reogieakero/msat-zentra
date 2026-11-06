@@ -1,14 +1,15 @@
 "use client";
 
-import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
 import {
   COMPONENT_NAMES,
   COMPONENT_ORDER,
-  type ClassComponent,
-  type ComponentType,
-} from "../../components/grading-data";
+} from "@/services/teacher/grading.compute";
+import type {
+  ClassComponent,
+  ComponentType,
+} from "@/services/teacher/grading.types";
 import styles from "./AllAssessmentsDialog.module.css";
 
 const DOT: Record<string, string> = {

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Brush,
+  CalendarDays,
   KeyRound,
   Palette,
   UserRound,
@@ -14,12 +14,11 @@ export interface SettingsSectionLink {
   Icon: LucideIcon;
 }
 
-/* Principal settings sections — preferences only. */
 export function principalSettingsSections(): SettingsSectionLink[] {
   return [
     { id: "section-profile", label: "Profile", Icon: UserRound },
+    { id: "section-term", label: "Term & school year", Icon: CalendarDays },
     { id: "section-appearance", label: "Appearance", Icon: Palette },
-    { id: "section-palette", label: "Palette", Icon: Brush },
     { id: "section-password", label: "Password", Icon: KeyRound },
   ];
 }

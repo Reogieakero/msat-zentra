@@ -17,7 +17,6 @@ import {
   Inbox,
   FileSignature,
   Award,
-  FileBarChart,
   ShieldCheck,
   Settings,
   type LucideIcon,
@@ -25,6 +24,7 @@ import {
 
 import styles from "./principal-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
 type NavItem = {
@@ -39,15 +39,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Principal nav — same branched left rail on desktop + flattened tab bar
-// on small screens as the nurse / teacher / guidance / coordinator desks.
-// Parents from the old top navbar (Academics, Risk Board, ADM Cases) keep
-// their overview link AND list each sub-page as its own leaf item so every
-// route is reachable from the rail. Active state uses longest-prefix
-// matching so a child page highlights the child, not the parent.
-//
-// Shared-concept convention (same label + icon across desks):
-// Overview=LayoutDashboard, ADM Cases=Inbox.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -113,7 +104,6 @@ const NAV: NavGroup[] = [
     label: "Insights",
     items: [
       { title: "Honor Roll", href: "/principal/honor-roll", icon: Award },
-      { title: "Reports", href: "/principal/reports", icon: FileBarChart },
       { title: "Audit Log", href: "/principal/audit", icon: ShieldCheck },
     ],
   },
@@ -129,8 +119,6 @@ const NAV: NavGroup[] = [
   },
 ];
 
-// GitHub-style tab bar: every section flattened into one row on small
-// screens. Groups only group the source data, not the rendered tabs.
 const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
 function matches(href: string, pathname: string, exactRoot: string) {
@@ -138,9 +126,6 @@ function matches(href: string, pathname: string, exactRoot: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-// Longest-prefix match: when both a parent (e.g. /principal/risk) and a
-// child (e.g. /principal/risk/students) match, the child wins so the rail
-// and tab bar highlight the deepest page.
 function findActiveHref(tabs: NavItem[], pathname: string) {
   let best: string | null = null;
   for (const t of tabs) {
@@ -213,23 +198,42 @@ function PrincipalRail({ groups }: { groups: NavGroup[] }) {
   );
 }
 
-export function PrincipalSidebar() {
+export function PrincipalSidebar({
+  collapsed = true,
+}: {
+  collapsed?: boolean;
+} = {}) {
+  const pathname = usePathname();
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const activeHref = findActiveHref(TABS, pathname);
 
   return (
     <>
-      <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Principal sections">
-        <div ref={railScrollRef} className={styles.railScroll}>
-          <PrincipalRail groups={NAV} />
-        </div>
-        <div className={styles.railHintWrap}>
-          <ScrollDownHint
-            scrollRef={railScrollRef}
-            watchKey="principal-nav"
-            label="Scroll for more"
-            className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+      <aside
+        className={`${styles.rail} ${styles.railDesktop} ${collapsed ? styles.railCollapsed : ""}`}
+        aria-label="Principal sections"
+      >
+        {collapsed ? (
+          <SidebarIconRail
+            groups={NAV}
+            ariaLabel="Principal sections, icon only"
+            activeHref={activeHref}
           />
-        </div>
+        ) : (
+          <>
+            <div ref={railScrollRef} className={styles.railScroll}>
+              <PrincipalRail groups={NAV} />
+            </div>
+            <div className={styles.railHintWrap}>
+              <ScrollDownHint
+                scrollRef={railScrollRef}
+                watchKey="principal-nav"
+                label="Scroll for more"
+                className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+              />
+            </div>
+          </>
+        )}
       </aside>
       <div className={styles.tabsMobile}>
         <PrincipalNavbar tabs={TABS} />

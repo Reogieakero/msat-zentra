@@ -799,6 +799,73 @@
   margin: 0;
 }
 
+/* ADM kanban board — the wider feed and four folder cards per row, same
+   rhythm as the nurse ADM cases board. */
+.feedWide {
+  max-width: 84rem;
+  margin-inline: auto;
+}
+
+.kanbanGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
+@media (max-width: 1200px) {
+  .kanbanGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .kanbanGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .kanbanGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.kanbanGrid > * {
+  animation: kanban-card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.kanbanGrid > *:nth-child(1) { animation-delay: 0.03s; }
+.kanbanGrid > *:nth-child(2) { animation-delay: 0.12s; }
+.kanbanGrid > *:nth-child(3) { animation-delay: 0.21s; }
+.kanbanGrid > *:nth-child(4) { animation-delay: 0.3s; }
+.kanbanGrid > *:nth-child(5) { animation-delay: 0.39s; }
+.kanbanGrid > *:nth-child(6) { animation-delay: 0.48s; }
+.kanbanGrid > *:nth-child(7) { animation-delay: 0.57s; }
+.kanbanGrid > *:nth-child(8) { animation-delay: 0.66s; }
+.kanbanGrid > *:nth-child(9) { animation-delay: 0.75s; }
+.kanbanGrid > *:nth-child(10) { animation-delay: 0.84s; }
+.kanbanGrid > *:nth-child(11) { animation-delay: 0.93s; }
+.kanbanGrid > *:nth-child(12) { animation-delay: 1.02s; }
+.kanbanGrid > *:nth-child(n + 13) { animation-delay: 1.05s; }
+
+@keyframes kanban-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanbanGrid > * {
+    animation: none;
+  }
+}
+
 /* Slim toolbar: title on the left, search on the right. Stays pinned
    below both fixed bars (3rem topbar + 3rem tab navbar) while cases
    scroll — same offsets as the nurse desk. */

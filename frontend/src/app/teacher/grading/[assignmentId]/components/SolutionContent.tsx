@@ -5,9 +5,11 @@ import {
   bandForGrade,
   computeSubjectGrade,
   subjectEvidence,
-  type ClassDetail,
-  type ComponentType,
-} from "../../components/grading-data";
+} from "@/services/teacher/grading.compute";
+import type {
+  ClassDetail,
+  ComponentType,
+} from "@/services/teacher/grading.types";
 import { WeightsVisual } from "./WeightsVisual";
 import styles from "./SolutionContent.module.css";
 

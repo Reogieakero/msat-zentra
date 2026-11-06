@@ -90,6 +90,14 @@ export const ComponentType = {
 export type ComponentType = (typeof ComponentType)[keyof typeof ComponentType]
 
 
+export const AssessmentAudience = {
+  regular: 'regular',
+  adm: 'adm'
+} as const
+
+export type AssessmentAudience = (typeof AssessmentAudience)[keyof typeof AssessmentAudience]
+
+
 export const LockStatus = {
   unlocked: 'unlocked',
   locked: 'locked',
@@ -208,7 +216,8 @@ export const AdmFormType = {
   ANECDOTAL_REPORT: 'ANECDOTAL_REPORT',
   CERTIFICATION: 'CERTIFICATION',
   MINUTES_OF_MEETING: 'MINUTES_OF_MEETING',
-  HV_FORM: 'HV_FORM'
+  HV_FORM: 'HV_FORM',
+  PRINCIPAL_SIGNAGE: 'PRINCIPAL_SIGNAGE'
 } as const
 
 export type AdmFormType = (typeof AdmFormType)[keyof typeof AdmFormType]
@@ -230,6 +239,14 @@ export const Sf10Status = {
 } as const
 
 export type Sf10Status = (typeof Sf10Status)[keyof typeof Sf10Status]
+
+
+export const Sf10Desk = {
+  registrar: 'registrar',
+  record_keeper: 'record_keeper'
+} as const
+
+export type Sf10Desk = (typeof Sf10Desk)[keyof typeof Sf10Desk]
 
 
 export const ActionType = {
@@ -323,3 +340,20 @@ export const AdmFormStatus = {
 } as const
 
 export type AdmFormStatus = (typeof AdmFormStatus)[keyof typeof AdmFormStatus]
+
+
+export const AdvisoryModuleKind = {
+  general: 'general',
+  adm: 'adm'
+} as const
+
+export type AdvisoryModuleKind = (typeof AdvisoryModuleKind)[keyof typeof AdvisoryModuleKind]
+
+
+export const AdvisorySubmissionKind = {
+  link: 'link',
+  file: 'file',
+  physical: 'physical'
+} as const
+
+export type AdvisorySubmissionKind = (typeof AdvisorySubmissionKind)[keyof typeof AdvisorySubmissionKind]

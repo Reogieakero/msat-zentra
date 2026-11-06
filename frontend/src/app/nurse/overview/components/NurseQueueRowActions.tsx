@@ -2,7 +2,19 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Loader2, MoreHorizontal } from "lucide-react";
+import {
+  CalendarClock,
+  CheckCircle2,
+  ClipboardCheck,
+  Eye,
+  FileText,
+  Info,
+  Loader2,
+  MessageSquarePlus,
+  MoreHorizontal,
+  Play,
+  Route,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +29,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
@@ -25,15 +40,18 @@ import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import { AdmTrackDialog } from "@/components/adm-tracker/AdmTrackDialog";
 import { Textarea } from "@/components/ui/textarea";
 import { NurseStartHandlingDialog } from "./NurseStartHandlingDialog";
+import { NurseSessionScheduleBoard } from "./NurseSessionScheduleBoard";
+import { apiErrorMessage } from "@/lib/api/errors";
 import {
   addNurseFollowUpNote,
-  apiErrorMessage,
   updateNurseReferralStatus,
-  type NurseQueueRow,
-  type NurseReferralStatus,
-} from "./nurse-overview-data";
+} from "@/services/nurse/referrals.service";
+import type {
+  NurseQueueRow,
+  NurseReferralStatus,
+} from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "./use-nurse-mutation";
-import { isEndorsed } from "../../referrals/components/nurse-referrals-format";
+import { activeSessionOf, isEndorsed } from "../../referrals/components/nurse-referrals-format";
 import styles from "./nurse-overview.module.css";
 
 const QUICK_ACTIONS: { status: NurseReferralStatus; label: string }[] = [
@@ -47,20 +65,21 @@ export function NurseQueueRowActions({
   seeMoreHref,
   viewFormHref,
   viewOnly = false,
+  menuLeadingItems,
 }: {
   row: NurseQueueRow;
   onChanged: () => void;
-  // Hides menu entries the caller already offers as primary buttons
-  // (timeline layout).
+
   hiddenItems?: Array<"start" | "resolve">;
-  // Deep-links to the page where this case lives (alerts table): "See
-  // more" jumps to the highlighted case, "View referral form" also
-  // overlays the filled referral form — no manual hunting.
+
   seeMoreHref?: string;
   viewFormHref?: string;
-  // View-only mode (alerts table): exactly three items — View referral
-  // form, View anecdotal report, See more. No status edits, no truncation.
+
   viewOnly?: boolean;
+
+  /** Extra items rendered at the top of the viewOnly menu, before a
+      separator (desk-specific actions like "Endorse & forward"). */
+  menuLeadingItems?: React.ReactNode;
 }) {
   const [startOpen, setStartOpen] = React.useState(false);
   const [resolveOpen, setResolveOpen] = React.useState(false);
@@ -100,9 +119,7 @@ export function NurseQueueRowActions({
   const notePending = noteMutation.isPending;
 
   const isClosed = row.status === "resolved" || row.status === "dismissed";
-  // Endorsed ADM cases moved to the coordinator with their full report —
-  // the anecdotal write-up is no longer viewable on this desk (same rule
-  // as the ADM referrals page).
+
   const isEndorsedRow = isEndorsed(row.type, row.status);
 
   function openReport() {
@@ -111,41 +128,25 @@ export function NurseQueueRowActions({
       return;
     }
     if (!row.anecdotalId) return;
-    // Same privacy rule as guidance: finished cases keep the full
-    // write-up hidden; the summary on this page stays visible.
+
     if (isClosed) setPrivacyOpen(true);
     else setPreviewId(row.anecdotalId);
   }
 
   function runStatus(status: NurseReferralStatus, resolutionSummary?: string) {
-    statusMutation.mutate(
-      { status, resolutionSummary },
-      {
-        onSuccess: () => {
-          if (status === "resolved") {
-            setResolveOpen(false);
-            setSummary("");
-            setDialogError(null);
-          }
-        },
-        onError: () => {
-          if (status === "resolved") {
-            setDialogError(
-              statusMutation.error
-                ? apiErrorMessage(statusMutation.error, "Could not resolve this case. Try again.")
-                : "Could not resolve this case. Try again."
-            );
-          }
-        },
-      }
-    );
+    // Overlays close at once — the shared Dock reports the request until it
+    // settles (the mutation hook owns that task).
+    if (status === "resolved") {
+      setResolveOpen(false);
+      setSummary("");
+      setDialogError(null);
+    }
+    statusMutation.mutate({ status, resolutionSummary });
   }
 
   function handleResolve() {
     setDialogError(null);
-    // Mirror the referrals-page gate: Done needs ≥1 completed clinic
-    // session (docs stay optional). The server enforces this too — this
-    // is just the friendly early message.
+
     if (row.type !== "ADM" && row.completedSessions === 0) {
       setDialogError("Finish at least one clinic session before marking this case done.");
       return;
@@ -160,18 +161,15 @@ export function NurseQueueRowActions({
       return;
     }
     setDialogError(null);
-    noteMutation.mutate(note.trim(), {
-      onError: () => {
-        setDialogError(
-          noteMutation.error
-            ? apiErrorMessage(noteMutation.error, "Could not save the note. Try again.")
-            : "Could not save the note. Try again."
-        );
-      },
-    });
+    // Close at once — the Dock reports the save until it settles.
+    setNoteOpen(false);
+    noteMutation.mutate(note.trim());
   }
 
   const isAdm = row.type === "ADM";
+  /* Clinic rows with a live booking get the same "Session schedule…"
+     kanban the ADM rows show (passed by their callers as a leading item). */
+  const bookedSession = isAdm ? null : activeSessionOf(row.sessions);
 
   return (
     <>
@@ -194,17 +192,46 @@ export function NurseQueueRowActions({
         <DropdownMenuContent align="end" className="min-w-56">
           {viewOnly ? (
             <>
+              {menuLeadingItems}
+              {!isAdm && bookedSession ? (
+                <>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className={styles.menuItem}>
+                      <CalendarClock aria-hidden />
+                      Session schedule…
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent
+                      sideOffset={8}
+                      className="min-w-0 overflow-visible border-0 bg-transparent p-0 shadow-none ring-0"
+                    >
+                      <NurseSessionScheduleBoard
+                        row={row}
+                        session={bookedSession}
+                      />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+              {!isAdm &&
+                (row.status === "pending" || row.status === "escalated") &&
+                !hiddenItems.includes("start") && (
+                  <DropdownMenuItem
+                    className={styles.menuItem}
+                    disabled={statusPending}
+                    onSelect={() => setStartOpen(true)}
+                  >
+                    <ClipboardCheck aria-hidden />
+                    Review clinic case…
+                  </DropdownMenuItem>
+                )}
               {isAdm && (
                 <DropdownMenuItem
                   className={styles.menuItem}
                   onSelect={() => setTrackOpen(true)}
                 >
+                  <Route aria-hidden />
                   Track ADM referral
-                </DropdownMenuItem>
-              )}
-              {viewFormHref && (
-                <DropdownMenuItem asChild className={styles.menuItem}>
-                  <Link href={viewFormHref}>View referral form</Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
@@ -212,13 +239,9 @@ export function NurseQueueRowActions({
                 disabled={!row.anecdotalId && !isEndorsedRow}
                 onSelect={openReport}
               >
+                <FileText aria-hidden />
                 View anecdotal report
               </DropdownMenuItem>
-              {seeMoreHref && (
-                <DropdownMenuItem asChild className={styles.menuItem}>
-                  <Link href={seeMoreHref}>See more</Link>
-                </DropdownMenuItem>
-              )}
             </>
           ) : (
           <>
@@ -226,24 +249,30 @@ export function NurseQueueRowActions({
             <>
               {seeMoreHref && (
                 <DropdownMenuItem asChild>
-                  <Link href={seeMoreHref}>See more…</Link>
+                  <Link href={seeMoreHref}>
+                    <Eye aria-hidden />
+                    See more…
+                  </Link>
                 </DropdownMenuItem>
               )}
               {viewFormHref && (
                 <DropdownMenuItem asChild>
-                  <Link href={viewFormHref}>View referral form…</Link>
+                  <Link href={viewFormHref}>
+                    <FileText aria-hidden />
+                    View referral form…
+                  </Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
             </>
           )}
-          {/* ADM cases follow the consultation review pipeline — raw status
-              edits are blocked server-side, so only notes stay here. */}
+
           {isAdm && (
             <DropdownMenuItem
               disabled={notePending}
               onSelect={() => setTrackOpen(true)}
             >
+              <Route aria-hidden />
               Track ADM referral
             </DropdownMenuItem>
           )}
@@ -251,6 +280,7 @@ export function NurseQueueRowActions({
             <>
               {(row.status === "pending" || row.status === "escalated") && !hiddenItems.includes("start") && (
                 <DropdownMenuItem disabled={statusPending} onSelect={() => setStartOpen(true)}>
+                  <Play aria-hidden />
                   Start handling…
                 </DropdownMenuItem>
               )}
@@ -260,21 +290,25 @@ export function NurseQueueRowActions({
                   disabled={statusPending}
                   onSelect={() => runStatus(action.status)}
                 >
+                  <Info aria-hidden />
                   {statusPending ? "Updating…" : action.label}
                 </DropdownMenuItem>
               ))}
             </>
           )}
           <DropdownMenuItem disabled={notePending || !row.anecdotalId} onSelect={openReport}>
+            <FileText aria-hidden />
             View anecdotal report…
           </DropdownMenuItem>
           <DropdownMenuItem disabled={notePending || !row.anecdotalId} onSelect={() => setNoteOpen(true)}>
+            <MessageSquarePlus aria-hidden />
             Add follow-up note…
           </DropdownMenuItem>
           {!isAdm && !hiddenItems.includes("resolve") && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled={statusPending} onSelect={() => setResolveOpen(true)}>
+                <CheckCircle2 aria-hidden />
                 Resolve case…
               </DropdownMenuItem>
             </>
@@ -415,6 +449,7 @@ export function NurseQueueRowActions({
           }}
           track={{
             referralStatus: row.status,
+            dismissedByRole: row.dismissedByRole,
             consultReviewer: row.consultReviewer ?? "nurse",
             referredBy: "Adviser",
             anecdotalDate: row.anecdotal?.observedAt ?? row.referredAt,

@@ -3,16 +3,16 @@
 import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { Crown, Medal, Star, Sprout, Leaf } from "lucide-react";
-import type { DescriptorBand, HonorRollCandidate } from "../honor-roll-data";
+import type { DescriptorBand } from "@/services/principal/academics";
+import type { HonorRollCandidate } from "@/services/principal/honorRoll.types";
 import styles from "./TierLeaderboard.module.css";
 
 interface Props {
   candidates: HonorRollCandidate[];
 }
 
-// DO 15, s. 2026 descriptor bands (Advancing 90+ → Emerging below 65).
 const BAND_ICON: Record<DescriptorBand, React.ComponentType<{ className?: string }>> = {
   Advancing: Crown,
   Benchmarking: Medal,
@@ -69,9 +69,9 @@ export function TierLeaderboard({ candidates }: Props) {
       </ol>
 
       <div className={styles.legend}>
-        <Badge variant="outline">Advancing ≥ 90</Badge>
-        <Badge variant="outline">Benchmarking ≥ 80</Badge>
-        <Badge variant="outline">Connecting ≥ 75</Badge>
+        <Pill tone="green">Advancing ≥ 90</Pill>
+        <Pill tone="blue">Benchmarking ≥ 80</Pill>
+        <Pill tone="amber">Connecting ≥ 75</Pill>
       </div>
     </Card>
   );

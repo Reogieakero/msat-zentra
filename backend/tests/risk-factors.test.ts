@@ -50,4 +50,28 @@ describe("academic risk factor", () => {
     });
     expect(academicFlag).toBe(true);
   });
+
+  it("trips when computed avg fails but transmuted passes (unified EITHER)", () => {
+    const { academicFlag } = computeRiskFactors({
+      ...base,
+      finalGrades: [{ computedAverage: 70, transmutedGrade: 80 }],
+    });
+    expect(academicFlag).toBe(true);
+  });
+
+  it("trips when transmuted avg fails but computed passes (unified EITHER)", () => {
+    const { academicFlag } = computeRiskFactors({
+      ...base,
+      finalGrades: [{ computedAverage: 80, transmutedGrade: 70 }],
+    });
+    expect(academicFlag).toBe(true);
+  });
+
+  it("ignores gradeMode param (real-time unified)", () => {
+    const grades = [{ computedAverage: 70, transmutedGrade: 80 }];
+    const raw = computeRiskFactors({ ...base, finalGrades: grades, gradeMode: "raw" });
+    const fin = computeRiskFactors({ ...base, finalGrades: grades, gradeMode: "final" });
+    expect(raw.academicFlag).toBe(true);
+    expect(fin.academicFlag).toBe(true);
+  });
 });

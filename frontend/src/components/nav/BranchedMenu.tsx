@@ -8,7 +8,6 @@ export interface BranchedMenuChild {
   value: string;
   label: string;
   icon?: React.ReactNode;
-  /** When set, the row navigates instead of acting as a plain button. */
   href?: string;
 }
 
@@ -32,8 +31,6 @@ interface BranchedMenuProps {
   items?: BranchedMenuItem[];
   defaultOpen?: OpenState;
   defaultActive?: string;
-  /** Controlled active value (e.g. the current route). Follows changes and
-   *  auto-opens the containing section. */
   activeValue?: string;
   onSelect?: (value: string, item: BranchedMenuChild | BranchedMenuItem) => void;
   onToggle?: (index: number, open: boolean) => void;
@@ -52,10 +49,6 @@ interface BranchedMenuProps {
   className?: string;
 }
 
-/* BranchedMenu (reactbits) ported to TypeScript + CSS modules. Section
-   headers fold; children branch out along animated SVG lines with a
-   travelling accent marker. Icons accept any React node (lucide
-   elements work directly). */
 export default function BranchedMenu({
   items = [],
   defaultOpen = 0,
@@ -91,9 +84,6 @@ export default function BranchedMenu({
     latest.current = { onSelect, onToggle };
   });
 
-  // Controlled mode: an external active value (route) wins and opens
-  // its section; otherwise the menu owns its state. Render-phase sync
-  // (same pattern as the attendance sheet key) so no effect is needed.
   if (activeValue !== undefined && activeValue !== active) {
     setActive(activeValue);
     const section = items.findIndex((it) =>
@@ -190,8 +180,6 @@ export default function BranchedMenu({
         const isOpen = kids ? open.has(i) : false;
         const leafValue = item.value ?? item.label;
         const leafActive = !kids && leafValue === active;
-        // Parent branch is active when any of its children is — so the
-        // group label follows the active link color too.
         const sectionActive = kids ? kids.some((kid) => kid.value === active) : leafActive;
         const bodyH = kids ? PAD * 2 + kids.length * rowHeight : 0;
         return (

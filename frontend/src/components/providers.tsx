@@ -6,10 +6,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { TermProvider } from "@/lib/term/TermContext";
 import { TermSelectOverlay } from "@/components/term/TermSelectOverlay";
+import { Sf10BulkUploadProvider } from "@/components/registry/sf10/sf10-bulk-upload-context";
+import { AdviserAccessCheckProvider } from "@/components/shared/adviser-access/adviser-access-check-context";
+import { TeacherSubmitDockProvider } from "@/components/shared/referral-submit/referral-submit-dock-context";
+import { LockGradesDockProvider } from "@/components/shared/lock-grades/lock-grades-dock-context";
+import { DockProvider } from "@/components/dock/dock-store";
+import { SharedDock } from "@/components/dock/SharedDock";
 
 type Theme = "light" | "dark";
 
-// Single workspace font (Inter) — the Nunito option was retired.
 export type FontPref = "inter";
 
 type ThemeContextValue = {
@@ -31,7 +36,7 @@ function getInitialFont(): FontPref {
   return "inter";
 }
 
-function applyFont(_font: FontPref) {
+function applyFont() {
   const root = document.documentElement;
   root.style.setProperty("--font-sans", "var(--font-inter)");
 }
@@ -43,17 +48,17 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const initial = getInitialFont();
     setFontState(initial);
-    applyFont(initial);
+    applyFont();
     setMounted(true);
   }, []);
 
   const setFont = React.useCallback((next: FontPref) => {
     setFontState(next);
-    applyFont(next);
+    applyFont();
     try {
       window.localStorage.setItem(FONT_STORAGE_KEY, next);
     } catch {
-      /* ignore storage failures */
+
     }
   }, []);
 
@@ -105,7 +110,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
-      /* ignore storage failures */
+
     }
   }, []);
 
@@ -133,12 +138,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
         queries: {
-          // Read-heavy role dashboards (Principal/Registrar) are also cached at
-          // the API layer (Upstash Redis, see backend/src/lib/cache.ts). Keep a
-          // client-side window so navigations between tabs feel instant without
-          // hammering the backend. Background refetch on window focus stays off
-          // on purpose: returning to a fresh page shows cached data immediately
-          // with no skeleton flash, and mutations invalidate explicitly.
+
           staleTime: 30_000,
             gcTime: 5 * 60_000,
             refetchOnWindowFocus: false,
@@ -152,11 +152,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <FontProvider>
         <QueryClientProvider client={queryClient}>
-          <TermProvider>
-            <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
-            <Toaster position="top-right" />
-            <TermSelectOverlay />
-          </TermProvider>
+          <DockProvider>
+          <Sf10BulkUploadProvider>
+            <AdviserAccessCheckProvider>
+              <TeacherSubmitDockProvider>
+              <LockGradesDockProvider>
+              <TermProvider>
+                <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+                <Toaster position="top-right" />
+                <TermSelectOverlay />
+                <SharedDock />
+              </TermProvider>
+              </LockGradesDockProvider>
+              </TeacherSubmitDockProvider>
+            </AdviserAccessCheckProvider>
+          </Sf10BulkUploadProvider>
+          </DockProvider>
         </QueryClientProvider>
       </FontProvider>
     </ThemeProvider>

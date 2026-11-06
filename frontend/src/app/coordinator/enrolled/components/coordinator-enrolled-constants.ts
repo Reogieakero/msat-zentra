@@ -1,6 +1,6 @@
 "use client";
 
-import type { AdmEligibility } from "../../components/coordinator-data";
+import type { AdmEligibility } from "@/services/coordinator/coordinator.types";
 
 export const ELIG_OPTIONS: { value: "all" | AdmEligibility; label: string }[] = [
   { value: "all", label: "All" },

@@ -1,56 +1,48 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import assign from "./section-assignments.module.css";
-import page from "../assign.module.css";
+import styles from "./sections-kanban.module.css";
 
-// Mirrors the loaded layout one-to-one: header row (title + subtitle +
-// action button), filter row (card title + count + grade filter), then section
-// cards in the same responsive grid as the real cards (title block | adviser
-// line | 3-action footer) with approximated widths.
-const SKELETON_ROWS = 6;
+const SKELETON_CARDS = 8;
 
 export function AssignSkeleton() {
   return (
-    <div className={page.skelWrap} role="status" aria-label="Loading sections" aria-busy="true">
-      <div className={page.headerRow} aria-hidden="true">
-        <div className={page.header}>
-          <Skeleton className={page.skelTitle} />
-          <Skeleton className={page.skelSubtitle} />
+    <div
+      className={styles.skelShell}
+      role="status"
+      aria-label="Loading sections"
+      aria-busy="true"
+    >
+      <div className={styles.toolbar} aria-hidden="true">
+        <div className={styles.toolbarText}>
+          <Skeleton className={styles.skelTitle} />
+          <Skeleton className={styles.skelDescription} />
         </div>
-        <Skeleton className={page.skelBtn} />
+        <Skeleton className={styles.skelFilter} />
+        <div className={styles.toolbarEnd}>
+          <Skeleton className={styles.skelButton} />
+        </div>
       </div>
-
-      <div className={page.card} aria-hidden="true">
-        <div className={assign.filterRow}>
-          <div>
-            <Skeleton className={page.skelCardTitle} />
-            <Skeleton className={page.skelCardSub} />
-          </div>
-          <Skeleton className={page.skelFilter} />
-        </div>
-        <div className={assign.grid}>
-          {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-            <div key={i} className={assign.skelRowGrid}>
-              <Skeleton className={`${assign.skelBadge} ${assign.gradeFloat}`} />
-              <div className={assign.cardHead}>
-                <Skeleton className={assign.skelAvatar} />
-                <div className={assign.cardTitleBlock}>
-                  <Skeleton className={assign.skelLabel} />
-                  <Skeleton className={assign.skelName} />
-                </div>
+      <div className={styles.grid} aria-hidden="true">
+        {Array.from({ length: SKELETON_CARDS }).map((_, i) => (
+          <div key={i} className={styles.card}>
+            <div className={styles.cardHead}>
+              <Skeleton className={styles.skelAvatar} />
+              <div className={styles.cardId}>
+                <Skeleton className={styles.skelName} />
+                <Skeleton className={styles.skelTeacher} />
               </div>
-              <div className={assign.teacherBlock}>
-                <Skeleton className={assign.skelLabel} />
-                <Skeleton className={assign.skelTeacher} />
-              </div>
-              <div className={assign.skelActionsRow}>
-                <Skeleton className={assign.skelAction} />
-                <Skeleton className={assign.skelAction} />
-              </div>
+              <Skeleton className={styles.skelPill} />
             </div>
-          ))}
-        </div>
+            <div className={styles.metaRow}>
+              <Skeleton className={styles.skelPill} />
+            </div>
+            <div className={styles.cardActions}>
+              <Skeleton className={styles.skelAction} />
+              <Skeleton className={styles.skelAction} />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

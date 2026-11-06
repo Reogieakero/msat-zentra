@@ -1,10 +1,10 @@
-import {
-  NURSE_STATUS_LABELS,
-  type ClinicAttachment,
-  type NurseQueueRow,
-  type NurseSessionItem,
-} from "../../overview/components/nurse-overview-data";
-import type { NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
+import { NURSE_STATUS_LABELS } from "@/services/nurse/labels";
+import type {
+  ClinicAttachment,
+  NurseQueueRow,
+  NurseSessionItem,
+} from "@/services/nurse/nurse.types";
+import type { NurseAlertItem } from "@/services/nurse/nurse.types";
 
 export interface DocEntry {
   key: string;
@@ -20,6 +20,7 @@ export interface DocEntry {
 
 export type TypeFilter = "" | "ADM" | "Clinic";
 export type SortKey = "referral" | "student" | "date" | "status";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "", label: "All types" },
@@ -27,7 +28,7 @@ const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "Clinic", label: "Clinic" },
 ];
 
-const PAGE_SIZE = 15;
+
 
 export function buildEntries(alerts: NurseAlertItem[]): DocEntry[] {
   const entries: DocEntry[] = [];
@@ -122,9 +123,6 @@ export function entryStatusVariant(
   return statusVariant(entry.row.status);
 }
 
-/* Per-student folder over finished transactions — one folder per student
-   whose cases appear here. Colors follow the dominant case type so the
-   grid reads at a glance. */
 export interface StudentHealthFolder {
   key: string;
   student: string;
@@ -143,8 +141,7 @@ export const HEALTH_FOLDER_COLORS: Record<"ADM" | "Clinic", string> = {
 };
 
 function folderIdentity(row: NurseQueueRow): { key: string; lrn: string } {
-  // Same identity rules as the overview builder: registered students key
-  // by LRN, roster enlistments fall back to name + section.
+
   const lrn = (row.lrn || "").trim();
   if (lrn && lrn !== "—") return { key: `lrn:${lrn}`, lrn };
   return {
@@ -185,12 +182,12 @@ export function groupEntriesByStudent(entries: DocEntry[]): StudentHealthFolder[
   }
   const folders = [...map.values()];
   for (const f of folders) {
-    // Newest case first inside each folder.
+
     f.entries.sort((a, b) => b.sortTime - a.sortTime || b.dateDay.localeCompare(a.dateDay));
     const adm = f.entries.filter((e) => e.row.type === "ADM").length;
     f.dominantType = adm * 2 >= f.entries.length ? "ADM" : "Clinic";
   }
-  // Most files first — the heaviest records surface on top.
+
   folders.sort((a, b) => b.fileCount - a.fileCount || b.entries.length - a.entries.length);
   return folders;
 }

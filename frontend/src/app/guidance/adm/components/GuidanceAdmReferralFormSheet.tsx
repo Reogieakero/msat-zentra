@@ -1,22 +1,17 @@
 "use client";
 
-import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useDock } from "@/components/dock/dock-store";
 import {
   AdmReferralFormSheet,
   type AdmReferralFormDraft,
 } from "@/components/adm-referral-form/AdmReferralFormPage";
-import type { GuidanceAdmCase } from "./guidance-adm-data";
-import { listAdmConsultationSessions, reviewAdmConsultation } from "./guidance-adm-data";
+import type { GuidanceAdmCase } from "@/services/guidance/adm.types";
+import { listAdmConsultationSessions, reviewAdmConsultation } from "@/services/guidance/adm.service";
 import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
 import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
-import type { GcForm03Data } from "./gcform03-data";
+import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 
-/**
- * Guidance GCForm-03 fill-up sheet — shared fill-up UI opening in place
- * (no navigation), guidance wiring: confirming endorses the case to the
- * ADM coordinator, pops a success toast, then closes back to the list.
- */
 export function GuidanceAdmReferralFormSheet({
   open,
   onClose,
@@ -37,10 +32,9 @@ export function GuidanceAdmReferralFormSheet({
   onChanged: () => void;
 }) {
   const invalidateGuidance = useGuidanceInvalidate();
+  const dock = useDock();
   const referralId = adapter.referralId;
 
-  // Sessions already booked on the case — confirming is blocked while one
-  // is still upcoming (same rule as the nurse desk).
   const sessionsQuery = useQuery({
     queryKey: ["adm-consultation-sessions", referralId],
     queryFn: () => listAdmConsultationSessions(referralId),
@@ -49,15 +43,30 @@ export function GuidanceAdmReferralFormSheet({
   const hasActiveSession = (sessionsQuery.data ?? []).some((s) => s.status === "scheduled");
 
   async function onConfirm({ form }: { form: GcForm03Data; scheduledAt?: string }) {
-    await reviewAdmConsultation(referralId, {
-      recommendation: form.guidanceRecommendations.trim() || "Referred for ADM.",
-      outcome: "endorse",
-    });
+    let taskId: string | null = null;
+    try {
+      taskId = dock.startTask({
+        kind: "adm-endorse",
+        title: "Endorsing to ADM",
+        description: "Saving the referral form and endorsement.",
+      });
+    } catch {
+      taskId = null;
+    }
+    try {
+      await reviewAdmConsultation(referralId, {
+        recommendation: form.guidanceRecommendations.trim() || "Referred for ADM.",
+        outcome: "endorse",
+      });
+    } catch (error) {
+      if (taskId) dock.failTask(taskId, "Could not endorse this case.");
+      throw error;
+    }
+    if (taskId) dock.completeTask(taskId, "Case endorsed.");
   }
 
   function onConfirmed() {
-    // Confirmed server-side: suppress the realtime echo, bump every
-    // guidance query (notifications included) via the shared invalidator.
+
     markSelfNotified(referralId);
     invalidateGuidance();
     onChanged();

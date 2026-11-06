@@ -3,22 +3,16 @@
 import * as React from "react";
 import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { FileText, Loader2, SearchX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchGuidanceAnecdotal,
-  type GuidanceAnecdotalData,
-} from "../../anecdotal/components/guidance-anecdotal-data";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../../components/GuidancePageHeader";
+import { GuidanceEmptyCard, GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
+import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
+import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import {
@@ -31,24 +25,55 @@ import filterStyles from "./components/guidance-behavioral-filters.module.css";
 import donutStyles from "./components/guidance-category-donut.module.css";
 import cardsStyles from "./components/guidance-behavioral-cards.module.css";
 import styles from "../../pages.module.css";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 
-const GUIDANCE_BEHAVIORAL_PAGE_SIZE = 15;
+const GUIDANCE_BEHAVIORAL_PAGE_SIZE = PAGE_SIZE;
 
-/**
- * Guidance behavioral records — fully live. Lists only filings an adviser
- * explicitly referred to guidance (`/api/guidance/anecdotal`): category
- * flags and counts that feed the behavioral risk flag (≥ 1 report).
- * Students and parents later see the level + category only, never the
- * write-up — and that write-up never leaves the case file here either.
- */
 export default function GuidanceBehavioralPage() {
-  const { activeTerm } = useTerm();
+  return (
+    <React.Suspense>
+      <GuidanceBehavioralPageInner />
+    </React.Suspense>
+  );
+}
+
+function GuidanceBehavioralPageInner() {
+  const searchParams = useSearchParams();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [queryInput, setQueryInput] = React.useState("");
-  const [category, setCategory] = React.useState<BehavioralCategoryFilter>("all");
-  const [page, setPage] = React.useState(1);
-  // Debounced 300ms so server queries fire after the user pauses typing.
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const [category, setCategoryState] = React.useState<BehavioralCategoryFilter>(() => {
+    const c = searchParams.get("category");
+    return c === "behavioral" || c === "bullying" || c === "academic" || c === "attendance" || c === "health"
+      ? c
+      : "all";
+  });
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "category"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
+  const setCategory = React.useCallback(
+    (v: BehavioralCategoryFilter) => {
+      setCategoryState(v);
+      pager.setFilters({ category: v === "all" ? undefined : v });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const query = useDebouncedValue(queryInput.trim(), 300);
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: query || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<GuidanceAnecdotalData>({
@@ -65,102 +90,82 @@ export default function GuidanceBehavioralPage() {
         ),
       staleTime: 60_000,
       placeholderData: keepPreviousData,
+      enabled: termReady,
     });
 
-  // Derived, never setState-in-effect.
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
-        <div className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>Insights · Behavioral</p>
-            <h1 className={styles.title}>Behavioral records</h1>
-            <p className={styles.lede}>Loading referred filings…</p>
-          </div>
-          <Skeleton style={{ width: "8rem", height: "1.5rem" }} />
-        </div>
+      <section className={styles.page} aria-busy="true" aria-label="Loading behavioral records">
+        <ZentraPageHeaderSkeleton withActions actionCount={1} />
 
-        {/* Donut card mirror — chart + legend + interpretation. */}
-        <Card className={styles.card} aria-hidden="true">
-          <CardHeader>
-            <CardTitle className={styles.sectionTitle}>
-              <Skeleton style={{ width: "14rem", height: "1rem" }} />
-            </CardTitle>
-            <CardDescription className={styles.sectionDesc}>
-              <Skeleton style={{ width: "22rem", maxWidth: "100%", height: "0.8rem" }} />
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className={donutStyles.chartRow}>
-              {/* Donut diameter is constrained by the 168px chart height. */}
-              <Skeleton style={{ width: "10.5rem", height: "10.5rem", borderRadius: "50%", flexShrink: 0 }} />
-              <div style={{ flex: "1 1 12rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} style={{ width: `${88 - i * 9}%`, height: "0.9rem" }} />
-                ))}
-              </div>
-            </div>
-            <Skeleton style={{ width: "100%", height: "3rem", marginTop: "0.875rem" }} />
-          </CardContent>
-        </Card>
-
-        {/* Feed card mirror — header action, filter row, cards grid, pager. */}
-        <Card className={styles.card} aria-hidden="true">
-          <CardHeader>
-            <CardTitle className={styles.sectionTitle}>
-              <Skeleton style={{ width: "12rem", height: "1rem" }} />
-            </CardTitle>
-            <CardDescription className={styles.sectionDesc}>
-              <Skeleton style={{ width: "18rem", maxWidth: "100%", height: "0.8rem" }} />
-            </CardDescription>
-            <CardAction className={filterStyles.headerAction}>
-              <div className={filterStyles.filters} style={{ marginBottom: 0 }}>
-                <Skeleton style={{ width: "22rem", maxWidth: "100%", height: "2rem" }} />
-                <Skeleton style={{ width: "7rem", height: "2rem" }} />
-              </div>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            <ul className={cardsStyles.grid}>
-              {[0, 1, 2, 3, 4, 5].map((i) => (
-                <li key={i} className={cardsStyles.card}>
-                  <div className={cardsStyles.top}>
-                    <div style={{ flex: 1 }}>
-                      <Skeleton style={{ width: "60%", height: "0.9rem" }} />
-                      <Skeleton style={{ width: "40%", height: "0.75rem", marginTop: "0.375rem" }} />
-                    </div>
-                    <Skeleton style={{ width: "4.5rem", height: "1.25rem" }} />
-                  </div>
-                  <div className={cardsStyles.meta}>
-                    {[0, 1, 2, 3, 4, 5].map((j) => (
-                      <div key={j} className={cardsStyles.metaItem}>
-                        <Skeleton style={{ width: "45%", height: "0.65rem" }} />
-                        <Skeleton style={{ width: "80%", height: "0.8rem", marginTop: "0.375rem" }} />
-                      </div>
-                    ))}
-                  </div>
-                  <div className={cardsStyles.foot}>
-                    <Skeleton style={{ width: "6rem", height: "1.25rem" }} />
-                    <span className={cardsStyles.spacer} />
-                    <Skeleton style={{ width: "5.5rem", height: "1.5rem" }} />
-                  </div>
-                </li>
+        <KanbanBoard
+          title={<Skeleton style={{ width: "14rem", height: "1rem" }} />}
+          description={<Skeleton style={{ width: "22rem", maxWidth: "100%", height: "0.8rem" }} />}
+          className={styles.card}
+          ariaLabel="Loading behavioral summary"
+        >
+          <div className={donutStyles.chartRow}>
+            <Skeleton style={{ width: "10.5rem", height: "10.5rem", borderRadius: "50%", flexShrink: 0 }} />
+            <div style={{ flex: "1 1 12rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} style={{ width: `${88 - i * 9}%`, height: "0.9rem" }} />
               ))}
-            </ul>
-            <div className={styles.actionsRight} style={{ marginTop: "0.75rem" }}>
-              <Skeleton style={{ width: "4rem", height: "1.75rem" }} />
-              <Skeleton style={{ width: "7rem", height: "0.8rem" }} />
-              <Skeleton style={{ width: "4rem", height: "1.75rem" }} />
             </div>
-            <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
-              <Skeleton style={{ width: "9rem", height: "2rem" }} />
-              <Skeleton style={{ width: "8rem", height: "2rem" }} />
+          </div>
+          <Skeleton style={{ width: "100%", height: "3rem", marginTop: "0.875rem" }} />
+        </KanbanBoard>
+
+        <KanbanBoard
+          title={<Skeleton style={{ width: "12rem", height: "1rem" }} />}
+          description={<Skeleton style={{ width: "18rem", maxWidth: "100%", height: "0.8rem" }} />}
+          actions={
+            <div className={filterStyles.filters} style={{ marginBottom: 0 }}>
+              <Skeleton style={{ width: "22rem", maxWidth: "100%", height: "2rem" }} />
+              <Skeleton style={{ width: "7rem", height: "2rem" }} />
             </div>
-          </CardContent>
-        </Card>
+          }
+          className={styles.card}
+          ariaLabel="Loading behavioral feed"
+        >
+          <ul className={cardsStyles.grid}>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <li key={i} className={cardsStyles.card}>
+                <div className={cardsStyles.top}>
+                  <div style={{ flex: 1 }}>
+                    <Skeleton style={{ width: "60%", height: "0.9rem" }} />
+                    <Skeleton style={{ width: "40%", height: "0.75rem", marginTop: "0.375rem" }} />
+                  </div>
+                  <Skeleton style={{ width: "4.5rem", height: "1.25rem" }} />
+                </div>
+                <div className={cardsStyles.meta}>
+                  {[0, 1, 2, 3, 4, 5].map((j) => (
+                    <div key={j} className={cardsStyles.metaItem}>
+                      <Skeleton style={{ width: "45%", height: "0.65rem" }} />
+                      <Skeleton style={{ width: "80%", height: "0.8rem", marginTop: "0.375rem" }} />
+                    </div>
+                  ))}
+                </div>
+                <div className={cardsStyles.foot}>
+                  <Skeleton style={{ width: "6rem", height: "1.25rem" }} />
+                  <span className={cardsStyles.spacer} />
+                  <Skeleton style={{ width: "5.5rem", height: "1.5rem" }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className={styles.actionsRight} style={{ marginTop: "0.75rem" }}>
+            <Skeleton style={{ width: "4rem", height: "1.75rem" }} />
+            <Skeleton style={{ width: "7rem", height: "0.8rem" }} />
+            <Skeleton style={{ width: "4rem", height: "1.75rem" }} />
+          </div>
+          <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
+            <Skeleton style={{ width: "9rem", height: "2rem" }} />
+            <Skeleton style={{ width: "8rem", height: "2rem" }} />
+          </div>
+        </KanbanBoard>
         <Skeleton style={{ width: "100%", height: "2.5rem" }} />
       </section>
     );
@@ -168,36 +173,26 @@ export default function GuidanceBehavioralPage() {
 
   if (isError || !data) {
     return (
-      <section className={styles.page}>
-        <div className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>Insights · Behavioral</p>
-            <h1 className={styles.title}>Behavioral records</h1>
-          </div>
-        </div>
-        <Card className={styles.card}>
-          <CardHeader>
-            <CardTitle className={styles.sectionTitle}>
-              We couldn&apos;t load the behavioral feed
-            </CardTitle>
-            <CardDescription className={styles.sectionDesc}>
-              Check your connection and try again.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => refetch()}
-              disabled={isFetching}
-            >
-              {isFetching ? (
-                <Loader2 className="animate-spin" aria-hidden style={{ width: "1rem", height: "1rem" }} />
-              ) : null}
-              {isFetching ? "Retrying…" : "Retry"}
-            </Button>
-          </CardContent>
-        </Card>
+      <section className={styles.page} aria-label="Behavioral records">
+        <GuidancePageHeader title="Behavioral Records" />
+        <KanbanBoard
+          title="We couldn&apos;t load the behavioral feed"
+          icon={<FileText className="size-3.5" aria-hidden="true" />}
+          description="Check your connection and try again."
+          className={styles.card}
+        >
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            {isFetching ? (
+              <Loader2 className="animate-spin" aria-hidden style={{ width: "1rem", height: "1rem" }} />
+            ) : null}
+            {isFetching ? "Retrying…" : "Retry"}
+          </Button>
+        </KanbanBoard>
       </section>
     );
   }
@@ -206,49 +201,47 @@ export default function GuidanceBehavioralPage() {
   const to = Math.min(safePage * data.pageSize, data.total);
 
   return (
-    <section className={styles.page}>
-      <div className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Insights · Behavioral</p>
-          <h1 className={styles.title}>Behavioral records</h1>
-          <p className={styles.lede}>
-            Live category flags and counts from filings referred to guidance —
-            the signal behind the behavioral risk flag (≥ 1 report).
-          </p>
-        </div>
-        <Badge variant="outline">
-          Live · {data.total} referred
-          {data.unfilteredTotal !== undefined && data.unfilteredTotal !== data.total
-            ? ` (of ${data.unfilteredTotal})`
-            : ""}
-        </Badge>
-      </div>
+    <section className={styles.page} aria-label="Behavioral records">
+      {(data.unfilteredTotal ?? data.total) === 0 && query === "" && category === "all" ? null : (
+        <GuidancePageHeader
+          title="Behavioral Records"
+          description="Live category flags and counts from filings referred to guidance — the signal behind the behavioral risk flag (≥ 1 report)."
+          actions={
+            <Badge variant="outline">
+              Live · {data.total} referred
+              {data.unfilteredTotal !== undefined && data.unfilteredTotal !== data.total
+                ? ` (of ${data.unfilteredTotal})`
+                : ""}
+            </Badge>
+          }
+        />
+      )}
+      {(data.unfilteredTotal ?? data.total) === 0 && query === "" && category === "all" ? (
+        <GuidanceEmptyCard
+          icon={FileText}
+          title="No behavioral records"
+          hint="Behavioral filings referred to guidance will appear here."
+          label="Behavioral records"
+          centered
+        />
+      ) : (
+        <>
 
-      <Card className={styles.card}>
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>
-            Referred filings by category
-          </CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            Only records an adviser routed to guidance — unreferred filings
-            never appear here.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <GuidanceCategoryDonut summary={data.summary} />
-        </CardContent>
-      </Card>
+      <KanbanBoard
+        title="Referred filings by category"
+        icon={<FileText className="size-3.5" aria-hidden="true" />}
+        description="Only records an adviser routed to guidance — unreferred filings never appear here."
+        className={styles.card}
+      >
+        <GuidanceCategoryDonut summary={data.summary} />
+      </KanbanBoard>
 
-      <Card className={styles.card}>
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>
-            Behavioral signal feed
-          </CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            Category + tier rows, no clinical text. Showing {from}–{to} of{" "}
-            {data.total}.
-          </CardDescription>
-          <CardAction className={filterStyles.headerAction}>
+      <KanbanBoard
+        title="Behavioral signal feed"
+        icon={<FileText className="size-3.5" aria-hidden="true" />}
+        description={`Category + tier rows, no clinical text. Showing ${from}–${to} of ${data.total}.`}
+        actions={
+          <div className={filterStyles.headerAction}>
             <GuidanceBehavioralFilters
               query={queryInput}
               onQueryChange={(v) => {
@@ -262,63 +255,42 @@ export default function GuidanceBehavioralPage() {
               }}
               summary={data.summary}
             />
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          {data.records.length === 0 ? (
-            <p className={styles.sectionDesc}>
-              No referred filings match — try clearing the search or filter.
-            </p>
-          ) : (
-            <GuidanceBehavioralCards records={data.records} />
-          )}
-
-          <div className={styles.actionsRight} style={{ marginTop: "0.75rem" }}>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={safePage <= 1 || (isFetching && !isPending)}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Previous
-            </Button>
-            <span className={styles.sectionDesc} aria-live="polite">
-              {isFetching && !isPending ? (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-                  <Loader2 className="animate-spin" aria-hidden style={{ width: "0.875rem", height: "0.875rem" }} />
-                  Loading…
-                </span>
-              ) : (
-                `Page ${safePage} of ${totalPages}`
-              )}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={safePage >= totalPages || (isFetching && !isPending)}
-              onClick={() =>
-                setPage((p) => Math.min(totalPages, p + 1))
-              }
-            >
-              Next
-            </Button>
           </div>
+        }
+        className={styles.card}
+      >
+        {data.records.length === 0 ? (
+          <GuidanceEmptyState
+            icon={SearchX}
+            title="No referred filings match"
+            hint="Try clearing the search or filter to see every referred filing."
+          />
+        ) : (
+          <GuidanceBehavioralCards records={data.records} />
+        )}
 
-          <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
-            <Button size="sm" variant="outline" asChild>
-              <Link href="/guidance/alerts">Open at-risk queue</Link>
-            </Button>
-            <Button size="sm" variant="outline" asChild>
-              <Link href="/guidance/referrals">View referrals</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <Pagination
+          currentPage={safePage}
+          totalItems={data.total}
+          onPageChange={setPage}
+        />
+
+        <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/guidance/alerts">Open at-risk queue</Link>
+          </Button>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/guidance/referrals">View referrals</Link>
+          </Button>
+        </div>
+      </KanbanBoard>
 
       <p className={styles.note}>
         Guidance sees owning + referred rows; the full write-up opens only
         through the case file, never from this feed.
       </p>
+        </>
+      )}
     </section>
   );
 }

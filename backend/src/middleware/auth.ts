@@ -49,7 +49,7 @@ export function requireOwnershipOrRole(getOwnerId: (req: Request) => string | Pr
       const ownerId = await getOwnerId(req);
       if (ownerId === req.user.id) return next();
     } catch {
-      /* fall through to 403 */
+
     }
     next(new AppError(403, "FORBIDDEN", "Not authorized for this resource"));
   };

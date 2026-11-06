@@ -12,7 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { phTodayKey } from "./attendance-taking-data";
+import { phTodayKey } from "@/services/teacher/attendance.service";
 
 function parseDayKey(dayKey: string): Date | undefined {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return undefined;
@@ -20,19 +20,15 @@ function parseDayKey(dayKey: string): Date | undefined {
   return Number.isNaN(day.getTime()) ? undefined : day;
 }
 
-/** shadcn calendar-in-popover sheet date picker speaking "YYYY-MM-DD".
- *  Only the selected subject's meetup dates are markable — future days and
- *  non-meetup days are disabled, with non-meetup days tinted red. While the
- *  meetup list loads (`meetupDates` null) only future days are disabled. */
 export function SheetDatePicker({
   date,
   onChange,
   meetupDates,
 }: {
-  /** "YYYY-MM-DD" sheet date. */
+
   date: string;
   onChange: (date: string) => void;
-  /** "YYYY-MM-DD" meetup keys for the active subject (null while loading). */
+
   meetupDates: string[] | null;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -69,9 +65,12 @@ export function SheetDatePicker({
             {selected ? format(selected, "MMM d, yyyy") : "Pick a date"}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-auto p-0">
+        <PopoverContent align="start" className="w-[280px] p-0">
+          <div className="p-4">
           <Calendar
             mode="single"
+            className="[--cell-size:--spacing(8)] w-full p-0"
+            classNames={{ month: "flex w-full flex-col items-center gap-4" }}
             selected={selected}
             defaultMonth={selected ?? today}
             disabled={(day) => !isMarkable(day)}
@@ -93,15 +92,7 @@ export function SheetDatePicker({
               setOpen(false);
             }}
           />
-          {meetupSet ? (
-            <div className="flex items-center gap-1.5 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
-              <span
-                className="h-3 w-3 shrink-0 rounded-[4px] bg-red-500/30"
-                aria-hidden="true"
-              />
-              Non-meetup day — no class for this subject
-            </div>
-          ) : null}
+          </div>
         </PopoverContent>
       </Popover>
       {!isToday ? (

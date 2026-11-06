@@ -17,18 +17,18 @@ import {
 describe("attendance engine (canonical single source of truth)", () => {
   describe("buildDayAxis + countSchoolDays", () => {
     it("produces a continuous inclusive axis and counts weekdays only", () => {
-      const axis = buildDayAxis("2026-01-05T00:00:00.000Z"); // Monday
+      const axis = buildDayAxis("2026-01-05T00:00:00.000Z");
       expect(axis[0]).toBe("2026-01-05");
-      expect(axis).toContain("2026-01-10"); // Saturday
+      expect(axis).toContain("2026-01-10");
       const weekdays = countSchoolDays(axis);
-      // Independent check: count Mon–Fri across the same range.
+
       const expected = axis.filter((k) => {
         const wd = new Date(k + "T00:00:00Z").getUTCDay();
         return wd !== 0 && wd !== 6;
       }).length;
       expect(weekdays).toBe(expected);
-      expect(isWeekendKey("2026-01-10")).toBe(true); // Sat
-      expect(isWeekendKey("2026-01-05")).toBe(false); // Mon
+      expect(isWeekendKey("2026-01-10")).toBe(true);
+      expect(isWeekendKey("2026-01-05")).toBe(false);
     });
   });
 
@@ -50,7 +50,7 @@ describe("attendance engine (canonical single source of truth)", () => {
       expect(cell.present).toBe(1);
       expect(cell.late).toBe(1);
       expect(cell.excused).toBe(1);
-      expect(cell.total).toBe(4); // absent is counted toward submitted total
+      expect(cell.total).toBe(4);
     });
   });
 
@@ -58,7 +58,7 @@ describe("attendance engine (canonical single source of truth)", () => {
     it("computes present ÷ headcount as 0..100", () => {
       expect(dailyPresentPercent(9, 10)).toBe(90);
       expect(dailyPresentPercent(0, 10)).toBe(0);
-      expect(dailyPresentPercent(5, 0)).toBe(0); // guard: no headcount
+      expect(dailyPresentPercent(5, 0)).toBe(0);
     });
   });
 
@@ -70,10 +70,9 @@ describe("attendance engine (canonical single source of truth)", () => {
         { present: 0, late: 0, excused: 0, total: 0 },
         { present: 10, late: 0, excused: 0, total: 10 },
       ];
-      // present=28 over 4 days, headcount=10, schoolDays=4 → 28/40 = 70%
+
       expect(avgPresentPercent(days, 10, 4)).toBe(70);
-      // Missing records are treated as no-present days (not a denominator shift).
-      // But the canonical denominator is headcount × schoolDays, so it stays.
+
       expect(avgPresentPercent(days, 10, 4)).toBe(70);
     });
 
@@ -86,10 +85,10 @@ describe("attendance engine (canonical single source of truth)", () => {
   describe("below80Days", () => {
     it("counts days with submitted records under 80% headcount", () => {
       const days = [
-        { present: 9, late: 0, excused: 0, total: 10 }, // 90% → not counted
-        { present: 7, late: 0, excused: 0, total: 10 }, // 70% → counted
-        { present: 0, late: 0, excused: 0, total: 0 }, // no records → ignored
-        { present: 10, late: 0, excused: 0, total: 10 }, // 100% → not
+        { present: 9, late: 0, excused: 0, total: 10 },
+        { present: 7, late: 0, excused: 0, total: 10 },
+        { present: 0, late: 0, excused: 0, total: 0 },
+        { present: 10, late: 0, excused: 0, total: 10 },
       ];
       expect(below80Days(days, 10)).toBe(1);
     });
@@ -123,16 +122,16 @@ describe("attendance engine (canonical single source of truth)", () => {
 
   describe("phTodayKey", () => {
     it("returns the Manila calendar day, not the UTC day", () => {
-      // 17:00 UTC = 01:00 next day in Manila — the block must already exist.
+
       expect(phTodayKey(new Date("2026-09-25T17:00:00.000Z"))).toBe("2026-09-26");
-      // 15:00 UTC = 23:00 same day in Manila.
+
       expect(phTodayKey(new Date("2026-09-25T15:00:00.000Z"))).toBe("2026-09-25");
     });
   });
 
   describe("manilaKey", () => {
     it("formats any instant as its Asia/Manila calendar date", () => {
-      // Instant-based: identical on servers in any timezone.
+
       expect(manilaKey(new Date("2026-09-15T16:00:00.000Z"))).toBe("2026-09-16");
       expect(manilaKey(new Date("2026-09-15T15:59:59.000Z"))).toBe("2026-09-15");
       expect(manilaKey(new Date("2026-12-18T15:00:00.000Z"))).toBe("2026-12-18");
@@ -141,13 +140,13 @@ describe("attendance engine (canonical single source of truth)", () => {
 
   describe("buildSchoolDayAxis", () => {
     it("runs term start -> today with zero weekend keys", () => {
-      const axis = buildSchoolDayAxis("2026-01-05T00:00:00.000Z"); // Monday
+      const axis = buildSchoolDayAxis("2026-01-05T00:00:00.000Z");
       expect(axis.length).toBeGreaterThan(0);
       expect(axis[0]).toBe("2026-01-05");
       for (const key of axis) {
         expect(isWeekendKey(key)).toBe(false);
       }
-      // A full Mon->today span loses exactly its weekend days.
+
       const full = buildDayAxis("2026-01-05T00:00:00.000Z");
       expect(axis.length).toBe(countSchoolDays(full));
     });

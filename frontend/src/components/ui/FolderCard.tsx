@@ -7,7 +7,9 @@ export interface FolderFile {
   tag: string;
   tone?: 1 | 2 | 3 | 4 | 5;
   icon?: "image" | "video" | "code" | "doc" | "chart";
-  /** Session-type color coding (guidance documentation slips). */
+  /** Actual image preview shown inside the folder slip (falls back to the icon). */
+  thumbUrl?: string;
+
   sessionKind?: "individual" | "parent_conference" | "group" | "home_visit";
 }
 
@@ -30,28 +32,55 @@ const FILE_ICONS: Record<NonNullable<FolderFile["icon"]>, React.ComponentType<{ 
 };
 
 interface FolderCardProps {
-  label: string;
+  /** Caption under the folder. Omit both label and sublabel for a bare
+      folder (e.g. when the surrounding card renders its own caption pills). */
+  label?: string;
   sublabel?: string;
   files: FolderFile[];
-  /** Optional chip pinned to the folder's bottom-right (e.g. record type). */
+
   cornerTag?: string;
-  /** Optional folder body color (e.g. per-category). Defaults to gray. */
+  /** Optional inline style for the corner tag pill (e.g. emerald approved). */
+  cornerTagStyle?: React.CSSProperties;
+
   folderColor?: string;
-  /** Optional per-slip click (e.g. open a gallery). Slips render as plain
-      divs when omitted; as buttons (with stopPropagation) when provided. */
+
   onFileClick?: (index: number) => void;
+  /** When set, the whole folder body opens (not just the file slip). File
+      slip clicks still fire onFileClick only — they stop propagation. */
+  onCardClick?: () => void;
+  /** Accessible name for the folder body button (used with onCardClick). */
+  cardAriaLabel?: string;
 }
 
-export function FolderCard({ label, sublabel, files, cornerTag, folderColor, onFileClick }: FolderCardProps) {
+export function FolderCard({ label, sublabel, files, cornerTag, cornerTagStyle, folderColor, onFileClick, onCardClick, cardAriaLabel }: FolderCardProps) {
   const count = files.length;
+  const folderInteractive = Boolean(onCardClick);
 
   return (
     <div className={styles.card}>
       <div
-        className={styles.folder}
+        className={`${styles.folder}${folderInteractive ? ` ${styles.folderClickable}` : ""}`}
         style={
           folderColor
             ? ({ "--folder-color": folderColor } as React.CSSProperties)
+            : undefined
+        }
+        role={folderInteractive ? "button" : undefined}
+        tabIndex={folderInteractive ? 0 : undefined}
+        aria-label={
+          folderInteractive
+            ? cardAriaLabel ?? label ?? "Open folder"
+            : undefined
+        }
+        onClick={onCardClick}
+        onKeyDown={
+          folderInteractive
+            ? (e: React.KeyboardEvent<HTMLDivElement>) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onCardClick?.();
+                }
+              }
             : undefined
         }
       >
@@ -72,7 +101,18 @@ export function FolderCard({ label, sublabel, files, cornerTag, folderColor, onF
             const inner = (
               <>
                 <div className={styles.shine} aria-hidden />
-                <Icon className={styles.fileIcon} aria-hidden />
+                {file.thumbUrl ? (
+                  <img
+                    src={file.thumbUrl}
+                    alt=""
+                    aria-hidden
+                    loading="lazy"
+                    draggable={false}
+                    className={styles.fileThumb}
+                  />
+                ) : (
+                  <Icon className={styles.fileIcon} aria-hidden />
+                )}
                 <div className={styles.fileText}>{file.name}</div>
                 <div className={styles.fileTag}>{file.tag}</div>
               </>
@@ -98,7 +138,7 @@ export function FolderCard({ label, sublabel, files, cornerTag, folderColor, onF
           })}
 
           {cornerTag && (
-            <div className={styles.cornerTag} aria-label={`Record type: ${cornerTag}`}>
+            <div className={styles.cornerTag} style={cornerTagStyle} aria-label={`Record type: ${cornerTag}`}>
               {cornerTag}
             </div>
           )}

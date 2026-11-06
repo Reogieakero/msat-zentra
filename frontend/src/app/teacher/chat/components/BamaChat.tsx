@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CardModal } from "@/components/ui/CardModal";
 import { Button } from "@/components/ui/button";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import {
@@ -18,15 +17,17 @@ import {
 } from "./bama-conversations";
 import { TEXT_QUESTION_LABELS, TEXT_QUESTION_PLACEHOLDERS } from "./bama-flow";
 import { useAnecdotalFlow } from "./useAnecdotalFlow";
+import { useSf10AccessFlow } from "./useSf10AccessFlow";
 import { BamaSidebar } from "./BamaSidebar";
 import { BamaThread } from "./BamaThread";
 import { BamaComposer } from "./BamaComposer";
-import { BamaFlowDialogs } from "./BamaFlowDialogs";
+import { BamaDeleteDialog } from "./BamaDeleteDialog";
 import styles from "./bama-chat.module.css";
 
 const TYPE_LABELS: Record<BamaChatType, string> = {
   "grade-flag": "Grade Flag",
   anecdotal: "Anecdotal Record",
+  "sf10-access": "SF10 Access",
 };
 
 const GREETINGS: Record<BamaChatType, string> = {
@@ -34,6 +35,8 @@ const GREETINGS: Record<BamaChatType, string> = {
     "Hi, I'm Bama. Tell me about the grade concern and I'll help you put the flag together.",
   anecdotal:
     "Hi, I'm Bama. Tell me what happened and I'll help you write the anecdotal record.\nWhich student is this anecdotal report for? Pick one below.",
+  "sf10-access":
+    "Hi, I'm Bama. I'll help you request SF10 read access for your advisory.\nPick your section below to begin.",
 };
 
 const FREE_FOLLOWUPS: Record<BamaChatType, string> = {
@@ -41,6 +44,8 @@ const FREE_FOLLOWUPS: Record<BamaChatType, string> = {
     "Got it — I've kept that with this chat. Full grade-flag help is still learning, so please raise the actual flag from Grade Flags for now.",
   anecdotal:
     "Noted — I've kept that with this chat. Pick the student above and I'll walk you through the report.",
+  "sf10-access":
+    "Noted — I've kept that with this chat. Follow the steps above to finish your SF10 access request.",
 };
 
 export function BamaChat() {
@@ -59,9 +64,6 @@ export function BamaChat() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const replyTimer = useRef<number | null>(null);
 
-  // Load persisted chats once (client only). Post-mount storage hydration
-  // is the documented exception — reading localStorage during render would
-  // hydrate different HTML than the server sent.
   /* eslint-disable react-hooks/set-state-in-effect -- client-only store hydration */
   useEffect(() => {
     const store = loadBamaStore();
@@ -72,7 +74,6 @@ export function BamaChat() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Persist chats on change (after hydration).
   useEffect(() => {
     if (hydrated) saveBamaStore({ conversations, activeId });
   }, [conversations, activeId, hydrated]);
@@ -85,6 +86,7 @@ export function BamaChat() {
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
   const anecMode = active?.type === "anecdotal";
+  const sf10Mode = active?.type === "sf10-access";
 
   const flow = useAnecdotalFlow({
     active,
@@ -95,12 +97,19 @@ export function BamaChat() {
     setDraft,
   });
 
-  // ---- Free chat (grade-flag threads) ----
+  const sf10Flow = useSf10AccessFlow({
+    active,
+    activeId,
+    hydrated,
+    setConversations,
+    draft,
+    setDraft,
+  });
+
   function handleFreeSend() {
     const text = draft.trim();
     if (!text || sending) return;
     if (!active) {
-      // No open chat — start one and keep the typed message in the box.
       startChat("anecdotal", true);
       composerRef.current?.focus();
       return;
@@ -143,11 +152,13 @@ export function BamaChat() {
 
   function handleSend() {
     if (anecMode) flow.handleAnecSend();
+    else if (sf10Mode) sf10Flow.handleReasonSend();
     else handleFreeSend();
   }
 
   function startChat(type: BamaChatType, keepDraft = false) {
     flow.resetFlowStates();
+    sf10Flow.resetFlowStates();
     const now = Date.now();
     const convo: BamaConversation = {
       ...createConversation(type),
@@ -160,30 +171,32 @@ export function BamaChat() {
     composerRef.current?.focus();
   }
 
-  // Deep link (e.g. "?new" from the repo's New record button): land fresh
-  // with no active thread, so the user picks the chat type
-  // (grade flag or anecdotal) from the welcome cards first — nothing is
-  // auto-created and no greeting is auto-sent.
   const newParamHandled = useRef(false);
-  // One-shot deep-link reset after hydration (param-driven, runs once).
   /* eslint-disable react-hooks/set-state-in-effect -- one-shot deep-link reset */
   useEffect(() => {
     if (!hydrated || newParamHandled.current) return;
     const t = searchParams.get("new");
     if (t === null) return;
     newParamHandled.current = true;
-    flow.resetFlowStates();
-    setActiveId(null);
-    setDraft("");
-    router.replace("/teacher/chat");
+    if (t === "grade-flag" || t === "anecdotal" || t === "sf10-access") {
+      startChat(t);
+    } else {
+      flow.resetFlowStates();
+      sf10Flow.resetFlowStates();
+      setActiveId(null);
+      setDraft("");
+    }
+    // Keep standalone new-tab mode when the chat was opened from a kanban
+    // board or the navbar pill (?standalone=1) so the shell stays full-width.
+    const standalone = searchParams.get("standalone") === "1";
+    router.replace(standalone ? "/teacher/chat?standalone=1" : "/teacher/chat");
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [hydrated, searchParams, router]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // New chat goes back to a fresh start: no active thread, so the user
-  // picks grade flag or anecdotal from the welcome cards first.
   function handleNewChat() {
     flow.resetFlowStates();
+    sf10Flow.resetFlowStates();
     setActiveId(null);
     setDraft("");
   }
@@ -193,33 +206,51 @@ export function BamaChat() {
     const id = deleteTarget.id;
     setConversations((prev) => prev.filter((c) => c.id !== id));
     flow.removeFlowSnapshot(id);
+    sf10Flow.removeFlowSnapshot(id);
     setActiveId((prev) => (prev === id ? null : prev));
     setDeleteTarget(null);
   }
 
   const composerDisabled =
-    sending || flow.filing || !active || active?.filed === true || (anecMode && flow.textQuestion === null);
+    sending ||
+    flow.filing ||
+    sf10Flow.submitting ||
+    !active ||
+    active?.filed === true ||
+    (anecMode && flow.textQuestion === null) ||
+    (sf10Mode && sf10Flow.phase !== "reason");
   const composerPlaceholder = !active
-    ? "Pick Grade Flag or Anecdotal above to begin"
+    ? "Pick Grade Flag, Anecdotal, or SF10 Access above to begin"
     : active?.filed
       ? "This record is filed — start a New chat for another report."
-      : anecMode
-        ? flow.textQuestion
-          ? TEXT_QUESTION_PLACEHOLDERS[flow.textQuestion]
-          : flow.student
-            ? "Answer the questions above — typing unlocks at each description step"
-            : "Pick a student to begin"
-        : `Ask Bama about this ${TYPE_LABELS[active.type].toLowerCase()}…`;
+      : sf10Mode
+        ? sf10Flow.phase === "section"
+          ? "Pick a section above to begin"
+          : sf10Flow.phase === "students"
+            ? "Select students above, then press Done"
+            : sf10Flow.phase === "reason"
+              ? "Type the reason for this request… (max 500 characters)"
+              : "Review the request above, then submit"
+        : anecMode
+          ? flow.textQuestion
+            ? TEXT_QUESTION_PLACEHOLDERS[flow.textQuestion]
+            : flow.student
+              ? "Answer the questions above — typing unlocks at each description step"
+              : "Pick a student to begin"
+          : `Ask Bama about this ${TYPE_LABELS[active.type].toLowerCase()}…`;
   const sendDisabled =
     sending ||
     flow.filing ||
+    sf10Flow.submitting ||
     !active ||
     active?.filed === true ||
     (anecMode
       ? flow.textQuestion !== null
         ? !draft.trim() || !flow.student
         : !flow.canFile
-      : !draft.trim());
+      : sf10Mode
+        ? sf10Flow.phase !== "reason" || !draft.trim()
+        : !draft.trim());
 
   return (
     <section className={styles.page} aria-label="Chat with Bama">
@@ -239,6 +270,7 @@ export function BamaChat() {
             active={active}
             sending={sending}
             flow={flow}
+            sf10Flow={sf10Flow}
             typeLabel={active ? TYPE_LABELS[active.type] : ""}
             threadRef={threadRef}
             onStartChat={startChat}
@@ -257,13 +289,19 @@ export function BamaChat() {
             onDraftChange={setDraft}
             disabled={composerDisabled}
             placeholder={composerPlaceholder}
-            inputLabel={anecMode && flow.textQuestion ? TEXT_QUESTION_LABELS[flow.textQuestion] : "Ask Bama"}
+            inputLabel={
+              anecMode && flow.textQuestion
+                ? TEXT_QUESTION_LABELS[flow.textQuestion]
+                : sf10Mode && sf10Flow.phase === "reason"
+                  ? "Reason for SF10 access request"
+                  : "Ask Bama"
+            }
             sendDisabled={sendDisabled}
             sendLabel={anecMode && flow.textQuestion === null ? "File record" : "Send message"}
             hint={
               active?.filed
                 ? "This record is filed — start a New chat for another report."
-                : sending || flow.filing
+                : sending || flow.filing || sf10Flow.submitting
                   ? "Working on it…"
                   : "Enter to send · Shift + Enter for a new line"
             }
@@ -275,41 +313,13 @@ export function BamaChat() {
         </div>
       </div>
 
-      <BamaFlowDialogs flow={flow} active={active} />
-
-      <CardModal
-        open={deleteTarget !== null}
+      <BamaDeleteDialog
+        target={deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        size="sm"
-        title="Delete this chat?"
-        description={
-          deleteTarget ? (
-            <>
-              “{deleteTarget.title}” will be permanently removed. This cannot be undone.
-            </>
-          ) : undefined
-        }
-      >
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => setDeleteTarget(null)}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            className={styles.btnRed}
-            onClick={() => {
-              confirmDelete();
-            }}
-          >
-            Delete
-          </Button>
-        </div>
-      </CardModal>
+        onConfirm={() => {
+          confirmDelete();
+        }}
+      />
 
       <OcForm01PreviewDialog recordId={previewRecordId} onClose={() => setPreviewRecordId(null)} />
     </section>

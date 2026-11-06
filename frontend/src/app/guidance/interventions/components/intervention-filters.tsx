@@ -13,7 +13,7 @@ import type {
   FactorFilter,
   FollowUpStatusFilter,
   RiskLevelFilter,
-} from "./guidance-interventions-data";
+} from "@/services/guidance/interventions.types";
 import styles from "./intervention-filters.module.css";
 
 const LEVEL_OPTIONS: { value: RiskLevelFilter; label: string }[] = [
@@ -46,7 +46,6 @@ interface CompactFilterProps {
   onChange: (value: string) => void;
 }
 
-/* Same compact dropdown design as the referrals status filter. */
 function CompactFilter({
   buttonLabel,
   active,

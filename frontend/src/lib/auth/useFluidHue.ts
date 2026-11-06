@@ -12,7 +12,7 @@ export function useFluidHue(): [FluidHue, (hue: FluidHue) => void] {
       const stored = window.localStorage.getItem(STORAGE_KEY) as FluidHue | null;
       if (stored && VALID.includes(stored)) setHueState(stored);
     } catch {
-      /* ignore unavailable storage */
+
     }
   }, []);
 
@@ -21,7 +21,7 @@ export function useFluidHue(): [FluidHue, (hue: FluidHue) => void] {
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
-      /* ignore unavailable storage */
+
     }
   }, []);
 

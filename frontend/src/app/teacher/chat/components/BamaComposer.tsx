@@ -33,7 +33,6 @@ export function BamaComposer({
   composerRef,
   activeId,
 }: BamaComposerProps) {
-  // Auto-extend the ask box with its content instead of scrolling it.
   useEffect(() => {
     const el = composerRef.current;
     if (!el) return;
@@ -69,7 +68,7 @@ export function BamaComposer({
           onClick={onSend}
           aria-label={sendLabel}
         >
-          <ArrowUp aria-hidden />
+          <ArrowUp aria-hidden className="text-amber-500" />
         </Button>
       </div>
       <p className={styles.hint}>{hint}</p>

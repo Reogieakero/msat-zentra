@@ -1,0 +1,461 @@
+/* Enrolled learners kanban board — three lanes grouped by module progress
+   (Not released / In progress / Complete). The board shell + lane headers
+   come from the shared KanbanBoard UI; only the board rows are bespoke so
+   they read as compact items, not the aurora "reminder card" look. All
+   accents ride --primary / --card / --muted tokens so the coordinator's
+   saved palette repaints the board in light + dark mode. */
+
+.boardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
+/* Search sits in the board header, right of the title. 16px radius, compact. */
+.searchWrap {
+  position: relative;
+  width: 10.5rem;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.8125rem;
+  height: 0.8125rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  height: 1.75rem;
+  padding: 0 0.625rem 0 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background-color: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  outline: none;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+
+.searchInput::placeholder {
+  color: var(--muted-foreground);
+}
+
+.searchInput:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring), transparent 55%);
+}
+
+/* Hide the browser's native search clear button (keeps the pill clean). */
+.searchInput::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.laneIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Lanes — 3-up on desktop, stacking as width shrinks. */
+.lanes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.laneBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Board row — compact item (no status stripe; lane colour lives in the header icon). */
+.item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  overflow: hidden;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+  animation: board-item-in 220ms ease-out;
+}
+
+.item:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  box-shadow: 0 8px 20px -14px color-mix(in oklch, var(--foreground), transparent 60%);
+}
+
+@keyframes board-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.itemTop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.mascot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+
+.itemTitle {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+/* Rounded-rectangle chips — LRN, grade, approval date. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 1.25rem;
+  padding-inline: 0.4375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--muted) 55%, transparent);
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* LRN + grade level — amber pills. */
+.chipAmber {
+  border-color: color-mix(in oklch, #f59e0b, transparent 55%);
+  background-color: color-mix(in oklch, #f59e0b 15%, transparent);
+  color: #b45309;
+}
+
+:global(.dark) .chipAmber {
+  color: #fbbf24;
+}
+
+/* Inline reason shown before the disabled "Mark completed" button. */
+.blockHint {
+  min-width: 0;
+  max-width: 9rem;
+  font-size: 0.625rem;
+  line-height: 1.3;
+  color: var(--muted-foreground);
+}
+
+.eligBadge {
+  border-radius: var(--radius-md);
+}
+
+.approvalRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.progress {
+  display: block;
+  height: 0.3125rem;
+  border-radius: 999px;
+  background-color: var(--muted);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--primary);
+  transition: width 0.3s ease-in-out;
+}
+
+.itemNote {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+
+.itemActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  row-gap: 0.25rem;
+  margin-top: 0.125rem;
+  padding-top: 0.25rem;
+}
+
+/* Document shortcuts (OCForm-01 / GCForm-03) + the module gate hint, stacked. */
+.actionsLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.docActions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Tooltip trigger wrapper — keeps the tooltip working on disabled buttons. */
+.iconTrigger {
+  display: inline-flex;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 140ms ease-out, border-color 140ms ease-out,
+    transform 140ms ease-out;
+}
+
+.iconBtn:hover:not(:disabled) {
+  color: var(--primary);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+.iconBtn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.iconBtn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.iconBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cta {
+  flex: 0 0 auto;
+  height: 1.5rem;
+  padding-inline: 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3125rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.cta:hover {
+  opacity: 0.9;
+}
+
+.cta:active {
+  transform: scale(0.98);
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.ctaSecondary {
+  flex: 0 0 auto;
+  height: 1.5rem;
+  padding-inline: 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3125rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.ctaSecondary:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.ctaSecondary:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.ctaSecondary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Error state. */
+.errorBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  padding: 1rem;
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.spin {
+  animation: board-spin 0.8s linear infinite;
+}
+
+@keyframes board-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading mirrors — item-shaped skeletons inside each lane board. */
+.skelItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.625rem 0.625rem 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+}
+
+.skelItem + .skelItem {
+  margin-top: 0.5rem;
+}
+
+.skelTitle {
+  width: 60%;
+  height: 0.8125rem;
+}
+
+.skelMeta {
+  width: 40%;
+  height: 0.6875rem;
+}
+
+.skelTrack {
+  width: 100%;
+  height: 0.3125rem;
+  border-radius: 999px;
+}
+
+.skelNote {
+  width: 75%;
+  height: 0.6875rem;
+}
+
+.skelCta {
+  width: 6rem;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+  margin-left: auto;
+}
+
+@media (max-width: 60rem) {
+  .lanes {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    animation: none;
+    transition: none;
+  }
+
+  .item:hover {
+    box-shadow: none;
+  }
+
+  .progressFill {
+    transition: none;
+  }
+
+  .cta:active,
+  .ctaSecondary:active {
+    transform: none;
+  }
+}

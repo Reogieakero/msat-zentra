@@ -1,11 +1,5 @@
 "use client";
 
-/* Referral taxonomy — exactly 2 types. ADM cases flow through the ADM
-   workflow; everything else is Other matters, received by staff directly:
-   guidance means counseling, the school nurse means clinical matters. No
-   principal routing — the staff who receive a file are guidance or nurse
-   (plus LRPC as an ADM reviewer). */
-
 export type ReferralDesk =
   | "nurse"
   | "guidance_counselor"
@@ -50,8 +44,6 @@ export interface StaffOption {
   reviewer: AdmReviewer | null;
 }
 
-/* Who receives the file, grouped by type. ADM reviewers route through the
-   ADM Coordinator; other matters go straight to the desk. */
 export const STAFF_BY_TYPE: Record<ReferralTypeKey, StaffOption[]> = {
   adm: [
     { value: "adm:nurse", label: "School Nurse", hint: "ADM review", desk: "adm_coordinator", reviewer: "nurse" },
@@ -86,9 +78,6 @@ function reviewerLabel(value: string | null): string {
   return "ADM queue";
 }
 
-/* Where the file lands: the desk itself, or — for ADM cases with a nurse /
-   guidance reviewer — the reviewer first, moving to the ADM Coordinator
-   only on endorsement. (lrpc has no reviewer step, so it stays direct.) */
 export function filedToLabel(opt: StaffOption): string {
   if (opt.desk !== "adm_coordinator") return opt.label;
   if (!opt.reviewer) return "ADM Coordinator";

@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import {
   Table,
   TableBody,
@@ -10,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ChevronRight } from "lucide-react";
-import type { SectionSummary } from "../academics-data";
+import type { SectionSummary } from "@/services/principal/academics";
 import styles from "./SectionSummaryTable.module.css";
 import shared from "../academics.module.css";
 

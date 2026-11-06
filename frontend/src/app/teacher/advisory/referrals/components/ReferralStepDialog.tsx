@@ -44,7 +44,6 @@ function formatDate(value?: string | null): string {
   });
 }
 
-// Plain-words office names for non-technical readers.
 const OFFICE_NAMES: Record<string, string> = {
   adm_coordinator: "ADM Coordinator",
   guidance_counselor: "Guidance Counselor",
@@ -55,8 +54,6 @@ const OFFICE_NAMES: Record<string, string> = {
   lrpc: "LRPC",
 };
 
-// Audit-trail labels can carry raw codes ("Referred to adm_coordinator",
-// "… (consult reviewer: nurse)") — rewrite them into plain words.
 function friendlyActivityLabel(label: string): string {
   let out = label ?? "";
   out = out.replace(/consult reviewer:\s*([A-Za-z_]+)/gi, (_, code: string) => {
@@ -74,20 +71,14 @@ function friendlyActivityLabel(label: string): string {
   return out;
 }
 
-// One activity row: long entries truncate with "…" and get their own
-// chevron toggle to expand the full text in place.
 function ActivityItem({ label, date }: { label: string; date: string }) {
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
-  // Reset + overflow measure without effects: the reset syncs during
-  // render, and the overflow check runs in the label's callback ref.
   const [prevLabel, setPrevLabel] = useState(label);
   if (prevLabel !== label) {
     setPrevLabel(label);
     setExpanded(false);
   }
-  // `label` re-fires the ref (React reattaches on identity change), so
-  // content changes re-measure even though the body never reads it.
   /* eslint-disable react-hooks/exhaustive-deps -- ref identity drives re-measurement */
   const measureRef = useCallback(
     (el: HTMLSpanElement | null) => {
@@ -120,8 +111,6 @@ function ActivityItem({ label, date }: { label: string; date: string }) {
   );
 }
 
-// Per-step detail overlay: what the step is, who owns it, its current
-// status info, and the recorded activity (time, date, actions executed).
 export function ReferralStepDialog({ step, timeline, onClose }: ReferralStepDialogProps) {
   const Icon = step?.Icon;
   const stateLabel =

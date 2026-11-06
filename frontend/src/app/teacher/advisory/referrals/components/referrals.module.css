@@ -2,20 +2,42 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  /* Shell offsets the fixed topbar + tab navbar with margin-top 6rem and
-     main adds 1rem padding; stretch to the viewport and keep exactly a
-     16px gutter at the bottom. */
-  min-height: calc(100dvh - 6rem - 2rem);
-  padding-bottom: 1rem;
+  /* Shell offsets mirror the teacher shell: 3rem topbar + 2rem main
+     padding on desktop ≥1024px (sidebar rail, no tab navbar), 6rem + 2rem
+     below that, 6rem + 1.5rem on mobile (main padding shrinks). The 16px
+     bottom gutter comes from main's own padding alone (no extra page
+     padding), so the starter strip sits exactly 16px above the gutter. */
+  min-height: calc(100vh - 3rem - 2rem);
+  min-height: calc(100dvh - 3rem - 2rem);
+  padding-bottom: 0;
+}
+
+@media (max-width: 1023px) {
+  .page {
+    min-height: calc(100vh - 6rem - 2rem);
+    min-height: calc(100dvh - 6rem - 2rem);
+  }
+}
+
+/* Mobile shell: main drops to 0.5rem bottom padding, so top up with
+   0.5rem here to keep exactly a 16px gutter below the strip. */
+@media (max-width: 767px) {
+  .page {
+    min-height: calc(100vh - 6rem - 1.5rem);
+    min-height: calc(100dvh - 6rem - 1.5rem);
+    padding-bottom: 0.5rem;
+  }
 }
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 19rem;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
+  /* Content-driven height: columns hug their contents instead of
+     stretching to the viewport height. */
   align-items: start;
   min-width: 0;
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
 }
 
@@ -206,7 +228,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  flex: 1;
+  /* Hug content height — do not stretch the kanban to fill the page. */
+  flex: 0 1 auto;
   min-height: 0;
 }
 
@@ -215,7 +238,7 @@
   flex-direction: column;
   gap: 0.875rem;
   min-width: 0;
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
 }
 
@@ -269,6 +292,219 @@
 
 .emptyAction:hover {
   background-color: color-mix(in oklch, var(--primary), black 8%);
+}
+
+/* Empty-state kanban — 2x2 starter board mirroring /teacher/anecdotal,
+   with the same staggered rise-in as the advisory students cards. */
+.kanbanGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+  /* Cards hug their contents instead of stretching to the tallest cell. */
+  align-items: start;
+}
+
+.kanbanGrid > div {
+  animation: board-card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.kanbanGrid > div:nth-child(1) { animation-delay: 0.03s; }
+.kanbanGrid > div:nth-child(2) { animation-delay: 0.12s; }
+.kanbanGrid > div:nth-child(3) { animation-delay: 0.21s; }
+.kanbanGrid > div:nth-child(n + 4) { animation-delay: 0.3s; }
+
+@media (max-width: 640px) {
+  .kanbanGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanbanGrid > div {
+    animation: none;
+  }
+}
+
+/* Bottom strip on the filled view — the same four starter cards in one row. */
+.stripGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+  /* Cards hug their contents instead of stretching to the tallest cell. */
+  align-items: start;
+}
+
+.stripGrid > div {
+  animation: board-card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stripGrid > div:nth-child(1) { animation-delay: 0.03s; }
+.stripGrid > div:nth-child(2) { animation-delay: 0.12s; }
+.stripGrid > div:nth-child(3) { animation-delay: 0.21s; }
+.stripGrid > div:nth-child(n + 4) { animation-delay: 0.3s; }
+
+@media (max-width: 1280px) {
+  .stripGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .stripGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stripGrid > div {
+    animation: none;
+  }
+}
+
+/* Date-column card stack: all cards render in full — no inner scroll.
+   The page scrolls instead, so every referred card stays visible. */
+.cardScroll {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* New-referral kanban overlay — plain board panel (no modal chrome),
+   theme-aware via design tokens for light and dark mode. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+  background-color: color-mix(in oklch, #000 55%, transparent);
+}
+
+:global(.dark) .overlay {
+  background-color: color-mix(in oklch, #000 72%, transparent);
+}
+
+.overlayPanel {
+  width: 100%;
+  max-width: 44rem;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--background);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 96%);
+  padding: 1rem;
+  animation: overlay-in 220ms ease-out both;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlayPanel {
+    animation: none;
+  }
+}
+
+/* Filled-state kanban — one column per referral (newest first),
+   same staggered rise-in as the advisory students cards. */
+.recordGrid {
+  display: grid;
+  /* Fixed-width kanban columns with a 16px column gap; rows keep their
+     breathing room when wrapping. */
+  grid-template-columns: repeat(auto-fill, 280px);
+  column-gap: 1rem;
+  row-gap: 1rem;
+  justify-content: start;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Columns hug their own card stack instead of stretching to the
+     tallest column in the row. */
+  align-items: start;
+}
+
+.recordGrid > li {
+  min-width: 0;
+  display: flex;
+  align-self: start;
+  width: 100%;
+  animation: board-card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.recordGrid > li:nth-child(1) { animation-delay: 0.03s; }
+.recordGrid > li:nth-child(2) { animation-delay: 0.12s; }
+.recordGrid > li:nth-child(3) { animation-delay: 0.21s; }
+.recordGrid > li:nth-child(4) { animation-delay: 0.3s; }
+.recordGrid > li:nth-child(5) { animation-delay: 0.39s; }
+.recordGrid > li:nth-child(6) { animation-delay: 0.48s; }
+.recordGrid > li:nth-child(7) { animation-delay: 0.57s; }
+.recordGrid > li:nth-child(8) { animation-delay: 0.66s; }
+.recordGrid > li:nth-child(9) { animation-delay: 0.75s; }
+.recordGrid > li:nth-child(10) { animation-delay: 0.84s; }
+.recordGrid > li:nth-child(11) { animation-delay: 0.93s; }
+.recordGrid > li:nth-child(12) { animation-delay: 1.02s; }
+.recordGrid > li:nth-child(n + 13) { animation-delay: 1.05s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .recordGrid > li {
+    animation: none;
+  }
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+  align-items: stretch;
+}
+
+.formGrid > section {
+  animation: board-card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.formGrid > section:nth-child(1) { animation-delay: 0.03s; }
+.formGrid > section:nth-child(2) { animation-delay: 0.12s; }
+.formGrid > section:nth-child(3) { animation-delay: 0.21s; }
+.formGrid > section:nth-child(n + 4) { animation-delay: 0.3s; }
+
+@keyframes board-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .formGrid > section {
+    animation: none;
+  }
 }
 
 /* ---- Loading skeletons (shown while fetching, prevents empty flash) ---- */

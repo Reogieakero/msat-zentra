@@ -1,0 +1,48 @@
+import { apiClient } from "@/lib/api/client";
+import type { InterventionStudentsResult, StudentFilters } from "@/app/principal/risk/interventions/types";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+
+export async function fetchInterventionStudents(
+  filters: StudentFilters,
+  page = 1,
+  pageSize = PAGE_SIZE,
+  signal?: AbortSignal
+): Promise<InterventionStudentsResult> {
+  const params: Record<string, string> = { page: String(page), pageSize: String(pageSize) };
+  if (filters.riskLevel && filters.riskLevel !== "all") params.riskLevel = filters.riskLevel;
+  if (filters.hasIntervention !== undefined)
+    params.hasIntervention = String(filters.hasIntervention);
+  if (filters.factor && filters.factor !== "all") params.factor = filters.factor;
+  if (filters.q?.trim()) params.q = filters.q.trim();
+  if (filters.section?.trim()) params.section = filters.section.trim();
+  if (filters.outcomeStatus) params.outcomeStatus = filters.outcomeStatus;
+  if (filters.plan) params.plan = filters.plan;
+  if (filters.sort) params.sort = filters.sort;
+
+  const { data } = await apiClient.get<InterventionStudentsResult>(
+    "/api/risk/interventions",
+    { params, signal }
+  );
+  return data;
+}
+
+export interface InterventionStats {
+  totalAtRisk: number;
+  withIntervention: number;
+  pendingApproval: number;
+  highRisk: number;
+  resolved: number;
+  ongoing: number;
+}
+
+export async function fetchInterventionStats(): Promise<InterventionStats> {
+  const { data } = await apiClient.get<InterventionStats>("/api/risk/interventions/stats");
+  return data;
+}
+
+export async function alertGuidance(studentId: string, note?: string): Promise<void> {
+  await apiClient.post(
+    `/api/risk/interventions/${encodeURIComponent(studentId)}/alert`,
+    note?.trim() ? { note: note.trim() } : {}
+  );
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { matchesAdviserName } from "../src/modules/teacher/advisory.routes.js";
+import { matchesAdviserName } from "../src/modules/teacher/advisory.repository.js";
 
 describe("Adviser self-claim name match", () => {
   it("matches identical names", () => {

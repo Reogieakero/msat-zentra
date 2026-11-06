@@ -1,12 +1,13 @@
 "use client";
 
+import * as React from "react";
 import { GuidanceReferralsView } from "./components/guidance-referrals-view";
+import { GuidanceReferralsSkeleton } from "./components/GuidanceReferralsSkeleton";
 
-/**
- * All referrals to guidance — kept for existing entry points (overview,
- * alerts, risk pages) that link here without knowing the track. The
- * sidebar's ADM Cases / Counseling Cases pages are the track-split views.
- */
 export default function GuidanceReferralsPage() {
-  return <GuidanceReferralsView />;
+  return (
+    <React.Suspense fallback={<GuidanceReferralsSkeleton />}>
+      <GuidanceReferralsView />
+    </React.Suspense>
+  );
 }

@@ -1,10 +1,9 @@
-import { Users } from "lucide-react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function ParentLoginPage() {
   return (
-    <AuthShell icon={Users} role="parent">
+    <AuthShell role="parent">
       <LoginForm
         role="parent"
         title="Parent / Guardian sign in"

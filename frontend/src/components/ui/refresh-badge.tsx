@@ -2,12 +2,6 @@
 
 import { Loader2 } from "lucide-react";
 
-/**
- * Non-blocking background-refresh indicator. Rendered only when the page
- * already shows data (`!isPending && isFetching`). Floats above the
- * content (fixed pill) so appearing/disappearing never shifts the layout.
- * Never replaces content — keeps layout stable and announces politely.
- */
 export function RefreshBadge({ label = "Refreshing…" }: { label?: string }) {
   return (
     <div

@@ -33,7 +33,6 @@ export interface MockAnecdotalStudent {
   lrn: string;
 }
 
-// Mock only — anecdotal workspace exploration. No backend wiring.
 export const MOCK_ANECDOTAL_STUDENTS: MockAnecdotalStudent[] = [
   { id: "stu-1", name: "Maria Santos", lrn: "201234567801" },
   { id: "stu-2", name: "Juan Cruz", lrn: "201234567802" },

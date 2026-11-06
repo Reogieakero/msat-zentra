@@ -4,12 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Seed 5 anecdotal records referred to the school nurse for NON-ADM matters:
-//   referredToRole = "nurse", consultReviewer = null (regular clinic desk).
-// These surface on /nurse/referrals (Referrals to me) and /nurse/alerts.
-// Idempotent: skips roster entries that already have any referral, and caps
-// at 5 new records per run.
-
 const CASES = [
   {
     observationDaysAgo: 0,
@@ -76,8 +70,6 @@ async function main() {
   });
   if (!term) throw new Error("No active term (Term 1)");
 
-  // Roster candidates: real class sections with an adviser, newest first,
-  // skipping anyone who already has any referral.
   const roster = await prisma.studentRoster.findMany({
     where: { schoolYearId: schoolYear.id, NOT: { sectionId: "xxxx-never" } },
     include: { section: { select: { id: true, name: true, adviserId: true } } },
@@ -133,8 +125,6 @@ async function main() {
       },
     });
 
-    // Referral time on the nurse pages = earliest audit entry; mirror what
-    // POST /api/anecdotal/:id/refer writes so "waiting" counts correctly.
     await prisma.auditLog.create({
       data: {
         userId: observerId,

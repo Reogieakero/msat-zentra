@@ -11,28 +11,15 @@ interface AuroraBannerProps {
   pill: string;
   count: React.ReactNode;
   title: string;
-  /** Small muted line under the title. */
   sub?: string;
-  /** Link label + target for button banners (unused when static). */
   cta?: string;
   href?: string;
   label: string;
-  /** Fire ember dots inside the card (shared FireParticles, ~12). */
   particles?: boolean;
-  /** State tint (e.g. schedule rail blue/green/gray): overrides
-   *  --primary on this card only, so beams, embers, pill, and CTA all
-   *  follow it instead of the user palette. */
   accent?: string;
-  /** Static readout (role="status" div, no navigation, no CTA row)
-   *  instead of a button. */
   static?: boolean;
 }
 
-/* Aurora banner card — primary-tinted beams across the top, fire
-   particles rising inside, centered pill + big count + title + CTA.
-   Used by the principal overview action banners and grade-grid
-   banners so all six look identical. Grid stretch gives equal heights
-   beside sibling cards. */
 export function AuroraBanner({
   icon: Icon,
   pill,

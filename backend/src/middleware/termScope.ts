@@ -1,18 +1,25 @@
 import type { NextFunction, Request, Response } from "express";
+import { verifyAccess } from "../lib/jwt.js";
 import { resolveTermScope } from "../lib/termScope.js";
 
 /**
- * Attaches the request's active School Year + Term (`req.termScope`).
- *
- * Mounted on `/api` (after `/api/auth`) so every data/transaction route
- * shares one resolution: explicit `?schoolYearId=`/`?termId=` override →
- * `x-school-year-id`/`x-term-id` session headers → database-active year.
- * Never fails the request — routes fall back to legacy behavior when the
- * scope is null (no calendar seeded yet).
+ * Role from the access token, when present. Mirrors requireAuth's token
+ * verification without rejecting the request (auth itself is enforced per
+ * route). Invalid/absent tokens resolve as "no role".
  */
+function roleOf(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) return null;
+  try {
+    return verifyAccess(header.slice(7)).role ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function attachTermScope(req: Request, _res: Response, next: NextFunction) {
   try {
-    req.termScope = (await resolveTermScope(req)) ?? undefined;
+    req.termScope = (await resolveTermScope(req, roleOf(req))) ?? undefined;
   } catch {
     req.termScope = undefined;
   }

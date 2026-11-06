@@ -4,73 +4,49 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
   flexRender,
   type ColumnDef,
-  type SortingState,
 } from "@tanstack/react-table";
 import {
   Search,
-  ChevronDown,
-  X,
+  ShieldCheck,
 } from "lucide-react";
+import { PrincipalEmptyState } from "../../../components/PrincipalEmptyCard";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
-import { useGradeMode } from "../../../grade-mode-context";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
+import { riskTone } from "@/lib/labels/status-tone";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
   Table,
-  TableHeader,
   TableBody,
   TableRow,
-  TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { FACTOR_LABELS, type BackendStudent, type RiskFactor, type RiskLevelKey } from "../api";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { FACTOR_LABELS, type BackendStudent, type RiskFactor, type RiskLevelKey } from "@/services/principal/riskStudents.types";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import styles from "./StudentsListTable.module.css";
-
-const gradeNum = (name: string) => {
-  const m = String(name).match(/(\d+)/);
-  if (!m) return 0;
-  const n = parseInt(m[1], 10);
-  return Number.isNaN(n) ? 0 : n;
-};
-
-const PAGE_SIZE = 20;
-
-// Explicit variants (theme tokens are monochrome ink) — same as the
-// guidance interventions desk.
-const RISK_VARIANT: Record<RiskLevelKey, "red" | "amber" | "green"> = {
-  High: "red",
-  Moderate: "amber",
-  Low: "green",
-};
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 
 const RISK_RANK: Record<RiskLevelKey, number> = { High: 3, Moderate: 2, Low: 1 };
 
+// Shared Pill tones: Academic amber, Attendance green, Behavioral blue.
+const FACTOR_TONE: Record<RiskFactor, "amber" | "green" | "blue"> = {
+  Academic: "amber",
+  Attendance: "green",
+  Behavioral: "blue",
+};
+
 export function StudentsListTable({
   selectedSection,
-  onSectionChange,
 }: {
   selectedSection: string;
-  onSectionChange: (section: string) => void;
 }) {
-  const { gradeMode } = useGradeMode();
   const [query, setQuery] = usePersistentState<string>(
     "zentra.risk.students.search",
     ""
@@ -79,80 +55,72 @@ export function StudentsListTable({
     "zentra.risk.students.risk",
     "all"
   );
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [pageIndex, setPageIndex] = React.useState(0);
+  const [page, setPage] = React.useState(1);
+  const debouncedQuery = useDebouncedValue(query, 300);
 
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
-  const { data, isPending } = useQuery({
-    queryKey: ["risk-students-list", termId, gradeMode],
-    queryFn: async () => {
+  const schoolYearId = activeTerm?.schoolYearId ?? null;
+  // Remember the last-visited page per heatmap selection: drilling back
+  // into a previously visited section restores its cached page (which is
+  // also still in the query cache, so it renders instantly with no
+  // skeleton); brand-new selections start at page 1.
+  const pageMemory = React.useRef<Record<string, number>>({});
+  React.useEffect(() => {
+    setPage(pageMemory.current[selectedSection] ?? 1);
+  }, [selectedSection]);
+  React.useEffect(() => {
+    pageMemory.current[selectedSection] = page;
+  }, [selectedSection, page]);
+  const { data, isPending, isFetching, isError, refetch } = useQuery({
+    queryKey: ["risk-students-list", termId, schoolYearId, page, debouncedQuery, riskFilter, selectedSection],
+    queryFn: async ({ signal }) => {
+      const params: Record<string, string | number> = {
+        page,
+        pageSize: PAGE_SIZE,
+      };
+      if (debouncedQuery.trim()) params.q = debouncedQuery.trim();
+      if (selectedSection !== "all") params.section = selectedSection;
+      if (riskFilter !== "all") params.riskLevel = riskFilter;
       const res = await apiClient.get<{ students: BackendStudent[]; total: number }>(
         "/api/risk/students",
-        { params: { pageSize: 50, gradeMode } }
+        { params, signal }
       );
       return res.data;
     },
-    staleTime: 60_000,
+    // Visited pages stay cached: back/forward navigation within the
+    // stale window serves instantly with no skeleton or refetch.
+    staleTime: 120_000,
+    gcTime: 600_000,
     refetchOnWindowFocus: false,
   });
+  // Refetch for a new section (not first load): replace rows with skeleton.
+  const isSectionLoading = isFetching && !isPending;
 
   const students = React.useMemo(() => data?.students ?? [], [data]);
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
 
-  const sections = React.useMemo(() => {
-    const seen = new Set<string>();
-    for (const s of students) {
-      if (s.section && s.section !== "—" && !seen.has(s.section)) seen.add(s.section);
+  // If filters shrink the result set under the current page, step back to
+  // the last valid page so footer label, requested page, and rows agree.
+  React.useEffect(() => {
+    if (!isPending && totalPages >= 1 && page > totalPages) {
+      setPage(totalPages);
     }
-    return Array.from(seen).sort(
-      (a, b) => gradeNum(a) - gradeNum(b) || a.localeCompare(b)
-    );
-  }, [students]);
-
-  const gradeGroups = React.useMemo(() => {
-    const map = new Map<number, string[]>();
-    for (const s of sections) {
-      const g = gradeNum(s);
-      if (!map.has(g)) map.set(g, []);
-      map.get(g)!.push(s);
-    }
-    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
-  }, [sections]);
-
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return students.filter((s) => {
-      const matchesQuery =
-        !q || s.name.toLowerCase().includes(q) || s.lrn.toLowerCase().includes(q);
-      const matchesSection = selectedSection === "all" || s.section === selectedSection;
-      const matchesRisk = riskFilter === "all" || s.riskLevel === riskFilter;
-      return matchesQuery && matchesSection && matchesRisk;
-    });
-  }, [students, query, selectedSection, riskFilter]);
+  }, [isPending, totalPages, page]);
 
   const hasActiveFilters =
-    query.trim() !== "" || selectedSection !== "all" || riskFilter !== "all";
+    debouncedQuery.trim() !== "" || selectedSection !== "all" || riskFilter !== "all";
 
   const applySearch = (value: string) => {
     setQuery(value);
-    setPageIndex(0);
-  };
-
-  const applySection = (value: string) => {
-    onSectionChange(value);
-    setPageIndex(0);
+    setPage(1);
   };
 
   const applyRisk = (value: "all" | RiskLevelKey) => {
     setRiskFilter(value);
-    setPageIndex(0);
-  };
-
-  const clearFilters = () => {
-    setQuery("");
-    onSectionChange("all");
-    setRiskFilter("all");
-    setPageIndex(0);
+    setPage(1);
   };
 
   const columns = React.useMemo<ColumnDef<BackendStudent>[]>(
@@ -161,29 +129,50 @@ export function StudentsListTable({
         id: "name",
         accessorFn: (row) => row.name,
         header: "Student",
-        size: 240,
-        minSize: 240,
-        maxSize: 240,
+        size: 280,
+        minSize: 280,
+        maxSize: 280,
         cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className={styles.cellMain}>{row.original.name}</p>
-            <p className={styles.cellSub}>
-              {row.original.lrn} · {row.original.section}
-            </p>
+          <div className={styles.studentCell}>
+            <StudentMascot
+              name={row.original.name}
+              seed={row.original.lrn}
+              character={row.original.mascot ?? undefined}
+              size={30}
+            />
+            <span className={styles.studentMeta}>
+              <span className={styles.studentName}>{row.original.name}</span>
+              <Pill tone="neutral" label="LRN" className={styles.lrnPill}>
+                {row.original.lrn}
+              </Pill>
+            </span>
           </div>
+        ),
+      },
+      {
+        id: "section",
+        accessorFn: (row) => row.section,
+        header: "Section",
+        size: 150,
+        minSize: 150,
+        maxSize: 150,
+        cell: ({ row }) => (
+          <Pill tone="amber" label={row.original.gradeLevel}>
+            {row.original.section}
+          </Pill>
         ),
       },
       {
         id: "risk",
         accessorFn: (row) => RISK_RANK[row.riskLevel],
         header: "Risk",
-        size: 130,
-        minSize: 130,
-        maxSize: 130,
+        size: 120,
+        minSize: 120,
+        maxSize: 120,
         cell: ({ row }) => (
-          <Badge variant={RISK_VARIANT[row.original.riskLevel]}>
+          <Pill tone={riskTone(row.original.riskLevel)} label="Risk level">
             {row.original.riskLevel}
-          </Badge>
+          </Pill>
         ),
       },
       {
@@ -199,16 +188,13 @@ export function StudentsListTable({
         enableSorting: false,
         cell: ({ row }) => (
           <span className={styles.factors}>
-            {(Object.keys(row.original.factors) as RiskFactor[]).map((f) => (
-              <span
-                key={f}
-                className={`${styles.factorChip} ${
-                  row.original.factors[f] ? styles.factorOn : styles.factorOff
-                }`}
-              >
-                {FACTOR_LABELS[f]}
-              </span>
-            ))}
+            {(Object.keys(row.original.factors) as RiskFactor[])
+              .filter((f) => row.original.factors[f])
+              .map((f) => (
+                <Pill key={f} tone={FACTOR_TONE[f]} label={`${FACTOR_LABELS[f]} factor`}>
+                  {FACTOR_LABELS[f]}
+                </Pill>
+              ))}
           </span>
         ),
       },
@@ -217,199 +203,115 @@ export function StudentsListTable({
   );
 
   const table = useReactTable({
-    data: filtered,
+    data: students,
     columns,
     getRowId: (row) => row.studentId,
-    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    initialState: { pagination: { pageSize: PAGE_SIZE } },
-    state: { sorting, pagination: { pageIndex, pageSize: PAGE_SIZE } },
-    onPaginationChange: (updater) => {
-      const next =
-        typeof updater === "function"
-          ? updater({ pageIndex, pageSize: PAGE_SIZE })
-          : updater;
-      setPageIndex(next.pageIndex);
-    },
   });
 
-  const pageCount = table.getPageCount();
-  const safePageIndex = Math.min(pageIndex, Math.max(0, pageCount - 1));
   const rows = table.getRowModel().rows;
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const safePage = Math.min(safePageIndex + 1, totalPages);
-  const start = total === 0 ? 0 : safePageIndex * PAGE_SIZE + 1;
-  const end = Math.min((safePageIndex + 1) * PAGE_SIZE, total);
 
+  const showSkeleton = isPending || isSectionLoading;
   return (
-    <section aria-label="At-risk students">
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className={`${styles.header} relative`}>
-          <div className={styles.headerText}>
-            <h2 className={styles.sectionTitle}>At-Risk Students</h2>
-            <p className={styles.sectionDesc}>
-              {selectedSection === "all"
-                ? `All at-risk learners across every section — ${total} student${total === 1 ? "" : "s"}.`
-                : `At-risk learners in ${selectedSection} — ${total} student${total === 1 ? "" : "s"}.`}
-            </p>
+    <KanbanBoard
+      title="At-Risk Students"
+      icon={<ShieldCheck size={14} aria-hidden="true" />}
+      actions={
+        <>
+          <Pill tone="green" label="Data source">
+            Adviser-shared
+          </Pill>
+          <div className={styles.searchWrap}>
+            <Search className={styles.searchIcon} aria-hidden />
+            <Input
+              className={`${styles.search} rounded-[16px]`}
+              style={{ height: "2rem" }}
+              placeholder="Search name or LRN…"
+              value={query}
+              onChange={(e) => applySearch(e.target.value)}
+              aria-label="Search at-risk students"
+            />
           </div>
-          <div className={styles.headerActions}>
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} aria-hidden />
-              <Input
-                className={styles.search}
-                style={{ height: "2rem" }}
-                placeholder="Search name or LRN…"
-                value={query}
-                onChange={(e) => applySearch(e.target.value)}
-                aria-label="Search at-risk students"
-              />
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  style={{ height: "2rem" }}
-                  aria-label={`Filter students by section, currently showing: ${selectedSection === "all" ? "All sections" : selectedSection}`}
-                  className={`${styles.filterBtn} ${
-                    selectedSection !== "all" ? styles.filterActive : ""
-                  }`}
-                >
-                  {selectedSection === "all" ? "Section" : selectedSection}
-                  {selectedSection !== "all" && <span className={styles.filterDot} aria-hidden />}
-                  <ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.filterMenu}>
-                <DropdownMenuCheckboxItem
-                  checked={selectedSection === "all"}
-                  onCheckedChange={() => applySection("all")}
-                >
-                  All sections
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                {gradeGroups.length === 0 ? (
-                  <DropdownMenuItem disabled>No sections</DropdownMenuItem>
-                ) : (
-                  gradeGroups.map(([grade, secs]) => (
-                    <React.Fragment key={grade}>
-                      <DropdownMenuLabel>Grade {grade}</DropdownMenuLabel>
-                      {secs.map((s) => (
-                        <DropdownMenuCheckboxItem
-                          key={s}
-                          checked={selectedSection === s}
-                          onCheckedChange={() => applySection(s)}
-                        >
-                          {s}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </React.Fragment>
-                  ))
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  style={{ height: "2rem" }}
-                  aria-label={`Filter students by risk level, currently showing: ${riskFilter === "all" ? "All levels" : riskFilter}`}
-                  className={`${styles.filterBtn} ${
-                    riskFilter !== "all" ? styles.filterActive : ""
-                  }`}
-                >
-                  {riskFilter === "all" ? "Risk" : riskFilter}
-                  {riskFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
-                  <ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.filterMenu}>
-                <DropdownMenuCheckboxItem
-                  checked={riskFilter === "all"}
-                  onCheckedChange={() => applyRisk("all")}
-                >
-                  All levels
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                {(["High", "Moderate", "Low"] as RiskLevelKey[]).map((lvl) => (
-                  <DropdownMenuCheckboxItem
-                    key={lvl}
-                    checked={riskFilter === lvl}
-                    onCheckedChange={() => applyRisk(lvl)}
-                  >
-                    {lvl}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" className={styles.clearBtn} onClick={clearFilters}>
-                <X aria-hidden />
-                Show all
-              </Button>
-            )}
-          </div>
+        </>
+      }
+      headerCenter={
+        <div className={styles.filterRow} role="group" aria-label="Filter by risk level">
+          {([
+            { value: "all" as const, label: "All levels" },
+            { value: "High" as const, label: "High risk" },
+            { value: "Moderate" as const, label: "Moderate risk" },
+          ]).map((option) => {
+            const active = riskFilter === option.value;
+            return (
+              <button
+                key={option.label}
+                type="button"
+                onClick={() => applyRisk(option.value)}
+                aria-pressed={active}
+                className={styles.filterButton}
+              >
+                <Pill tone={active ? "blue" : "neutral"} className={styles.filterPill}>
+                  {option.label}
+                </Pill>
+              </button>
+            );
+          })}
         </div>
-
-        <div className={`${styles.tableBody} relative`}>
-          {isPending ? (
-            <div className={styles.tableWrap}>
+      }
+      footer={
+        <Pagination
+          currentPage={safePage}
+          totalItems={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      }
+      ariaLabel="At-risk students"
+    >
+        <div className={`${styles.tableBody} relative`} aria-busy={showSkeleton || undefined}>
+          {showSkeleton ? (
+            <div className={styles.tableWrap} aria-label="Loading students for selected section" aria-busy="true">
               <Table aria-label="At-risk students">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Risk</TableHead>
-                    <TableHead>Factors</TableHead>
-                  </TableRow>
-                </TableHeader>
                 <TableBody>
                   <SkeletonRows />
                 </TableBody>
               </Table>
             </div>
-          ) : filtered.length === 0 ? (
-            <p className={styles.empty}>
-              {query.trim()
-                ? `No students match “${query}”.`
-                : hasActiveFilters
-                  ? "No students match the selected filters."
-                  : "No at-risk students — nothing needs attention right now."}
-            </p>
+          ) : isError && rows.length === 0 ? (
+            <div className={styles.empty} role="alert">
+              <p className={styles.empty}>Couldn&apos;t load at-risk students.</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>
+          ) : rows.length === 0 ? (
+            <PrincipalEmptyState
+              icon={ShieldCheck}
+              title={
+                debouncedQuery.trim()
+                  ? "No matching students"
+                  : hasActiveFilters
+                    ? "No matching students"
+                    : "No at-risk students"
+              }
+              hint={
+                debouncedQuery.trim()
+                  ? `No students match “${debouncedQuery}”.`
+                  : hasActiveFilters
+                    ? "No students match the selected filters."
+                    : "No at-risk students — nothing needs attention right now."
+              }
+            />
           ) : (
             <div className={styles.tableWrap}>
               <Table aria-label="At-risk students" className="w-full table-fixed">
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
-                      {headerGroup.headers.map((header) => (
-                        <TableHead
-                          key={header.id}
-                          style={{ width: header.getSize() }}
-                          onClick={header.column.getToggleSortingHandler()}
-                          className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
                 <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.id}>
+                  {rows.map((row, index) => (
+                    <TableRow
+                      key={row.id}
+                      className={styles.rowIn}
+                      style={{ animationDelay: `${60 + Math.min(index, 11) * 45}ms` }}
+                    >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
@@ -426,35 +328,8 @@ export function StudentsListTable({
             </div>
           )}
 
-          <div className={styles.pager}>
-            <p className={styles.range}>
-              Showing {start}–{end} of {total}
-            </p>
-            <div className={styles.pagerButtons}>
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={!table.getCanPreviousPage() || total === 0}
-                onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-              >
-                Previous
-              </Button>
-              <span className={styles.pageLabel} aria-live="polite">
-                Page {safePage} of {totalPages}
-              </span>
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={!table.getCanNextPage() || total === 0}
-                onClick={() => setPageIndex((p) => p + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
         </div>
-      </div>
-    </section>
+    </KanbanBoard>
   );
 }
 
@@ -464,15 +339,22 @@ function SkeletonRows() {
       {Array.from({ length: 6 }).map((_, i) => (
         <TableRow key={i}>
           <TableCell>
-            <span className={styles.skelName} />
-            <span className={styles.skelLrn} />
+            <div className={styles.studentCell}>
+              <span className={styles.skelAvatar} />
+              <span className={styles.studentMeta}>
+                <span className={styles.skelName} />
+                <span className={styles.skelLrn} />
+              </span>
+            </div>
           </TableCell>
           <TableCell>
-            <span className={styles.skelCell} style={{ width: "38%" }} />
+            <span className={styles.skelChip} />
+          </TableCell>
+          <TableCell>
+            <span className={styles.skelCell} style={{ width: "60%" }} />
           </TableCell>
           <TableCell>
             <span className={styles.factors}>
-              <span className={styles.skelChip} />
               <span className={styles.skelChip} />
               <span className={styles.skelChip} />
             </span>

@@ -1,48 +1,58 @@
 .footer {
   position: relative;
   z-index: 1;
-  border-top: 1px solid var(--border);
-  background-color: var(--background);
+  border-top: 1px solid rgba(228, 241, 236, 0.1);
 }
 
 .inner {
-  width: min(100% - 48px, 1140px);
-  margin-inline: auto;
-  padding: 1.75rem 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
   align-items: flex-start;
+  width: min(100% - 48px, 1180px);
+  margin-inline: auto;
+  padding: 1.75rem 0 2.25rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: rgba(228, 241, 236, 0.75);
+  text-decoration: none;
+  font-family: var(--font-geist), var(--font-inter), sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .copy {
   margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  letter-spacing: 0.01em;
-  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: rgba(228, 241, 236, 0.36);
 }
 
 .links {
   display: flex;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .link {
-  font-size: 0.85rem;
-  color: var(--muted-foreground);
+  font-size: 0.76rem;
+  color: rgba(228, 241, 236, 0.5);
   text-decoration: none;
   transition: color 150ms ease-out;
 }
 
 .link:hover {
-  color: var(--primary);
+  color: var(--mint);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 760px) {
   .inner {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    padding-block: 1.6rem;
   }
 }

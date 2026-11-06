@@ -1,26 +1,27 @@
 "use client";
 
-import * as React from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarClock, ChevronRight } from "lucide-react";
+import { CalendarClock, ChevronRight, X } from "lucide-react";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FolderCard } from "@/components/ui/FolderCard";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { NurseAdmReviewDialog } from "../../overview/components/NurseAdmReviewDialog";
 import type {
   NurseQueueRow,
   NurseSessionItem,
-} from "../../overview/components/nurse-overview-data";
+} from "@/services/nurse/nurse.types";
 import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
-import type { NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
+import type { NurseAlertItem } from "@/services/nurse/nurse.types";
 import {
+  anecdotalCategoryBadgeVariant,
   anecdotalCategoryColor,
   formatDate,
   formatTime,
@@ -36,15 +37,15 @@ import {
   watermarkColor,
   watermarkLabel,
 } from "./nurse-referrals-format";
-import { SessionPlanCard } from "@/components/session-plan/SessionPlanCard";
+import {
+  SessionPlanCard,
+  sessionBoardDialogWidth,
+} from "@/components/session-plan/SessionPlanCard";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./NurseReferralEntry.module.css";
 
 export type SessionDialogKind = "finish" | "move" | "cancel" | "delete";
 
-/* Sentence-form timing lines (no dot separators), e.g.
-   "Referred today, Sep 29, 2026." and
-   "Latest update was needs review on Sep 29, 2026 at 7:57 PM." */
 function referredSentence(row: NurseQueueRow): string {
   if (!row.date || row.date === "—") return "Referral date is not recorded.";
   const date = formatDate(row.date);
@@ -74,6 +75,8 @@ export function NurseReferralEntry({
   alert,
   highlighted = false,
   now,
+  boardOpen,
+  onBoardChange,
   onPreview,
   onPrivacy,
   onEndorsedNotice,
@@ -87,6 +90,10 @@ export function NurseReferralEntry({
   alert: NurseAlertItem;
   highlighted?: boolean;
   now: number;
+  /** The Clinic sessions board is owned by the page so a confirmed action
+      can close it at once (the Dock carries the request). */
+  boardOpen: boolean;
+  onBoardChange: (open: boolean) => void;
   onPreview: (recordId: string) => void;
   onPrivacy: (studentName: string) => void;
   onEndorsedNotice: (studentName: string) => void;
@@ -101,23 +108,17 @@ export function NurseReferralEntry({
   const isAdm = row.type === "ADM";
   const isPending = row.status === "pending";
   const isClosed = row.status === "resolved" || row.status === "dismissed" || (row.completedSessions > 0 && !hasScheduledSession(row.sessions));
-  // Endorsed ADM cases moved to the coordinator with their full report —
-  // the anecdotal write-up is no longer viewable on this desk.
+
   const isEndorsedRow = isEndorsed(row.type, row.status);
-  // Clinic sessions run on clinic matters, plus pre-confirm bookings
-  // on pending ADM consultations (booked from review without
-  // deciding). Endorsed ADM sessions stay read-only history.
+
   const canManageSessions = !isAdm || (isAdm && row.status === "pending");
-  // One active session per case — booking waits while one is scheduled
-  // (same rule as the guidance desk; the server enforces it too).
+
   const booked = hasScheduledSession(row.sessions);
   const incident = row.anecdotal?.incident?.trim() || "";
   const latest = latestActionOf(row, alert);
-  // Clinic sessions open in an overlay modal from the rail strip —
-  // never inline in the card. Starts closed; the strip shows the count.
+
   const showSessions = !isPending || (isAdm && row.sessions.length > 0);
   const hasRail = !!row.anecdotalId || showSessions;
-  const [sessOpen, setSessOpen] = React.useState(false);
 
   return (
     <li
@@ -131,7 +132,6 @@ export function NurseReferralEntry({
         {watermarkLabel(row)}
       </span>
 
-      {/* Horizontal card — identity column left, report middle, rail right */}
       <div className={`relative ${styles.hGrid}${hasRail ? "" : ` ${styles.hGridNoRail}`}`}>
         <div className={styles.idCol}>
           <div className={styles.idTop}>
@@ -158,7 +158,9 @@ export function NurseReferralEntry({
             <Badge variant={isAdm ? "secondary" : "outline"}>
               {isAdm ? "ADM" : "Clinic"}
             </Badge>
-            <Badge variant="outline">{row.category}</Badge>
+            <Badge variant={anecdotalCategoryBadgeVariant(row.category) ?? "outline"}>
+              {row.category}
+            </Badge>
           </div>
           <p className={styles.railMeta}>{referredSentence(row)}</p>
           <p className={styles.railMeta}>{latestSentence(latest)}</p>
@@ -176,8 +178,6 @@ export function NurseReferralEntry({
             </div>
           ) : null}
 
-        {/* Clinic intake notes only — ADM consultations carry the
-            endorsement in the internal note below, never here. */}
         {row.intakeNotes && !isAdm ? (
           <p className={styles.calloutMuted}>
             <span className={styles.calloutPrefix}>First impressions: </span>
@@ -198,9 +198,7 @@ export function NurseReferralEntry({
             Sent to the clinic: {row.escalationReason}
           </p>
         ) : null}
-        {/* Internal notes stay off ADM rows — the endorsement lives in
-            the GCForm-03 referral form viewer, and the raw note carries
-            internal `[ADM …]` encoding not meant for display. */}
+
         {row.notes && !isAdm ? (
           <p className={styles.calloutMuted}>
             <span className={styles.calloutPrefix}>Internal note: </span>
@@ -218,11 +216,7 @@ export function NurseReferralEntry({
                   onCreateReferral={(draft) => onCreateReferral(row, draft)}
                 />
               )}
-              {/* The filled template is view-only — confirming
-                  already auto-endorsed, so no forward button.
-                  Shown for every ADM case (pending or endorsed, including
-                  legacy endorsements without the ready flag) so the GCForm-03
-                  matches the guidance ADM "See referral form" behavior. */}
+
               <Button
                 type="button"
                 size="xs"
@@ -235,8 +229,7 @@ export function NurseReferralEntry({
             </>
           ) : (
             <>
-              {/* Clinic flow: view → book → done → docs. Same Book session
-                  button as the guidance desk; one active session at a time. */}
+
               {row.anecdotalId && (
                 <Button
                   type="button"
@@ -318,14 +311,13 @@ export function NurseReferralEntry({
             ) : null}
             {showSessions ? (
               <div className={styles.sessRailBlock}>
-                {/* Custom sessions opener — gradient strip, not a plain button
-                    and not a folder. Opens the sessions as an overlay modal. */}
+
                 <button
                   type="button"
                   className={styles.sessDrop}
                   aria-haspopup="dialog"
                   aria-label={`Clinic sessions for ${row.student}, ${row.sessions.length} ${row.sessions.length === 1 ? "session" : "sessions"} — click to view`}
-                  onClick={() => setSessOpen(true)}
+                  onClick={() => onBoardChange(true)}
                 >
                   <span className={styles.sessDropIcon} aria-hidden="true">
                     <CalendarClock size={18} />
@@ -345,20 +337,41 @@ export function NurseReferralEntry({
                     className={styles.sessChevron}
                   />
                 </button>
-                <Dialog open={sessOpen} onOpenChange={setSessOpen}>
+                <Dialog open={boardOpen} onOpenChange={onBoardChange}>
                   <DialogContent
-                    className={`${styles.modalCard} max-h-[85vh] overflow-y-auto sm:max-w-lg`}
+                    showCloseButton={false}
+                    className={`${styles.modalCard} max-h-[85vh] overflow-y-auto ${sessionBoardDialogWidth(row.sessions.length)}`}
                   >
                     <span className={assign.glowClip} aria-hidden="true">
                       <span className={assign.cardGlow} />
                     </span>
-                    <DialogHeader className="relative">
-                      <DialogTitle>Clinic sessions for {row.student}</DialogTitle>
-                      <DialogDescription>
-                        {row.sessions.length} {row.sessions.length === 1 ? "session" : "sessions"} on this case.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="relative">
+                    {/* Title/description live on the kanban board below (the
+                        sr-only pair keeps the dialog labelled for screen
+                        readers). */}
+                    <DialogTitle className="sr-only">
+                      Clinic sessions for {row.student}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                      {row.sessions.length} {row.sessions.length === 1 ? "session" : "sessions"} on this case.
+                    </DialogDescription>
+                    <KanbanBoard
+                      className="relative bg-card"
+                      title={`Clinic sessions for ${row.student}`}
+                      icon={<CalendarClock className="size-3.5" aria-hidden="true" />}
+                      actions={
+                        <DialogClose asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="size-6"
+                            aria-label="Close"
+                          >
+                            <X className="size-4" aria-hidden="true" />
+                          </Button>
+                        </DialogClose>
+                      }
+                    >
                       <SessionPlanCard
                         title="Clinic sessions"
                         sessions={row.sessions.map((s) => ({
@@ -377,7 +390,7 @@ export function NurseReferralEntry({
                           action === "docs" ? onDocs(row, s) : onSession(row, s, action)
                         }
                       />
-                    </div>
+                    </KanbanBoard>
                   </DialogContent>
                 </Dialog>
               </div>

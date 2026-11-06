@@ -3,53 +3,51 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
-import { Loader2 } from "lucide-react";
+import { FileBarChart2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchNurseAlerts,
-  fetchNurseRiskLevels,
-  type NurseAlertsPage,
-  type NurseRiskLevel,
-} from "../alerts/components/nurse-alerts-data";
+import { NurseEmptyCard } from "../components/NurseEmptyCard";
+import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
+import { fetchNurseRiskLevels } from "@/services/nurse/risk.service";
+import type {
+  NurseAlertsPage,
+  NurseRiskLevel,
+} from "@/services/nurse/nurse.types";
 import {
   buildNurseAdmInsights,
   buildNurseAdmReferrals,
-} from "./components/nurse-adm-data";
-import { NurseAdmInsights } from "./components/NurseAdmInsights";
+} from "@/services/nurse/adm.reports";
+import {
+  NurseAdmInsights,
+  NurseAdmStats,
+} from "./components/NurseAdmInsights";
 import { NurseAdmReports } from "./components/NurseAdmReports";
-import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
+import { NurseAdmRisk } from "./components/NurseAdmRisk";
+import { NurseAdmHotspotStat } from "./components/NurseAdmHotspotStat";
 import styles from "./components/nurse-adm.module.css";
+import pageStyles from "../pages.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
-/**
- * Referrals Report — insights and reports over every case referred to the
- * school nurse (clinic + ADM). Case work itself lives on the ADM Cases
- * and Clinic Matters timelines, linked from the recommendations below.
- */
 export default function NurseAdmPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  // Aggregate insights view: bounded desk fetch (previews slice downstream).
+
   const { data: alertsData, isPending, isError, refetch, isFetching } =
     useQuery<NurseAlertsPage>({
       queryKey: ["nurse-alerts", "preview", termKey],
       queryFn: ({ signal }) =>
-        fetchNurseAlerts({ page: 1, pageSize: 100, signal }),
+        fetchNurseAlerts({ page: 1, pageSize: PAGE_SIZE, signal }),
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
-  // All-status case list (pending through dismissed) — insights, reports,
-  // and queue always reflect the current referrals whatever their status.
   const data = React.useMemo(
     () => (alertsData ? buildNurseAdmReferrals(alertsData.cases) : null),
     [alertsData]
   );
 
-  // Live rule-based risk level per student behind these cases (account
-  // id or roster id — the endpoint serves both). Desk-wide so the
-  // high-risk recommendation sees clinic cases too.
   const studentIds = React.useMemo(
     () =>
       [
@@ -70,12 +68,9 @@ export default function NurseAdmPage() {
     queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     staleTime: 300_000,
-    enabled: studentIds.length > 0,
+    enabled: termReady && studentIds.length > 0,
   });
 
-  // Referral insights derive from the same desk list the reports read
-  // (clinic + ADM), so every number repaints live with the desk — no
-  // extra fetch.
   const insights = React.useMemo(
     () =>
       data ? buildNurseAdmInsights(data.desk, riskByStudent ?? {}) : null,
@@ -83,13 +78,11 @@ export default function NurseAdmPage() {
   );
 
   if (isPending) {
-    // High-fidelity skeleton mirroring the findings strip + NurseAdmReports
-    // (donut + legend, 12-week line + interpretations) so nothing shifts on
-    // load.
+
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading referrals report">
         <div className={styles.skelFindings} aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className={styles.skelFinding} />
           ))}
         </div>
@@ -147,10 +140,14 @@ export default function NurseAdmPage() {
   }
 
   const refreshing = isFetching && !isPending;
+  const isTrueEmpty = (data?.desk.length ?? 0) === 0;
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
-      {refreshing ? <NurseRefreshBadge label="Refreshing referrals report…" /> : null}
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label="Referrals report"
+    >
       {riskError && studentIds.length > 0 ? (
         <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
           Risk levels couldn&apos;t load.{" "}
@@ -164,8 +161,30 @@ export default function NurseAdmPage() {
           </button>
         </p>
       ) : null}
-      {insights ? <NurseAdmInsights data={insights} /> : null}
-      <NurseAdmReports data={data} />
+      {isTrueEmpty ? (
+        <NurseEmptyCard
+          icon={FileBarChart2}
+          title="No referrals this term"
+          hint="Referral trends and outcomes will appear here once cases are filed."
+          label="Referrals report"
+          centered
+          layout="fit"
+        />
+      ) : (
+        <>
+          {insights ? (
+            <>
+              <NurseAdmStats
+                data={insights}
+                extra={<NurseAdmHotspotStat />}
+              />
+              <NurseAdmReports data={data} insights={insights} />
+              <NurseAdmInsights data={insights} />
+              <NurseAdmRisk />
+            </>
+          ) : null}
+        </>
+      )}
     </section>
   );
 }

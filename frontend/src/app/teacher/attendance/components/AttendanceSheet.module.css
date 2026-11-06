@@ -215,6 +215,51 @@
   color: var(--muted-foreground);
 }
 
+.admGroup {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border);
+}
+
+.admTitle {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.admNote {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.admChip {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid rgb(245 158 11 / 0.4);
+  border-radius: var(--radius-md);
+  background: #fef3c7;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #92400e;
+  vertical-align: middle;
+}
+
+:global(.dark) .admChip {
+  background: rgb(245 158 11 / 0.2);
+  color: #fbbf24;
+}
+
+.admLocked {
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: var(--muted-foreground);
+}
+
 .submitError {
   margin: 0;
   font-size: 0.8125rem;

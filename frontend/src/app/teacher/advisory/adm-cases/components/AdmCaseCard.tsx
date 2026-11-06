@@ -1,57 +1,49 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  initialsOf,
-  type AdmCase,
-} from "./adm-cases-data";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { Pill } from "@/components/ui/pill";
+import type { AdmCase } from "@/services/teacher/admCases.types";
+import { StudentMascot } from "../../referrals/components/StudentMascot";
 
 interface AdmCaseCardProps {
   caseData: AdmCase;
   onDetails: () => void;
 }
 
-/**
- * Section-grid case card (avatar, name/title hierarchy, status row, stage
- * progress, actions) in the shared section card style. Read-only — stage
- * and status only.
- */
 export function AdmCaseCard({ caseData, onDetails }: AdmCaseCardProps) {
-  const initials = initialsOf(caseData.studentName);
-
   return (
     <article
-      className={assign.card}
-      aria-label={`ADM case for ${caseData.studentName}, ${caseData.approved ? "approved" : "pending approval"}`}
+      aria-label={`ADM case for ${caseData.studentName}, ${caseData.stageLabel}`}
+      className="flex min-w-0 flex-col items-center gap-2 rounded-lg border bg-white p-3 text-center shadow-sm transition-colors hover:border-primary/60 hover:shadow dark:bg-card"
     >
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <span className={assign.cardHead}>
-        <span className={assign.avatar} aria-hidden="true">
-          {initials}
-        </span>
-        <span className={`${assign.claimMark} ml-auto self-start`}>
-          <span
-            className={assign.statusDot}
-            style={{ backgroundColor: caseData.approved ? "#22c55e" : "#f59e0b" }}
-            aria-hidden="true"
-          />
-          <span className={assign.claimLabel}>{caseData.approved ? "Approved" : "Pending"}</span>
-        </span>
-      </span>
-      <span className={assign.teacherBlock}>
-        <span className={assign.fieldLabel}>{caseData.studentName}</span>
-        <span className={assign.itemTeacher} title={`LRN ${caseData.lrn}`}>
-          LRN {caseData.lrn}
-        </span>
-      </span>
-      <span className={`${assign.cardActions} justify-end`}>
-        <Button type="button" size="sm" onClick={onDetails}>
-          Track case
+      <StudentMascot
+        name={caseData.studentName}
+        seed={caseData.lrn}
+        character={caseData.mascot ?? undefined}
+        size={96}
+      />
+      <button
+        type="button"
+        onClick={onDetails}
+        aria-label={`Monitor ADM case for ${caseData.studentName}`}
+        className="w-full cursor-pointer truncate text-center text-sm font-semibold text-foreground"
+        title={caseData.studentName}
+      >
+        {caseData.studentName}
+      </button>
+      <Pill tone="neutral" label="LRN" className="max-w-full whitespace-normal text-center leading-tight">
+        {caseData.lrn}
+      </Pill>
+      <div className="flex w-full justify-end">
+        <Button
+          type="button"
+          onClick={onDetails}
+          aria-label={`Monitor ADM case for ${caseData.studentName}`}
+          className="h-6 text-xs"
+        >
+          Monitor
         </Button>
-      </span>
+      </div>
     </article>
   );
 }

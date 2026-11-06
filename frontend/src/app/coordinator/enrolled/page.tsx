@@ -2,12 +2,14 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { CaseHistoryDialog, historyTargetFor } from "../components/CaseHistoryDialog";
 import { useCoordinatorEnrolled } from "./components/use-coordinator-enrolled";
-import { CoordinatorEnrolledFilters } from "./components/coordinator-enrolled-filters";
-import { CoordinatorEnrolledGrid } from "./components/coordinator-enrolled-grid";
-import { CoordinatorEnrolledSkeleton } from "./components/coordinator-enrolled-skeleton";
+import {
+  CoordinatorEnrolledBoard,
+  CoordinatorEnrolledBoardSkeleton,
+} from "./components/coordinator-enrolled-board";
+import { CoordinatorEnrolledCompleteConfirm } from "./components/coordinator-enrolled-complete-confirm";
+import { Pagination } from "@/components/shared/pagination";
 import styles from "./components/coordinator-enrolled.module.css";
 
 function CoordinatorEnrolledPageInner() {
@@ -17,9 +19,6 @@ function CoordinatorEnrolledPageInner() {
   const openedFor = React.useRef<string | null>(null);
   const { rows, enrolledPending, historyTarget, setHistoryTarget } = r;
 
-  // Deep-link support (?highlight=<rowId>): open history for the matching
-  // enrolled row once it loads. No-ops when the id is not shown so
-  // filters stay untouched.
   React.useEffect(() => {
     if (!highlight || openedFor.current === highlight) return;
     if (enrolledPending || historyTarget) return;
@@ -31,68 +30,54 @@ function CoordinatorEnrolledPageInner() {
   }, [highlight, rows, enrolledPending, historyTarget, setHistoryTarget]);
 
   return (
-    <section className={styles.page} aria-label="Enrolled students">
-      <CoordinatorEnrolledFilters
-        total={r.total}
-        query={r.query}
-        onQueryChange={r.setQuery}
-        elig={r.elig}
-        onEligChange={r.setElig}
-        eligMenuLabel={r.eligMenuLabel}
-        hasActiveFilters={r.hasActiveFilters}
-        onClear={r.clearFilters}
-      />
-      <CoordinatorEnrolledGrid
-        rows={r.rows}
-        isPending={r.enrolledPending}
-        isError={r.enrolledError}
-        isRefetching={r.enrolledRefetching}
-        hasActiveFilters={r.hasActiveFilters}
-        onRetry={r.refetchEnrolled}
-        onHistory={r.setHistoryTarget}
-      />
-      {/* Server pager (strict 15-row list pages). Tiles read unfiltered
-          totals; this pager reads the filtered count. */}
+    <section
+      className={
+        !r.enrolledPending && !r.enrolledError && r.rows.length === 0 && !r.hasActiveFilters
+          ? `${styles.page} ${styles.pageEmpty}`
+          : styles.page
+      }
+      aria-label="Enrolled students"
+      aria-busy={r.enrolledPending || undefined}
+    >
+      {!r.enrolledPending && !r.enrolledError && r.rows.length === 0 && !r.hasActiveFilters ? null : (
+        <CoordinatorEnrolledBoard
+          rows={r.rows}
+          isPending={r.enrolledPending}
+          isError={r.enrolledError}
+          isRefetching={r.enrolledRefetching}
+          hasActiveFilters={r.hasActiveFilters}
+          completingId={r.completingId}
+          query={r.query}
+          onQueryChange={r.setQuery}
+          onRetry={r.refetchEnrolled}
+          onHistory={r.setHistoryTarget}
+          onComplete={r.setCompleteTarget}
+        />
+      )}
+
       {!r.enrolledPending && !r.enrolledError && r.total > 0 ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: "1rem",
-          }}
-          aria-label="Enrolled pagination"
-        >
-          <p style={{ fontSize: "0.875rem", opacity: 0.75 }}>
-            Showing {r.start}–{r.end} of {r.total} · Page {r.safePage} of{" "}
-            {r.totalPages}
-          </p>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={r.safePage <= 1}
-              onClick={() => r.setPage(r.safePage - 1)}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={r.safePage >= r.totalPages}
-              onClick={() => r.setPage(r.safePage + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={r.safePage}
+          totalItems={r.total}
+          onPageChange={(p) => r.setPage(p)}
+        />
       ) : null}
 
-      {/* Case history */}
       <CaseHistoryDialog
         target={r.historyTarget}
         onClose={() => r.setHistoryTarget(null)}
       />
+
+      {r.completeTarget ? (
+        <CoordinatorEnrolledCompleteConfirm
+          row={r.completeTarget}
+          pending={r.stagePending}
+          onConfirm={r.confirmComplete}
+          onClose={() => {
+            if (!r.stagePending) r.setCompleteTarget(null);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
@@ -106,7 +91,7 @@ export default function CoordinatorEnrolledPage() {
           aria-label="Enrolled students"
           aria-busy="true"
         >
-          <CoordinatorEnrolledSkeleton rows={6} />
+          <CoordinatorEnrolledBoardSkeleton />
         </section>
       }
     >

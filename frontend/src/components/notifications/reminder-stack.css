@@ -25,9 +25,12 @@
   width: 100%;
   height: 100%;
   cursor: grab;
+  /* Re-enable hit-testing inside the pointer-events:none reminder stack so
+     notes stay draggable/clickable. */
+  pointer-events: auto;
 }
 
 .rb-card {
-  border-radius: 1rem;
+  border-radius: var(--radius-md, 0.5rem);
   width: 100%;
 }

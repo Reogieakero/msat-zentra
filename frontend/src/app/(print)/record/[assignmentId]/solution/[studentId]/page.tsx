@@ -1,13 +1,12 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchClassDetail } from "@/app/teacher/grading/components/grading-data";
+import { fetchClassDetail } from "@/services/teacher/grading.service";
 import { SolutionContent } from "@/app/teacher/grading/[assignmentId]/components/SolutionContent";
 import styles from "../../record-sheet.module.css";
 

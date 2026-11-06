@@ -1,22 +1,32 @@
 "use client";
 
-import type { CertSummary } from "./coordinator-certifications-data";
+import type { CertSummary } from "@/services/coordinator/certifications.types";
 import styles from "./coordinator-certifications-charts.module.css";
 
-export function CoordinatorCertificationsGradeChart({ summary }: { summary: CertSummary }) {
+export function CoordinatorCertificationsGradeChart({
+  summary,
+  bare = false,
+}: {
+  summary: CertSummary;
+  /** Render only the bars — the rail flyout already supplies the title. */
+  bare?: boolean;
+}) {
   const rows = (summary.byGrade ?? []).filter((r) => r.count > 0);
   const max = rows.reduce((m, r) => Math.max(m, r.count), 0);
 
   return (
-    /* Shell-less block — the page wraps the whole left panel in one
-       shared glow card, so this renders title + content only. */
-    <div className={styles.block} aria-label="Certifications by grade level">
-      <div>
-        <h3 className={styles.sectionTitle}>Certifications by grade level</h3>
-        <p className={styles.sectionDesc}>
-          Live counts across every certification you issued.
-        </p>
-      </div>
+    <div
+      className={styles.block}
+      aria-label={bare ? "Certifications by grade level" : undefined}
+    >
+      {bare ? null : (
+        <div>
+          <h3 className={styles.sectionTitle}>Certifications by grade level</h3>
+          <p className={styles.sectionDesc}>
+            Live counts across every certification you issued.
+          </p>
+        </div>
+      )}
       <div className={styles.body}>
         {summary.total === 0 || rows.length === 0 ? (
           <div className={styles.emptyWrapGrade}>

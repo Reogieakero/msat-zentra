@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { TabletSmartphone } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import type { AdmApprovalsPage } from "@/app/coordinator/components/coordinator-data";
+import type { AdmApprovalsPage } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-sidebar-reminder.module.css";
 
 interface NeedsDeviceCase {
@@ -13,11 +13,6 @@ interface NeedsDeviceCase {
   approvalDate: string | null;
 }
 
-/* Principal-approved cases with no device issued yet — the devices-side
-   twin of the live parent-meeting reminder. Read-only flag: it never
-   issues anything itself, it just points at the devices page. Polls the
-   approvals ledger itself (independent of the devices page queries) and
-   stays mounted until a device is recorded for every approved case. */
 function useNeedsDeviceCases(): NeedsDeviceCase[] {
   const [cases, setCases] = React.useState<NeedsDeviceCase[]>([]);
 
@@ -26,7 +21,8 @@ function useNeedsDeviceCases(): NeedsDeviceCase[] {
     const load = () => {
       apiClient
         .get<AdmApprovalsPage>("/api/adm/approvals", {
-          params: { limit: 200 },
+          // Strict 15-record ceiling for sidebar preview.
+          params: { limit: 15 },
         })
         .then(({ data }) => {
           if (cancelled || !data || !Array.isArray(data.rows)) return;

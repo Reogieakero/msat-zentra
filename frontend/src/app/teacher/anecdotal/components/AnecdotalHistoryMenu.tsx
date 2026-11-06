@@ -33,11 +33,6 @@ export function formatConversationDate(ts: number): string {
   return format(d, "MMM d, yyyy");
 }
 
-/**
- * Floating menu on the filing chat: previous chat threads (one per filing
- * flow) plus the teacher's record folders, each linking to its dedicated
- * records page.
- */
 export function AnecdotalHistoryMenu({
   conversations,
   activeId,

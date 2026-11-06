@@ -1,25 +1,8 @@
 import { prisma } from "../../lib/prisma.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
-import { meetsAcademicExcellenceAward } from "../../services/grading.js";
-
-const GRADE_LABELS: Record<string, string> = {
-  G7: "Grade 7",
-  G8: "Grade 8",
-  G9: "Grade 9",
-  G10: "Grade 10",
-  G11: "Grade 11",
-  G12: "Grade 12",
-};
-
-function gradeLabel(gradeLevel: string): string {
-  return GRADE_LABELS[gradeLevel] ?? gradeLevel;
-}
-
-// Numeric grade level from a "Grade <name>" label, for stable G7→G12 ordering.
-function gradeNum(label: string): number {
-  const m = label.match(/\d+/);
-  return m ? Number(m[0]) : 0;
-}
+import { gradeLabel, gradeToNumber as gradeNum } from "../../lib/grades.js";
+import { pickCurrentTerm } from "../../lib/termScope.js";
+import { getLiveHonorRoll } from "../academics/honor-roll-live.service.js";
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
@@ -57,8 +40,6 @@ export interface ReportsPayload {
   accountApprovals: { band: string; pending: number }[];
 }
 
-// The 8 ADM pipeline stages, in canonical order, with the human label used by
-// the Principal Reports command center (mirrors services/adm.ts ADM_STAGE_FLOW).
 const ADM_STAGE_LABELS: Record<string, string> = {
   anecdotal: "Anecdotal",
   consultation: "Consultation",
@@ -87,8 +68,8 @@ async function resolveScopeFilter(scope: ReportScope, opts: {
   termId: string | null;
   schoolYearId: string | null;
 }) {
-  const { gradeLevel, sectionId, termId, schoolYearId } = opts;
-  // Returns prisma filters for section/student lookups scoped to the request.
+  const { gradeLevel, sectionId, schoolYearId } = opts;
+
   const sectionWhere: Record<string, unknown> = {};
   const studentWhere: Record<string, unknown> = {};
   if (scope === "section" && sectionId) {
@@ -110,40 +91,65 @@ export async function getReports(params: {
   schoolYearId?: string | null;
   termId?: string | null;
 }): Promise<ReportsPayload> {
-  // Session's active term first; legacy active-year lookup only when the
-  // request carries no scope.
+
   let activeTerm: {
     id: string;
     termNumber: number;
+    startDate: Date | null;
+    endDate: Date | null;
     schoolYear: { name: string; id: string };
   } | null = null;
+  const termSelect = {
+    id: true,
+    termNumber: true,
+    startDate: true,
+    endDate: true,
+    schoolYear: { select: { name: true, id: true } },
+  } as const;
   if (params.termId) {
     activeTerm = await prisma.term.findUnique({
       where: { id: params.termId },
-      select: { id: true, termNumber: true, schoolYear: { select: { name: true, id: true } } },
+      select: termSelect,
     });
   }
   if (!activeTerm && params.schoolYearId) {
-    activeTerm = await prisma.term.findFirst({
-      where: { schoolYearId: params.schoolYearId },
-      orderBy: { termNumber: "asc" },
-      select: { id: true, termNumber: true, schoolYear: { select: { name: true, id: true } } },
+    const year = await prisma.schoolYear.findUnique({
+      where: { id: params.schoolYearId },
+      select: { terms: { orderBy: { termNumber: "asc" }, select: termSelect } },
     });
+    // Prefer the term in session for that year (same rule the term-scope
+    // middleware uses); fall back to the first term when no dates overlap.
+    activeTerm =
+      (year ? pickCurrentTerm(year.terms) : null) ?? null;
   }
   if (!activeTerm) {
     activeTerm = await prisma.term.findFirst({
       where: { schoolYear: { isActive: true } },
       orderBy: { termNumber: "asc" },
-      select: {
-        id: true,
-        termNumber: true,
-        schoolYear: { select: { name: true, id: true } },
-      },
+      select: termSelect,
     });
   }
   const termId = activeTerm?.id ?? null;
   const schoolYearId = activeTerm?.schoolYear.id ?? null;
   const termLabel = activeTerm ? `Term ${activeTerm.termNumber}` : "No active term";
+
+  // Snapshot fallback (DB cache when Redis is absent/cold): serve a fresh
+  // snapshot (<30 min) for this exact scope+term instead of recomputing.
+  const scopeId = params.sectionId ?? params.gradeLevel ?? null;
+  if (termId) {
+    try {
+      const snap = await prisma.reportSnapshot.findFirst({
+        where: { reportType: "principal-reports", scope: params.scope, scopeId, termId },
+        orderBy: { generatedAt: "desc" },
+        select: { payload: true, generatedAt: true },
+      });
+      if (snap && Date.now() - snap.generatedAt.getTime() < 30 * 60_000) {
+        return snap.payload as unknown as ReportsPayload;
+      }
+    } catch {
+      // Snapshot is best-effort; fall through to live computation.
+    }
+  }
   const schoolYear = activeTerm?.schoolYear.name ?? "No active school year";
 
   const { sectionWhere, studentWhere } = await resolveScopeFilter(params.scope, {
@@ -153,14 +159,12 @@ export async function getReports(params: {
     schoolYearId,
   });
 
-  // ---- Performance trends: avg transmuted per term (school-wide or scoped) ----
   const trends = await buildTrends(params.scope, {
     gradeLevel: params.gradeLevel,
     sectionId: params.sectionId,
     schoolYearId,
   });
 
-  // ---- Scorecard sections, students, interventions, adm, audit, anecdotals ----
   const [sections, interventions, admProfiles, auditLogs, anecdotalRecords] =
     await Promise.all([
       prisma.section.findMany({
@@ -182,7 +186,7 @@ export async function getReports(params: {
               anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
             },
           },
-          // Enlisted students without accounts — same grade scope when set.
+
           rosterEntries: {
             where:
               typeof studentWhere.gradeLevel === "string"
@@ -208,11 +212,21 @@ export async function getReports(params: {
         where: termId ? { termId } : undefined,
         select: { stage: true, eligibilityStatus: true },
       }),
-      // Bounded to recent rows instead of the entire audit table
-      // (audit has no term FK; activity panel only needs recent volume).
+
       prisma.auditLog.findMany({
+        // Term-scoped by date range when the term carries dates; otherwise
+        // bounded to the latest 500 rows (was 2000, unscoped across terms).
+        where:
+          activeTerm?.startDate || activeTerm?.endDate
+            ? {
+                createdAt: {
+                  ...(activeTerm?.startDate ? { gte: activeTerm.startDate } : {}),
+                  ...(activeTerm?.endDate ? { lte: activeTerm.endDate } : {}),
+                },
+              }
+            : undefined,
         orderBy: { createdAt: "desc" },
-        take: 2000,
+        take: 500,
         select: { actionType: true },
       }),
       prisma.anecdotalRecord.findMany({
@@ -221,16 +235,11 @@ export async function getReports(params: {
       }),
     ]);
 
-  // ---- KPIs + honor roll + risk distribution (live recompute) ----
   let transmutedSum = 0;
   let transmutedCount = 0;
-  let honorRoll = 0;
   const riskCounts = { High: 0, Moderate: 0, Low: 0 };
-  const honorRollByGradeMap = new Map<string, number>();
 
   for (const section of sections) {
-    const grade = gradeLabel(section.gradeLevel);
-    // Registered profiles plus unregistered enlistments (matched by LRN).
     const registeredLrns = new Set(section.students.map((s) => s.lrn));
     const cohort = [
       ...section.students,
@@ -249,10 +258,7 @@ export async function getReports(params: {
         transmutedSum += avg;
         transmutedCount += 1;
       }
-      // Risk level uses the SAME rule as the Risk board (riskBoard.service):
-      // academic flag from transmuted grades (gradeMode "final"), attendance flag
-      // from present / totalRecords for THIS student (not section enrollment),
-      // behavioral from any anecdotal. Keeps the two cards in sync.
+
       const studentFinals = (student.finalGrades ?? []).filter(
         (f) => f.transmutedGrade != null
       );
@@ -272,29 +278,23 @@ export async function getReports(params: {
       const level: "High" | "Moderate" | "Low" =
         sCount >= 2 ? "High" : sCount === 1 ? "Moderate" : "Low";
       riskCounts[level] += 1;
-      // Honor roll uses the SAME DepEd rule as Academics/Overview: every subject
-      // grade must be locked/finalized, the student must not be High risk, AND
-      // the average must meet the Academic Excellence rule (DO 15, s. 2026).
-      // Counting any locked non-High student would overstate the figure vs
-      // those pages.
-      const allLocked =
-        finals.length > 0 &&
-        finals.every(
-          (f) =>
-            f.lockStatus === "locked" ||
-            f.lockStatus === "adviser_approved" ||
-            f.finalizedAt != null
-        );
-      if (allLocked && level !== "High") {
-        const gGrades = finals.map((f) => f.transmutedGrade as number);
-        const avg = gGrades.reduce((s, g) => s + g, 0) / gGrades.length;
-        const lowest = gGrades.length > 0 ? Math.min(...gGrades) : 100;
-        if (meetsAcademicExcellenceAward(avg, lowest)) {
-          honorRoll += 1;
-          honorRollByGradeMap.set(grade, (honorRollByGradeMap.get(grade) ?? 0) + 1);
-        }
-      }
     }
+  }
+
+  // Keep the honor roll identical to /principal/honor-roll: reuse the live
+  // service (StudentGrade-based) instead of recomputing from FinalGrade rows,
+  // which only exist once finals are locked and therefore undercounted.
+  const liveHonorRoll = await getLiveHonorRoll({
+    schoolYearId,
+    termId,
+    gradeLevel: params.scope === "grade" ? params.gradeLevel : null,
+    sectionId: params.scope === "section" ? params.sectionId : null,
+  });
+  const honorRoll = liveHonorRoll.candidates.length;
+  const honorRollByGradeMap = new Map<string, number>();
+  for (const candidate of liveHonorRoll.candidates) {
+    const label = `Grade ${candidate.gradeLevel}`;
+    honorRollByGradeMap.set(label, (honorRollByGradeMap.get(label) ?? 0) + 1);
   }
 
   const avgTransmuted = transmutedCount > 0 ? round1(transmutedSum / transmutedCount) : 0;
@@ -302,8 +302,6 @@ export async function getReports(params: {
   const interventionsTotal = interventions.length;
   const interventionRate = interventionsTotal > 0 ? Math.round((interventionsResolved / interventionsTotal) * 100) : 0;
 
-  // Sections at risk + attendance watch share ONE section-attendance fetch
-  // (was two identical findMany passes). Computed together below.
   const attendanceScope = {
     gradeLevel: params.gradeLevel,
     sectionId: params.sectionId,
@@ -323,10 +321,8 @@ export async function getReports(params: {
     honorRoll,
   };
 
-  // ---- Intervention success by grade/section group ----
   const interventionSuccess = buildInterventionSuccess(params, sections, interventions);
 
-  // ---- Honor roll by grade ----
   const honorRollByGrade = Array.from(honorRollByGradeMap.entries())
     .map(([grade, candidates]) => ({ grade, candidates }))
     .sort(
@@ -334,7 +330,6 @@ export async function getReports(params: {
         Number(a.grade.replace(/\D/g, "")) - Number(b.grade.replace(/\D/g, ""))
     );
 
-  // ---- ADM pipeline + eligibility ----
   const admStages = ADM_STAGE_ORDER.map((stage) => ({
     stage: ADM_STAGE_LABELS[stage],
     count: admProfiles.filter((p) => p.stage === stage).length,
@@ -345,23 +340,19 @@ export async function getReports(params: {
     { status: "Ineligible", count: admProfiles.filter((p) => p.eligibilityStatus === "ineligible").length },
   ];
 
-  // ---- Risk distribution ----
   const riskDistribution = [
     { level: "High", count: riskCounts.High },
     { level: "Moderate", count: riskCounts.Moderate },
     { level: "Low", count: riskCounts.Low },
   ];
 
-  // ---- Audit activity by action type ----
   const auditActivity = buildAuditActivity(auditLogs);
 
-  // ---- Anecdotal volume by category ----
   const anecdotalCategories = buildAnecdotalCategories(anecdotalRecords);
 
-  // ---- Account approvals awaiting (RK / Registrar) ----
   const accountApprovals = await buildAccountApprovals();
 
-  return {
+  const payload: ReportsPayload = {
     termLabel,
     schoolYear,
     kpis,
@@ -376,13 +367,32 @@ export async function getReports(params: {
     anecdotalCategories,
     accountApprovals,
   };
+
+  // Persist snapshot for the fallback path (best-effort, never fails live).
+  if (termId) {
+    try {
+      await prisma.reportSnapshot.create({
+        data: {
+          reportType: "principal-reports",
+          scope: params.scope,
+          scopeId,
+          termId,
+          payload: payload as unknown as object,
+        },
+      });
+    } catch {
+      // Ignore snapshot write failures.
+    }
+  }
+
+  return payload;
 }
 
 function anecdotalScopeWhere(
   params: { scope: ReportScope; gradeLevel?: string; sectionId?: string },
   sectionWhere: Record<string, unknown>
 ): Record<string, unknown> {
-  // AnecdotalRecord has no gradeLevel field; scope it via section relationship.
+
   if (params.scope === "section" && params.sectionId) {
     return { sectionId: params.sectionId };
   }
@@ -405,63 +415,32 @@ async function buildTrends(
     orderBy: { termNumber: "asc" },
     select: { id: true, termNumber: true },
   });
-  const sectionWhere: Record<string, unknown> = {};
-  if (scope === "section" && opts.sectionId) sectionWhere.id = opts.sectionId;
-  else if (scope === "grade" && opts.gradeLevel) sectionWhere.gradeLevel = opts.gradeLevel;
-  else sectionWhere.schoolYearId = opts.schoolYearId;
-
-  // Parallel per-term fetch (was serial await-in-loop). Terms are few (3),
-  // so Promise.all is bounded and safe.
-  const perTerm = await Promise.all(
-    terms.map(async (t) => {
-      const sections = await prisma.section.findMany({
-        where: sectionWhere,
-        select: {
-          id: true,
-          students: {
-            select: {
-              lrn: true,
-              finalGrades: {
-                where: { termId: t.id },
-                select: { transmutedGrade: true },
-              },
-            },
-          },
-          rosterEntries: {
-            select: {
-              lrn: true,
-              finalGrades: {
-                where: { termId: t.id },
-                select: { transmutedGrade: true },
-              },
-            },
-          },
-        },
-      });
-      let sum = 0;
-      let count = 0;
-      const tally = (grades: { transmutedGrade: number | null }[]) => {
-        for (const g of grades) {
-          if (g.transmutedGrade != null) {
-            sum += g.transmutedGrade as number;
-            count += 1;
+  // Single aggregate query across all terms: one grouped AVG instead of a
+  // per-term full section+grade scan fan-out.
+  const termIds = terms.map((t) => t.id);
+  const gradeWhere: Record<string, unknown> =
+    scope === "section" && opts.sectionId
+      ? { OR: [{ student: { sectionId: opts.sectionId } }, { roster: { sectionId: opts.sectionId } }] }
+      : scope === "grade" && opts.gradeLevel
+        ? {
+            OR: [
+              { student: { gradeLevel: opts.gradeLevel } },
+              { roster: { gradeLevel: opts.gradeLevel } },
+            ],
           }
-        }
-      };
-      for (const s of sections) {
-        const registeredLrns = new Set(s.students.map((st) => st.lrn));
-        for (const st of s.students) tally(st.finalGrades);
-        for (const r of s.rosterEntries) {
-          if (!registeredLrns.has(r.lrn)) tally(r.finalGrades);
-        }
-      }
-      const avg = count > 0 ? round1(sum / count) : 0;
-      return { term: `T${t.termNumber}`, avgTransmuted: avg, order: t.termNumber };
-    }),
-  );
-  return perTerm
-    .sort((a, b) => a.order - b.order)
-    .map(({ term, avgTransmuted }) => ({ term, avgTransmuted }));
+        : {};
+  const groups =
+    termIds.length > 0
+      ? await prisma.finalGrade.groupBy({
+          by: ["termId"],
+          where: { termId: { in: termIds }, transmutedGrade: { not: null }, ...gradeWhere },
+          _avg: { transmutedGrade: true },
+        })
+      : [];
+  const avgByTerm = new Map(groups.map((g) => [g.termId, g._avg.transmutedGrade ?? 0]));
+  return terms
+    .sort((a, b) => a.termNumber - b.termNumber)
+    .map((t) => ({ term: `T${t.termNumber}`, avgTransmuted: round1(avgByTerm.get(t.id) ?? 0) }));
 }
 
 function buildInterventionSuccess(
@@ -469,7 +448,7 @@ function buildInterventionSuccess(
   sections: { id: string; gradeLevel: string; name: string }[],
   interventions: { outcomeStatus: string; student: { gradeLevel: string; sectionId: string | null } | null }[]
 ): { grade: string; referred: number; resolved: number; ongoing: number; unresolved: number }[] {
-  // Group interventions by the section/grade label appropriate to the scope.
+
   const groups = new Map<string, { referred: number; resolved: number; ongoing: number; unresolved: number }>();
   const labelFor = (gradeLevel: string, sectionId: string | null): string => {
     if (params.scope === "section") {
@@ -496,8 +475,6 @@ function buildInterventionSuccess(
     );
 }
 
-// Single section-attendance pass feeding BOTH the at-risk count and the
-// watch list (previously two identical findMany queries).
 async function buildAttendanceSectionStats(
   scope: ReportScope,
   opts: { gradeLevel?: string; sectionId?: string; termId: string | null; schoolYearId: string | null }
@@ -548,7 +525,7 @@ function buildAuditActivity(logs: { actionType: string }[]): { action: string; c
     const label = LABELS[log.actionType] ?? log.actionType;
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
-  // Preserve a stable, meaningful order matching the command center.
+
   const ORDER = [
     "Grade Lock",
     "Anecdotal Edit",
@@ -563,8 +540,7 @@ function buildAuditActivity(logs: { actionType: string }[]): { action: string; c
 }
 
 function buildAnecdotalCategories(records: { category: string }[]): { category: string; count: number }[] {
-  // Labels mirror backend AnecdotalCategory enum CATEGORY_META so the Reports
-  // breakdown agrees with the Risk / Anecdotal pages (bullying -> "Bullying").
+
   const LABELS: Record<string, string> = {
     behavioral: "Behavioral",
     academic: "Academic",
@@ -582,8 +558,7 @@ function buildAnecdotalCategories(records: { category: string }[]): { category: 
 }
 
 async function buildAccountApprovals(): Promise<{ band: string; pending: number }[]> {
-  // Pending accounts split by grade band ownership: G7–G10 = Record Keeper,
-  // G11–G12 = Registrar. Approximated from each pending user's student profile.
+
   const pendingUsers = await prisma.user.findMany({
     where: { status: "pending" },
     select: { studentProfile: { select: { gradeLevel: true } } },

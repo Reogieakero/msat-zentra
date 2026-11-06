@@ -1,0 +1,347 @@
+/* Schedule approval — a data table inside the shared KanbanBoard shell,
+   centered on the page, with pill-based grade filters. The right rail reuses
+   the principal overview rail shell. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* Centered board + icon-only rail column. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  min-width: 0;
+  /* Table sits in the vertical middle of the desk; the rail stays pinned to
+     the top of the page (16px under the navbar). */
+  min-height: calc(100dvh - 8rem);
+}
+
+/* The table board sits centered in the content column. */
+.boardWrap {
+  width: 100%;
+  max-width: 60rem;
+  margin-inline: auto;
+  animation: board-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Right rail slides in from the gutter once the board has landed. */
+.railIn {
+  animation: rail-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.9s backwards;
+}
+
+/* Grade filter — shared pills, one button each. */
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Filter chips land after the board, one after another. */
+.filterRow > * {
+  animation: row-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.25s backwards;
+}
+
+.filterRow > *:nth-child(2) {
+  animation-delay: 0.33s;
+}
+
+.filterRow > *:nth-child(3) {
+  animation-delay: 0.41s;
+}
+
+.filterRow > *:nth-child(4) {
+  animation-delay: 0.49s;
+}
+
+.filterRow > *:nth-child(5) {
+  animation-delay: 0.57s;
+}
+
+.filterRow > *:nth-child(6) {
+  animation-delay: 0.65s;
+}
+
+.filterRow > *:nth-child(7) {
+  animation-delay: 0.73s;
+}
+
+.filterButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.filterButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  /* The table is a board, not a scroll region — hide the horizontal bar but
+     keep the overflow so narrow viewports can still pan. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tableWrap::-webkit-scrollbar {
+  display: none;
+}
+
+.table {
+  width: 100%;
+  min-width: 40rem;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.table td {
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  text-align: left;
+  transition: background-color 140ms ease-out;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr {
+  /* Rows cascade in; each row sets its own animation-delay inline so the
+     stagger survives grade-filter changes (the tbody is keyed). The last row
+     of the longest board lands right at the 5s mark. */
+  animation: row-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.table tbody tr:hover {
+  background-color: color-mix(in oklch, var(--muted), transparent 40%);
+}
+
+.sectionCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.sectionName {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.mutedCell {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+
+.teacherNone {
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.actionCol {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.emptyCell {
+  padding: 2rem 0.625rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+/* Inline review overlay body — same row rhythm as the section card. */
+.reviewBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.reviewHead {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-width: 0;
+  padding: 0.25rem;
+}
+
+.reviewMascot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary), transparent 90%);
+}
+
+.reviewMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.reviewRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.reviewLabel {
+  flex-shrink: 0;
+  min-width: 5.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.reviewValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.reviewHint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+
+/* Flyout bucket rows (right rail). */
+.railList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.railRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--foreground);
+  text-decoration: none;
+  transition: background-color 120ms ease-out;
+}
+
+.railRow:hover {
+  background-color: var(--muted);
+}
+
+.railRow:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.railRowName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.railRowMeta {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+}
+
+/* Entrance choreography — same expo-out curve as the academics board:
+   the panel lifts in, then rows cascade, while the rail slides from the gutter. */
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rail-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardWrap,
+  .railIn,
+  .filterRow > *,
+  .table tbody tr {
+    animation: none;
+  }
+}

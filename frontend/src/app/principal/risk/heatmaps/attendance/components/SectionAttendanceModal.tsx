@@ -11,10 +11,11 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Users } from "lucide-react";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import { apiClient } from "@/lib/api/client";
-import { CardModal } from "@/components/ui/CardModal";
-import { Badge } from "@/components/ui/badge";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
+import { Pill } from "@/components/ui/pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,7 +27,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SortTh, TablePager } from "./heatmap-table";
+import { SortTh } from "./heatmap-table";
+import { Pagination } from "@/components/shared/pagination";
 import common from "./heatmap-table.module.css";
 import styles from "./SectionAttendanceModal.module.css";
 
@@ -54,7 +56,7 @@ interface SectionStudent {
   rate: number;
 }
 
-const PAGE_SIZE = 15;
+
 
 const gradeNum = (name: string) => {
   const m = String(name).match(/(\d+)/);
@@ -62,6 +64,7 @@ const gradeNum = (name: string) => {
   const n = parseInt(m[1], 10);
   return Number.isNaN(n) ? 0 : n;
 };
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export function SectionAttendanceModal({
   open,
@@ -81,7 +84,6 @@ export function SectionAttendanceModal({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pageIndex, setPageIndex] = React.useState(0);
 
-  // Picker mode (no section chosen yet): every section in the school.
   const sectionsQuery = useQuery({
     queryKey: ["attendance-modal-sections"],
     queryFn: async () => {
@@ -108,7 +110,6 @@ export function SectionAttendanceModal({
     staleTime: 30_000,
   });
 
-  // Reset table state whenever the drilled section changes.
   React.useEffect(() => {
     setStudentQuery("");
     setSorting([]);
@@ -195,12 +196,12 @@ export function SectionAttendanceModal({
         accessorFn: (row) => row.rate,
         header: "Rate",
         cell: ({ row }) => (
-          <Badge
-            variant={row.original.rate < 80 ? "destructive" : "outline"}
-            className={common.rateBadge}
+          <Pill
+            tone={row.original.rate < 80 ? "red" : "green"}
+            label="Attendance rate"
           >
             {row.original.rate}%
-          </Badge>
+          </Pill>
         ),
       },
     ],
@@ -232,14 +233,12 @@ export function SectionAttendanceModal({
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(safePageIndex + 1, totalPages);
-  const start = total === 0 ? 0 : safePageIndex * PAGE_SIZE + 1;
-  const end = Math.min((safePageIndex + 1) * PAGE_SIZE, total);
 
   return (
-    <CardModal
+    <KanbanOverlay
       open={open}
       onClose={onClose}
-      size="lg"
+      width="lg"
       title={
         selection
           ? `Section attendance · ${selection.sectionName}`
@@ -250,7 +249,6 @@ export function SectionAttendanceModal({
           ? `Per-student daily breakdown — present means present in every subject offered that day. ${schoolDays} school days. Read-only.`
           : `Pick a section to see its full per-student daily table. Read-only.`
       }
-      watchKey={selection?.sectionId ?? "picker"}
     >
       {!selection ? (
         <>
@@ -301,12 +299,9 @@ export function SectionAttendanceModal({
                         Grade {s.gradeLevel} · {s.enrolled} students
                       </span>
                     </span>
-                    <Badge
-                      variant={s.rate < 80 ? "destructive" : "outline"}
-                      className={common.rateBadge}
-                    >
+                    <Pill tone={s.rate < 80 ? "red" : "green"} label="Attendance rate">
                       {s.rate}%
-                    </Badge>
+                    </Pill>
                   </button>
                 </li>
               ))}
@@ -324,6 +319,14 @@ export function SectionAttendanceModal({
               {total} student{total === 1 ? "" : "s"}
             </p>
           </div>
+          {!studentsQuery.isPending && !studentsQuery.isError && filtered.length === 0 && !studentQuery.trim() ? (
+            <PrincipalEmptyState
+              icon={Users}
+              title="No students in this section"
+              hint="No students found in this section for the active term."
+            />
+          ) : (
+          <>
           <div className={common.searchWrap} style={{ marginBottom: "0.75rem" }}>
             <Search className={common.searchIcon} aria-hidden />
             <Input
@@ -422,22 +425,17 @@ export function SectionAttendanceModal({
                   </TableBody>
                 </Table>
               </div>
-              <TablePager
-                start={start}
-                end={end}
-                total={total}
-                page={safePage}
-                totalPages={totalPages}
-                canPrev={table.getCanPreviousPage()}
-                canNext={table.getCanNextPage()}
-                onPrev={() => setPageIndex((p) => Math.max(0, p - 1))}
-                onNext={() => setPageIndex((p) => p + 1)}
-                label="students"
+              <Pagination
+                currentPage={safePage}
+                totalItems={total}
+                onPageChange={(p) => setPageIndex(p - 1)}
               />
             </>
           )}
+          </>
+          )}
         </>
       )}
-    </CardModal>
+    </KanbanOverlay>
   );
 }

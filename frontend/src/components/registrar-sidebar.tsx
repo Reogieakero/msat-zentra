@@ -11,11 +11,13 @@ import {
   FileBarChart,
   FileText,
   Settings,
+  Upload,
   type LucideIcon,
 } from "lucide-react";
 
 import styles from "./registrar-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
 type NavItem = {
@@ -30,12 +32,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Registrar nav — same branched left rail on desktop + flattened tab bar
-// on small screens as the principal desk. Active state uses longest-prefix
-// matching so a child page highlights the child, not the parent.
-//
-// Shared-concept convention (same label + icon across desks):
-// Overview=LayoutDashboard.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -55,6 +51,7 @@ const NAV: NavGroup[] = [
       },
       { title: "Report Cards", href: "/registrar/report-cards", icon: FileBarChart },
       { title: "SF10 Records", href: "/registrar/sf10", icon: FileText },
+      { title: "Upload SF10", href: "/registrar/sf10/upload", icon: Upload },
     ],
   },
   {
@@ -69,8 +66,6 @@ const NAV: NavGroup[] = [
   },
 ];
 
-// GitHub-style tab bar: every section flattened into one row on small
-// screens. Groups only group the source data, not the rendered tabs.
 const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
 function matches(href: string, pathname: string, exactRoot: string) {
@@ -78,9 +73,6 @@ function matches(href: string, pathname: string, exactRoot: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-// Longest-prefix match: when both a parent (e.g. /registrar/accounts) and a
-// child (e.g. /registrar/accounts/123) match, the child wins so the rail
-// and tab bar highlight the deepest page.
 function findActiveHref(tabs: NavItem[], pathname: string) {
   let best: string | null = null;
   for (const t of tabs) {
@@ -153,23 +145,42 @@ function RegistrarRail({ groups }: { groups: NavGroup[] }) {
   );
 }
 
-export function RegistrarSidebar() {
+export function RegistrarSidebar({
+  collapsed = true,
+}: {
+  collapsed?: boolean;
+} = {}) {
+  const pathname = usePathname();
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const activeHref = findActiveHref(TABS, pathname);
 
   return (
     <>
-      <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Registrar sections">
-        <div ref={railScrollRef} className={styles.railScroll}>
-          <RegistrarRail groups={NAV} />
-        </div>
-        <div className={styles.railHintWrap}>
-          <ScrollDownHint
-            scrollRef={railScrollRef}
-            watchKey="registrar-nav"
-            label="Scroll for more"
-            className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+      <aside
+        className={`${styles.rail} ${styles.railDesktop} ${collapsed ? styles.railCollapsed : ""}`}
+        aria-label="Registrar sections"
+      >
+        {collapsed ? (
+          <SidebarIconRail
+            groups={NAV}
+            ariaLabel="Registrar sections, icon only"
+            activeHref={activeHref}
           />
-        </div>
+        ) : (
+          <>
+            <div ref={railScrollRef} className={styles.railScroll}>
+              <RegistrarRail groups={NAV} />
+            </div>
+            <div className={styles.railHintWrap}>
+              <ScrollDownHint
+                scrollRef={railScrollRef}
+                watchKey="registrar-nav"
+                label="Scroll for more"
+                className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+              />
+            </div>
+          </>
+        )}
       </aside>
       <div className={styles.tabsMobile}>
         <RegistrarNavbar tabs={TABS} />

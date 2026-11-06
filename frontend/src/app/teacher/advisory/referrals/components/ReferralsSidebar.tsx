@@ -35,7 +35,6 @@ interface ReferralsSidebarProps {
   onQueryChange: (next: string) => void;
   trackFilter: TrackFilter;
   onTrackFilterChange: (next: TrackFilter) => void;
-  /** Initial load: controls stay mounted, list region shows skeleton rows. */
   loading?: boolean;
 }
 
@@ -53,8 +52,6 @@ const STATUS_LABELS: Record<string, string> = {
   dismissed: "Cancelled",
 };
 
-// Fallback for unmapped values: no underscores, Title Case
-// (e.g. "in_progress" -> "In Progress").
 function humanize(value: string | undefined | null): string {
   const words = (value ?? "").replace(/[_-]+/g, " ").trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return "—";

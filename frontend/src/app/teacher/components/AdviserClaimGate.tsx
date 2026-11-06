@@ -17,9 +17,7 @@ type ClaimableSection = {
   name: string;
   gradeLevel: number;
   adviserLabel: string;
-  /** Principal's listed name matches this account — shown first. */
   suggested: boolean;
-  /** Principal assigned this seat — the teacher must enter its code to claim. */
   hasCode?: boolean;
 };
 
@@ -56,17 +54,9 @@ function dismiss(userId: string, schoolYearId: string): void {
   try {
     window.localStorage.setItem(dismissalKey(userId, schoolYearId), "1");
   } catch {
-    /* ignore storage failures */
   }
 }
 
-// First-login adviser self-onboarding. Shows once per school year while the
-// teacher advises nothing: step 1 asks "Are you an adviser?" — No dismisses
-// to the workspace; Yes lists sections the principal filed under the
-// teacher's name, and picking one + entering its advisory code links the
-// account as section adviser. Teachers already linked never see this; a "No"
-// re-asks only while they still advise nothing (e.g. next login), which is
-// exactly when the question is still relevant.
 export function AdviserClaimGate() {
   const session = useSession();
   const queryClient = useQueryClient();
@@ -76,12 +66,10 @@ export function AdviserClaimGate() {
   const [code, setCode] = React.useState("");
   const [error, setError] = React.useState<{ year: string; message: string } | null>(null);
   const [saving, setSaving] = React.useState(false);
-  // Dismissals are per school year — a new year re-arms the prompt.
   const [dismissedYear, setDismissedYear] = React.useState<string | null>(null);
 
   const isTeacher = session?.role === "subject_teacher" || session?.role === "adviser";
   const schoolYearId = activeTerm?.schoolYearId ?? "";
-  // The term picker overlay takes precedence — only ask once a term is set.
   const gateOn =
     !!isTeacher && !!session && !!schoolYearId && !promptRequired && dismissedYear !== schoolYearId;
 
@@ -96,8 +84,6 @@ export function AdviserClaimGate() {
   const status = statusQuery.data;
   const userId = session?.sub ?? "";
 
-  // Already advising → treat as done for this year (write-through so the
-  // next mount short-circuits on the stored flag without fetching).
   if (status && status.alreadyAdvising.length > 0 && userId && schoolYearId) {
     if (!isDismissed(userId, schoolYearId)) dismiss(userId, schoolYearId);
   }
@@ -108,7 +94,6 @@ export function AdviserClaimGate() {
   if (statusQuery.isPending || statusQuery.isError || !status) return null;
   if (done) return null;
 
-  // A term switch mid-pick must not carry a stale selection or error.
   const effectiveSelected = status.claimable.some((s) => s.id === selectedId) ? selectedId : null;
   const selectedSection = status.claimable.find((s) => s.id === effectiveSelected) ?? null;
   const codeRequired = !!selectedSection?.hasCode || !!selectedSection?.adviserLabel;
@@ -144,8 +129,6 @@ export function AdviserClaimGate() {
     const sectionGrade = section.gradeLevel;
     setError(null);
     setSaving(true);
-    // Instant: close the gate in the same tick — the claim confirms in the
-    // background and advisory surfaces refresh from the response.
     dismiss(userId, year);
     setDismissedYear(year);
     void (async () => {
@@ -154,7 +137,6 @@ export function AdviserClaimGate() {
           sectionId,
           ...(needsCode ? { code: trimmedCode } : {}),
         });
-        // Patch the status cache instantly: claimed section moves to advised.
         const statusKey = ["teacher", "advisory", "claim-status", year];
         queryClient.setQueryData<ClaimStatus>(statusKey, (prev) => {
           if (!prev) return prev;
@@ -168,8 +150,6 @@ export function AdviserClaimGate() {
             claimable: prev.claimable.filter((s) => s.id !== sectionId),
           };
         });
-        // Advisory surfaces fetched pre-claim (the roster even 404s with
-        // retry:false) must refetch now — prefixes match the scoped keys.
         for (const key of [
           ["teacher-overview"],
           ["advisory-students"],
@@ -185,14 +165,11 @@ export function AdviserClaimGate() {
           description: `You are now the adviser of ${sectionName} (Grade ${sectionGrade}).`,
         });
       } catch (err) {
-        // Reopen the gate on the same step with the failure reason.
         try {
           window.localStorage.removeItem(dismissalKey(userId, year));
         } catch {
-          /* ignore storage failures */
         }
         setDismissedYear(null);
-        // The backend envelopes errors as { error: { code, message } }.
         const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
         const serverMessage = data?.error?.message ?? data?.message;
         const message =

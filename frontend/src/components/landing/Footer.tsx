@@ -1,24 +1,34 @@
 import Link from "next/link";
-import { Reveal } from "./Reveal";
+import { Asterisk } from "lucide-react";
 import styles from "./Footer.module.css";
 
 export function Footer() {
   const year = new Date().getFullYear();
+
   return (
     <footer className={styles.footer}>
-      <Reveal className={styles.inner}>
+      <div className={styles.inner}>
+        <Link href="#overview" className={styles.brand}>
+          <Asterisk size={16} aria-hidden="true" />
+          <span>Zentra</span>
+        </Link>
+
         <p className={styles.copy}>
-          © {year} Zentra · Mati School of Arts and Trades
+          © {year} Mati School of Arts and Trades · Student Information & Management System
         </p>
+
         <nav className={styles.links} aria-label="Footer">
-          <Link href="#privacy" className={styles.link}>
-            Privacy
+          <Link href="#modules" className={styles.link}>
+            Modules
           </Link>
-          <Link href="#access" className={styles.link}>
-            Access request
+          <Link href="#roles" className={styles.link}>
+            Roles
+          </Link>
+          <Link href="/login" className={styles.link}>
+            Sign in
           </Link>
         </nav>
-      </Reveal>
+      </div>
     </footer>
   );
 }

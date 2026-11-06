@@ -37,6 +37,7 @@ export type Sf10RecordSumAggregateOutputType = {
 export type Sf10RecordMinAggregateOutputType = {
   id: string | null
   studentId: string | null
+  desk: $Enums.Sf10Desk | null
   source: $Enums.Sf10Source | null
   status: $Enums.Sf10Status | null
   uploadedFileUrl: string | null
@@ -54,6 +55,7 @@ export type Sf10RecordMinAggregateOutputType = {
 export type Sf10RecordMaxAggregateOutputType = {
   id: string | null
   studentId: string | null
+  desk: $Enums.Sf10Desk | null
   source: $Enums.Sf10Source | null
   status: $Enums.Sf10Status | null
   uploadedFileUrl: string | null
@@ -71,6 +73,7 @@ export type Sf10RecordMaxAggregateOutputType = {
 export type Sf10RecordCountAggregateOutputType = {
   id: number
   studentId: number
+  desk: number
   source: number
   status: number
   uploadedFileUrl: number
@@ -99,6 +102,7 @@ export type Sf10RecordSumAggregateInputType = {
 export type Sf10RecordMinAggregateInputType = {
   id?: true
   studentId?: true
+  desk?: true
   source?: true
   status?: true
   uploadedFileUrl?: true
@@ -116,6 +120,7 @@ export type Sf10RecordMinAggregateInputType = {
 export type Sf10RecordMaxAggregateInputType = {
   id?: true
   studentId?: true
+  desk?: true
   source?: true
   status?: true
   uploadedFileUrl?: true
@@ -133,6 +138,7 @@ export type Sf10RecordMaxAggregateInputType = {
 export type Sf10RecordCountAggregateInputType = {
   id?: true
   studentId?: true
+  desk?: true
   source?: true
   status?: true
   uploadedFileUrl?: true
@@ -238,6 +244,7 @@ export type Sf10RecordGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inter
 export type Sf10RecordGroupByOutputType = {
   id: string
   studentId: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status: $Enums.Sf10Status
   uploadedFileUrl: string | null
@@ -279,6 +286,7 @@ export type Sf10RecordWhereInput = {
   NOT?: Prisma.Sf10RecordWhereInput | Prisma.Sf10RecordWhereInput[]
   id?: Prisma.StringFilter<"Sf10Record"> | string
   studentId?: Prisma.StringFilter<"Sf10Record"> | string
+  desk?: Prisma.EnumSf10DeskFilter<"Sf10Record"> | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFilter<"Sf10Record"> | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFilter<"Sf10Record"> | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.StringNullableFilter<"Sf10Record"> | string | null
@@ -301,6 +309,7 @@ export type Sf10RecordWhereInput = {
 export type Sf10RecordOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  desk?: Prisma.SortOrder
   source?: Prisma.SortOrder
   status?: Prisma.SortOrder
   uploadedFileUrl?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -322,10 +331,12 @@ export type Sf10RecordOrderByWithRelationInput = {
 
 export type Sf10RecordWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  studentId?: string
+  studentId_desk?: Prisma.Sf10RecordStudentIdDeskCompoundUniqueInput
   AND?: Prisma.Sf10RecordWhereInput | Prisma.Sf10RecordWhereInput[]
   OR?: Prisma.Sf10RecordWhereInput[]
   NOT?: Prisma.Sf10RecordWhereInput | Prisma.Sf10RecordWhereInput[]
+  studentId?: Prisma.StringFilter<"Sf10Record"> | string
+  desk?: Prisma.EnumSf10DeskFilter<"Sf10Record"> | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFilter<"Sf10Record"> | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFilter<"Sf10Record"> | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.StringNullableFilter<"Sf10Record"> | string | null
@@ -343,11 +354,12 @@ export type Sf10RecordWhereUniqueInput = Prisma.AtLeast<{
   verifiedByUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   validatedByUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   versions?: Prisma.Sf10RecordVersionListRelationFilter
-}, "id" | "studentId">
+}, "id" | "studentId_desk">
 
 export type Sf10RecordOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  desk?: Prisma.SortOrder
   source?: Prisma.SortOrder
   status?: Prisma.SortOrder
   uploadedFileUrl?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -374,6 +386,7 @@ export type Sf10RecordScalarWhereWithAggregatesInput = {
   NOT?: Prisma.Sf10RecordScalarWhereWithAggregatesInput | Prisma.Sf10RecordScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Sf10Record"> | string
   studentId?: Prisma.StringWithAggregatesFilter<"Sf10Record"> | string
+  desk?: Prisma.EnumSf10DeskWithAggregatesFilter<"Sf10Record"> | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceWithAggregatesFilter<"Sf10Record"> | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusWithAggregatesFilter<"Sf10Record"> | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.StringNullableWithAggregatesFilter<"Sf10Record"> | string | null
@@ -391,6 +404,7 @@ export type Sf10RecordScalarWhereWithAggregatesInput = {
 
 export type Sf10RecordCreateInput = {
   id?: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -411,6 +425,7 @@ export type Sf10RecordCreateInput = {
 export type Sf10RecordUncheckedCreateInput = {
   id?: string
   studentId: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -429,6 +444,7 @@ export type Sf10RecordUncheckedCreateInput = {
 
 export type Sf10RecordUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -449,6 +465,7 @@ export type Sf10RecordUpdateInput = {
 export type Sf10RecordUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -468,6 +485,7 @@ export type Sf10RecordUncheckedUpdateInput = {
 export type Sf10RecordCreateManyInput = {
   id?: string
   studentId: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -485,6 +503,7 @@ export type Sf10RecordCreateManyInput = {
 
 export type Sf10RecordUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -501,6 +520,7 @@ export type Sf10RecordUpdateManyMutationInput = {
 export type Sf10RecordUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -526,9 +546,15 @@ export type Sf10RecordOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type Sf10RecordStudentIdDeskCompoundUniqueInput = {
+  studentId: string
+  desk: $Enums.Sf10Desk
+}
+
 export type Sf10RecordCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  desk?: Prisma.SortOrder
   source?: Prisma.SortOrder
   status?: Prisma.SortOrder
   uploadedFileUrl?: Prisma.SortOrder
@@ -551,6 +577,7 @@ export type Sf10RecordAvgOrderByAggregateInput = {
 export type Sf10RecordMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  desk?: Prisma.SortOrder
   source?: Prisma.SortOrder
   status?: Prisma.SortOrder
   uploadedFileUrl?: Prisma.SortOrder
@@ -568,6 +595,7 @@ export type Sf10RecordMaxOrderByAggregateInput = {
 export type Sf10RecordMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  desk?: Prisma.SortOrder
   source?: Prisma.SortOrder
   status?: Prisma.SortOrder
   uploadedFileUrl?: Prisma.SortOrder
@@ -717,6 +745,10 @@ export type Sf10RecordUncheckedUpdateManyWithoutStudentNestedInput = {
   deleteMany?: Prisma.Sf10RecordScalarWhereInput | Prisma.Sf10RecordScalarWhereInput[]
 }
 
+export type EnumSf10DeskFieldUpdateOperationsInput = {
+  set?: $Enums.Sf10Desk
+}
+
 export type EnumSf10SourceFieldUpdateOperationsInput = {
   set?: $Enums.Sf10Source
 }
@@ -741,6 +773,7 @@ export type Sf10RecordUpdateOneRequiredWithoutVersionsNestedInput = {
 
 export type Sf10RecordCreateWithoutVerifiedByUserInput = {
   id?: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -760,6 +793,7 @@ export type Sf10RecordCreateWithoutVerifiedByUserInput = {
 export type Sf10RecordUncheckedCreateWithoutVerifiedByUserInput = {
   id?: string
   studentId: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -787,6 +821,7 @@ export type Sf10RecordCreateManyVerifiedByUserInputEnvelope = {
 
 export type Sf10RecordCreateWithoutValidatedByUserInput = {
   id?: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -806,6 +841,7 @@ export type Sf10RecordCreateWithoutValidatedByUserInput = {
 export type Sf10RecordUncheckedCreateWithoutValidatedByUserInput = {
   id?: string
   studentId: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -853,6 +889,7 @@ export type Sf10RecordScalarWhereInput = {
   NOT?: Prisma.Sf10RecordScalarWhereInput | Prisma.Sf10RecordScalarWhereInput[]
   id?: Prisma.StringFilter<"Sf10Record"> | string
   studentId?: Prisma.StringFilter<"Sf10Record"> | string
+  desk?: Prisma.EnumSf10DeskFilter<"Sf10Record"> | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFilter<"Sf10Record"> | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFilter<"Sf10Record"> | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.StringNullableFilter<"Sf10Record"> | string | null
@@ -886,6 +923,7 @@ export type Sf10RecordUpdateManyWithWhereWithoutValidatedByUserInput = {
 
 export type Sf10RecordCreateWithoutStudentInput = {
   id?: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -904,6 +942,7 @@ export type Sf10RecordCreateWithoutStudentInput = {
 
 export type Sf10RecordUncheckedCreateWithoutStudentInput = {
   id?: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -948,6 +987,7 @@ export type Sf10RecordUpdateManyWithWhereWithoutStudentInput = {
 
 export type Sf10RecordCreateWithoutVersionsInput = {
   id?: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -967,6 +1007,7 @@ export type Sf10RecordCreateWithoutVersionsInput = {
 export type Sf10RecordUncheckedCreateWithoutVersionsInput = {
   id?: string
   studentId: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -1000,6 +1041,7 @@ export type Sf10RecordUpdateToOneWithWhereWithoutVersionsInput = {
 
 export type Sf10RecordUpdateWithoutVersionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1019,6 +1061,7 @@ export type Sf10RecordUpdateWithoutVersionsInput = {
 export type Sf10RecordUncheckedUpdateWithoutVersionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1037,6 +1080,7 @@ export type Sf10RecordUncheckedUpdateWithoutVersionsInput = {
 export type Sf10RecordCreateManyVerifiedByUserInput = {
   id?: string
   studentId: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -1054,6 +1098,7 @@ export type Sf10RecordCreateManyVerifiedByUserInput = {
 export type Sf10RecordCreateManyValidatedByUserInput = {
   id?: string
   studentId: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -1070,6 +1115,7 @@ export type Sf10RecordCreateManyValidatedByUserInput = {
 
 export type Sf10RecordUpdateWithoutVerifiedByUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1089,6 +1135,7 @@ export type Sf10RecordUpdateWithoutVerifiedByUserInput = {
 export type Sf10RecordUncheckedUpdateWithoutVerifiedByUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1107,6 +1154,7 @@ export type Sf10RecordUncheckedUpdateWithoutVerifiedByUserInput = {
 export type Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1123,6 +1171,7 @@ export type Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserInput = {
 
 export type Sf10RecordUpdateWithoutValidatedByUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1142,6 +1191,7 @@ export type Sf10RecordUpdateWithoutValidatedByUserInput = {
 export type Sf10RecordUncheckedUpdateWithoutValidatedByUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1160,6 +1210,7 @@ export type Sf10RecordUncheckedUpdateWithoutValidatedByUserInput = {
 export type Sf10RecordUncheckedUpdateManyWithoutValidatedByUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1176,6 +1227,7 @@ export type Sf10RecordUncheckedUpdateManyWithoutValidatedByUserInput = {
 
 export type Sf10RecordCreateManyStudentInput = {
   id?: string
+  desk: $Enums.Sf10Desk
   source: $Enums.Sf10Source
   status?: $Enums.Sf10Status
   uploadedFileUrl?: string | null
@@ -1193,6 +1245,7 @@ export type Sf10RecordCreateManyStudentInput = {
 
 export type Sf10RecordUpdateWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1211,6 +1264,7 @@ export type Sf10RecordUpdateWithoutStudentInput = {
 
 export type Sf10RecordUncheckedUpdateWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1229,6 +1283,7 @@ export type Sf10RecordUncheckedUpdateWithoutStudentInput = {
 
 export type Sf10RecordUncheckedUpdateManyWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  desk?: Prisma.EnumSf10DeskFieldUpdateOperationsInput | $Enums.Sf10Desk
   source?: Prisma.EnumSf10SourceFieldUpdateOperationsInput | $Enums.Sf10Source
   status?: Prisma.EnumSf10StatusFieldUpdateOperationsInput | $Enums.Sf10Status
   uploadedFileUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1278,6 +1333,7 @@ export type Sf10RecordCountOutputTypeCountVersionsArgs<ExtArgs extends runtime.T
 export type Sf10RecordSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  desk?: boolean
   source?: boolean
   status?: boolean
   uploadedFileUrl?: boolean
@@ -1301,6 +1357,7 @@ export type Sf10RecordSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
 export type Sf10RecordSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  desk?: boolean
   source?: boolean
   status?: boolean
   uploadedFileUrl?: boolean
@@ -1322,6 +1379,7 @@ export type Sf10RecordSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
 export type Sf10RecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  desk?: boolean
   source?: boolean
   status?: boolean
   uploadedFileUrl?: boolean
@@ -1343,6 +1401,7 @@ export type Sf10RecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
 export type Sf10RecordSelectScalar = {
   id?: boolean
   studentId?: boolean
+  desk?: boolean
   source?: boolean
   status?: boolean
   uploadedFileUrl?: boolean
@@ -1358,7 +1417,7 @@ export type Sf10RecordSelectScalar = {
   currentVersion?: boolean
 }
 
-export type Sf10RecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "source" | "status" | "uploadedFileUrl" | "ocrExtractedData" | "verifiedBy" | "verifiedAt" | "validatedBy" | "validatedAt" | "releasedAt" | "archivedAt" | "uploadedAt" | "updatedAt" | "currentVersion", ExtArgs["result"]["sf10Record"]>
+export type Sf10RecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "desk" | "source" | "status" | "uploadedFileUrl" | "ocrExtractedData" | "verifiedBy" | "verifiedAt" | "validatedBy" | "validatedAt" | "releasedAt" | "archivedAt" | "uploadedAt" | "updatedAt" | "currentVersion", ExtArgs["result"]["sf10Record"]>
 export type Sf10RecordInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
   verifiedByUser?: boolean | Prisma.Sf10Record$verifiedByUserArgs<ExtArgs>
@@ -1388,6 +1447,7 @@ export type $Sf10RecordPayload<ExtArgs extends runtime.Types.Extensions.Internal
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     studentId: string
+    desk: $Enums.Sf10Desk
     source: $Enums.Sf10Source
     status: $Enums.Sf10Status
     uploadedFileUrl: string | null
@@ -1830,6 +1890,7 @@ export interface Prisma__Sf10RecordClient<T, Null = never, ExtArgs extends runti
 export interface Sf10RecordFieldRefs {
   readonly id: Prisma.FieldRef<"Sf10Record", 'String'>
   readonly studentId: Prisma.FieldRef<"Sf10Record", 'String'>
+  readonly desk: Prisma.FieldRef<"Sf10Record", 'Sf10Desk'>
   readonly source: Prisma.FieldRef<"Sf10Record", 'Sf10Source'>
   readonly status: Prisma.FieldRef<"Sf10Record", 'Sf10Status'>
   readonly uploadedFileUrl: Prisma.FieldRef<"Sf10Record", 'String'>

@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Inbox, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RefreshBadge } from "@/components/ui/refresh-badge";
-import {
-  fetchGuidanceReferrals,
-  type GuidanceReferralsData,
-} from "./guidance-referrals-data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../../components/GuidancePageHeader";
+import { GuidanceEmptyCard } from "../../components/GuidanceEmptyCard";
+import { fetchGuidanceReferrals } from "@/services/guidance/referrals.service";
+import type { GuidanceReferralsData } from "@/services/guidance/guidance.types";
 import { GuidanceReferralsTable } from "./guidance-referrals-table";
 import { GuidanceReferralsSkeleton } from "./GuidanceReferralsSkeleton";
 import {
@@ -18,41 +19,60 @@ import {
 } from "./guidance-referrals-format";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
+import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { useSearchParams } from "next/navigation";
 import styles from "./guidance-referrals.module.css";
+import pageStyles from "../../pages.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
-const GUIDANCE_REFERRALS_PAGE_SIZE = 15;
+const GUIDANCE_REFERRALS_PAGE_SIZE = PAGE_SIZE;
+/* The locked desk boards page in whole 4×4 kanban grids (four rows of
+   four), same as the nurse ADM / clinic boards. */
+const GUIDANCE_BOARD_PAGE_SIZE = 16;
 
-/**
- * Shared referrals view — the All page uses it unlocked (server-paged,
- * with the track dropdown), while ADM Cases / Counseling Cases lock it to
- * one track (server track-filtered + server-paginated, same model as the
- * nurse timelines).
- *
- * Deep-links pass `highlightId`: the backend serves the case's own page
- * (?highlight=) and the table scrolls to it; the first pager/filter touch
- * takes over with plain params. Derived — no setState in effects.
- */
 export function GuidanceReferralsView({
   lockedType = "",
   title = "Referrals to me",
+  description,
   highlightId = null,
 }: {
   lockedType?: GuidanceTypeFilter;
   title?: string;
+  description?: string;
   highlightId?: string | null;
 }) {
   const locked = lockedType !== "";
-  const { activeTerm } = useTerm();
+  const isKanban =
+    lockedType === "ADM" || lockedType === "Counseling";
+  const pageSize = isKanban ? GUIDANCE_BOARD_PAGE_SIZE : GUIDANCE_REFERRALS_PAGE_SIZE;
+  const searchParams = useSearchParams();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const [query, setQuery] = React.useState("");
+  const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
+  const query = useDebouncedValue(queryInput.trim(), 300);
   const [typeFilter, setTypeFilter] = React.useState<GuidanceTypeFilter>(lockedType);
-  // Sidebar action (track + status + gates, server-side) mirroring the
-  // nurse desk menus. Empty = no action filter.
+
   const [action, setAction] = React.useState<GuidanceAction>("");
-  const [page, setPage] = React.useState(1);
+  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
+  const page = pager.page;
+  const setPage = pager.setPage;
   const [takeover, setTakeover] = React.useState(false);
-  // Debounced 300ms so server queries fire after the user pauses typing.
-  const debounced = useDebouncedValue(query.trim(), 300);
+
+  // Sync debounced search to the URL and reset to page 1 when it changes.
+  const firstSearchSync = React.useRef(true);
+  React.useEffect(() => {
+    if (firstSearchSync.current) {
+      firstSearchSync.current = false;
+      return;
+    }
+    pager.setFilters({ q: query || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
+  const setQuery = React.useCallback((value: string) => {
+    setQueryInput(value);
+  }, []);
+  const debounced = query;
   const landing = !takeover && highlightId !== null;
 
   const handleQueryChange = (value: string) => {
@@ -62,12 +82,10 @@ export function GuidanceReferralsView({
   };
 
   const handleTypeChange = (value: GuidanceTypeFilter) => {
-    // Locked pages stay on their track — the dropdown is hidden, and
-    // "Show all" restores the locked track rather than clearing it.
+
     if (lockedType !== "") return;
     setTypeFilter(value);
-    // The sidebar menus are per-track — a stale action from the other
-    // track would empty the list, so reset it.
+
     setAction("");
     setTakeover(true);
     setPage(1);
@@ -84,8 +102,6 @@ export function GuidanceReferralsView({
     setPage(next);
   };
 
-  // One menu pick carries its own track; otherwise the type dropdown applies.
-  // Locked pages always use their own track.
   const actionParams = resolveActionParams(action);
   const effType =
     lockedType === "ADM"
@@ -129,30 +145,74 @@ export function GuidanceReferralsView({
           completed: completedParam,
           open: openParam,
           page: takeover || !locked ? page : 1,
-          pageSize: GUIDANCE_REFERRALS_PAGE_SIZE,
+          pageSize,
           ...(landing && highlightId ? { highlight: highlightId } : {}),
         },
         { signal }
       ),
-    // Page turns reuse the previous page so they never flash skeletons.
+
     placeholderData: keepPreviousData,
     staleTime: 60_000,
+    enabled: termReady,
   });
 
   const { data, isPending, isError, isRefetching, refetch } = referralsQuery;
 
-  // Derived, never setState-in-effect: the server clamps too, this keeps
-  // the pager truthful while a filter shrinks the list under the cursor.
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);
 
+  const headerCopy = React.useMemo(() => {
+    if (lockedType === "ADM")
+      return {
+        title,
+        description:
+          description ??
+          "ADM cases endorsed to guidance — review, accept, or forward for action.",
+      };
+    if (lockedType === "Counseling")
+      return {
+        title,
+        description:
+          description ??
+          "Counseling cases on your desk — accept a case to start work, resolve it when follow-through is done.",
+      };
+    return {
+      title,
+      description:
+        description ??
+        "Every behavior and incident report advisers routed to you. Accept a case to start work, resolve it when follow-through is done.",
+    };
+  }, [lockedType, title, description]);
+
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
-        <GuidanceReferralsSkeleton
-          lockType={lockedType !== ""}
-          menuRows={lockedType === "ADM" ? 6 : lockedType === "Counseling" ? 5 : undefined}
-        />
+      <section className={styles.page} aria-busy="true" aria-label="Loading your cases">
+        {isKanban ? (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[72, 96, 84, 92, 74, 78, 84].map((width, index) => (
+                  <Skeleton
+                    key={index}
+                    className="h-7 rounded-full"
+                    style={{ width }}
+                  />
+                ))}
+              </div>
+              <Skeleton className="h-8 w-56 rounded-[16px]" />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <Skeleton key={index} className="h-64 rounded-xl" />
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <ZentraPageHeaderSkeleton />
+            <GuidanceReferralsSkeleton lockType={false} />
+          </>
+        )}
       </section>
     );
   }
@@ -183,10 +243,36 @@ export function GuidanceReferralsView({
 
   const refreshing = isRefetching && !isPending;
   const referrals = Array.isArray(data.referrals) ? data.referrals : [];
+  const unfilteredTotal = data.unfilteredTotal ?? data.total ?? 0;
+  const isTrueEmpty =
+    referrals.length === 0 &&
+    unfilteredTotal === 0 &&
+    debounced === "" &&
+    action === "" &&
+    (locked || typeFilter === "");
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
-      {refreshing ? <RefreshBadge label="Refreshing cases…" /> : null}
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label={headerCopy.title}
+    >
+      {isTrueEmpty || isKanban ? null : (
+        <GuidancePageHeader
+          title={headerCopy.title}
+          description={headerCopy.description}
+        />
+      )}
+      {isTrueEmpty ? (
+        <GuidanceEmptyCard
+          icon={Inbox}
+          title="No referrals found"
+          hint="New cases sent to you by advisers will appear here."
+          label={headerCopy.title}
+          centered
+          layout="fit"
+        />
+      ) : (
       <GuidanceReferralsTable
         referrals={referrals}
         summary={data.summary ?? null}
@@ -196,7 +282,7 @@ export function GuidanceReferralsView({
         pageSize={data.pageSize}
         totalPages={totalPages}
         onPageChange={handlePageChange}
-        query={query}
+        query={queryInput}
         onQueryChange={handleQueryChange}
         typeFilter={typeFilter}
         onTypeChange={handleTypeChange}
@@ -207,8 +293,10 @@ export function GuidanceReferralsView({
         isNavigating={isRefetching && !isPending}
         lockType={locked}
         title={title}
+        layout={isKanban ? "kanban" : "list"}
         highlightId={highlightId}
       />
+      )}
     </section>
   );
 }

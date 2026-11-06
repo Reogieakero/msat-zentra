@@ -23,32 +23,79 @@
   flex-shrink: 0;
 }
 
-.filterBtn {
-  position: relative;
-  height: 2rem;
+/* Header filters — plan-action + risk-level pill tabs, centered in the
+   kanban title row on the same 24px line as the data-source pill, split by a
+   single vertical divider. */
+.headerFilters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
-.filterActive {
-  border-color: color-mix(in oklch, var(--primary), transparent 60%);
-  color: var(--primary);
-  background-color: color-mix(in oklch, var(--primary), transparent 92%);
+.filterDivider {
+  color: var(--border);
+  font-size: 0.875rem;
+  line-height: 1;
+  user-select: none;
 }
 
-.filterDot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 999px;
-  background-color: var(--primary);
-  flex-shrink: 0;
+.actionTabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0 0.125rem;
 }
 
-.filterMenu {
-  min-width: 12rem;
+.actionTab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: opacity 140ms ease;
 }
 
-.clearBtn {
-  height: 2rem;
-  color: var(--muted-foreground);
+.actionTab:hover {
+  opacity: 0.82;
+}
+
+.actionTab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Shared 24px pill-tab metric so both filter groups line up. */
+.filterPill {
+  height: 1.5rem;
+  padding-block: 0;
+}
+
+/* Rows cascade in exactly like the academics schedule board: the tbody is
+   keyed by the active filters/page so each new list replays the stagger. */
+.cascadeRows tr {
+  animation: row-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cascadeRows tr {
+    animation: none;
+  }
 }
 
 .cellMain {
@@ -57,6 +104,37 @@
   font-weight: 600;
   color: var(--foreground);
   white-space: nowrap;
+}
+
+/* Student cell — mascot + name, with the LRN + section as separate pills. */
+.studentCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.studentBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.studentName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.studentMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
 .cellSub {

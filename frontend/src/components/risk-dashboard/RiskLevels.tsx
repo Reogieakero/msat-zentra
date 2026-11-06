@@ -12,11 +12,6 @@ import {
 import { usePrimaryScale } from "./use-primary-scale";
 import styles from "./RiskLevels.module.css";
 
-/**
- * Students on a desk by risk level — one learner counts once no
- * matter how many cases they carry. Each slice links to nothing; levels
- * only, no identities.
- */
 export function RiskLevels({
   desk,
   mix,
@@ -28,12 +23,10 @@ export function RiskLevels({
   mix: LevelSlice[];
   totalStudents: number;
   interpretation: string;
-  /** Saved settings hex — wins over the probed runtime palette. */
   primary?: string | null;
 }) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  // Live primary scale in bucket order (High → Unassessed).
   const scale = usePrimaryScale(4, primary);
   const colors = { High: scale[0], Moderate: scale[1], Low: scale[2], Unassessed: scale[3] };
   const surface = isDark ? CARD_SURFACE_DARK : CARD_SURFACE_LIGHT;

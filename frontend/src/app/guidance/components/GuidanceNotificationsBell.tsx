@@ -6,9 +6,6 @@ import {
   guidanceNotificationTitle,
 } from "@/lib/notifications/label";
 
-/* Guidance inbox bell — the shared bell with guidance-scoped targets
-   (referred cases deep-link to the referrals queue). Realtime sync keeps
-   the badge count live without manual refresh. */
 export function GuidanceNotificationsBell() {
   return (
     <NotificationsBell

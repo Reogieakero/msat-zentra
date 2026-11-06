@@ -1,7 +1,3 @@
-// Shared types for the risk heatmap components. These mirror the JSON shapes
-// returned by the backend (see attendance.routes.ts, academics.service.ts, risk
-// endpoints). No mock data lives here — every value is sourced from the API.
-
 export type RiskLevelKey = "High" | "Moderate" | "Low";
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
@@ -54,17 +50,17 @@ export interface SectionAttendanceStat {
   section: string;
   gradeLevel: string;
   enrolled: number;
-  rate: number; // 0..100 — avg present per school day ÷ headcount
-  belowDays: number; // days under 80%
-  amRate: number; // 0..100
-  pmRate: number; // 0..100
+  rate: number;
+  belowDays: number;
+  amRate: number;
+  pmRate: number;
   trend: "up" | "down" | "flat";
-  atRiskStudents: number; // enrolled students below 80% for the session
+  atRiskStudents: number;
 }
 
 export interface TrendPoint {
   date: string;
-  rate: number; // 0..100 — daily present ÷ the relevant headcount (section or school)
+  rate: number;
 }
 
 export interface SessionPattern {
@@ -75,7 +71,7 @@ export interface SessionPattern {
 
 export interface AcademicHeatmapCell {
   subject: string;
-  below75Pct: number; // 0..100, % of section below passing for this subject
+  below75Pct: number;
   below75Count: number;
   enrolled: number;
 }

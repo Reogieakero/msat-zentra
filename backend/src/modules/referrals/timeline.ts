@@ -7,10 +7,6 @@ export const TIMELINE_DESK_LABELS: Record<string, string> = {
   principal: "Principal",
 };
 
-// Timeline steps in friendly sentence form — the Track dialog renders these
-// verbatim, never raw audit fragments. Auto-generated reasons collapse into
-// the sentence; a teacher-typed note only rides along as `detail` when it is
-// long enough to carry meaning (one-word notes like "k" stay out).
 export function friendlyTimelineStep(
   action: string,
   reason: string | null,
@@ -24,8 +20,6 @@ export function friendlyTimelineStep(
     note === "Referral update";
   const detail = !autoText && note.length >= 5 ? note : null;
   if (action === "referral_dismissed") {
-    // A dismissal the filing teacher made themselves reads withdrawn;
-    // a desk decision reads rejected. Unknown actors keep the legacy text.
     if (actorRole === "adviser" || actorRole === "subject_teacher" || !actorRole) {
       return { label: "The referral was withdrawn by the filing teacher.", detail };
     }
@@ -48,8 +42,6 @@ export function friendlyTimelineStep(
   return { label: "Referral update.", detail: null };
 }
 
-// Session audit → friendly sentence, same voice as the referral steps.
-// Auto-generated reasons collapse; a human-typed cancel note rides along.
 export function friendlySessionStep(
   action: string,
   reason: string | null,
@@ -80,9 +72,6 @@ export function friendlySessionStep(
   }
 }
 
-// Parent-meeting audit → friendly sentence. Venue decides the branch: an
-// in-school booking lives at the meeting stage, a home-venue booking (or a
-// missed meeting) on the home-visitation path.
 export function friendlyMeetingStep(
   reason: string | null,
 ): { label: string; detail: string | null; homeVisit: boolean } {
@@ -107,28 +96,15 @@ export function friendlyMeetingStep(
 export interface CaseTimelineEntry {
   label: string;
   detail: string | null;
-  /** Day form (YYYY-MM-DD) — legacy shape the dialogs already render. */
   date: string;
-  /** Full execution ISO — orders same-day actions newest-last. */
   at: string;
-  /** Raw audit action (referral_dismissed, session_scheduled, …). */
   action: string;
-  /** Actor role behind the action (adviser, nurse, …). Null when unknown. */
   byRole: string | null;
-  /** Which audit table the entry came from. */
   source: "referrals" | "counseling_sessions" | "adm_parent_meetings" | "case";
-  /** Stage hint for synthesized entries (adm_stage target, …). */
   stage?: string | null;
-  /** Meeting entries only: true when the event belongs on the home-visit
-   *  path (home-venue booking or a missed meeting). */
   homeVisit?: boolean;
 }
 
-// Every action on a case — referral audits, the sessions booked on it,
-// and the parent meetings (home or school) booked for it — oldest first,
-// with the actor role and full timestamp attached so desks can render
-// per-stage latest actions. Shared by referrals/mine and adm/my-cases
-// so both teacher surfaces tell the same story.
 export async function buildCaseTimeline(
   referralIds: string[]
 ): Promise<Map<string, CaseTimelineEntry[]>> {
@@ -257,7 +233,6 @@ export async function buildCaseTimeline(
     );
   }
 
-  // Oldest first (referral audits already are; session rows merge in order).
   for (const list of out.values()) {
     list.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   }

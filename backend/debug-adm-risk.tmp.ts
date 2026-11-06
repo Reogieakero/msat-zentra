@@ -1,0 +1,12 @@
+﻿import { prisma } from "./src/lib/prisma.js";
+const profiles = await prisma.admLearnerProfile.findMany({ select: { studentId: true, termId: true, stage: true, student: { select: { sectionId: true, section: { select: { name: true, adviser: { select: { staffProfile: { select: { shareStudentData: true } } } } } } } } } });
+console.log("profiles", profiles.length);
+const byTerm = new Map();
+for (const p of profiles) byTerm.set(p.termId, (byTerm.get(p.termId) ?? 0) + 1);
+console.log("byTerm", [...byTerm.entries()]);
+const terms = await prisma.term.findMany({ select: { id: true, termNumber: true, schoolYearId: true, startDate: true, endDate: true, schoolYear: { select: { name: true, isActive: true } } } });
+console.log("terms", terms);
+console.log("sections sharing", profiles.map(p => ({ stage: p.stage, section: p.student.section?.name, share: p.student.section?.adviser?.staffProfile?.shareStudentData })));
+const snaps = await prisma.riskSnapshot.count();
+console.log("snapshots", snaps);
+await prisma.$disconnect();

@@ -1,21 +1,40 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { classDetailKey, useClassDetail } from "../components/grading-data";
+import { classDetailKey, useClassDetail } from "@/services/teacher/grading.service";
+import { useTeacherOverviewGradebook } from "@/services/teacher/overview.service";
 import { useSession } from "@/lib/auth/useSession";
+import { gradebookSlug } from "@/lib/gradebookSlug";
 import { ClassWorkspace } from "./components/ClassWorkspace";
 import { ClassWorkspaceSkeleton } from "./components/ClassWorkspaceSkeleton";
 import styles from "./components/ClassWorkspace.module.css";
 
+function decodeParam(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 export default function ClassWorkspacePage() {
   const params = useParams<{ assignmentId: string }>();
-  const assignmentId = params.assignmentId;
+  const param = decodeParam(params.assignmentId);
   const queryClient = useQueryClient();
   const session = useSession();
+
+  // URLs carry a subject+section slug; resolve it to the internal
+  // `${subjectId}|${sectionId}` class id via the overview class list.
+  // Legacy id URLs (still accepted by the API) keep working.
+  const gradebook = useTeacherOverviewGradebook();
+  const classes = gradebook.data?.classes ?? [];
+  const match = classes.find((c) => c.id === param || gradebookSlug(c) === param);
+  const legacyId = param.includes("|") ? param : "";
+  const assignmentId = match?.id ?? legacyId;
+
   const detailQuery = useClassDetail(assignmentId);
 
   const refresh = () =>
@@ -23,14 +42,7 @@ export default function ClassWorkspacePage() {
       queryKey: classDetailKey(session?.sub ?? null, assignmentId),
     });
 
-  // Initial load only: mirrors the workspace (back link, header, sidebar,
-  // encode table with Student/LRN/Score/% columns, footer). Background
-  // refetches keep existing data visible via placeholderData above.
-  // Error first when there is nothing to show: with retry:false + 
-  // placeholderData, a failed first load leaves data undefined while
-  // isPending is already false — checking pending first would spin the
-  // skeleton forever instead of showing the not-found state.
-  if (detailQuery.isError && !detailQuery.data) {
+  if ((detailQuery.isError && !detailQuery.data) || (!assignmentId && gradebook.isFetched)) {
     return (
       <section className={styles.page}>
         <Link href="/teacher/grading" className={styles.back}>
@@ -42,17 +54,13 @@ export default function ClassWorkspacePage() {
     );
   }
 
-  if (detailQuery.isPending || !detailQuery.data) {
+  if (!assignmentId || detailQuery.isPending || !detailQuery.data) {
     return <ClassWorkspaceSkeleton />;
   }
 
-  // No remount key here on purpose: the encoder keeps its category,
-  // assessment, and draft state across refetches, so saved scores stay on
-  // screen and remain editable. Fresh server data flows in via props
-  // (finals table, assessment lists) while drafts are preserved.
   return (
     <>
-      <ClassWorkspace detail={detailQuery.data} onMutated={refresh} />
+      <ClassWorkspace detail={detailQuery.data} queryKeyId={assignmentId} onMutated={refresh} />
     </>
   );
 }

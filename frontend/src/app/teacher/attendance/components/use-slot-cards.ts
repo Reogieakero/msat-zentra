@@ -1,0 +1,113 @@
+"use client";
+import { useMemo, useState } from "react";
+import { WEEK_LABELS_SHORT } from "@/services/teacher/schedule";
+import {
+  buildTimetable,
+  formatRange,
+  type DayConfig,
+} from "@/app/teacher/schedule/components/schedule-time";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import type { AttendancePair } from "./use-attendance-pairs";
+export interface SlotCard {
+  key: string;
+  pairKey: string;
+  section: { id: string; name: string; gradeLevel: string | null };
+  subject: { id: string; name: string; code: string };
+  day: number;
+  period: number;
+  status: "DRAFT" | "SUBMITTED" | "APPROVED";
+  time: string | null;
+  start: number | null;
+  end: number | null;
+  live: boolean;
+  rank: number;
+  haystack: string;
+  /** How many weekly sessions this subject+section pair holds (shown as one row). */
+  sessionCount: number;
+}
+export function useSlotCards(pairs: AttendancePair[], config: DayConfig | undefined, now: Date) {
+  const [slotQuery, setSlotQuery] = useState("");
+  const debouncedSlotQuery = useDebouncedValue(slotQuery, 250);
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const todayDow = now.getDay();
+  const slotCards = useMemo(() => {
+    const rows = config ? buildTimetable(config) : [];
+    const rowByPeriod = new Map<number, { start: number; end: number; label: string }>();
+    for (const r of rows) {
+      if (r.kind !== "period") continue;
+      if (!rowByPeriod.has(r.periodIndex)) {
+        rowByPeriod.set(r.periodIndex, {
+          start: r.startMin,
+          end: r.endMin,
+          label: formatRange(r.startMin, r.endMin),
+        });
+      }
+    }
+    const timeFor = (period: number): string | null => rowByPeriod.get(period)?.label ?? null;
+    const rangeOf = (period: number): { start: number; end: number } | null => {
+      const hit = rowByPeriod.get(period);
+      return hit ? { start: hit.start, end: hit.end } : null;
+    };
+    const dayLabelOf = (day: number): string =>
+      WEEK_LABELS_SHORT[day - 1] ?? `Day ${day}`;
+    const cards: SlotCard[] = [];
+    for (const p of pairs) {
+      if (!p.subject) continue;
+      for (const s of p.slots) {
+        const t = timeFor(s.period);
+        const range = rangeOf(s.period);
+        const timeLabel = `${dayLabelOf(s.day)} ${t ?? `Period ${s.period + 1}`}`;
+        let rank: number;
+        let live = false;
+        if (s.day === todayDow && range) {
+          if (nowMin >= range.start && nowMin < range.end) {
+            rank = -1;
+            live = true;
+          } else if (nowMin < range.start) {
+            rank = range.start;
+          } else {
+            rank = 100000 - range.end;
+          }
+        } else {
+          const offset = (((s.day - todayDow) % 7) + 7) % 7;
+          rank = offset === 0 ? 300000 : 200000 + offset * 10000 + (range?.start ?? 0);
+        }
+        cards.push({
+          key: `${p.key}|${s.day}|${s.period}`,
+          pairKey: p.key,
+          section: p.section,
+          subject: p.subject,
+          day: s.day,
+          period: s.period,
+          status: s.status,
+          time: t,
+          start: range?.start ?? null,
+          end: range?.end ?? null,
+          live,
+          rank,
+          haystack: `${p.subject.name} ${p.subject.code} ${p.section.name} ${timeLabel}`.toLowerCase(),
+          sessionCount: 1,
+        });
+      }
+    }
+    // Dedupe: same subject in the same section/grade counts as ONE row, no
+    // matter how many times it appears in the week. Keep the most relevant
+    // session (live > soonest) as the representative; the sheet itself still
+    // resolves the live slot from the pair, so collapsing rows is display-only.
+    const byPair = new Map<string, SlotCard[]>();
+    for (const c of cards) {
+      const arr = byPair.get(c.pairKey) ?? [];
+      arr.push(c);
+      byPair.set(c.pairKey, arr);
+    }
+    const deduped = [...byPair.values()].map((group) => {
+      const rep = [...group].sort((a, b) => a.rank - b.rank)[0]!;
+      return { ...rep, sessionCount: group.length };
+    });
+    const q = debouncedSlotQuery.trim().toLowerCase();
+    return deduped
+      .filter((c) => q === "" || c.haystack.includes(q))
+      .sort((a, b) => a.rank - b.rank);
+  }, [pairs, config, nowMin, todayDow, debouncedSlotQuery]);
+  return { slotCards, slotQuery, setSlotQuery };
+}

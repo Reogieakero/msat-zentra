@@ -73,10 +73,6 @@ function initialsOf(name: string): string {
   return `${(parts[0] ?? "S").charAt(0)}${(parts[1] ?? "").charAt(0)}`.toUpperCase();
 }
 
-// Floating library content: one entry per student with originated referrals.
-// Rendered inside the "My referrals" sheet — opening a student lists only
-// that student's referrals, and picking one loads its workflow onto the
-// canvas and closes the panel.
 export function ReferralLibrary({ referrals, selectedId, onSelect }: ReferralLibraryProps) {
   const [query, setQuery] = useState("");
   const [activeKey, setActiveKey] = useState<string | null>(null);

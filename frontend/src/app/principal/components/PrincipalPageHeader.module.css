@@ -1,8 +1,3 @@
-/* Unified compact page header for the Principal role.
-   Single source of truth for title size, subtitle size, spacing.
-   Title: 1.25rem / 600. Subtitle: 0.8125rem muted, max 60ch.
-   Keep it compact — heroes and KPI banners live below as content. */
-
 .header {
   display: flex;
   align-items: flex-start;

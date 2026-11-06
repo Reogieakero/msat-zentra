@@ -3,14 +3,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api/client";
 import {
   guidanceNotificationTarget,
   nurseNotificationTarget,
   teacherNotificationTarget,
 } from "@/lib/notifications/label";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { ReminderStack } from "./ReminderStack";
 import styles from "./booking-reminder.module.css";
 
@@ -19,15 +17,17 @@ export interface BookingReminder {
   title: string;
   message: string;
   href: string | null;
+  overdue: boolean;
+  /** Structured pieces so the name and date can be highlighted inline. */
+  student: string;
+  kind: string;
+  when: string;
+  venue: string;
 }
 
-/* Session-driven reminder engine — the card's ONLY trigger is the live
-   session list (sileo + bell stay notification-driven and untouched).
-   A card drops for a scheduled session due within the advance window
-   (5 minutes) or already overdue, with no action and no X on record.
-   Handled keys are session-scoped (`sess:<id>`); old notification-id
-   entries simply age out of the 30-day store. */
-const UPCOMING_WINDOW_MS = 5 * 60 * 1000;
+// 30-minute lead time: a clinic desk gets a useful heads-up without the pop-up
+// arriving so early it becomes noise. Overdue sessions still render regardless.
+const UPCOMING_WINDOW_MS = 30 * 60 * 1000;
 
 interface DeskSession {
   sessionId: string;
@@ -57,8 +57,6 @@ function hrefFor(
   desk: ReminderDesk,
   s: DeskSession
 ): string | null {
-  // The nurse/guidance targets sniff "ADM" off the message to pick the ADM
-  // timeline — pass the track through for routing only (never displayed).
   const routingMessage = s.track === "ADM" ? `ADM ${s.student}` : s.student;
   if (desk === "nurse") {
     return (
@@ -79,9 +77,6 @@ function hrefFor(
     );
   }
   if (desk === "coordinator") {
-    // Profile-stage cases open the full case file; pre-profile referrals
-    // highlight their consultation row on the queue (same deep-link the
-    // overview forwards table uses).
     if (s.sourceTable === "adm_profiles") {
       return `/coordinator/referrals/${encodeURIComponent(s.sourceId)}`;
     }
@@ -102,11 +97,25 @@ const SESSION_KIND_LABELS: Record<string, string> = {
   home_visit: "Home visit",
 };
 
-/* Card message from live session facts — upcoming while in the window,
-   overdue once the time passes (both with venue when set). */
-function sessionMessage(s: DeskSession, now: number): string {
+function sessionMessage(p: SessionText): string {
+  const venue = p.venue ? ` · ${p.venue}` : "";
+  if (!p.overdue) {
+    return `${p.student} — upcoming ${p.kind} meetup, ${p.when}${venue}`;
+  }
+  return `${p.student} — overdue ${p.kind} meetup, ${p.when}${venue} — still unattended`;
+}
+
+interface SessionText {
+  student: string;
+  kind: string;
+  when: string;
+  venue: string;
+  overdue: boolean;
+}
+
+function sessionParts(s: DeskSession, now: number): SessionText {
   const kind = SESSION_KIND_LABELS[s.sessionType] ?? s.sessionType.replace(/_/g, " ");
-  const venue = s.venue?.trim() ? ` · ${s.venue.trim()}` : "";
+  const venue = s.venue?.trim() ?? "";
   const d = new Date(s.scheduledAt);
   const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const day = d.toLocaleDateString("en-US", {
@@ -119,17 +128,16 @@ function sessionMessage(s: DeskSession, now: number): string {
   const startOfDay = new Date(d);
   startOfDay.setHours(0, 0, 0, 0);
   const overdue = d.getTime() <= now;
+  let when: string;
   if (!overdue) {
     const diffDays = Math.round((startOfDay.getTime() - startOfToday.getTime()) / 86_400_000);
-    const when = diffDays === 0 ? `today at ${time}` : `${day} at ${time}`;
-    return `${s.student} — upcoming ${kind} meetup, ${when}${venue}`;
+    when = diffDays === 0 ? `today at ${time}` : `${day} at ${time}`;
+  } else {
+    when = `${day} at ${time}`;
   }
-  return `${s.student} — overdue ${kind} meetup, ${day} at ${time}${venue} — still unattended`;
+  return { student: s.student, kind, when, venue, overdue };
 }
 
-/* Evaluate the live session list for the desk and drop cards for due,
-   unhandled sessions (nearest first, capped). Shared by mount, the
-   30-second tick, tab-focus returns, and booking-mutation success. */
 function evaluateSessions(desk: ReminderDesk): void {
   apiClient
     .get<DeskSession[]>("/api/my-sessions/upcoming")
@@ -140,18 +148,22 @@ function evaluateSessions(desk: ReminderDesk): void {
         .filter((s) => sessionDue(s, now))
         .sort((a, b) => (a.scheduledAt < b.scheduledAt ? -1 : 1));
       let changed = false;
-      // No stack cap: every due unhandled session shows. Handled (X / View
-      // case) cards never re-drop, so dismissing can't surface "new" ones.
       for (const s of due) {
         const id = sessionKey(s);
         if (reminders.some((x) => x.id === id)) continue;
         if (isHandled(id)) continue;
+        const parts = sessionParts(s, now);
         reminders = [
           {
             id,
             title: "Upcoming session",
-            message: sessionMessage(s, now),
+            message: sessionMessage(parts),
             href: hrefFor(desk, s),
+            overdue: parts.overdue,
+            student: parts.student,
+            kind: parts.kind,
+            when: parts.when,
+            venue: parts.venue,
           },
           ...reminders,
         ];
@@ -165,10 +177,6 @@ function evaluateSessions(desk: ReminderDesk): void {
 let reminders: BookingReminder[] = [];
 const listeners = new Set<() => void>();
 
-/* Handled reminders persist across reloads (cleared on logout with the
-   rest of the zentra.* keys): a dismissed (X) or acted-on (View case) card
-   never re-drops. Anything still live and unhandled re-drops on every
-   login — the reminder stands until the reader deals with it. */
 const HANDLED_KEY = "zentra.booking-reminders-handled";
 const HANDLED_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -192,7 +200,6 @@ function loadHandled(): Record<string, { how: HandledHow; at: number }> {
       try {
         window.localStorage.setItem(HANDLED_KEY, JSON.stringify(parsed));
       } catch {
-        // Storage full/blocked — memory-only from here.
       }
     }
     return parsed;
@@ -214,7 +221,6 @@ function markHandled(id: string, how: HandledHow) {
   try {
     window.localStorage.setItem(HANDLED_KEY, JSON.stringify(map));
   } catch {
-    // Storage full/blocked — memory-only from here.
   }
 }
 
@@ -243,12 +249,10 @@ let activeDesk: ReminderDesk | null = null;
 let lastRefreshAt = 0;
 const REFRESH_THROTTLE_MS = 10_000;
 
-/** Re-run the session evaluation now (mutation success, tab focus).
- *  Throttled — one small list fetch per call. */
-export function refreshBookingReminders(): void {
+export function refreshBookingReminders(force = false): void {
   if (!activeDesk) return;
   const now = Date.now();
-  if (now - lastRefreshAt < REFRESH_THROTTLE_MS) return;
+  if (!force && now - lastRefreshAt < REFRESH_THROTTLE_MS) return;
   lastRefreshAt = now;
   evaluateSessions(activeDesk);
 }
@@ -266,10 +270,6 @@ export function useBookingReminders(): BookingReminder[] {
   return React.useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
-/* Persistent top-center booking reminder rendered as a React-Bits-style
-   stacked deck (spring fanning, drag or click to cycle). Stays until the
-   reader dismisses (X) or acts (View case). Mounted once per desk layout
-   so it survives page navigation. */
 export function BookingReminderStack({ desk }: { desk: ReminderDesk }) {
   const items = useBookingReminders();
   const router = useRouter();
@@ -277,12 +277,7 @@ export function BookingReminderStack({ desk }: { desk: ReminderDesk }) {
   React.useEffect(() => {
     activeDesk = desk;
     evaluateSessions(desk);
-    // Re-evaluate every 30 seconds so a future booking drops its card the
-    // moment it enters the 5-minute window while the page stays open
-    // (handled/dismissed cards never re-drop; dead bookings stay silent).
     const timer = window.setInterval(() => evaluateSessions(desk), 30_000);
-    // Returning to the tab re-evaluates immediately instead of waiting
-    // for the next poll/minute tick (throttled inside refresh).
     const onFocus = () => refreshBookingReminders();
     window.addEventListener("focus", onFocus);
     return () => {
@@ -300,52 +295,56 @@ export function BookingReminderStack({ desk }: { desk: ReminderDesk }) {
     if (r.href) router.push(r.href);
   };
 
-  const renderCard = (id: string) => {
+  const renderCard = (id: string, isTop: boolean) => {
     const r = byId.get(id);
     if (!r) return null;
     return (
       <div
-        className={`${assign.card} ${styles.drop}`}
+        className={`${styles.tile} ${r.overdue ? styles.tileOverdue : ""}`}
         role="alert"
-        onClick={(e) => e.stopPropagation()}
+        aria-hidden={!isTop}
       >
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className={styles.cardRow}>
-        <span className={styles.icon} aria-hidden="true">
-          <CalendarClock size={20} />
-        </span>
-        <div className={styles.body}>
-          <p className={styles.title}>{r.title}</p>
-          <p className={styles.message}>{r.message}</p>
-        </div>
-        <div className={styles.actions}>
-          {r.href ? (
-            <Button
+        <div className={styles.tileHead}>
+          <span className={styles.status}>
+            <span className={styles.statusIcon} aria-hidden="true">
+              <CalendarClock size={12} strokeWidth={2.25} />
+            </span>
+            <span className={styles.statusDot} aria-hidden="true" />
+            {r.overdue ? "Overdue" : "Upcoming"}
+          </span>
+          <div className={styles.actions}>
+            {r.href ? (
+              <button
+                type="button"
+                className={styles.cta}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  viewCase(r);
+                }}
+              >
+                View case
+              </button>
+            ) : null}
+            <button
               type="button"
-              size="sm"
+              className={styles.dismiss}
               onClick={(e) => {
                 e.stopPropagation();
-                viewCase(r);
+                dismissBookingReminder(r.id);
               }}
+              aria-label="Dismiss booking reminder"
             >
-              View case
-            </Button>
-          ) : null}
-          <button
-            type="button"
-            className={styles.dismiss}
-            onClick={(e) => {
-              e.stopPropagation();
-              dismissBookingReminder(r.id);
-            }}
-            aria-label="Dismiss booking reminder"
-          >
-            <X size={16} aria-hidden="true" />
-          </button>
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
         </div>
-        </div>
+        <p className={styles.message}>
+          <span className={styles.pill}>{r.student}</span>
+          {` — ${r.overdue ? "overdue" : "upcoming"} ${r.kind} meetup, `}
+          <span className={styles.pill}>{r.when}</span>
+          {r.venue ? ` · ${r.venue}` : null}
+          {r.overdue ? " — still unattended" : null}
+        </p>
       </div>
     );
   };

@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import type { HonorRollCandidate, PotentialHonorCandidate } from "../academics-data";
-import { descriptorBand } from "../academics-data";
+import type { HonorRollCandidate, PotentialHonorCandidate } from "@/services/principal/academics";
+import { descriptorBand } from "@/services/principal/academics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { X } from "lucide-react";
 import styles from "./HonorRollTable.module.css";
@@ -23,7 +23,7 @@ export function HonorRollTable({
   loading,
   onClose,
 }: Props) {
-  // DO 15, s. 2026: awardees listed alphabetically.
+
   const rows = React.useMemo(
     () => [...candidates].sort((a, b) => a.name.localeCompare(b.name)),
     [candidates]

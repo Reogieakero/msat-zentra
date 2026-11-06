@@ -5,12 +5,9 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
+import { registryProfileSchema } from "../registry/registry.schemas.js";
 
 const router = Router();
-
-const HEX_COLOR = z
-  .string()
-  .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a #RRGGBB hex value");
 
 async function readPrincipalProfileSettings(principalId: string) {
   const [user, profile] = await Promise.all([
@@ -20,18 +17,18 @@ async function readPrincipalProfileSettings(principalId: string) {
     }),
     prisma.staffProfile.findUnique({
       where: { userId: principalId },
-      select: { photoUrl: true, primaryColor: true, secondaryColor: true },
+      select: { photoUrl: true, mascot: true, primaryColor: true, secondaryColor: true },
     }),
   ]);
   return {
     fullName: user?.fullName ?? "",
     photoUrl: profile?.photoUrl ?? null,
+    mascot: profile?.mascot ?? null,
     primaryColor: profile?.primaryColor ?? null,
     secondaryColor: profile?.secondaryColor ?? null,
   };
 }
 
-// GET /api/principal/settings/profile — own display name, photo, palette.
 router.get(
   "/settings/profile",
   requireAuth,
@@ -45,26 +42,17 @@ router.get(
   }
 );
 
-// PATCH /api/principal/settings/profile — display name + workspace palette.
-// Mirrors the nurse endpoint; adviser / master-teacher fields are
-// intentionally absent for the principal desk.
 router.patch(
   "/settings/profile",
   requireAuth,
   requireRole("principal"),
-  validate(
-    "body",
-    z.object({
-      fullName: z.string().trim().min(1).max(100).optional(),
-      primaryColor: HEX_COLOR.nullable().optional(),
-      secondaryColor: HEX_COLOR.nullable().optional(),
-    })
-  ),
+  validate("body", registryProfileSchema),
   async (req, res, next) => {
     try {
       const principalId = req.user!.id;
-      const { fullName, primaryColor, secondaryColor } = req.body as {
+      const { fullName, mascot, primaryColor, secondaryColor } = req.body as {
         fullName?: string;
+        mascot?: string | null;
         primaryColor?: string | null;
         secondaryColor?: string | null;
       };
@@ -75,9 +63,14 @@ router.patch(
             data: { fullName },
           });
         }
-        const palette: { primaryColor?: string | null; secondaryColor?: string | null } = {};
+        const palette: {
+          primaryColor?: string | null;
+          secondaryColor?: string | null;
+          mascot?: string | null;
+        } = {};
         if (primaryColor !== undefined) palette.primaryColor = primaryColor;
         if (secondaryColor !== undefined) palette.secondaryColor = secondaryColor;
+        if (mascot !== undefined) palette.mascot = mascot;
         if (Object.keys(palette).length > 0) {
           await tx.staffProfile.upsert({
             where: { userId: principalId },
@@ -89,13 +82,16 @@ router.patch(
             },
           });
         }
-      });
-      await writeAudit({
-        userId: principalId,
-        actionType: "update",
-        sourceTable: "staff_profiles",
-        sourceId: principalId,
-        reason: "Principal updated profile settings",
+        await writeAudit(
+          {
+            userId: principalId,
+            actionType: "update",
+            sourceTable: "staff_profiles",
+            sourceId: principalId,
+            reason: "Principal updated profile settings",
+          },
+          tx,
+        );
       });
       await invalidateTags(["principal", "overview"]);
       res.json(await readPrincipalProfileSettings(principalId));
@@ -105,8 +101,6 @@ router.patch(
   }
 );
 
-// POST /api/principal/settings/photo — profile photo upload (JSON data URL).
-// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
 router.post(
   "/settings/photo",
   requireAuth,

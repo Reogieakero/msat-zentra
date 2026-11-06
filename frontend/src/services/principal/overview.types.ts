@@ -1,0 +1,44 @@
+export interface OverviewKpis {
+  enrollment: number;
+  activeSections: number;
+  teachers: number;
+  anecdotals: number;
+}
+
+export interface OverviewAtRisk {
+  attendance: number;
+  grades: number;
+  behavior: number;
+  students: number;
+}
+
+export interface OverviewRiskLevels {
+  high: number;
+  moderate: number;
+  low: number;
+}
+
+export interface OverviewRiskGradeRow {
+  grade: string;
+  count: number;
+}
+
+export interface OverviewSectionRow {
+  grade: string;
+  section: string;
+  count: number;
+}
+
+export interface OverviewData {
+  kpis: OverviewKpis;
+  atRisk: OverviewAtRisk;
+  /** Learners in adviser-shared sections (risk-board denominator). */
+  sharedEnrollment?: number;
+  riskByLevel: OverviewRiskLevels;
+  riskByGrade: OverviewRiskGradeRow[];
+  sections: OverviewSectionRow[];
+  admPending: number;
+  accountApprovals: number;
+  attendanceWatch: number;
+  honorRoll: number;
+}

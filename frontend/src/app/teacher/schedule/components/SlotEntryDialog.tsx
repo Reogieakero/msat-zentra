@@ -13,38 +13,24 @@ export type SlotValue = {
 
 type Props = {
   sectionName: string;
-  /** Section grade ("G7") — shown for context. */
   gradeLevel: string;
-  /** Human-readable slot, e.g. "Mon · 8:30 – 9:30 AM". */
   slotLabel: string;
-  /** Grade-scoped subjects to choose from. */
   subjects: { id: string; name: string; code: string }[];
-  /** Teacher names typed by the master. */
   teachers: { id: string; name: string; code: string | null }[];
   listsPending: boolean;
   listsError: boolean;
-  /** Current cell content, if the slot is already filled. */
   initial: SlotValue | null;
   saving: boolean;
   removing: boolean;
   error: string | null;
-  /** One-teacher-per-subject owners in this section, excluding the slot being
-   * edited: subjectId -> teacherIds already holding that subject elsewhere.
-   * When a subject has exactly one owner the teacher picker locks to it; when
-   * it has several the slot cannot be saved until the subject is unified
-   * (clear its slots first). A teacher may still own several subjects. */
   subjectTeacherMap?: Record<string, string[]>;
   onClose: () => void;
   onSave: (subjectId: string, teacherNameId: string) => void;
   onRemove: () => void;
-  /** Swap to the standalone creation modals when a list is empty. */
   onAddTeacher: () => void;
   onAddSubject: () => void;
 };
 
-// Single per-slot entry modal: subject and teacher dropdowns together.
-// Record creation lives in the page-level catalog cards — pick here,
-// create there.
 export function SlotEntryDialog({
   sectionName,
   gradeLevel,
@@ -67,9 +53,6 @@ export function SlotEntryDialog({
   const [subjectId, setSubjectId] = useState(initial?.subjectId ?? "");
   const [teacherNameId, setTeacherNameId] = useState(initial?.teacherNameId ?? "");
 
-  // One subject takes one teacher per section — but a teacher may own
-  // several subjects. Owners exclude the slot being edited, so retaking a
-  // subject's last slot still swaps its teacher cleanly.
   const owners = (subjectTeacherMap?.[subjectId] ?? []).filter(Boolean);
   const uniqueOwners = Array.from(new Set(owners));
   const lockedTeacherId = uniqueOwners.length === 1 ? uniqueOwners[0] : null;
@@ -80,9 +63,6 @@ export function SlotEntryDialog({
     .map((id) => teachers.find((t) => t.id === id)?.name ?? "another teacher")
     .join(", ");
 
-  // When the subject changes to one that already has an owner in this
-  // section, pin the teacher picker to that owner — synced during render,
-  // never in an effect.
   if (lockedTeacherId && lockedTeacherId !== teacherNameId) {
     setTeacherNameId(lockedTeacherId);
   }
@@ -129,7 +109,7 @@ export function SlotEntryDialog({
                   <p className="text-sm text-muted-foreground">
                     No subjects for this grade yet — add them first.
                   </p>
-                  <Button variant="outline" size="sm" onClick={onAddSubject}>
+                  <Button variant="outline" size="sm" onClick={onAddSubject} className="h-6 px-2 text-xs">
                     <Plus size={14} aria-hidden />
                     Add subjects
                   </Button>
@@ -151,7 +131,7 @@ export function SlotEntryDialog({
                   <p className="text-sm text-muted-foreground">
                     No teacher names yet — add them first.
                   </p>
-                  <Button variant="outline" size="sm" onClick={onAddTeacher}>
+                  <Button variant="outline" size="sm" onClick={onAddTeacher} className="h-6 px-2 text-xs">
                     <Plus size={14} aria-hidden />
                     Add teachers
                   </Button>
@@ -213,6 +193,7 @@ export function SlotEntryDialog({
               onClick={onRemove}
               disabled={removing || saving}
               aria-busy={removing || undefined}
+              className="h-6 px-2 text-xs"
             >
               {removing ? (
                 <>
@@ -224,7 +205,7 @@ export function SlotEntryDialog({
               )}
             </Button>
           ) : null}
-          <Button variant="destructive" onClick={onClose} disabled={busy}>
+          <Button variant="destructive" onClick={onClose} disabled={busy} className="h-6 px-2 text-xs">
             Cancel
           </Button>
           <Button
@@ -233,6 +214,7 @@ export function SlotEntryDialog({
             }}
             disabled={!canSave}
             aria-busy={saving || undefined}
+            className="h-6 px-2 text-xs"
           >
             {saving ? (
               <>

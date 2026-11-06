@@ -19,12 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
+import { roleTone } from "@/lib/labels/status-tone";
 import {
   ACTION_LABELS,
   ROLE_LABELS,
   type AuditEntry,
-} from "../audit-data";
+} from "@/services/principal/audit.types";
 import { buildChangeLines, summarizeAction } from "../format-change";
 import styles from "./audit-table.module.css";
 
@@ -83,10 +84,6 @@ function FriendlyDiff({ entry }: { entry: AuditEntry }) {
   );
 }
 
-/* Audit entries as a data table in the At-Risk Advisees pattern: fixed-width
-   sortable columns, bordered wrapper, click a row to expand its before/after
-   diff inline. There is no detail sheet on this desk — the expanded diff is
-   the full inspection. Sorting applies to the loaded server page. */
 export function AuditTable({ entries }: { entries: AuditEntry[] }) {
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -119,7 +116,7 @@ export function AuditTable({ entries }: { entries: AuditEntry[] }) {
         minSize: 170,
         maxSize: 170,
         cell: ({ row }) => (
-          <span className={styles.mono}>{formatTimestamp(row.original.timestamp)}</span>
+          <span className={styles.timestamp}>{formatTimestamp(row.original.timestamp)}</span>
         ),
       },
       {
@@ -138,9 +135,9 @@ export function AuditTable({ entries }: { entries: AuditEntry[] }) {
         minSize: 120,
         maxSize: 120,
         cell: ({ row }) => (
-          <Badge variant="outline" className={styles.roleBadge}>
+          <Pill tone={roleTone(row.original.actorRole)} label="Role" className={styles.roleBadge}>
             {ROLE_LABELS[row.original.actorRole]}
-          </Badge>
+          </Pill>
         ),
       },
       {
@@ -191,7 +188,7 @@ export function AuditTable({ entries }: { entries: AuditEntry[] }) {
 
   return (
     <div className="relative overflow-x-auto rounded-md border">
-      <Table className="w-full table-fixed" aria-label="Audit entries">
+      <Table className="w-full table-fixed text-xs" aria-label="Audit entries">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">

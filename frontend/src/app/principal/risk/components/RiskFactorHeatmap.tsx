@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { X } from "lucide-react";
-import { useRiskHeatmap, fetchSectionFactorStudents, type HeatmapStudent, type RiskFactor } from "../riskBoard";
+import { useRiskHeatmap, fetchSectionFactorStudents } from "@/services/principal/risk.service";
+import type { HeatmapStudent, RiskFactor } from "@/services/principal/risk.types";
 import styles from "./risk-factor-heatmap.module.css";
 
 const FACTORS: RiskFactor[] = ["Academic", "Attendance", "Behavioral"];
@@ -20,8 +21,8 @@ const SCALE = ["var(--hm-0)", "var(--hm-1)", "var(--hm-2)", "var(--hm-3)", "var(
 
 type Selection = { sectionId: string; section: string; factor: RiskFactor } | null;
 
-export function RiskFactorHeatmap({ gradeMode = "final" }: { gradeMode?: "raw" | "final" }) {
-  const { data, loading, error } = useRiskHeatmap(gradeMode);
+export function RiskFactorHeatmap() {
+  const { data, loading, error } = useRiskHeatmap();
   const [selected, setSelected] = React.useState<Selection>(null);
   const [visible, setVisible] = React.useState(false);
   const [students, setStudents] = React.useState<HeatmapStudent[]>([]);
@@ -42,16 +43,15 @@ export function RiskFactorHeatmap({ gradeMode = "final" }: { gradeMode?: "raw" |
     return () => clearTimeout(id);
   }, [selected, open]);
 
-  // Fetch the per-cell student list whenever a new cell is opened.
   React.useEffect(() => {
-    if (!selected || !data?.termId) {
+    if (!selected) {
       return;
     }
     let cancelled = false;
     queueMicrotask(() => {
       if (!cancelled) setLoadingStudents(true);
     });
-    fetchSectionFactorStudents(selected.sectionId, selected.factor, data.termId, gradeMode)
+    fetchSectionFactorStudents(selected.sectionId, selected.factor)
       .then((res) => {
         if (!cancelled) setStudents(res);
       })
@@ -65,7 +65,7 @@ export function RiskFactorHeatmap({ gradeMode = "final" }: { gradeMode?: "raw" |
     return () => {
       cancelled = true;
     };
-  }, [selected, data?.termId, gradeMode]);
+  }, [selected]);
 
   const sections = data?.sections ?? [];
   const factorTotals = data?.factorTotals;

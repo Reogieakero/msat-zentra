@@ -11,29 +11,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ClinicFormDropdown } from "./ClinicFormDropdown";
+import { ClockTimePicker } from "@/components/ui/clock-time-picker";
 import { cn } from "@/lib/utils";
-
-/* Half-hour slots across the school day, stored as "HH:MM". */
-const TIME_SLOTS: string[] = (() => {
-  const slots: string[] = [];
-  for (let hour = 7; hour <= 18; hour += 1) {
-    for (const minute of [0, 30]) {
-      slots.push(
-        `${`${hour}`.padStart(2, "0")}:${`${minute}`.padStart(2, "0")}`
-      );
-    }
-  }
-  return slots;
-})();
-
-function formatSlot(hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm;
-  const suffix = h >= 12 ? "PM" : "AM";
-  const hour = h % 12 === 0 ? 12 : h % 12;
-  return `${hour}:${`${m}`.padStart(2, "0")} ${suffix}`;
-}
 
 function parseDateInput(value: string): Date | undefined {
   if (!value) return undefined;
@@ -44,20 +23,20 @@ function parseDateInput(value: string): Date | undefined {
 interface ClinicDatePickerProps {
   id: string;
   label: string;
-  /** "YYYY-MM-DD" ("" when unset). */
   value: string;
   onChange: (value: string) => void;
-  /** Days before this "YYYY-MM-DD" are disabled (past dates). */
   min?: string;
+  /** Extra classes for the field label (e.g. a denser size on boards). */
+  labelClassName?: string;
 }
 
-/** shadcn calendar-in-popover date picker speaking "YYYY-MM-DD". */
 export function ClinicDatePicker({
   id,
   label,
   value,
   onChange,
   min,
+  labelClassName,
 }: ClinicDatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const selected = parseDateInput(value);
@@ -65,7 +44,7 @@ export function ClinicDatePicker({
 
   return (
     <div>
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id} className={labelClassName}>{label}</Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -103,36 +82,26 @@ export function ClinicDatePicker({
 interface ClinicTimePickerProps {
   id: string;
   label: string;
-  /** "HH:MM" 24-hour ("" when unset). */
   value: string;
   onChange: (value: string) => void;
 }
 
-/** Readable time-slot dropdown ("2:30 PM") instead of a typed time input. */
 export function ClinicTimePicker({
   id,
   label,
   value,
   onChange,
 }: ClinicTimePickerProps) {
-  const options = React.useMemo(
-    () =>
-      (value && !TIME_SLOTS.includes(value)
-        ? [...TIME_SLOTS, value].sort()
-        : TIME_SLOTS
-      ).map((slot) => ({ value: slot, label: formatSlot(slot) })),
-    [value]
-  );
-
   return (
-    <ClinicFormDropdown
-      id={id}
-      label={label}
-      value={value}
-      onChange={onChange}
-      placeholder="Pick a time"
-      options={options}
-      scrollable
-    />
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <ClockTimePicker
+        id={id}
+        value={value}
+        onChange={onChange}
+        placeholder="Pick a time"
+        className="mt-1"
+      />
+    </div>
   );
 }

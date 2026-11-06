@@ -7,17 +7,15 @@ import { Loader2 } from "lucide-react";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CoordinatorCertificationsCharts } from "./components/coordinator-certifications-charts";
-import { CoordinatorCertificationsGradeChart } from "./components/coordinator-certifications-grade";
 import { CoordinatorCertificationsFolders } from "./components/coordinator-certifications-folders";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { CoordinatorCertificationsRail } from "./components/coordinator-certifications-rail";
 import {
   fetchCertApprovalRows,
   fetchCertStageRows,
   mergeCertRecords,
   summarizeCertRecords,
-  type CertStatusFilter,
-} from "./components/coordinator-certifications-data";
+} from "@/services/coordinator/certifications.service";
+import type { CertStatusFilter } from "@/services/coordinator/certifications.types";
 import styles from "./components/coordinator-certifications.module.css";
 
 function tabToStatus(tab: string | null): CertStatusFilter {
@@ -30,7 +28,7 @@ function tabToStatus(tab: string | null): CertStatusFilter {
 function CertificationsBody() {
   const params = useSearchParams();
   const [queryInput, setQueryInput] = React.useState("");
-  // Debounced 300ms server search (registrar precedent).
+
   const query = useDebouncedValue(queryInput.trim(), 300);
   const [status, setStatus] = React.useState<CertStatusFilter>(() =>
     tabToStatus(params.get("tab")),
@@ -60,7 +58,6 @@ function CertificationsBody() {
     staleTime: 30_000,
   });
 
-  // Defensive: non-array payloads (cached/error shapes) never crash the merge.
   const records = React.useMemo(
     () =>
       mergeCertRecords(
@@ -75,11 +72,16 @@ function CertificationsBody() {
   const summary = React.useMemo(() => summarizeCertRecords(records), [records]);
 
   const isPending =
-    certQuery.isPending || approvalQuery.isPending || approvedQuery.isPending;
+    (certQuery.isPending || approvalQuery.isPending || approvedQuery.isPending) &&
+    records.length === 0 &&
+    certQuery.data === undefined &&
+    approvalQuery.data === undefined &&
+    approvedQuery.data === undefined;
   const isFetching =
     certQuery.isFetching || approvalQuery.isFetching || approvedQuery.isFetching;
   const isError =
-    certQuery.isError || approvalQuery.isError || approvedQuery.isError;
+    (certQuery.isError || approvalQuery.isError || approvedQuery.isError) &&
+    records.length === 0;
 
   const refetchAll = () => {
     void certQuery.refetch();
@@ -89,7 +91,7 @@ function CertificationsBody() {
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
+      <section className={styles.page} aria-busy="true" aria-label="Certifications">
         <div className={styles.layout}>
           <div className={styles.main}>
             <div className={styles.skelPanel}>
@@ -107,7 +109,7 @@ function CertificationsBody() {
                 </div>
               </div>
               <div className={styles.skelFolderGrid}>
-                {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                {[0, 1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className={styles.skelFolderCard}>
                     <Skeleton className={styles.skelFolderBadge} />
                     <Skeleton className={styles.skelFolder} />
@@ -119,33 +121,10 @@ function CertificationsBody() {
             </div>
           </div>
 
-          <div className={styles.side}>
-            <div className={styles.skelSidePanel}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <Skeleton className={styles.skelChart} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendLabel} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-              <Skeleton className={styles.skelInterpretation} />
-              <hr className={styles.divider} />
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelGradeBars}>
-                {[0, 1, 2, 3].map((j) => (
-                  <div key={j} className={styles.skelGradeRow}>
-                    <Skeleton className={styles.skelGradeLabel} />
-                    <Skeleton className={styles.skelGradeBar} />
-                    <Skeleton className={styles.skelGradeCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className={styles.railSkel} aria-hidden>
+            {[0, 1].map((j) => (
+              <Skeleton key={j} className={styles.railSkelIcon} />
+            ))}
           </div>
         </div>
       </section>
@@ -176,12 +155,16 @@ function CertificationsBody() {
     );
   }
 
+  const trulyEmpty =
+    records.length === 0 && query.trim() === "" && status === "all";
+
   return (
-    <section className={styles.page} aria-label="Certifications">
-      <div className={styles.layout}>
-        {/* Certification folders sit flat on the page (no card
-            background); the insights panel on the right carries the
-            shared glow-card design. */}
+    <section
+      className={trulyEmpty ? `${styles.page} ${styles.pageEmpty}` : styles.page}
+      aria-label="Certifications"
+    >
+      <div className={trulyEmpty ? `${styles.layout} ${styles.layoutEmpty}` : styles.layout}>
+
         <div className={styles.main}>
           <CoordinatorCertificationsFolders
             records={records}
@@ -189,21 +172,11 @@ function CertificationsBody() {
             onQueryChange={handleQueryInputChange}
             status={status}
             onStatusChange={setStatus}
+            isSyncing={isFetching}
           />
         </div>
 
-        <aside className={styles.side}>
-          <section className={assign.card} aria-label="Certification insights">
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
-            <div className="relative flex min-w-0 flex-col gap-5">
-              <CoordinatorCertificationsCharts summary={summary} />
-              <hr className={styles.divider} />
-              <CoordinatorCertificationsGradeChart summary={summary} />
-            </div>
-          </section>
-        </aside>
+        {trulyEmpty ? null : <CoordinatorCertificationsRail summary={summary} />}
       </div>
     </section>
   );

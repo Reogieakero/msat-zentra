@@ -7,9 +7,6 @@ import { CATEGORY_SHADES_DARK, CATEGORY_SHADES_LIGHT } from "./risk-dashboard-da
 type RGB = [number, number, number];
 
 function parseRgb(value: string): RGB | null {
-  // Handles legacy commas, modern space syntax, and slash alpha
-  // ("rgb(59, 130, 246)", "rgb(59 130 246)", "rgb(59 130 246 / 1)").
-  // Non-sRGB spaces (oklch/…) don't match and fall back to static steps.
   const m = value.match(/rgba?\(([^)]+)\)/);
   if (!m) return null;
   const parts = m[1]
@@ -21,9 +18,6 @@ function parseRgb(value: string): RGB | null {
   return [parts[0], parts[1], parts[2]];
 }
 
-/* Resolved runtime value of a CSS var (follows user-recolored palettes).
-   Probes through a throwaway node because custom-property values read
-   off :root come back unresolved. */
 function probeVar(name: string): string | null {
   try {
     const probe = document.createElement("span");
@@ -42,7 +36,6 @@ function mix(a: RGB, b: RGB, t: number): string {
   return `rgb(${c(0)}, ${c(1)}, ${c(2)})`;
 }
 
-/* Stored settings hex ("#3b82f6", short form tolerated) → RGB. */
 function parseHex(hex: string): RGB | null {
   const h = hex.trim().replace(/^#/, "");
   const full =
@@ -58,11 +51,6 @@ function parseHex(hex: string): RGB | null {
 const LIGHT_SURFACE: RGB = [255, 255, 255];
 const DARK_SURFACE: RGB = [46, 46, 46];
 
-/**
- * Deterministic primary scale from a settings hex — darkest (pure primary)
- * first, stepping toward the card surface. No DOM involved, so it can never
- * go stale; returns null when the hex is unusable.
- */
 export function buildPrimaryScale(hex: string, isDark: boolean, count: number): string[] | null {
   const primary = parseHex(hex);
   if (!primary) return null;
@@ -73,20 +61,10 @@ export function buildPrimaryScale(hex: string, isDark: boolean, count: number): 
   );
 }
 
-/**
- * Primary-ink scale with `count` steps, darkest first. When `primaryHex`
- * (the desk's saved settings color) is provided the scale builds straight
- * from it — deterministic, no timing involved. Otherwise it resolves live
- * from the runtime `--primary` toward the card surface, so SVG fills follow
- * user-recolored palettes (SVG attributes can't resolve CSS vars). Falls
- * back to the static per-theme ink steps on first paint.
- */
 export function usePrimaryScale(count: number, primaryHex?: string | null): string[] {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const n = Math.max(count, 1);
-  // A settings hex wins outright — pure render-time derivation, no timing
-  // involved and no effect needed.
   const direct = primaryHex ? buildPrimaryScale(primaryHex, isDark, n) : null;
   const [probed, setProbed] = React.useState<string[] | null>(null);
   const hasDirect = direct !== null;
@@ -99,8 +77,6 @@ export function usePrimaryScale(count: number, primaryHex?: string | null): stri
       const next = Array.from({ length: n }, (_, i) =>
         mix(primary, surface, n === 1 ? 0 : (i / (n - 1)) * 0.82),
       );
-      // The saved settings palette lands after first paint (async fetch) —
-      // adopt it when it arrives, but skip identical scales.
       setProbed((prev) =>
         prev !== null &&
         prev.length === next.length &&
@@ -109,11 +85,7 @@ export function usePrimaryScale(count: number, primaryHex?: string | null): stri
           : next,
       );
     };
-    // Measure after paint — async so the effect itself never sets state
-    // synchronously.
     const frame = window.requestAnimationFrame(measure);
-    // The palette gate paints :root vars whenever settings resolve or the
-    // user recolors — re-measure then so charts track it live.
     const observer = new MutationObserver(measure);
     observer.observe(document.documentElement, {
       attributes: true,

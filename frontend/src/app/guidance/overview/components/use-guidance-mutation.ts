@@ -1,27 +1,18 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
+import type { DockTaskKind } from "@/components/dock/dock-types";
 import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
-import { apiErrorMessage } from "../../referrals/components/guidance-referrals-data";
+import { apiErrorMessage } from "@/lib/api/errors";
 
-/**
- * Shared guidance-desk mutation helper (mirrors the nurse desk).
- *
- * Every guidance mutation follows the same production lifecycle:
- *   idle → pending (button disabled + spinner) → success (toast + targeted
- *   invalidation) OR error (inline message + error toast) → settled.
- *
- * Centralizing the invalidation keys here prevents drift: every guidance
- * mutation refreshes exactly the guidance queries and nothing else —
- * no whole-app refetch, no stale desk after a write.
- */
 export const GUIDANCE_QUERY_KEYS = [
   ["guidance-referrals"],
   ["guidance-referrals-highlight"],
   ["guidance-interventions"],
   ["guidance-overview"],
-  // Prefix — covers ["guidance-alerts", "referrals"|"interventions"].
+
   ["guidance-alerts"],
   ["guidance-adm"],
   ["guidance-adm-report"],
@@ -36,14 +27,6 @@ export const GUIDANCE_QUERY_KEYS = [
   ["adm-consultation-sessions"],
 ] as const;
 
-/**
- * Scoped invalidation: a mutation (or realtime event) only refetches the
- * queries it can actually change. Previously every guidance write and every
- * realtime event invalidated all sixteen prefixes — one counseling note
- * refetched the risk heatmap walks, anecdotal folders, ADM report, and
- * session documents. The default (no scope) preserves the old all-keys
- * behavior so existing call sites stay correct; pass scopes to narrow.
- */
 export type GuidanceScope =
   | "referrals"
   | "interventions"
@@ -66,6 +49,7 @@ const GUIDANCE_SCOPE_KEYS: Record<GuidanceScope, readonly (readonly string[])[]>
     ["guidance-risk"],
     ["guidance-risk-levels"],
     ["guidance-risk-heatmap"],
+    ["guidance-risk-behavioral"],
     ["guidance-risk-alert-factors"],
   ],
   documents: [["guidance-session-documents"]],
@@ -73,20 +57,30 @@ const GUIDANCE_SCOPE_KEYS: Record<GuidanceScope, readonly (readonly string[])[]>
 };
 
 export function invalidateGuidanceQueries(
-  queryClient: { invalidateQueries: (filters: { queryKey: string[] }) => void },
+  queryClient: { invalidateQueries: (filters: { queryKey: string[] }) => Promise<void> },
   scopes?: GuidanceScope | GuidanceScope[],
-) {
+): Promise<void[]> {
   const keys = !scopes
     ? GUIDANCE_QUERY_KEYS
     : (Array.isArray(scopes) ? scopes : [scopes]).flatMap((s) => GUIDANCE_SCOPE_KEYS[s]);
-  for (const key of keys) {
-    void queryClient.invalidateQueries({ queryKey: [...key] });
-  }
+  return Promise.all(
+    keys.map((key) => queryClient.invalidateQueries({ queryKey: [...key] })),
+  );
 }
 
 export function useGuidanceInvalidate(scopes?: GuidanceScope | GuidanceScope[]) {
   const queryClient = useQueryClient();
   return () => invalidateGuidanceQueries(queryClient, scopes);
+}
+
+export interface GuidanceDockOptions<TVariables> {
+  kind?: DockTaskKind;
+  title: string | ((variables: TVariables) => string);
+  description: string | ((variables: TVariables) => string);
+  /** Text the settled row shows. Falls back to `successDescription`/`successTitle`. */
+  done?: string | ((variables: TVariables) => string);
+  /** Failure text. Falls back to the API error message. */
+  fail?: string | ((variables: TVariables) => string);
 }
 
 interface GuidanceMutationOptions<TData, TVariables> {
@@ -95,37 +89,97 @@ interface GuidanceMutationOptions<TData, TVariables> {
   successDescription?: (variables: TVariables, data: TData) => string;
   errorTitle?: string;
   errorFallback: string;
-  /** When true, suppress the error toast (caller shows inline error only). */
+
   silentError?: boolean;
-  /** When true, skip the success toast (caller toasts its own message). */
+
   silentSuccess?: boolean;
   onSuccessExtra?: (data: TData, variables: TVariables) => void;
-  /** Referral/intervention id this write acts on — confirmed writes suppress
-      their own realtime echo toast for 30s (bell row still lands). Falls
-      back to `data.id` when the mutation resolves one. */
+
   sourceId?: string | ((variables: TVariables) => string);
-  /** Narrow the post-success refetch (default: all guidance keys, the
-      previous behavior). Case writes usually only move queue/overview/
-      alerts/adm state — never the heatmap walks or document folders. */
+
   scopes?: GuidanceScope | GuidanceScope[];
+  /** Apply an instant optimistic cache patch. Return a rollback to run on error. */
+  optimisticUpdate?: (queryClient: QueryClient, variables: TVariables) => (() => void) | void;
+  /** Show this mutation as a task in the shared bottom-right Dock. */
+  dock: GuidanceDockOptions<TVariables>;
 }
 
-/**
- * useMutation pre-wired for the guidance desk: success toast only after the
- * server confirms, error toast (sanitized, never raw SQL/Prisma) on failure,
- * and targeted guidance-query invalidation. The caller still owns inline error
- * display via `mutation.error` + `apiErrorMessage`.
- */
+interface GuidanceMutationContext {
+  rollback?: () => void;
+  dockTaskId?: string;
+  dockDone?: string;
+  dockFail?: string;
+}
+
+function dockText<TVariables>(
+  value: string | ((variables: TVariables) => string),
+  variables: TVariables
+): string {
+  return typeof value === "function" ? value(variables) : value;
+}
+
 export function useGuidanceMutation<TData = unknown, TVariables = void>(
   options: GuidanceMutationOptions<TData, TVariables>
 ) {
   const queryClient = useQueryClient();
+  const dock = useDock();
   const invalidate = () => invalidateGuidanceQueries(queryClient, options.scopes);
-  return useMutation<TData, Error, TVariables>({
+  return useMutation<TData, Error, TVariables, GuidanceMutationContext>({
     mutationFn: async (variables) => options.mutationFn(variables),
-    onSuccess: (data, variables) => {
-      // Per-sourceId self-suppression: the confirmed id skips its realtime
-      // echo toast for 30s (bell row still lands, lists still invalidate).
+    onMutate: async (variables) => {
+      // Instant UI update — runs before the network request resolves.
+      await queryClient.cancelQueries();
+      const rollback = options.optimisticUpdate?.(queryClient, variables);
+
+      let dockTaskId: string | undefined;
+      let dockDone: string | undefined;
+      let dockFail: string | undefined;
+      try {
+        dockTaskId = dock.startTask({
+          kind: options.dock.kind ?? "generic",
+          title: dockText(options.dock.title, variables),
+          description: dockText(options.dock.description, variables),
+        });
+        dockDone = options.dock.done
+          ? dockText(options.dock.done, variables)
+          : undefined;
+        dockFail = options.dock.fail
+          ? dockText(options.dock.fail, variables)
+          : undefined;
+      } catch {
+        // Dock is optional feedback — never let it block the mutation.
+        dockTaskId = undefined;
+        dockDone = undefined;
+        dockFail = undefined;
+      }
+
+      return {
+        rollback: typeof rollback === "function" ? rollback : undefined,
+        dockTaskId,
+        dockDone,
+        dockFail,
+      };
+    },
+    onSuccess: (data, variables, context) => {
+      const successTitle = options.successTitle;
+      const successDescription = options.successDescription;
+      // The Dock is the single success surface: settle the task with the real
+      // outcome instead of popping a second toast on top of it.
+      if (context?.dockTaskId) {
+        const doneText =
+          context.dockDone ??
+          (successDescription
+            ? successDescription(variables, data)
+            : successTitle);
+        dock.completeTask(context.dockTaskId, doneText);
+      } else if (!options.silentSuccess) {
+        toast.success({
+          title: successTitle,
+          ...(successDescription
+            ? { description: successDescription(variables, data) }
+            : {}),
+        });
+      }
       const fromData =
         typeof data === "string"
           ? data
@@ -141,23 +195,20 @@ export function useGuidanceMutation<TData = unknown, TVariables = void>(
             ? fromData
             : null;
       if (sourceId) markSelfNotified(sourceId);
-      invalidate();
-      if (!options.silentSuccess) {
-        toast.success({
-          title: options.successTitle,
-          ...(options.successDescription
-            ? { description: options.successDescription(variables, data) }
-            : {}),
-        });
-      }
       options.onSuccessExtra?.(data, variables);
+      void invalidate().catch(() => {
+        // Stale lists retry on focus; success must not be swallowed.
+      });
     },
-    // Pessimistic: rows stay put with their spinner until the server
-    // confirms — only the success refetch above moves/removes them. No
-    // onSettled blanket refetch: it doubled every mutation's network cost
-    // (success invalidated, then settled invalidated again) and refetched
-    // on error when nothing changed.
-    onError: (err) => {
+
+    onError: (err, _variables, context) => {
+      context?.rollback?.();
+      if (context?.dockTaskId) {
+        dock.failTask(
+          context.dockTaskId,
+          context.dockFail ?? apiErrorMessage(err, options.errorFallback)
+        );
+      }
       if (!options.silentError) {
         toast.error({
           title: options.errorTitle ?? "Update failed",

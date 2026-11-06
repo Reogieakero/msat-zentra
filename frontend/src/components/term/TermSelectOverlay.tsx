@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getAccessToken } from "@/lib/api/client";
+import { decodeTokenIdentity, isTeacherRole } from "@/lib/auth/roles";
 import {
   resolveDefaultTerm,
   useTerm,
@@ -55,19 +56,23 @@ export function TermSelectOverlay() {
   } = useTerm();
 
   const [authed, setAuthed] = React.useState(false);
+  const [role, setRole] = React.useState<string | null>(null);
   const [yearId, setYearId] = React.useState<string>("");
   const [picked, setPicked] = React.useState<ActiveTerm | null>(null);
 
   React.useEffect(() => {
-    setAuthed(getAccessToken() != null);
+    const identity = decodeTokenIdentity(getAccessToken());
+    setAuthed(identity != null);
+    setRole(identity?.role ?? null);
   }, [pathname, promptRequired]);
 
+  // Only teacher roles select a term; every other role is scoped server-side.
   const mustShow =
     authed &&
+    isTeacherRole(role) &&
     !HIDDEN_PREFIXES.some((p) => pathname?.startsWith(p)) &&
     (promptRequired || (!isLoading && !activeTerm && schoolYears.length > 0));
 
-  // Preselect stored term (if still valid) or the sensible default.
   React.useEffect(() => {
     if (!mustShow || schoolYears.length === 0) return;
     const valid =

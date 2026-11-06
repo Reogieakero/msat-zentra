@@ -34,8 +34,7 @@ export default function StudentRecordFolderPage() {
   const head = records[0] ?? null;
 
   function goBack() {
-    // Return to wherever the teacher came from (advisory list, hub, chat);
-    // fall back to the folders hub on a direct visit with no history.
+
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
@@ -114,4 +113,3 @@ export default function StudentRecordFolderPage() {
     </section>
   );
 }
-

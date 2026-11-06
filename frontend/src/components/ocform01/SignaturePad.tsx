@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Eraser, PenLine } from "lucide-react";
+import { Eraser, Loader2, PenLine } from "lucide-react";
 import styles from "./SignaturePad.module.css";
 
 interface SignaturePadProps {
@@ -15,10 +15,6 @@ interface SignaturePadProps {
 const INK = "#111111";
 const PAD_HEIGHT = 160;
 
-/**
- * Drawn-signature capture: mouse, stylus, or finger via Pointer Events.
- * Exports a transparent PNG data URL for POST /api/anecdotal/:id/sign.
- */
 export function SignaturePad({ onSave, onCancel, saving, error }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
@@ -77,7 +73,7 @@ export function SignaturePad({ onSave, onCancel, saving, error }: SignaturePadPr
     try {
       canvasRef.current?.releasePointerCapture(e.pointerId);
     } catch {
-      // Pointer already released — harmless.
+
     }
   }
 
@@ -128,6 +124,7 @@ export function SignaturePad({ onSave, onCancel, saving, error }: SignaturePadPr
           type="button"
           variant="ghost"
           size="sm"
+          className="h-6 px-2 text-[11px]"
           onClick={onCancel}
           disabled={saving}
         >
@@ -137,6 +134,7 @@ export function SignaturePad({ onSave, onCancel, saving, error }: SignaturePadPr
           type="button"
           variant="outline"
           size="sm"
+          className="h-6 px-2 text-[11px]"
           onClick={handleClear}
           disabled={saving || empty}
         >
@@ -147,9 +145,13 @@ export function SignaturePad({ onSave, onCancel, saving, error }: SignaturePadPr
           type="button"
           variant="default"
           size="sm"
+          className="h-6 px-2 text-[11px]"
           onClick={handleSave}
           disabled={saving || empty}
         >
+          {saving ? (
+            <Loader2 size={14} className="animate-spin" aria-hidden />
+          ) : null}
           {saving ? "Saving…" : "Save signature"}
         </Button>
       </div>

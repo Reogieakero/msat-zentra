@@ -1,15 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { fetchGuidanceAlerts } from "../../alerts/components/guidance-alerts-data";
-import type { GuidanceRiskLevel } from "../../referrals/components/guidance-referrals-data";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { fetchGuidanceAlerts } from "@/services/guidance/alerts.service";
+import type { GuidanceRiskLevel } from "@/services/guidance/guidance.types";
 import type { GuidanceRiskRow } from "./guidance-risk-dashboard";
 import styles from "./risk-watch.module.css";
 
@@ -24,6 +18,7 @@ const FACTOR_WORDS: Record<keyof GuidanceRiskFactorFlags, string> = {
   attendance: "Attendance",
   behavioral: "Behavioral",
 };
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export interface RiskWatchedStudent {
   studentId: string;
@@ -48,21 +43,15 @@ function normalizeName(value: string): string {
   return value.trim().toLowerCase();
 }
 
-/**
- * Per-student factor flags from the flagged-student queue
- * (`GET /api/guidance/alerts`), keyed by normalized student name. The
- * alerts feed is per-student while risk rows are per-referral, so names are
- * the join key — flags OR-merge when a student appears more than once.
- * Students with no alert row simply carry no drivers (never assumed).
- */
 export async function fetchAllGuidanceAlertFactors(): Promise<
   Record<string, GuidanceRiskFactorFlags>
 > {
-  const first = await fetchGuidanceAlerts({ page: 1, pageSize: 100 });
+  // Bounded preview (15×10=150 max). Full-dataset traversal is not allowed.
+  const first = await fetchGuidanceAlerts({ page: 1, pageSize: PAGE_SIZE });
   const pages = Math.min(first.totalPages, 10);
   const all = [...first.alerts];
   for (let p = 2; p <= pages; p++) {
-    const res = await fetchGuidanceAlerts({ page: p, pageSize: 100 });
+    const res = await fetchGuidanceAlerts({ page: p, pageSize: PAGE_SIZE });
     all.push(...res.alerts);
   }
   const map: Record<string, GuidanceRiskFactorFlags> = {};
@@ -84,13 +73,6 @@ function referredMs(row: GuidanceRiskRow): number {
   return Number.isFinite(t) ? t : 0;
 }
 
-/**
- * Plain-words risk watch over the guidance desk students — level mix, the
- * High watchlist with driving concerns, and the top flagged concern.
- * Students with no level stay out of the mix (never assumed okay). Links
- * land on each student's newest timeline case. Pure derivation from live
- * rows, so it repaints with the desk.
- */
 export function buildGuidanceRiskWatch(
   rows: GuidanceRiskRow[],
   referralToStudent: Record<string, string | null>,
@@ -169,17 +151,19 @@ export function GuidanceRiskWatchCard({ data }: { data: RiskWatchData }) {
   if (data.okay > 0) parts.push(`${data.okay} doing okay`);
   const hidden = Math.max(0, data.urgent - data.watchlist.length);
   return (
-    <Card className={styles.glow} aria-label="Students needing attention">
+    <KanbanBoard
+      className={styles.glow}
+      title={<span className={styles.title}>Who needs attention first</span>}
+      description={
+        <span className={styles.desc}>
+          High-risk students in plain words — names open their timeline.
+        </span>
+      }
+      ariaLabel="Students needing attention"
+    >
       <span className={styles.glowClip} aria-hidden="true">
         <span className={styles.cardGlow} />
       </span>
-      <CardHeader>
-        <CardTitle className={styles.title}>Who needs attention first</CardTitle>
-        <CardDescription className={styles.desc}>
-          High-risk students in plain words — names open their timeline.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
         {known === 0 ? (
           <p className={styles.message} role="status">
             {data.unknown > 0
@@ -225,7 +209,6 @@ export function GuidanceRiskWatchCard({ data }: { data: RiskWatchData }) {
                 ? "Nobody needs urgent attention right now — keep an eye on the watch group."
                 : "Everyone referred is doing okay — hold the line with routine follow-through."}
         </p>
-      </CardContent>
-    </Card>
+    </KanbanBoard>
   );
 }

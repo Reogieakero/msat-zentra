@@ -3,14 +3,7 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import styles from "./BookSessionDialog.module.css";
 
 interface DeleteSessionDialogProps {
@@ -22,14 +15,9 @@ interface DeleteSessionDialogProps {
   keepLabel?: string;
   submitLabel?: string;
   busy?: boolean;
-  /** Save failure from the caller's API call. */
   serverError?: string | null;
 }
 
-/**
- * Shared delete-cancelled-session confirm — permanent removal, case stays
- * open. The caller performs the delete.
- */
 export function DeleteSessionDialog({
   open,
   onClose,
@@ -43,8 +31,6 @@ export function DeleteSessionDialog({
 }: DeleteSessionDialogProps) {
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fresh error state every time the modal opens — synced during render,
-  // never in an effect.
   const openKey = open ? "open" : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {
@@ -55,30 +41,20 @@ export function DeleteSessionDialog({
   if (!open) return null;
 
   return (
-    <Dialog
+    <KanbanOverlay
       open
-      onOpenChange={(next) => {
-        // Locked while the delete is in flight.
-        if (!next && !busy) {
-          onClose();
-          setError(null);
-        }
+      onClose={() => {
+        if (busy) return;
+        onClose();
+        setError(null);
       }}
-    >
-      <DialogContent
-        className={styles.dialogScrollHidden}
-        aria-busy={busy || undefined}
-      >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        {error || serverError ? (
-          <div className={styles.errorBlock} role="alert">
-            <p className={styles.errorText}>{error ?? serverError}</p>
-          </div>
-        ) : null}
-        <DialogFooter>
+      dismissable={!busy}
+      busy={busy}
+      width="md"
+      title={title}
+      description={description}
+      footer={
+        <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
           <Button variant="outline" onClick={onClose} disabled={busy}>
             {keepLabel}
           </Button>
@@ -92,8 +68,14 @@ export function DeleteSessionDialog({
             {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
             {busy ? "Deleting…" : submitLabel}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      {error || serverError ? (
+        <div className={styles.errorBlock} role="alert">
+          <p className={styles.errorText}>{error ?? serverError}</p>
+        </div>
+      ) : null}
+    </KanbanOverlay>
   );
 }

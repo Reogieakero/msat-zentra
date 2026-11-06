@@ -3,20 +3,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./GuidanceReferralsSkeleton.module.css";
 
-/* Loading state that mirrors the referrals display: sticky toolbar
-   (title + search + track filter), two-column entries (rail with date,
-   badges, status help, sent/observed-by lines, latest-action block,
-   student card + report body with reason, observed block, folder,
-   callout, session plan, variable actions), and the grouped action-menu
-   sidebar — so nothing jumps when the fetch lands. Locked pages scroll
-   the full list (scroll hint, no pager). */
 export function GuidanceReferralsSkeleton({
   lockType = false,
   menuRows,
 }: {
   lockType?: boolean;
-  // Locked action-menu row count (ADM 6 / Counseling 5 with the Cancelled
-  // row). Unlocked keeps the per-track defaults below.
   menuRows?: number;
 }) {
   const sideGroups: { label: string; rows: number }[] = lockType
@@ -28,8 +19,7 @@ export function GuidanceReferralsSkeleton({
   return (
     <div className={styles.layout} aria-busy="true" aria-label="Loading your cases">
       <div className={styles.feed}>
-        {/* Locked track pages match the nurse timelines: entries start
-            immediately with no toolbar shimmer. */}
+
         {!lockType ? (
           <div className={`${styles.toolbar} ${styles.toolbarSticky}`}>
             <Skeleton className={styles.title} />
@@ -47,7 +37,7 @@ export function GuidanceReferralsSkeleton({
                 <div className={styles.badges}>
                   <Skeleton />
                   <Skeleton />
-                  {/* Third badge wraps on most rows; fourth only for priority. */}
+
                   <Skeleton className={i === 2 ? styles.badgeHidden : undefined} />
                 </div>
                 <Skeleton className={styles.statusHelp} />

@@ -28,6 +28,19 @@
   animation: coord-spin 1s linear infinite;
 }
 
+/* Action row — right-aligned footer inside CardModal body. */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.actions > button {
+  height: 2rem;
+  min-height: 2rem;
+}
+
 @keyframes coord-spin {
   to {
     transform: rotate(360deg);

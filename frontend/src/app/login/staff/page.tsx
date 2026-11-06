@@ -1,10 +1,9 @@
-import { Briefcase } from "lucide-react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function StaffLoginPage() {
   return (
-    <AuthShell icon={Briefcase} role="staff">
+    <AuthShell role="staff">
       <LoginForm
         role="staff"
         title="Staff sign in"

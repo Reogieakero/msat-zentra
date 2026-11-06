@@ -2,21 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { getRedis } from "./redis.js";
 import { getEnv } from "../config/env.js";
 import { logger } from "./pino.js";
-
-/**
- * Response cache for read-heavy GET routes (Principal/Registrar pages).
- *
- * - Keyed by method + path + query string + caller role + caller user id so
- *   different roles never share a cached payload (Principal vs Registrar
- *   scopes differ) and — critically — different users with the same role
- *   never see each other's user-scoped data (e.g. one teacher's advisory
- *   section served to another teacher).
- * - On hit, the cached JSON is served and `x-cache: HIT` is set.
- * - On miss, the response is captured via a patched `res.json` and stored with
- *   the configured TTL (seconds), tagged so it can be purged later.
- * - Failures (Redis down, serialize error) degrade to live responses — caching
- *   is strictly best-effort.
- */
+import { weakEtag } from "./etag.js";
 
 function buildKey(req: Request): string {
   const user = (req as Request & { user?: { id?: string; role?: string } }).user;
@@ -25,11 +11,15 @@ function buildKey(req: Request): string {
   const qs = req.originalUrl.includes("?")
     ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
     : "";
-  // Term scope varies every payload once the client sends its active
-  // selection — without it, a Term 1 response would be served to Term 2.
+  // NOTE: req.path is relative to the mounted router, so every router root
+  // ("/api/overview", "/api/academics", …) would collapse to "/". Include the
+  // mount point (baseUrl) so keys are unique per endpoint. The "v2" prefix
+  // orphans entries cached under the old colliding scheme (they expire by TTL).
+  const fullPath = `${req.baseUrl ?? ""}${req.path ?? ""}` || req.originalUrl.split("?")[0];
+
   const scope = (req as Request & { termScope?: { schoolYearId?: string; termId?: string } }).termScope;
   const scopeKey = scope ? `:${scope.schoolYearId ?? ""}:${scope.termId ?? ""}` : "";
-  return `cache:${req.method}:${req.path}${qs}:${role}:${uid}${scopeKey}`;
+  return `cache:v2:${req.method}:${fullPath}${qs}:${role}:${uid}${scopeKey}`;
 }
 
 function tagKey(tag: string): string {
@@ -37,26 +27,45 @@ function tagKey(tag: string): string {
 }
 
 export interface CacheOptions {
-  /** Cache TTL in seconds. Defaults to CACHE_TTL_SECONDS. */
+
   ttl?: number;
-  /** Invalidation tags attached to the cached entry. */
+
   tags?: string[];
+
+  /** Cache-Control header sent with the response. Defaults to a short private TTL. */
+  cacheControl?: string;
 }
 
 export function cache(options: CacheOptions = {}) {
   return async function cacheMiddleware(req: Request, res: Response, next: NextFunction) {
-    // Only cache idempotent GETs.
+
     if (req.method !== "GET") return next();
     const redis = getRedis();
+    // Never let the browser reuse an API payload: Redis is the cache, and a
+    // client-side max-age kept serving pre-write lists for up to 30s after a
+    // PATCH (a completed ADM case popped back onto its board on refetch).
+    // Awaited tag invalidation completes before the write responds, so the
+    // refetch that follows always misses the stale entry.
+    // "private, no-cache" (store-but-revalidate) would avoid the stale-list bug
+    // above, but it writes confidential records to the browser's disk cache, so
+    // no-store stays the default; pass cacheControl explicitly to opt a route in.
+    const cacheControl = options.cacheControl ?? "private, no-store";
+    res.setHeader("Cache-Control", cacheControl);
     if (!redis) return next();
 
     const key = buildKey(req);
     try {
       const hit = await redis.get<string>(key);
       if (hit) {
+        const payload = typeof hit === "string" ? hit : JSON.stringify(hit);
         res.setHeader("x-cache", "HIT");
         res.setHeader("content-type", "application/json");
-        return res.status(200).send(typeof hit === "string" ? hit : JSON.stringify(hit));
+        // The live path gets its ETag from the `etag()` middleware, which wraps
+        // res.json — this HIT path uses res.send, so it would otherwise ship the
+        // full body on every repeat read. Same tag algorithm, so Express answers
+        // req.fresh with a bodyless 304 when the client already has it.
+        res.setHeader("ETag", weakEtag(payload));
+        return res.status(200).send(payload);
       }
     } catch (err) {
       logger.warn({ err, key }, "cache read failed — serving live");
@@ -88,20 +97,23 @@ export function cache(options: CacheOptions = {}) {
   };
 }
 
-/**
- * Purge every cached entry carrying one of the given tags. Call this from
- * write routes (approve / lock / validate / release) so the next read is live.
- */
 export async function invalidateTags(tags: string[]): Promise<void> {
   const redis = getRedis();
   if (!redis || tags.length === 0) return;
   try {
-    for (const tag of tags) {
-      const keys = await redis.smembers(tagKey(tag));
-      if (keys.length) {
-        await redis.del(...keys);
-        await redis.del(tagKey(tag));
-      }
+    // Fan the membership reads out in parallel. The old sequential loop
+    // paid up to 3 Upstash REST roundtrips per tag, awaited before the
+    // response — e.g. ~13 tags on refer ≈ 13s of send latency from PH.
+    const members = await Promise.all(tags.map((tag) => redis.smembers(tagKey(tag))));
+    const doomed: string[] = [];
+    for (const [i, tag] of tags.entries()) {
+      const keys = members[i] ?? [];
+      if (keys.length > 0) doomed.push(...keys, tagKey(tag));
+    }
+    // Batched DELs keep REST payloads small; skipped entirely when empty.
+    for (let i = 0; i < doomed.length; i += 500) {
+      const slice = doomed.slice(i, i + 500);
+      if (slice.length > 0) await redis.del(...slice);
     }
   } catch (err) {
     logger.warn({ err, tags }, "cache invalidation failed");

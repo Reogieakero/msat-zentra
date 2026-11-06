@@ -1,150 +1,45 @@
 "use client";
-
 import * as React from "react";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import {
   getCoreRowModel,
   getFilteredRowModel,
-  getSortedRowModel,
   useReactTable,
-  flexRender,
   type ColumnDef,
   type ColumnFiltersState,
-  type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table";
-import {
-  Clock,
-  Loader2,
-  SearchIcon,
-  Users,
-} from "lucide-react";
+import { SearchIcon, Users } from "lucide-react";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import { assignUniqueMascots } from "@/app/teacher/grading/[assignmentId]/components/mascot-assignment";
+import { compareSurnameFirst, formatSurnameFirst } from "@/lib/names";
 import { Button } from "@/components/ui/button";
-import { CardModal } from "@/components/ui/CardModal";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sonner";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import styles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
-import sheetStyles from "./attendance-sheet.module.css";
-import {
-  phTodayKey,
-  submitSheet,
-  useMeetupDates,
-  useSheetMarks,
-  type SheetContext,
-  type SheetStatus,
-} from "./attendance-taking-data";
-
+import { useDock } from "@/components/dock/dock-store";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import rowStyles from "@/components/ui/row-list.module.css";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSession } from "@/lib/auth/useSession";
+import { useTerm } from "@/lib/term/TermContext";
+import { MARKS_STALE_MS, DEFAULT_MEETUP_DAYS, fetchSheetMarks, phTodayKey, sheetMarksKey, submitSheet, useMeetupDates, useSheetMarks, useSheetOwner } from "@/services/teacher/attendance.service";
+import { apiErrorMessage } from "@/lib/api/errors";
+import type { SheetContext, SheetStatus } from "@/services/teacher/attendance.types";
+import { MeetupBlocksCell, StatusBoxes } from "./status-boxes";
+import { useRosterMarks } from "./use-roster-marks";
+import { SaveAttendanceKanban } from "./save-attendance-dialog";
 interface RosterRow {
   id: string;
   name: string;
   lrn: string;
   rate: number | null;
-  status: SheetStatus;
+  status: SheetStatus | null;
+  impliedAbsent?: boolean;
+  admExempt: boolean;
 }
-
-const MARKS_STORAGE_KEY = "zentra.attendance-marks";
-const MAX_STORED_SHEETS = 30;
-
-const VALID_STATUSES: SheetStatus[] = ["present", "absent", "late", "excused"];
-
-function loadStoredMarks(key: string): Record<string, SheetStatus> {
-  try {
-    if (typeof window === "undefined") return {};
-    const raw = window.localStorage.getItem(MARKS_STORAGE_KEY);
-    if (!raw) return {};
-    const all = JSON.parse(raw) as Record<string, Record<string, SheetStatus>>;
-    const mine = all[key];
-    if (!mine || typeof mine !== "object") return {};
-    const clean: Record<string, SheetStatus> = {};
-    for (const [id, s] of Object.entries(mine)) {
-      if ((VALID_STATUSES as string[]).includes(s)) clean[id] = s;
-    }
-    return clean;
-  } catch {
-    return {};
-  }
-}
-
-function persistStoredMarks(key: string, marks: Record<string, SheetStatus>): void {
-  try {
-    const raw = window.localStorage.getItem(MARKS_STORAGE_KEY);
-    const all: Record<string, Record<string, SheetStatus>> = raw
-      ? (JSON.parse(raw) as Record<string, Record<string, SheetStatus>>)
-      : {};
-    const keys = Object.keys(all);
-    if (!all[key] && keys.length >= MAX_STORED_SHEETS) {
-      for (const k of keys.slice(0, keys.length - MAX_STORED_SHEETS + 1)) delete all[k];
-    }
-    all[key] = marks;
-    window.localStorage.setItem(MARKS_STORAGE_KEY, JSON.stringify(all));
-  } catch {
-    // Storage blocked or full — picks still hold in memory for the visit.
-  }
-}
-
-function rateClass(rate: number): string {
-  if (rate >= 0.9) return "text-green-600 dark:text-green-500";
-  if (rate >= 0.75) return "text-amber-600 dark:text-amber-500";
-  return "text-red-600 dark:text-red-500";
-}
-
-const STATUS_BOXES: { value: SheetStatus; letter: string; activeClass: string; label: string }[] = [
-  { value: "present", letter: "P", activeClass: "bg-green-500/70 border-green-500/70 text-white", label: "Present" },
-  { value: "absent", letter: "A", activeClass: "bg-red-500/70 border-red-500/70 text-white", label: "Absent" },
-  { value: "late", letter: "L", activeClass: "bg-amber-500/70 border-amber-500/70 text-white", label: "Late" },
-  { value: "excused", letter: "E", activeClass: "bg-blue-500/70 border-blue-500/70 text-white", label: "Excused" },
-];
-
-function StatusBoxes({
-  value,
-  onPick,
-  disabled,
-}: {
-  value: SheetStatus;
-  onPick: (s: SheetStatus) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-1">
-      {STATUS_BOXES.map((b) => {
-        const isActive = b.value === value;
-        return (
-          <button
-            key={b.value}
-            type="button"
-            onClick={() => onPick(b.value)}
-            disabled={disabled}
-            aria-pressed={isActive}
-            aria-label={`Mark ${b.label}`}
-            title={disabled ? `${b.label} — locked` : b.label}
-            className={`flex h-7 w-7 items-center justify-center rounded-md border text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-              isActive
-                ? b.activeClass
-                : "border-input bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground"
-            }`}
-          >
-            {b.letter}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/** Time gate for the sheet: live slots mark, finished slots edit, future
- *  (or undeterminable) slots stay locked. `todayEnd` is the last end
- *  minute of today's meetups — past meetup dates with no record display
- *  as absent instead of "no record". */
 export interface AttendanceLive {
   locked: boolean;
   tone: "lock" | "info";
@@ -153,235 +48,124 @@ export interface AttendanceLive {
   todayKey: string;
   todayEnd: number | null;
 }
-
-// Worst-status wins when several slots share a meetup day.
-const DAY_RANK: Record<SheetStatus, number> = { present: 0, excused: 1, late: 2, absent: 3 };
-
-const BLOCK_DOT: Record<SheetStatus, string> = {
-  present: "bg-green-500",
-  late: "bg-amber-500",
-  absent: "bg-red-500",
-  excused: "bg-gray-400",
-};
-
-const BLOCK_LABEL: Record<SheetStatus, string> = {
-  present: "Present",
-  absent: "Absent",
-  late: "Late",
-  excused: "Excused",
-};
-
 export interface BlocksInfo {
   dates: string[];
   statusOf: (id: string, date: string) => SheetStatus | null;
-  /** True when a meetup date passed with no record — renders absent red
-   *  instead of "no record". */
   pastDue: (date: string) => boolean;
   loading: boolean;
   hasTerm: boolean;
 }
+const DAY_RANK: Record<SheetStatus, number> = { present: 0, excused: 1, late: 2, absent: 3 };
 
-function makeBaseColumns(
-  pick: (id: string, status: SheetStatus) => void,
-  blocks: BlocksInfo,
-  locked: boolean,
-): ColumnDef<RosterRow>[] {
-  return [
-  {
-    accessorKey: "name",
-    header: "Student",
-    size: 220,
-    minSize: 220,
-    maxSize: 220,
-    cell: ({ row }) => (
-      <div className="min-w-0">
-        <p className={styles.cellMain}>{row.original.name}</p>
-        <p className={styles.cellSub}>{row.original.lrn}</p>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "rate",
-    header: "Attendance",
-    size: 100,
-    minSize: 90,
-    sortingFn: (a, b) => (a.original.rate ?? -1) - (b.original.rate ?? -1),
-    cell: ({ row }) => {
-      const rate = row.getValue("rate") as number | null;
-      if (rate === null) {
-        return <span className="text-muted-foreground">—</span>;
-      }
-      return <div className={`font-medium tabular-nums ${rateClass(rate)}`}>{Math.round(rate * 100)}%</div>;
-    },
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    size: 180,
-    minSize: 160,
-    cell: ({ row }) => (
-      <StatusBoxes
-        value={row.getValue("status") as SheetStatus}
-        onPick={(s) => pick(row.original.id, s)}
-        disabled={locked}
-      />
-    ),
-  },
-  {
-    id: "blocks",
-    header: "Meetups",
-    enableSorting: false,
-    enableHiding: false,
-    size: 360,
-    minSize: 240,
-    cell: ({ row }) => {
-      if (blocks.loading) {
-        return <span className="text-xs text-muted-foreground">Loading meetups…</span>;
-      }
-      if (!blocks.hasTerm || blocks.dates.length === 0) {
-        return <span className="text-xs text-muted-foreground">No meetup dates.</span>;
-      }
-      return (
-        <div
-          className="flex items-center gap-[3px] overflow-x-auto py-0.5"
-          style={{ scrollbarWidth: "none" }}
-          role="img"
-          aria-label={`${blocks.dates.length} meetup days`}
-        >
-          {blocks.dates.map((d) => {
-            const s = blocks.statusOf(row.original.id, d);
-            const autoAbsent = !s && blocks.pastDue(d);
-            return (
-              <span
-                key={d}
-                title={
-                  s
-                    ? `${d} — ${BLOCK_LABEL[s]}`
-                    : autoAbsent
-                      ? `${d} — absent (not logged)`
-                      : `${d} — no record`
-                }
-                className={`h-[17px] w-[17px] shrink-0 rounded-[4px] border border-border/60 ${
-                  s ? BLOCK_DOT[s] : autoAbsent ? "bg-red-500" : "bg-muted"
-                }`}
-              />
-            );
-          })}
-        </div>
-      );
-    },
-  },
-  ];
+const EMPTY_STUDENTS: SheetContext["students"] = [];
+const EMPTY_MEETUP_DATES: string[] = [];
+
+/* Row pills mirror the overview At-Risk RowList tones. */
+const PILL_BASE =
+  "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium";
+
+const MARK_PILL: Record<SheetStatus, { label: string; tone: string }> = {
+  present: { label: "Present", tone: "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400" },
+  absent: { label: "Absent", tone: "border-red-500 bg-red-500/10 text-red-600 dark:text-red-400" },
+  late: { label: "Late", tone: "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400" },
+  excused: { label: "Excused", tone: "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-400" },
+};
+const UNMARKED_PILL = "border-border bg-muted text-muted-foreground";
+
+function ratePillTone(rate: number): string {
+  if (rate >= 0.9) return "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400";
+  if (rate >= 0.75) return "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+  return "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400";
 }
 
 interface AttendanceRosterTableProps {
-  /** "YYYY-MM-DD" sheet date — picked from the navbar date picker. */
   date: string;
   subjectId: string | undefined;
   assignmentId?: string;
   slot: number;
-  /** Per-section roster for the active (section, subject) pair — the ONLY
-   *  student source. Per-subject sheets list the section's enlisted students
-   *  (GET /api/attendance/section-roster), never the advisory list. */
-  roster?: {
-    ctx: SheetContext | null;
-    pending: boolean;
-    error: boolean;
-    /** Card the teacher picked — when it differs from the loaded ctx, the
-     *  sheet is mid-switch and must load, never render the old section. */
-    requestedSectionId?: string | null;
-  };
-  /** Meetup weekdays (1 = Mon … 5 = Fri) of the active subject in the
-   *  active section — drives the blocks-view columns. Defaults to all. */
+  roster?: { ctx: SheetContext | null; pending: boolean; error: boolean; requestedSectionId?: string | null };
   meetupDays?: number[];
-  /** Time gate for marking. Required — the sheet never marks unlocked. */
   live: AttendanceLive;
-  /** Extra class for the table container (e.g. the calculated floor). */
-  stretchClassName?: string;
+  blocksMode: boolean;
+  onBlocksModeChange: (value: boolean) => void;
 }
-
-/* Class roster as a data table (data-table5 pattern: sortable + draggable
-   columns, name filter, column visibility, row selection, pagination).
-   Status reflects submitted marks for the active date/subject/slot. */
-export function AttendanceRosterTable({
-  date,
-  subjectId,
-  assignmentId,
-  slot,
-  roster,
-  meetupDays = [1, 2, 3, 4, 5],
-  live,
-  stretchClassName,
-}: AttendanceRosterTableProps) {
+export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, roster, meetupDays = DEFAULT_MEETUP_DAYS as unknown as number[], live, blocksMode, onBlocksModeChange }: AttendanceRosterTableProps) {
   const invalidateTeacher = useTeacherInvalidate();
-  // Strictly per-section: no advisory fallback. Without a resolved section
-  // roster the sheet has no students — it must never show advisees here.
-  const effectiveCtx = roster?.ctx ?? null;
-  const hasSection = !!effectiveCtx?.sectionId;
-  const marksQuery = useSheetMarks(date, subjectId, slot, effectiveCtx?.sectionId ?? null);
-
-  const students = React.useMemo(() => effectiveCtx?.students ?? [], [effectiveCtx]);
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const { activeTerm } = useTerm();
+  const teacherId = session?.sub ?? null;
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const sectionId = roster?.ctx?.sectionId ?? null;
+  const hasSection = !!sectionId;
+  const marksQuery = useSheetMarks(date, subjectId, slot, sectionId);
+  // One teacher owns a meetup: if someone else already saved this sheet, it is
+  // read-only here (the API answers 409 MEETUP_TAKEN if a save slips through).
+  const ownerQuery = useSheetOwner(date, subjectId, slot, sectionId);
+  const ownedByOther = ownerQuery.data?.mine === false;
+  const ownerName = ownerQuery.data?.submittedBy?.name ?? "another teacher";
+  // The parent rebuilds the roster wrapper per render — read through to the
+  // stable query-backed students array so downstream memos stay settled.
+  const students = roster?.ctx?.students ?? EMPTY_STUDENTS;
+  // Unique mascot per student — same pool/assignment as the gradebook
+  // encode + score views so sprites stay stable per student.
+  const mascotById = React.useMemo(
+    () =>
+      assignUniqueMascots(
+        students.map((s) => ({ id: s.studentId, name: s.name, lrn: s.lrn })),
+      ),
+    [students],
+  );
   const serverMarks = React.useMemo(() => marksQuery.data ?? {}, [marksQuery.data]);
-  // Section correctness first: when the picked card's section is not the
-  // loaded one (mid-switch with kept previous data), the sheet loads —
-  // another section's roster is never presented as the current sheet.
-  // Same-section background refetches (realtime invalidations) keep the
-  // sheet visible since the ids already match.
-  const switchingSection =
-    !!roster?.requestedSectionId && effectiveCtx?.sectionId !== roster.requestedSectionId;
-  // Section roster drives loading. Marks only block when actually fetching
-  // (a disabled marks query is idle — no section/subject yet — and must not
-  // hold the sheet in skeleton).
-  const marksLoading = marksQuery.fetchStatus !== "idle" && marksQuery.isPending;
+  const switchingSection = !!roster?.requestedSectionId && sectionId !== roster.requestedSectionId;
+  // With keepPreviousData, switching subject/slot/date serves the previous
+  // sheet as placeholder — treat that as loading so the skeleton shows
+  // instead of flashing the wrong sheet's marks. Same-key background
+  // revalidates (real data present, not placeholder) render normally.
+  const marksLoading =
+    (marksQuery.fetchStatus !== "idle" && marksQuery.isPending) || marksQuery.isPlaceholderData;
   const loading = switchingSection || (roster?.pending ?? false) || marksLoading;
   const loadError = (roster?.error ?? false) || (hasSection && marksQuery.isError);
-
-  // Local picks layer on top of server marks (a new date/section/subject
-  // is a new sheet — swap to its stored picks). Picks persist per sheet in
-  // localStorage, so a refresh, lost connection, or closed tab never drops
-  // marking progress. Submit wiring comes with the marking rebuild.
-  const sheetKey = `${date}|${effectiveCtx?.sectionId ?? "none"}|${subjectId ?? "none"}|${slot}`;
-  const [seenKey, setSeenKey] = React.useState(sheetKey);
-  const [marks, setMarks] = React.useState<Record<string, SheetStatus>>(() =>
-    loadStoredMarks(sheetKey),
-  );
-  if (seenKey !== sheetKey) {
-    setSeenKey(sheetKey);
-    setMarks(loadStoredMarks(sheetKey));
-  }
-
+  const sheetKey = `${date}|${sectionId ?? "none"}|${subjectId ?? "none"}|${slot}`;
+  const { marks, setMarks, pick, merged } = useRosterMarks(sheetKey, serverMarks);
+  const dock = useDock();
+  const dockRef = React.useRef(dock);
   React.useEffect(() => {
-    persistStoredMarks(sheetKey, marks);
-  }, [sheetKey, marks]);
-
-  const pick = React.useCallback((id: string, status: SheetStatus) => {
-    setMarks((prev) => ({ ...prev, [id]: status }));
-  }, []);
-
+    dockRef.current = dock;
+  }, [dock]);
   const [saveOpen, setSaveOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
-
-  // Save opens from the header Save button (never while locked).
   const openSave = () => {
-    if (live.locked) return;
+    if (live.locked || ownedByOther) return;
     setSaveError(null);
     setSaveOpen(true);
   };
-
-  // Same record set as the advisory matrix: every subject teacher's
-  // takes for this subject — never fabricated, blanks stay blank.
-  // Meetup keys come from the shared hook so the sheet and the navbar date
-  // picker agree on which dates are markable.
-  const {
-    days: subjectDays,
-    dateKeys,
-    isPending: meetupPending,
-    hasTerm: hasMeetupTerm,
-  } = useMeetupDates(effectiveCtx?.sectionId ?? undefined, subjectId, meetupDays);
-  const meetupDates = dateKeys ?? [];
-
-  // Per-student day statuses, indexed once (worst status wins a day).
+  const { days: subjectDays, dateKeys, isPending: meetupPending, hasTerm: hasMeetupTerm } = useMeetupDates(sectionId ?? undefined, subjectId, meetupDays);
+  const meetupDates = dateKeys ?? EMPTY_MEETUP_DATES;
+  // Prefetch prev/next meetup dates so picker hops render instantly from
+  // cache. Skips entries that are already fresh; save-path invalidation
+  // (attendance-sheet-marks prefix) clears these on submit.
+  // meetupDates identity is memoized upstream — depend on a joined key so a
+  // new array with the same dates can't retrigger prefetches every render.
+  const meetupDatesKey = meetupDates.join("|");
+  React.useEffect(() => {
+    if (!teacherId || !subjectId || !sectionId || meetupDates.length === 0) return;
+    const idx = meetupDates.indexOf(date);
+    if (idx < 0) return;
+    for (const neighbor of [meetupDates[idx - 1], meetupDates[idx + 1]]) {
+      if (!neighbor) continue;
+      const key = sheetMarksKey(teacherId, neighbor, subjectId, slot, sectionId, termKey);
+      const state = queryClient.getQueryState(key);
+      if (state && Date.now() - state.dataUpdatedAt < MARKS_STALE_MS) continue;
+      void queryClient.prefetchQuery({
+        queryKey: key,
+        queryFn: () => fetchSheetMarks(`${neighbor}T00:00:00Z`, subjectId, slot, sectionId),
+        staleTime: MARKS_STALE_MS,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, teacherId, termKey, date, meetupDatesKey, subjectId, slot, sectionId]);
   const dayStatusByStudent = React.useMemo(() => {
     const map = new Map<string, Map<string, SheetStatus>>();
     for (const r of subjectDays?.records ?? []) {
@@ -395,386 +179,319 @@ export function AttendanceRosterTable({
     }
     return map;
   }, [subjectDays]);
-
-  const dayStatusOf = React.useCallback(
-    (id: string, day: string): SheetStatus | null =>
-      dayStatusByStudent.get(id)?.get(day) ?? null,
-    [dayStatusByStudent],
-  );
-
-  const blocksInfo = React.useMemo<BlocksInfo>(
-    () => ({
-      dates: meetupDates,
-      statusOf: dayStatusOf,
-      pastDue: (day: string) =>
-        day < live.todayKey ||
-        (day === live.todayKey && live.todayEnd !== null && live.nowMin >= live.todayEnd),
-      loading: meetupPending,
-      hasTerm: hasMeetupTerm,
-    }),
-    [meetupDates, dayStatusOf, meetupPending, hasMeetupTerm, live],
-  );
-
-  const baseColumns = React.useMemo(
-    () => makeBaseColumns(pick, blocksInfo, live.locked),
-    // openSave reads the current lock flag; columns rebuild with it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pick, blocksInfo, live.locked],
-  );
-
-  // Attendance % = present ÷ elapsed meetups for THIS subject — the same
-  // basis as the advisory matrix, so both views always agree. Elapsed
-  // meetups with no record count as absent; nothing elapsed renders blank.
+  const dayStatusOf = React.useCallback((id: string, day: string): SheetStatus | null => dayStatusByStudent.get(id)?.get(day) ?? null, [dayStatusByStudent]);
+  const liveTodayKey = live.todayKey;
+  const liveTodayEnd = live.todayEnd;
+  const liveNowMin = live.nowMin;
+  const blocksInfo = React.useMemo<BlocksInfo>(() => ({
+    dates: meetupDates,
+    statusOf: dayStatusOf,
+    pastDue: (day: string) => day < liveTodayKey || (day === liveTodayKey && liveTodayEnd !== null && liveNowMin >= liveTodayEnd),
+    loading: meetupPending,
+    hasTerm: hasMeetupTerm,
+  }), [meetupDates, dayStatusOf, meetupPending, hasMeetupTerm, liveTodayKey, liveTodayEnd, liveNowMin]);
   const data = React.useMemo<RosterRow[]>(() => {
     const elapsed = meetupDates.filter((d) => d <= live.todayKey);
-    return students.map((s) => {
+    // Missing record means absent once the subject time is done: any past
+    // meetup date, or today once today's class has ended.
+    const sheetPastDue =
+      date < live.todayKey ||
+      (date === live.todayKey && live.todayEnd !== null && live.nowMin >= live.todayEnd);
+    const ordered = [...students].sort((a, b) => compareSurnameFirst(a.name, b.name));
+    return ordered.map((s) => {
+      const admExempt = s.admExempt ?? false;
       const days = dayStatusByStudent.get(s.studentId);
       let present = 0;
       for (const d of elapsed) {
         if (days?.get(d) === "present") present += 1;
       }
-      return {
-        id: s.studentId,
-        name: s.name,
-        lrn: s.lrn,
-        rate: elapsed.length === 0 ? null : present / elapsed.length,
-        status: marks[s.studentId] ?? serverMarks[s.studentId] ?? "present",
-      };
+      // Real saved status first; when nothing was ever recorded and the
+      // meetup time has passed, display absent (implied, not saved).
+      const saved = merged[s.studentId] ?? null;
+      const impliedAbsent = saved === null && sheetPastDue;
+      return { id: s.studentId, name: formatSurnameFirst(s.name), lrn: s.lrn, rate: admExempt || elapsed.length === 0 ? null : present / elapsed.length, status: admExempt ? null : saved ?? (sheetPastDue ? "absent" : null), impliedAbsent: admExempt ? false : impliedAbsent, admExempt };
     });
-  }, [students, serverMarks, marks, meetupDates, dayStatusByStudent, live.todayKey]);
-
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  }, [students, merged, meetupDates, dayStatusByStudent, live.todayKey, live.todayEnd, live.nowMin, date]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [blocksMode, setBlocksMode] = React.useState(false);
-
-  const columns = React.useMemo<ColumnDef<RosterRow>[]>(() => baseColumns, [baseColumns]);
-
-  // Blocks mode collapses the table to Student + Meetups only.
-  const effectiveVisibility: VisibilityState = blocksMode
-    ? { name: true, rate: false, status: false, blocks: true }
-    : { blocks: false };
-
-  const table = useReactTable({
-    data,
-    columns,
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility: effectiveVisibility,
-    },
-  });
-
-  const saveCounts = React.useMemo(() => {
+  // Data arrives surname-sorted; the header only filters by name now.
+  const columns = React.useMemo<ColumnDef<RosterRow>[]>(
+    () => [{ accessorKey: "name" }],
+    [],
+  );
+  const effectiveVisibility = React.useMemo<VisibilityState>(
+    () =>
+      (blocksMode
+        ? { name: true, rate: false, status: false, blocks: true }
+        : { name: true, rate: true, status: true, blocks: false }) as VisibilityState,
+    [blocksMode],
+  );
+  const table = useReactTable({ data, columns, getRowId: (row) => row.id, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getFilteredRowModel: getFilteredRowModel(), state: { columnFilters, columnVisibility: effectiveVisibility } });
+  // Dirty-only: send just the rows the teacher actually changed since the last
+  // save (local pick differs from the server mark). Unmarked rows are never
+  // submitted.
+  const delta = React.useMemo(
+    () =>
+      data.filter(
+        (d): d is RosterRow & { status: SheetStatus } =>
+          !d.admExempt &&
+          d.status !== null && marks[d.id] !== undefined && marks[d.id] !== serverMarks[d.id],
+      ),
+    [data, marks, serverMarks],
+  );
+  const deltaBreakdown = React.useMemo(() => {
     const c: Record<SheetStatus, number> = { present: 0, absent: 0, late: 0, excused: 0 };
-    for (const d of data) c[d.status] += 1;
-    return c;
-  }, [data]);
-  const saveBreakdown = (Object.keys(saveCounts) as SheetStatus[])
-    .filter((s) => saveCounts[s] > 0)
-    .map((s) => `${saveCounts[s]} ${s}`)
-    .join(", ");
-
+    for (const d of delta) c[d.status] += 1;
+    return (Object.keys(c) as SheetStatus[]).filter((s) => c[s] > 0).map((s) => `${c[s]} ${s}`).join(", ");
+  }, [delta]);
+  const deltaPills = React.useMemo(() => {
+    const c: Record<SheetStatus, number> = { present: 0, absent: 0, late: 0, excused: 0 };
+    for (const d of delta) c[d.status] += 1;
+    return (Object.keys(c) as SheetStatus[])
+      .filter((s) => c[s] > 0)
+      .map((s) => ({ status: s, count: c[s] }));
+  }, [delta]);
   async function handleSaveConfirm() {
-    const ctx = effectiveCtx;
+    const ctx = roster?.ctx ?? null;
     if (!ctx || !subjectId || saving) return;
-    setSaving(true);
-    setSaveError(null);
+    if (ownedByOther) {
+      setSaveError(`This meetup was already submitted by ${ownerName} — one teacher per meetup.`);
+      return;
+    }
+    if (delta.length === 0) {
+      setSaveError("No changes to save — update at least one status first.");
+      return;
+    }
+    // Shared Dock opens this tick and keeps settling even if the user
+    // navigates away mid-flight.
+    const count = delta.length;
+    const summary = deltaBreakdown;
+    let taskId: string | null = null;
     try {
-      const result = await submitSheet({
-        sectionId: ctx.sectionId,
-        termId: ctx.termId,
-        date: `${date}T00:00:00Z`,
-        subjectId,
-        assignmentId,
-        slot,
-        records: data.map((d) => ({ studentId: d.id, status: d.status })),
-      });
-      setMarks({});
-      setSaveOpen(false);
-      invalidateTeacher.marks();
-      toast.success({
-        title: "Attendance saved",
-        description: `${result.count} record${result.count === 1 ? "" : "s"} submitted.`,
-      });
+      taskId = dockRef.current.startTask({ kind: "attendance-save", title: "Saving attendance", description: `Saving ${count} record${count === 1 ? "" : "s"}…`, total: count });
     } catch {
-      setSaveError("Could not save attendance. Try again.");
+      taskId = null;
+    }
+    setSaveOpen(false);
+    setSaveError(null);
+    setSaving(true);
+    try {
+      const result = await submitSheet({ sectionId: ctx.sectionId, termId: ctx.termId, date: `${date}T00:00:00Z`, subjectId, assignmentId, slot, records: delta.map((d) => ({ studentId: d.id, status: d.status })) });
+      setMarks({});
+      try {
+        if (taskId) dockRef.current.completeTask(taskId, `${result.count} record${result.count === 1 ? "" : "s"} submitted${summary ? ` · ${summary}` : ""}`);
+      } catch {
+        /* ignore */
+      }
+      invalidateTeacher.marks();
+      toast.success({ title: "Attendance saved", description: `${result.count} record${result.count === 1 ? "" : "s"} submitted.` });
+    } catch (err) {
+      const message = apiErrorMessage(err, "Could not save attendance. Try again.");
+      const code =
+        (err as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error
+          ?.code ?? null;
+      try {
+        if (taskId) dockRef.current.failTask(taskId, message);
+      } catch {
+        /* ignore */
+      }
+      setSaveError(message);
+      toast.error({ title: "Could not save attendance", description: message });
+      if (code === "TERM_NOT_VERIFIED") {
+        // The server is authoritative on grants: snap local grant state to
+        // truth so the verify gate appears (marks stay local, nothing lost).
+        void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-me"] });
+        invalidateTeacher.schedule();
+      }
     } finally {
       setSaving(false);
     }
   }
-
-  // Geometry-matched skeleton: same card + header/filter row, four table
-  // columns (Student 220 two-line / Attendance 100 / Status 180 boxes /
-  // Meetups 360 dot strip), 8 rows, and pager footer as the loaded table.
+  const boardIcon = (
+    <span className="text-amber-500" aria-hidden>
+      <Users size={14} />
+    </span>
+  );
+  const sheetDesc = ownedByOther
+    ? `Submitted by ${ownerName} — one teacher per meetup, this sheet is read-only.`
+    : live.locked && live.message
+      ? live.message
+      : date === phTodayKey()
+        ? "Mark today's sheet for this subject and section."
+        : `Viewing the ${date} sheet for this subject and section.`;
+  const rows = table.getRowModel().rows;
   if (loading) {
     return (
       <section aria-label="Class attendance" className="flex min-w-0 flex-col gap-3">
-        <div className={assign.card} aria-busy="true" aria-label="Loading roster" aria-hidden>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <Skeleton className="h-6 w-40" />
-              <Skeleton className="mt-1 h-4 w-64" />
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Skeleton className="h-9 w-40" />
-              <Skeleton className="h-9 w-20" />
-              <Skeleton className="h-9 w-16" />
-            </div>
-          </div>
-          <div className="relative overflow-x-auto rounded-md border">
-            <div className="flex bg-muted/50" aria-hidden>
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 220 }} />
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 100 }} />
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 180 }} />
-              <Skeleton className="m-2 h-4 flex-1 rounded" />
-            </div>
+        <KanbanBoard
+          title="Class attendance"
+          icon={boardIcon}
+          description="Loading sheet…"
+          ariaLabel="Loading roster"
+        >
+          <div aria-busy="true" aria-label="Loading roster">
             {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div key={i} className="flex items-center gap-2 border-t px-3 py-2">
-                <div className="flex min-w-0 flex-col gap-1.5" style={{ width: 220 }}>
+              <div key={i} className={rowStyles.row} aria-hidden>
+                <Skeleton className="h-5 w-full rounded-md" />
+                <span className={rowStyles.sep}>|</span>
+                <span className={rowStyles.titleCell}>
                   <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-                <Skeleton className="h-5 w-12 rounded" style={{ width: 100 }} />
-                <div className="flex gap-1" style={{ width: 180 }}>
-                  <Skeleton className="h-7 flex-1 rounded" />
-                  <Skeleton className="h-7 flex-1 rounded" />
-                  <Skeleton className="h-7 flex-1 rounded" />
-                  <Skeleton className="h-7 flex-1 rounded" />
-                </div>
-                <div className="flex min-w-0 flex-1 items-center gap-1" aria-hidden>
-                  {Array.from({ length: 12 }).map((_, d) => (
-                    <Skeleton key={d} className="h-3 w-3 shrink-0 rounded-full" />
-                  ))}
-                </div>
+                  <Skeleton className="h-5 w-16 rounded-md" />
+                </span>
+                <span className={rowStyles.metaCell}>
+                  <Skeleton className="h-5 w-16 rounded-md" />
+                  <Skeleton className="h-5 w-12 rounded-md" />
+                  <Skeleton className="h-7 w-32 rounded-md" />
+                  <Skeleton className="h-6 w-6 rounded-full" />
+                </span>
               </div>
             ))}
           </div>
-          <div className="relative flex items-center justify-end space-x-2">
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-8 w-20" />
-          </div>
-        </div>
+        </KanbanBoard>
       </section>
     );
   }
-
   if (loadError) {
-    return (
-      <p role="alert" className="text-sm text-destructive">
-        Could not load the class roster.
-      </p>
-    );
+    return (<p role="alert" className="text-sm text-destructive">Could not load the class roster.</p>);
   }
-
-  /* Same data-table pattern as the overview At-Risk Advisees table:
-     section wrapper, assign.card, title + desc header with the filter on
-     the right, fixed table, h-24 filtered-empty, count footer. The sheet
-     lists every enrolled student (no pagination); only the columns differ
-     (marking needs Status / Attendance / Meetups). */
+  const headerActions = (
+    <InputGroup className="h-8 w-40 shrink-0 rounded-[16px] text-xs sm:w-48">
+      <InputGroupInput
+        placeholder="Filter students..."
+        value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+        onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
+        aria-label="Filter students"
+        className="h-8 text-xs"
+      />
+      <InputGroupAddon><SearchIcon size={13} /></InputGroupAddon>
+    </InputGroup>
+  );
   return (
     <section aria-label="Class attendance" className="flex min-w-0 flex-col gap-3">
-    {data.length === 0 ? (
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className="relative">
-          <h2 className={styles.sectionTitle}>Class attendance</h2>
-          <p className={styles.sectionDesc}>
-            {date === phTodayKey()
-              ? "Mark today's sheet for this subject and section."
-              : `Viewing the ${date} sheet for this subject and section.`}
-          </p>
-        </div>
-        <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-          <span
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-            aria-hidden="true"
-          >
-            <Users size={24} className="text-muted-foreground" />
-          </span>
-          <p className="font-medium">No students yet</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Students will appear here once they are enlisted in this section.
-          </p>
-        </div>
-      </div>
-    ) : (
-    <div className={assign.card}>
-      <span className={assign.glowClip} aria-hidden="true">
-        <span className={assign.cardGlow} />
-      </span>
-      <div className="relative flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className={styles.sectionTitle}>Class attendance</h2>
-          <p className={styles.sectionDesc}>
-            {date === phTodayKey()
-              ? "Mark today's sheet for this subject and section."
-              : `Viewing the ${date} sheet for this subject and section.`}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <InputGroup className="max-w-40 shrink-0">
-            <InputGroupInput
-              placeholder="Filter students..."
-              value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-              onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-              aria-label="Filter students"
-            />
-            <InputGroupAddon>
-              <SearchIcon />
-            </InputGroupAddon>
-          </InputGroup>
-          <Button
-            variant={blocksMode ? "default" : "outline"}
-            onClick={() => setBlocksMode((v) => !v)}
-            aria-pressed={blocksMode}
-            title="Toggle meetup blocks view"
-            className={blocksMode ? "opacity-70" : undefined}
-          >
-            Blocks
-          </Button>
-          <Button onClick={openSave} disabled={live.locked}>
-            Save
-          </Button>
-        </div>
-      </div>
-      <div className="relative overflow-x-auto rounded-md border">
-        <Table className="w-full table-fixed">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={{ width: header.getSize() }}
-                    onClick={header.column.getToggleSortingHandler()}
-                    className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{ width: cell.column.getSize() }}
-                      className="truncate"
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No students match your search.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="relative flex items-center justify-end space-x-2">
-        <div className="text-muted-foreground flex-1 text-sm">
-          {table.getFilteredRowModel().rows.length} student
-          {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
-        </div>
-      </div>
-    </div>
-    )}
-      {live.message && live.tone !== "lock" ? (
-        <div
-          role="note"
-          aria-label={live.message}
-          className={`${assign.card} ${sheetStyles.floatCard}`}
-          style={{
-            position: "fixed",
-            right: "1rem",
-            bottom: "1rem",
-            zIndex: 40,
-            width: "19rem",
-            maxWidth: "calc(100vw - 2rem)",
-            borderColor: "color-mix(in oklch, #f59e0b 45%, transparent)",
-            background:
-              "linear-gradient(135deg, color-mix(in oklch, #f59e0b 26%, var(--card)), color-mix(in oklch, #d9770f 18%, var(--card)))",
-          }}
-        >
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex items-center gap-3">
-            <span
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-500/15"
-              aria-hidden="true"
-            >
-              <Clock size={20} className="text-amber-500" />
-            </span>
-            <div className="min-w-0">
-              <h3 className="font-semibold">
-                {live.message.includes("live now") ? "Live now" : "Editable"}
-              </h3>
-              <p className="text-xs text-muted-foreground">{live.message}</p>
+      <KanbanBoard
+        title="Class attendance"
+        icon={boardIcon}
+        actions={data.length === 0 ? undefined : headerActions}
+        description={sheetDesc}
+        footer={
+          data.length === 0 ? undefined : (
+            <div className="flex items-center justify-between gap-2 px-1 pb-1">
+              <span className="text-sm text-muted-foreground">
+                {rows.length} student{rows.length === 1 ? "" : "s"}
+              </span>
+              <Button size="sm" className="h-6 px-2.5 text-xs" onClick={openSave} disabled={live.locked || ownedByOther || delta.length === 0} title={ownedByOther ? `Submitted by ${ownerName} — one teacher per meetup` : delta.length === 0 ? "Update at least one status to enable saving" : undefined}>Save{delta.length > 0 ? ` (${delta.length})` : ""}</Button>
             </div>
+          )
+        }
+      >
+        {data.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 px-1 py-6 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted" aria-hidden="true"><Users size={24} className="text-muted-foreground" /></span>
+            <p className="font-medium">No students yet</p>
+            <p className="max-w-sm text-sm text-muted-foreground">Students will appear here once they are enlisted in this section.</p>
           </div>
-        </div>
-      ) : null}
-      {saveOpen ? (
-        <CardModal
-          open
-          onClose={() => {
-            if (!saving) setSaveOpen(false);
-          }}
-          dismissable={!saving}
-          size="sm"
-          title="Save attendances?"
-          description={
-            <>
-              Submits {data.length} student{data.length === 1 ? "" : "s"}
-              {saveBreakdown ? ` — ${saveBreakdown}` : ""} for this sheet.
-            </>
-          }
-        >
-          {saveError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {saveError}
-            </p>
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="destructive" onClick={() => setSaveOpen(false)} disabled={saving}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveConfirm} disabled={saving} aria-busy={saving || undefined}>
-              {saving ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" aria-hidden />
-                  <span aria-live="polite">Saving…</span>
-                </>
-              ) : (
-                "Save attendances"
-              )}
-            </Button>
+        ) : rows.length === 0 ? (
+          <div className="flex w-full justify-center px-1 py-6">
+            <InsightCallout role="status" className="w-full max-w-xl text-left">
+              <strong>No students match your search.</strong> Try a different name
+              or LRN — or clear the filter to see everyone.
+            </InsightCallout>
           </div>
-        </CardModal>
-      ) : null}
+        ) : (
+          <ul
+            className={`${rowStyles.list} ${rowStyles.listBleed}`}
+            style={{ "--row-list-gutter": "0.625rem" } as React.CSSProperties}
+            aria-label="Class attendance roster"
+          >
+            {rows.map((row) => {
+              const r = row.original;
+              const pill = r.status ? MARK_PILL[r.status] : null;
+              const pillLabel = pill ? pill.label : "Unmarked";
+              const pct = r.rate === null ? "—" : `${Math.round(r.rate * 100)}%`;
+              return (
+                <li
+                  key={r.id}
+                  className={rowStyles.row}
+                  aria-label={`${r.name}, ${pillLabel}, ${r.admExempt ? "attendance exempt" : `attendance ${pct}`}`}
+                >
+                  {!blocksMode || pill ? (
+                    <span className={`${PILL_BASE} w-fit max-w-full justify-center ${pill ? pill.tone : UNMARKED_PILL}`}>
+                      {pillLabel}
+                    </span>
+                  ) : (
+                    <span aria-hidden />
+                  )}
+                  <span className={rowStyles.sep} aria-hidden>
+                    |
+                  </span>
+                  <span className={rowStyles.titleCell}>
+                    <StudentMascot
+                      name={r.name}
+                      seed={r.lrn}
+                      character={mascotById.get(r.id)}
+                      size={28}
+                    />
+                    <span className={rowStyles.title} title={r.name}>
+                      {r.name}
+                    </span>
+                    <Pill
+                      tone="neutral"
+                      label="LRN"
+                      className="min-w-0 max-w-full truncate tabular-nums"
+                      title={r.lrn}
+                    >
+                      {r.lrn}
+                    </Pill>
+                    {r.admExempt ? (
+                      <Pill
+                        tone="amber"
+                        label="ADM case"
+                        title="Signed ADM case — seat-time attendance is exempt; module work is the evidence"
+                        className="shrink-0"
+                      >
+                        ADM
+                      </Pill>
+                    ) : null}
+                  </span>
+                  <span className={rowStyles.metaCell}>
+                    {r.admExempt ? (
+                      <span className="text-xs italic text-muted-foreground">
+                        Exempt — not marked
+                      </span>
+                    ) : blocksMode ? (
+                      <span className="w-[22.5rem] max-w-full flex-none">
+                        <MeetupBlocksCell
+                          dates={blocksInfo.dates}
+                          statusOf={blocksInfo.statusOf}
+                          pastDue={blocksInfo.pastDue}
+                          loading={blocksInfo.loading}
+                          hasTerm={blocksInfo.hasTerm}
+                          studentId={r.id}
+                        />
+                      </span>
+                    ) : (
+                      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <span
+                          className={`${PILL_BASE} shrink-0 gap-1 tabular-nums ${r.rate === null ? UNMARKED_PILL : ratePillTone(r.rate)}`}
+                          title={r.rate === null ? "No meetups yet" : `Attendance rate ${pct}`}
+                        >
+                          {pct}
+                        </span>
+                        <StatusBoxes
+                          value={r.status}
+                          onPick={(s) => pick(r.id, s)}
+                          disabled={live.locked || ownedByOther}
+                          impliedAbsent={r.impliedAbsent}
+                        />
+                      </span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </KanbanBoard>
+      <SaveAttendanceKanban open={saveOpen} saving={saving} saveError={saveError} count={delta.length} breakdown={deltaPills} onClose={() => setSaveOpen(false)} onConfirm={() => void handleSaveConfirm()} />
     </section>
   );
 }

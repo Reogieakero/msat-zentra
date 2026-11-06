@@ -10,6 +10,8 @@ export type BackendSubjectGrade = {
 export type BackendStudentRow = {
   studentId: string;
   name: string;
+  lrn: string;
+  mascot?: string | null;
   overallAverage: number;
   subjects: BackendSubjectGrade[];
 };
@@ -18,6 +20,8 @@ export type BackendSectionRow = {
   sectionId: string;
   section: string;
   grade: string;
+  /** Adviser has shared student data for this section (principal gate). */
+  shared?: boolean;
   avgTransmuted: number;
   students: BackendStudentRow[];
 };
@@ -34,6 +38,16 @@ export type CellData = {
   below: number;
 };
 
+/** Adviser-shared learner with no grade record yet (roster identity only). */
+export type UngradedStudent = {
+  studentId: string;
+  name: string;
+  lrn: string;
+  mascot?: string | null;
+  section: string;
+  grade: string;
+};
+
 export type AttentionItem = {
   sectionId: string;
   section: string;
@@ -43,7 +57,6 @@ export type AttentionItem = {
   below: number;
 };
 
-/** Grade-filter sentinel for the live academic trend (all grade levels). */
 export const ALL_GRADES = "__all__";
 
 export function gradeSortKey(grade: string): number {
@@ -55,7 +68,6 @@ export function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-/** Green shades for passing, solid red only for below-75. */
 export function avgStyle(avg: number | null): React.CSSProperties {
   if (avg === null) {
     return {

@@ -63,8 +63,9 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DragAlongCell, DraggableHeader } from "@/components/data-table/drag-columns";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { riskBadgeVariant } from "@/lib/risk/status";
-import type { AdvisoryStatusRow } from "./teacher-overview-data";
+import type { AdvisoryStatusRow } from "@/services/teacher/overview.types";
 import styles from "./teacher-overview-advisory.module.css";
 
 type StatusFilter = "" | AdvisoryStatusRow["riskLevel"];
@@ -200,10 +201,6 @@ interface TeacherOverviewAdvisoryProps {
   students: AdvisoryStatusRow[];
 }
 
-/* Advisory-students card as a data table (data-table5 pattern: sortable +
-   draggable columns, name/status filters, column visibility, row
-   selection, pagination). Header keeps the title, privacy note, and the
-   status count. */
 export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -262,7 +259,7 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
       const newOrder = typeof updater === "function" ? updater(fullColumnOrder) : updater;
       setColumnOrder(newOrder.filter((id: string) => id !== "select" && id !== "actions"));
     },
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageSize: PAGE_SIZE } },
     state: {
       sorting,
       columnFilters,
@@ -272,7 +269,6 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
     },
   });
 
-  // Keep the status dropdown and the table column filter in sync.
   const setStatusFilter = (next: StatusFilter) => {
     setStatus(next);
     table.getColumn("riskLevel")?.setFilterValue(next === "" ? undefined : next);
@@ -428,28 +424,15 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
               </DndContext>
             </div>
             <div className="flex items-center justify-end space-x-2">
-              <div className="text-muted-foreground flex-1 text-sm">
+              <div className="text-muted-foreground flex-1 text-sm" aria-live="polite">
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected.
               </div>
-              <div className="space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  Next
-                </Button>
-              </div>
+              <Pagination
+                currentPage={table.getState().pagination.pageIndex + 1}
+                totalItems={table.getFilteredRowModel().rows.length}
+                onPageChange={(p) => table.setPageIndex(p - 1)}
+              />
             </div>
           </div>
         )}

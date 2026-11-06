@@ -1,26 +1,6 @@
 import type { Request } from "express";
 import { prisma } from "./prisma.js";
-
-/**
- * Global active term context.
- *
- * Login → user picks School Year + Term → the client stores it
- * (`zentra.activeTerm`) and sends it on every API request via the
- * `x-school-year-id` / `x-term-id` headers (see frontend `apiClient`).
- * All reads are scoped to that selection and all writes are saved under
- * it — pages never ask for year/term again.
- *
- * Resolution order per request:
- *  1. Explicit per-request override (`?schoolYearId=` / `?termId=` query
- *     params, used by cross-term analytics views). A `termId` always wins
- *     over a bare `schoolYearId`.
- *  2. Session scope headers (`x-school-year-id` / `x-term-id`).
- *  3. Fallback: the database-active school year + its first term
- *     (preserves legacy behavior for callers without a selection).
- *
- * Invalid ids never fail the request — they fall through to the next rule
- * so a stale stored selection degrades to the active year instead of 4xx.
- */
+import { canSteerTerm } from "./roles.js";
 
 export interface TermScope {
   schoolYearId: string;
@@ -53,12 +33,25 @@ function header(req: Request, name: string): string | undefined {
   return single(req.headers[name]);
 }
 
-export async function resolveTermScope(req: Request): Promise<TermScope | null> {
-  // Per-request override wins (analytics views spanning terms).
-  const qYear = single((req.query as Record<string, unknown>).schoolYearId);
-  const qTerm = single((req.query as Record<string, unknown>).termId);
-  const hYear = header(req, "x-school-year-id");
-  const hTerm = header(req, "x-term-id");
+export async function resolveTermScope(
+  req: Request,
+  role?: string | null,
+): Promise<TermScope | null> {
+  // Teacher roles steer the term per desk; the principal steers it once in
+  // Settings and every principal page follows the pick. Every other role —
+  // and unauthenticated callers — always resolves server-side (active school
+  // year → current term), so their desks can never be steered by (or leak)
+  // another desk's term selection.
+  const steersTerm = canSteerTerm(role);
+
+  const qYear = steersTerm
+    ? single((req.query as Record<string, unknown>).schoolYearId)
+    : undefined;
+  const qTerm = steersTerm
+    ? single((req.query as Record<string, unknown>).termId)
+    : undefined;
+  const hYear = steersTerm ? header(req, "x-school-year-id") : undefined;
+  const hTerm = steersTerm ? header(req, "x-term-id") : undefined;
 
   const termId = qTerm ?? hTerm;
   const yearId = qYear ?? hYear;
@@ -135,11 +128,9 @@ export async function resolveTermScope(req: Request): Promise<TermScope | null> 
     };
   }
 
-  // No years/terms seeded yet.
   return null;
 }
 
-/** Scope attached by middleware, or null when no calendar exists yet. */
 export function getTermScope(req: Request): TermScope | null {
   return req.termScope ?? null;
 }
@@ -149,8 +140,6 @@ interface TermDateRow {
   endDate: Date | null;
 }
 
-/** Prefer the term containing today; fall back to the first term. Terms
- *  without dates never win over dated ones covering today. */
 export function pickCurrentTerm<T extends TermDateRow>(terms: T[]): T | null {
   if (terms.length === 0) return null;
   const today = new Date().toISOString().slice(0, 10);
@@ -163,34 +152,19 @@ export function pickCurrentTerm<T extends TermDateRow>(terms: T[]): T | null {
   );
 }
 
-/**
- * Optional scope argument for service-layer functions. Routes pass
- * `req.termScope ?? undefined`; services fall back to the database-active
- * year/term when it is absent so legacy callers keep working.
- */
 export interface TermScopeInput {
   schoolYearId?: string | null;
   termId?: string | null;
 }
 
-/** Term id for reads/writes — null only when no school year exists at all. */
 export function scopedTermId(req: Request): string | null {
   return req.termScope?.termId ?? null;
 }
 
-/** School-year id for reads/writes — null only when none exists at all. */
 export function scopedSchoolYearId(req: Request): string | null {
   return req.termScope?.schoolYearId ?? null;
 }
 
-/**
- * Sync Prisma `where` fragment scoping a school-year-owned row (Section,
- * Term, …) to the session's active School Year. Falls back to the legacy
- * database-active year when the request carries no scope.
- *
- * Usage: `where: schoolYearWhere(req)` — a drop-in for
- * `where: { schoolYear: { isActive: true } }`.
- */
 export function schoolYearWhere(
   req: Request,
 ): { schoolYearId: string } | { schoolYear: { isActive: boolean } } {
@@ -207,11 +181,6 @@ export interface ScopedTermRow {
   schoolYearName: string | null;
 }
 
-/**
- * The request's active term as a row-shaped object. Prefers the session
- * scope (no extra query); falls back to the database-active year's first
- * term for legacy callers. Null only when no calendar exists at all.
- */
 export async function scopedTermRow(req: Request): Promise<ScopedTermRow | null> {
   const s = req.termScope;
   if (s) {
@@ -249,10 +218,6 @@ export async function scopedTermRow(req: Request): Promise<ScopedTermRow | null>
     : null;
 }
 
-/**
- * The request's active school-year id. Prefers the session scope;
- * falls back to the database-active year. Null when none exists.
- */
 export async function scopedYearId(req: Request): Promise<string | null> {
   if (req.termScope) return req.termScope.schoolYearId;
   const y = await prisma.schoolYear.findFirst({

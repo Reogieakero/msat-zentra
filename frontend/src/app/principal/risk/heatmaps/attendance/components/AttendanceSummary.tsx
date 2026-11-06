@@ -4,9 +4,14 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, TrendingUp, TriangleAlert, Users } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PrincipalPageHeader } from "../../../../components/PrincipalPageHeader";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import styles from "./attendance.module.css";
+
+/** Decorative sprite pinned per metric — same treatment as the overview strip. */
+const MASCOTS = ["owl", "bear", "rocket", "knight"] as const;
 
 interface SectionStat {
   sectionId: string;
@@ -17,6 +22,8 @@ interface TrendPoint {
   date: string;
   rate: number;
 }
+
+const SHARED_PARAMS = { sharedOnly: true } as const;
 
 function trendDirection(points: TrendPoint[]): "up" | "down" | "flat" {
   if (points.length < 4) return "flat";
@@ -31,12 +38,9 @@ function trendDirection(points: TrendPoint[]): "up" | "down" | "flat" {
   return "flat";
 }
 
-/** Page header + KPI strip. Queries share cache keys with the views below
- *  (SectionAverages, SchoolTrend), so no extra network is spent — and the
- *  30s poll keeps every number live with no manual refresh. */
 export function AttendanceSummary() {
   const statsQuery = useQuery({
-    queryKey: ["attendance-section-averages"],
+    queryKey: ["attendance-section-averages", "shared"],
     queryFn: async () => {
       const res = await apiClient.get<{
         sections: SectionStat[];
@@ -44,7 +48,7 @@ export function AttendanceSummary() {
         schoolDays: number;
         totalEnrolled: number;
         term?: { id: string; termNumber: number };
-      }>("/api/attendance/section-stats");
+      }>("/api/attendance/section-stats", { params: SHARED_PARAMS });
       return res.data;
     },
     staleTime: 30_000,
@@ -52,11 +56,11 @@ export function AttendanceSummary() {
     refetchOnWindowFocus: false,
   });
   const attentionQuery = useQuery({
-    queryKey: ["attendance-needs-attention"],
+    queryKey: ["attendance-needs-attention", "shared"],
     queryFn: async () => {
       const res = await apiClient.get<{
         students: unknown[];
-      }>("/api/attendance/at-risk-students");
+      }>("/api/attendance/at-risk-students", { params: SHARED_PARAMS });
       return res.data;
     },
     staleTime: 30_000,
@@ -85,81 +89,147 @@ export function AttendanceSummary() {
         : "Steady";
 
   return (
-    <>
-      <PrincipalPageHeader
-        title="Attendance Heatmap"
-        description="School-wide daily attendance — a student counts present for a day only when present in every subject offered that day. Sections and students under 80% need attention."
-      />
+    <div
+      className={styles.kpiGrid}
+      aria-busy={loading || undefined}
+      aria-label="Attendance overview"
+    >
       {loading ? (
-        <div className={styles.kpiGrid} aria-hidden>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className={styles.kpiSkel} />
-          ))}
-        </div>
+        Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className={styles.kpiSkel} />
+        ))
       ) : (
-        <div className={styles.kpiGrid}>
-          <div className={styles.kpiCard}>
-            <span className={styles.glowClip} aria-hidden="true">
-              <span className={styles.cardGlow} />
-            </span>
-            <span className={styles.kpiTop}>
-              <TriangleAlert
-                className={styles.kpiIconBad}
-                size={16}
-                aria-hidden
-              />
-              <span className={styles.kpiValue}>
-                {below.toLocaleString()}
+        <>
+          <KanbanBoard
+            className={styles.board}
+            title="Sections below 80%"
+            icon={
+              <span className={styles.icon} aria-hidden="true">
+                <TriangleAlert size={14} />
               </span>
-            </span>
-            <span className={styles.kpiLabel}>Sections below 80%</span>
-            <span className={styles.kpiSub}>
-              of {sections.length.toLocaleString()} sections
-            </span>
-          </div>
-          <div className={styles.kpiCard}>
-            <span className={styles.glowClip} aria-hidden="true">
-              <span className={styles.cardGlow} />
-            </span>
-            <span className={styles.kpiTop}>
-              <Users className={styles.kpiIconBad} size={16} aria-hidden />
-              <span className={styles.kpiValue}>{atRisk.toLocaleString()}</span>
-            </span>
-            <span className={styles.kpiLabel}>Students below 80%</span>
-            <span className={styles.kpiSub}>grouped by grade below</span>
-          </div>
-          <div className={styles.kpiCard}>
-            <span className={styles.glowClip} aria-hidden="true">
-              <span className={styles.cardGlow} />
-            </span>
-            <span className={styles.kpiTop}>
-              <TrendingUp
-                className={styles.kpiIcon}
-                size={16}
-                aria-hidden
-              />
-              <span className={styles.kpiValue}>{directionLabel}</span>
-            </span>
-            <span className={styles.kpiLabel}>School direction</span>
-            <span className={styles.kpiSub}>second half vs first half</span>
-          </div>
-          <div className={styles.kpiCard}>
-            <span className={styles.glowClip} aria-hidden="true">
-              <span className={styles.cardGlow} />
-            </span>
-            <span className={styles.kpiTop}>
-              <Activity className={styles.kpiIcon} size={16} aria-hidden />
-              <span className={styles.kpiValue}>
-                {enrolled.toLocaleString()}
+            }
+            ariaLabel="Sections below 80 percent"
+          >
+            <div className={styles.stat}>
+              <span className={styles.statTop}>
+                <span className={styles.statNumber}>
+                  {below.toLocaleString()}
+                </span>
+                <span className={styles.statMascot} aria-hidden="true">
+                  <StudentMascot
+                    name="Sections below 80%"
+                    character={MASCOTS[0]}
+                    size={36}
+                  />
+                </span>
               </span>
-            </span>
-            <span className={styles.kpiLabel}>Students enrolled</span>
-            <span className={styles.kpiSub}>
-              active-term headcount · roster-aware
-            </span>
-          </div>
-        </div>
+              <span className={styles.statHint}>Sections under target rate</span>
+              <div className={styles.kpiPills}>
+                <Pill tone="amber" label="Sections in scope">
+                  Of {sections.length.toLocaleString()} sections
+                </Pill>
+              </div>
+            </div>
+          </KanbanBoard>
+
+          <KanbanBoard
+            className={styles.board}
+            title="Students below 80%"
+            icon={
+              <span className={styles.icon} aria-hidden="true">
+                <Users size={14} />
+              </span>
+            }
+            ariaLabel="Students below 80 percent"
+          >
+            <div className={styles.stat}>
+              <span className={styles.statTop}>
+                <span className={styles.statNumber}>
+                  {atRisk.toLocaleString()}
+                </span>
+                <span className={styles.statMascot} aria-hidden="true">
+                  <StudentMascot
+                    name="Students below 80%"
+                    character={MASCOTS[1]}
+                    size={36}
+                  />
+                </span>
+              </span>
+              <span className={styles.statHint}>Learners below target rate</span>
+              <div className={styles.kpiPills}>
+                <Pill tone="amber" label="Breakdown">
+                  Grouped by grade below
+                </Pill>
+              </div>
+            </div>
+          </KanbanBoard>
+
+          <KanbanBoard
+            className={styles.board}
+            title="School direction"
+            icon={
+              <span className={styles.icon} aria-hidden="true">
+                <TrendingUp size={14} />
+              </span>
+            }
+            ariaLabel="School attendance direction"
+          >
+            <div className={styles.stat}>
+              <span className={styles.statTop}>
+                <span className={styles.statNumber}>{directionLabel}</span>
+                <span className={styles.statMascot} aria-hidden="true">
+                  <StudentMascot
+                    name="School direction"
+                    character={MASCOTS[2]}
+                    size={36}
+                  />
+                </span>
+              </span>
+              <span className={styles.statHint}>Term-to-date attendance trend</span>
+              <div className={styles.kpiPills}>
+                <Pill tone="amber" label="Comparison window">
+                  Second half vs first half
+                </Pill>
+              </div>
+            </div>
+          </KanbanBoard>
+
+          <KanbanBoard
+            className={styles.board}
+            title="Students enrolled"
+            icon={
+              <span className={styles.icon} aria-hidden="true">
+                <Activity size={14} />
+              </span>
+            }
+            ariaLabel="Students enrolled"
+          >
+            <div className={styles.stat}>
+              <span className={styles.statTop}>
+                <span className={styles.statNumber}>
+                  {enrolled.toLocaleString()}
+                </span>
+                <span className={styles.statMascot} aria-hidden="true">
+                  <StudentMascot
+                    name="Students enrolled"
+                    character={MASCOTS[3]}
+                    size={36}
+                  />
+                </span>
+              </span>
+              <span className={styles.statHint}>Total learners on the roll</span>
+              <div className={styles.kpiPills}>
+                <Pill tone="amber" label="Scope">
+                  Active-term headcount
+                </Pill>
+                <Pill tone="green" label="Data source">
+                  Adviser-shared
+                </Pill>
+              </div>
+            </div>
+          </KanbanBoard>
+        </>
       )}
-    </>
+    </div>
   );
 }

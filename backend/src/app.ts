@@ -1,8 +1,13 @@
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
+import { pinoHttp } from "pino-http";
 import { getEnv } from "./config/env.js";
 import { errorHandler, notFound } from "./lib/errors.js";
+import { logger } from "./lib/pino.js";
+import { prisma } from "./lib/prisma.js";
+import { authLimiter } from "./middleware/rateLimit.js";
+import { perfLog } from "./lib/perf.js";
 
 import authRoutes from "./modules/auth/auth.routes.js";
 import { attachTermScope } from "./middleware/termScope.js";
@@ -31,25 +36,42 @@ import guidanceRoutes from "./modules/guidance/guidance.routes.js";
 import nurseRoutes from "./modules/nurse/nurse.routes.js";
 import principalRoutes from "./modules/principal/principal.routes.js";
 import sessionsRoutes from "./modules/sessions/sessions.routes.js";
+import studentRoutes from "./modules/student/modules.routes.js";
 
 export function createApp() {
   const env = getEnv();
   const app = express();
   app.use(helmet());
   app.use(cors({ origin: [env.WEB_ORIGIN, env.MOBILE_ORIGIN], credentials: true }));
-  // Authenticated API responses carry user-/role-scoped (often sensitive)
-  // data. Never allow shared/public HTTP caching of them; freshness is
-  // managed by the database + client query invalidation instead.
+  if (env.NODE_ENV !== "test") {
+    app.use(
+      pinoHttp({
+        logger,
+
+        autoLogging: { ignore: (req) => req.url === "/health" },
+      })
+    );
+  }
+
   app.use("/api", (_req, res, next) => {
     res.setHeader("Cache-Control", "private, no-store");
     next();
   });
   app.use(express.json({ limit: "1mb" }));
+  // Request timing + payload-size instrumentation (no PII).
+  app.use("/api", perfLog);
 
-  app.get("/health", (_req, res) => res.json({ status: "ok" }));
-  app.use("/api/auth", authRoutes);
-  // Global active School Year + Term (Login → select → session scope).
-  // Resolves headers/query into req.termScope for every data route below.
+  app.get("/health", async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ status: "ok" });
+    } catch {
+      res.status(503).json({ status: "degraded" });
+    }
+  });
+
+  app.use("/api/auth", authLimiter, authRoutes);
+
   app.use("/api", attachTermScope);
   app.use("/api/grades", gradesRoutes);
   app.use("/api/attendance", attendanceRoutes);
@@ -76,6 +98,7 @@ app.use("/api/teacher/grading", gradingRoutes);
   app.use("/api/nurse", nurseRoutes);
   app.use("/api/principal", principalRoutes);
   app.use("/api/my-sessions", sessionsRoutes);
+  app.use("/api/student", studentRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
