@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { FileText, Info, Send } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import { Button } from "@/components/ui/button";
 import refStyles from "./referrals.module.css";
 
 function BamaMascot({ size = 14 }: { size?: number }) {
@@ -38,7 +37,7 @@ function ColumnHead({
   return (
     <div
       className="-mx-2.5 flex items-center justify-between gap-2 border-b border-border px-3.5 pb-2"
-      aria-label={action ? title : `${title}, ${count}`}
+      aria-label={count !== undefined && !action ? `${title}, ${count}` : title}
     >
       <span className="inline-flex min-w-0 items-center gap-1.5 text-[13px] font-semibold">
         {icon} <span className="truncate">{title}</span>
@@ -110,22 +109,12 @@ export function ReferralStarterKanban({
       aria-label="Referral starter actions"
     >
           <div
-            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
+            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5 [font-family:var(--font-inter)]"
             aria-label="New Referral"
           >
             <ColumnHead
               icon={<Send size={14} aria-hidden className="text-blue-500" />}
               title="New Referral"
-              action={
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-6 px-2 text-[11px]"
-                  onClick={onNewReferral}
-                >
-                  Refer now
-                </Button>
-              }
             />
             <button
               type="button"
@@ -154,17 +143,12 @@ export function ReferralStarterKanban({
           </div>
 
           <div
-            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
+            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5 [font-family:var(--font-inter)]"
             aria-label="Anecdotal Records"
           >
             <ColumnHead
               icon={<FileText size={14} aria-hidden className="text-amber-500" />}
               title="Anecdotal Records"
-              action={
-                <Button asChild variant="outline" className="h-6 px-2 text-[11px]">
-                  <Link href="/teacher/anecdotal">See all</Link>
-                </Button>
-              }
             />
             <ul className="flex min-w-0 flex-1 flex-col gap-2">
               <li className="flex min-w-0 flex-col">
@@ -179,19 +163,12 @@ export function ReferralStarterKanban({
           </div>
 
           <div
-            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
+            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5 [font-family:var(--font-inter)]"
             aria-label="Chat with Bama"
           >
             <ColumnHead
               icon={<BamaMascot size={16} />}
               title="Chat with Bama"
-              action={
-                <Button asChild variant="outline" className="h-6 px-2 text-[11px]">
-                  <Link href="/teacher/chat?standalone=1" target="_blank" rel="noopener noreferrer">
-                    Chat now
-                  </Link>
-                </Button>
-              }
             />
             <ul className="flex min-w-0 flex-1 flex-col gap-2">
               <li className="flex min-w-0 flex-col">
@@ -208,7 +185,7 @@ export function ReferralStarterKanban({
           </div>
 
           <div
-            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
+            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5 [font-family:var(--font-inter)]"
             aria-label={`Status Legend, ${STATUS_ENTRIES.length}`}
           >
             <ColumnHead

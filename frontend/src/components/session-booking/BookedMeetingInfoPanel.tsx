@@ -58,28 +58,34 @@ export function BookedMeetingInfoContent({ info }: { info: BookedMeetingInfo }) 
         <div className={styles.row}>
           <dt className={styles.rowLabel}>Date</dt>
           <dd className={styles.rowValue}>
-            <span className={styles.pill}>
+            <Pill tone="blue" label="Date">
               {formatManilaDateLong(info.datetime)}
-            </span>
+            </Pill>
           </dd>
         </div>
         <div className={styles.row}>
           <dt className={styles.rowLabel}>Time</dt>
           <dd className={styles.rowValue}>
-            <span className={styles.pill}>{formatManilaTime(info.datetime)}</span>
+            <Pill tone="blue" label="Time">
+              {formatManilaTime(info.datetime)}
+            </Pill>
           </dd>
         </div>
         <div className={styles.row}>
           <dt className={styles.rowLabel}>Venue</dt>
           <dd className={styles.rowValue}>
-            <span className={styles.pill}>{venueLabel(info.venue)}</span>
+            <Pill tone="blue" label="Venue">
+              {venueLabel(info.venue)}
+            </Pill>
           </dd>
         </div>
         {info.logbookRef ? (
           <div className={styles.row}>
             <dt className={styles.rowLabel}>Logbook</dt>
             <dd className={styles.rowValue}>
-              <span className={styles.pill}>{info.logbookRef}</span>
+              <Pill tone="neutral" label="Logbook ref">
+                {info.logbookRef}
+              </Pill>
             </dd>
           </div>
         ) : null}
@@ -95,12 +101,13 @@ export function BookedMeetingInfoContent({ info }: { info: BookedMeetingInfo }) 
             ) : (
               <span className={styles.invitees}>
                 {named.map((s, i) => (
-                  <span
+                  <Pill
                     key={s.id ?? `${s.fullName ?? "invitee"}-${i}`}
-                    className={styles.pill}
+                    tone="neutral"
+                    label="Invited staff"
                   >
                     {s.fullName}
-                  </span>
+                  </Pill>
                 ))}
               </span>
             )}

@@ -8,26 +8,6 @@
   min-height: 100%;
 }
 
-/* Railed layout (record-keeper): main stack + icon-only upload rail on the
-   right — same two-column shell as the overview page. */
-.pageRailed {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 2.75rem;
-  gap: 1rem;
-  align-items: start;
-  min-width: 0;
-  /* 0 padding: shell .main already gives exactly 16px gutters. */
-  padding: 0;
-  width: 100%;
-  min-height: 100%;
-}
-
-@media (max-width: 1023px) {
-  .pageRailed {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* Stacked layout: KPI tiles, upload card, records table. */
 .stack {
   display: flex;
@@ -94,7 +74,7 @@
 
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.75rem;
   min-width: 0;
 }
@@ -164,6 +144,69 @@
   color: var(--muted-foreground);
 }
 
+/* Upload banner — the fifth cell of the stats row. A CTA banner rather than
+   a stat card: amber dashed shell, centered icon + label. */
+.kpiUpload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px dashed color-mix(in oklch, #f59e0b 55%, transparent);
+  border-radius: var(--radius-xl);
+  background-color: color-mix(in oklch, #f59e0b 8%, transparent);
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 140ms ease-out,
+    background-color 140ms ease-out;
+}
+
+.kpiUpload:hover {
+  border-color: color-mix(in oklch, #f59e0b 80%, transparent);
+  background-color: color-mix(in oklch, #f59e0b 15%, transparent);
+}
+
+.kpiUpload:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kpiUploadIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklch, #f59e0b 45%, transparent);
+  background-color: color-mix(in oklch, #f59e0b 14%, transparent);
+  color: #f59e0b;
+}
+
+.kpiUploadText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.kpiUploadTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+.kpiUploadHint {
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+
 .kpiHeadSkeleton {
   display: flex;
   align-items: center;
@@ -184,6 +227,12 @@
 .kpiSkelCard {
   height: 4.25rem;
   border-radius: var(--radius-lg);
+}
+
+@media (max-width: 1280px) {
+  .kpiGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1024px) {
@@ -274,8 +323,39 @@
 .filterRow {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
   flex-wrap: wrap;
+}
+
+/* Status pill-tabs in the board header (All / Attached / Released) — shared
+   pills, same treatment as the coordinator referrals filter row. */
+.filterButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.filterButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.statusTabCount {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+/* No-match callout — the shared insight callout centered in the board. */
+.emptyCallout {
+  display: flex;
+  justify-content: center;
+}
+
+.emptyCallout > p {
+  text-align: center;
 }
 
 .content {

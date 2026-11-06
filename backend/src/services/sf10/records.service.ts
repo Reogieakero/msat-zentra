@@ -157,7 +157,7 @@ export async function listRecords(query: RecordsQuery) {
             lrn: true,
             user: { select: { fullName: true } },
             gradeLevel: true,
-            section: { select: { name: true } },
+            section: { select: { id: true, name: true } },
           },
         },
       },
@@ -165,6 +165,36 @@ export async function listRecords(query: RecordsQuery) {
   ]);
   const countBy = { attach: 0, available: 0, released: 0 };
   for (const c of counts) countBy[c.status] = c._count._all;
+
+  // Adviser access is a separate grant (adviser-access desk), not an SF10
+  // lifecycle step — surface it per record so the board never mistakes a
+  // granted read-access for a cross-school release. A grant is either
+  // per-LRN (approvedLrns) or a whole-request approval for the section.
+  const pageLrns = records.map((r) => r.student.lrn);
+  const pageSectionIds = records
+    .map((r) => r.student.section?.id)
+    .filter((id): id is string => !!id);
+  const accessRows =
+    pageLrns.length > 0
+      ? await prisma.adviserSf10AccessRequest.findMany({
+          where: {
+            OR: [
+              { approvedLrns: { hasSome: pageLrns } },
+              ...(pageSectionIds.length > 0
+                ? [{ status: "approved" as const, sectionId: { in: pageSectionIds } }]
+                : []),
+            ],
+          },
+          select: { approvedLrns: true, sectionId: true, status: true },
+        })
+      : [];
+  const accessLrns = new Set(accessRows.flatMap((r) => r.approvedLrns ?? []));
+  const accessSectionIds = new Set(
+    accessRows.filter((r) => r.status === "approved").map((r) => r.sectionId),
+  );
+  const hasAdviserAccess = (r: (typeof records)[number]) =>
+    accessLrns.has(r.student.lrn) ||
+    (r.student.section ? accessSectionIds.has(r.student.section.id) : false);
 
   return {
     records: records.map((r) => ({
@@ -187,6 +217,7 @@ export async function listRecords(query: RecordsQuery) {
       archivedAt: r.archivedAt,
       currentVersion: r.currentVersion,
       updatedAt: r.updatedAt,
+      adviserAccess: hasAdviserAccess(r),
     })),
     total,
     page,
@@ -1237,7 +1268,7 @@ export async function getRecordDetail(ctx: Sf10Context, recordId: string) {
           lrn: true,
           user: { select: { fullName: true } },
           gradeLevel: true,
-          section: { select: { name: true } },
+          section: { select: { id: true, name: true } },
         },
       },
     },
@@ -1245,9 +1276,27 @@ export async function getRecordDetail(ctx: Sf10Context, recordId: string) {
   if (!record) throw new AppError(404, "NOT_FOUND", "SF10 record not found");
   await assertDeskAccess(record.desk, ctx, record.student.gradeLevel);
   if (ctx.role === "adviser") await assertAdviserSf10Access(ctx.userId, recordId);
-  const [versions, map] = await Promise.all([
+  const [versions, map, adviserAccessCount] = await Promise.all([
     listVersions(ctx, record.id),
     getSubjectMap(ctx, record.id),
+    // Read access granted on the adviser-access desk is tracked separately
+    // from the SF10 lifecycle status (release = issued to another school).
+    // Per-LRN grants and whole-request section approvals both count.
+    prisma.adviserSf10AccessRequest.count({
+      where: {
+        OR: [
+          { approvedLrns: { has: record.student.lrn } },
+          ...(record.student.section
+            ? [
+                {
+                  status: "approved" as const,
+                  sectionId: record.student.section.id,
+                },
+              ]
+            : []),
+        ],
+      },
+    }),
   ]);
   return {
     record: {
@@ -1272,6 +1321,7 @@ export async function getRecordDetail(ctx: Sf10Context, recordId: string) {
       archivedAt: record.archivedAt,
       currentVersion: record.currentVersion,
       updatedAt: record.updatedAt,
+      adviserAccess: adviserAccessCount > 0,
     },
     versions: versions.versions,
     map,

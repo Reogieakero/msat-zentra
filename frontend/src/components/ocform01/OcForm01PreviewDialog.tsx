@@ -28,11 +28,14 @@ import {
 interface OcForm01PreviewDialogProps {
   recordId: string | null;
   onClose: () => void;
+  /** Opened from inside another dialog — paint above it. */
+  raised?: boolean;
 }
 
 export function OcForm01PreviewDialog({
   recordId,
   onClose,
+  raised = false,
 }: OcForm01PreviewDialogProps) {
   const [detail, setDetail] = useState<OcForm01Detail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -263,6 +266,7 @@ export function OcForm01PreviewDialog({
       title="GCForm-01 — Anecdotal Report"
       description="Official template preview (GCForm-01). Prints to A4 portrait. Save as PNG/JPG/PDF (16px gutters)."
       size="xl"
+      raised={raised}
       dismissable={!applying && !saving && exporting === null}
       footer={
         signing ? undefined : (

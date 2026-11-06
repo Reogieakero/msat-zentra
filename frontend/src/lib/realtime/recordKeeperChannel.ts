@@ -15,6 +15,7 @@ const RECORD_KEEPER_KEYS = [
   ["record-keeper-accounts-audit"],
   ["record-keeper-sf10"],
   ["record-keeper-adviser-access"],
+  ["record-keeper-subjects"],
   ["record-keeper-notifications"],
 ] as const;
 
@@ -44,6 +45,7 @@ function keysForNotification(
       return [
         ["record-keeper-overview"],
         ["record-keeper-account-breakdown"],
+        ["record-keeper-subjects"],
         bell,
       ];
     default:

@@ -146,7 +146,6 @@ export function ReferralStarterSidebar({ onNewReferral }: { onNewReferral?: () =
                 actions={
                   <Button
                     type="button"
-                    variant="outline"
                     className="h-6 px-2 text-[11px]"
                     onClick={onNewReferral}
                   >
@@ -210,7 +209,7 @@ export function ReferralStarterSidebar({ onNewReferral }: { onNewReferral?: () =
                 ariaLabel="Anecdotal Records"
                 className="border-0 [font-family:var(--font-inter)]"
                 actions={
-                  <Button asChild variant="outline" className="h-6 px-2 text-[11px]">
+                  <Button asChild className="h-6 px-2 text-[11px]">
                     <Link href="/teacher/anecdotal">See all</Link>
                   </Button>
                 }
@@ -270,7 +269,7 @@ export function ReferralStarterSidebar({ onNewReferral }: { onNewReferral?: () =
                 ariaLabel="Chat with Bama"
                 className="border-0 [font-family:var(--font-inter)]"
                 actions={
-                  <Button asChild variant="outline" className="h-6 px-2 text-[11px]">
+                  <Button asChild className="h-6 px-2 text-[11px]">
                     <Link href="/teacher/chat?standalone=1" target="_blank" rel="noopener noreferrer">
                       Chat now
                     </Link>

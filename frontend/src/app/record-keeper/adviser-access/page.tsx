@@ -1,22 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Megaphone, ShieldQuestion, Users } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import { AdviserAccessKanban } from "./components/AdviserAccessTables";
+import { AdviserAccessTable, AdviserAccessTableSkeleton } from "./components/AdviserAccessTable";
 import { apiClient } from "@/lib/api/client";
-import { toast } from "@/components/ui/sonner";
-import { useDock } from "@/components/dock/dock-store";
-import { markSelfNotified } from "@/lib/realtime/recordKeeperChannel";
 import type { AdviserAccessRequest } from "./components/types";
 import { getStudentListStats, mergeConfirmedMarks } from "@/components/shared/adviser-access/adviser-access-types";
-import { useAdviserAccessCheck } from "@/components/shared/adviser-access/adviser-access-check-context";
 import { RecordKeeperEmptyCard } from "../components/RecordKeeperEmptyCard";
 import { Sf10RequestsRail } from "./components/Sf10RequestsRail";
 import {
   AdviserAccessSummarySkeleton,
-  AdviserAccessBoardSkeleton,
 } from "@/components/shared/adviser-access/adviser-access-skeleton";
 import styles from "./adviser-access.module.css";
 
@@ -31,8 +26,6 @@ async function fetchRequests() {
 }
 
 export default function AdviserAccessPage() {
-  const qc = useQueryClient();
-  const dock = useDock();
   const { data, isPending, isError } = useQuery({
     queryKey: QUERY_KEY,
     queryFn: fetchRequests,
@@ -41,65 +34,6 @@ export default function AdviserAccessPage() {
   });
 
   const requests = React.useMemo(() => data ?? [], [data]);
-
-  // Whole-request Deny only — kept as a secondary action in the kanban.
-  const deny = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      apiClient.post(`/api/record-keeper/adviser-access-requests/${id}/deny`, {
-        reason: reason ?? "Denied by record keeper",
-      }),
-    onSuccess: (_data, { id }) => {
-      markSelfNotified(id);
-      toast.success({
-        title: "Access denied",
-        description: "The access request was denied.",
-      });
-    },
-    onError: (err) => {
-      const message =
-        (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message ??
-        "Could not deny this request.";
-      toast.error({ title: "Action failed", description: message });
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEY });
-      qc.invalidateQueries({ queryKey: ["record-keeper-overview"] });
-      qc.invalidateQueries({ queryKey: ["record-keeper-notifications"] });
-    },
-  });
-
-  const [denyingId, setDenyingId] = React.useState<string | null>(null);
-  // Verification runs in the root-level dock (survives page navigation).
-  const accessCheck = useAdviserAccessCheck();
-  const checkingId = accessCheck.checkingId;
-
-  const handleCheck = React.useCallback(
-    (id: string) => {
-      accessCheck.startCheck("record-keeper", id);
-    },
-    [accessCheck],
-  );
-
-  const handleDeny = React.useCallback(
-    async (id: string, reason: string) => {
-      setDenyingId(id);
-      let taskId: string | null = null;
-      try {
-        taskId = dock.startTask({ kind: "generic", title: "Denying adviser access", description: "Adviser access request" });
-      } catch {
-        taskId = null;
-      }
-      try {
-        await deny.mutateAsync({ id, reason });
-        if (taskId) dock.completeTask(taskId, "Access request denied.");
-      } catch {
-        if (taskId) dock.failTask(taskId, "Could not deny this request.");
-      } finally {
-        setDenyingId(null);
-      }
-    },
-    [deny, dock],
-  );
 
   const pendingRequests = React.useMemo(() => requests.filter((r) => r.status === "pending"), [requests]);
 
@@ -169,7 +103,7 @@ export default function AdviserAccessPage() {
         <div className={styles.layout}>
           <div className={styles.stack}>
             <AdviserAccessSummarySkeleton className={styles.summaryGrid} />
-            <AdviserAccessBoardSkeleton />
+            <AdviserAccessTableSkeleton />
           </div>
           <Sf10RequestsRail />
         </div>
@@ -239,13 +173,7 @@ export default function AdviserAccessPage() {
             ))}
           </section>
 
-          <AdviserAccessKanban
-            requests={pendingRequests}
-            onCheck={handleCheck}
-            checkingId={checkingId}
-            onDeny={handleDeny}
-            denyingId={denyingId}
-          />
+          <AdviserAccessTable requests={pendingRequests} />
         </div>
         <Sf10RequestsRail />
       </div>

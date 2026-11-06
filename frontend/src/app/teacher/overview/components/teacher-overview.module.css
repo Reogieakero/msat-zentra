@@ -13,16 +13,19 @@
 }
 
 .body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
-  gap: 1.25rem;
-  /* Stretch both columns so the rail cards match the main height. */
+  display: flex;
   align-items: stretch;
+  gap: 1.25rem;
+  min-width: 0;
 }
 
+/* Rail collapse: animate the rail's own width, not the grid tracks — one
+   property, one reflow, and it composes with the drag-resize. */
 .sideCol {
   position: sticky;
   top: 7rem;
+  flex: 0 0 auto;
+  width: var(--rail-width, 20rem);
   /* Content-height (not stretched) so sticky actually pins the rail while
      only the main column scrolls the page. No independent scroll region. */
   align-self: start;
@@ -30,10 +33,216 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  transition: width 380ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.bodyCollapsed .sideCol {
+  width: 3.5rem;
+  /* Clip the outgoing panel in the collapsed rail (the resize handle only
+     renders while expanded, so this can't hide it). */
+  overflow: hidden;
+}
+
+/* While dragging the handle, track the pointer 1:1 (no easing lag). */
+.bodyResizing .sideCol {
+  transition: none;
+}
+
+.sideColCollapsed {
+  align-items: stretch;
+}
+
+/* Two stacked layers: the open panel and the icon strip stay mounted and
+   cross-fade, so nothing flashes or refetches when toggling. */
+.railLayer {
+  min-width: 0;
+  transition:
+    opacity 220ms ease,
+    transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.railExpanded {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  opacity: 1;
+  transform: none;
+}
+
+.railIcons {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  opacity: 0;
+  transform: translateX(16px);
+  pointer-events: none;
+}
+
+.bodyCollapsed .railExpanded {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--rail-width, 20rem);
+  opacity: 0;
+  transform: translateX(28px);
+  pointer-events: none;
+}
+
+.bodyCollapsed .railIcons {
+  position: relative;
+  top: auto;
+  right: auto;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.railHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.125rem;
+}
+
+.railTitle {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.railToggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  color: var(--muted-foreground);
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.railToggle:hover {
+  background: var(--muted);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+.railToggle:focus-visible,
+.railResize:focus-visible,
+.railCard:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+/* Collapsed rail = square icon cards, one per tool (same language as the
+   grading workspace gutter: 1px border, rounded-xl, amber accent). */
+.railStack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  /* Breathing room for the badge that overhangs the first card. */
+  padding: 0.25rem;
+}
+
+.railCard {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  /* Matches the grading workspace gutter icons (Tailwind `rounded-xl`). */
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  background: var(--card);
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.railCard:hover {
+  border-color: color-mix(in oklch, var(--color-amber-500), transparent 40%);
+  background: color-mix(in oklch, var(--color-amber-500), transparent 90%);
+  box-shadow: 0 4px 12px -8px color-mix(in oklch, var(--color-amber-500), transparent 30%);
+}
+
+.railCardNeutral:hover {
+  border-color: var(--border);
+  background: var(--muted);
+  box-shadow: none;
+}
+
+.railIcon {
+  color: var(--color-amber-500);
+}
+
+.railCardNeutral .railIcon {
+  color: var(--muted-foreground);
+}
+
+.railBadge {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--color-amber-500);
+  color: #000;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Drag handle on the rail's left edge (widen/narrow). */
+.railResize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.625rem;
+  width: 0.75rem;
+  cursor: col-resize;
+  touch-action: none;
+  border-radius: 999px;
+}
+
+.railResize::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 36px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--border);
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.railResize:hover::after,
+.railResize:focus-visible::after {
+  opacity: 1;
 }
 
 .mainCol {
   display: flex;
+  flex: 1 1 0%;
   flex-direction: column;
   gap: 1.25rem;
   min-width: 0;
@@ -41,11 +250,35 @@
 
 @media (max-width: 1024px) {
   .body {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
-  .sideCol {
+  .sideCol,
+  .bodyCollapsed .sideCol {
     position: static;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .railResize {
+    display: none;
+  }
+
+  .railStack {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .bodyCollapsed .railExpanded {
+    /* No horizontal slide on stacked layouts (prevents page overflow). */
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sideCol,
+  .railLayer {
+    transition: none;
   }
 }
 
@@ -56,3 +289,5 @@
   color: var(--muted-foreground);
   font-size: 0.875rem;
 }
+
+/* Charts are the primary view. */

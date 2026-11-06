@@ -12,6 +12,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
+import { useBreadcrumbExtraContext } from "./BreadcrumbExtra";
 
 /* Segment labels that title-casing would get wrong. */
 const SEGMENT_LABELS: Record<string, string> = {
@@ -40,7 +41,7 @@ const WORKSPACE_LABELS: Record<string, string> = {
 
 /* Full-path labels for tab pages whose sidebar name differs from the URL. */
 const PATH_LABELS: Record<string, string> = {
-  "/teacher/overview": "Dashboard",
+  "/record-keeper/academics": "Subjects",
   "/teacher/advisory/list": "Advisory List",
   "/teacher/advisory/students": "Students",
   "/teacher/advisory/attendance": "Attendance",
@@ -110,6 +111,9 @@ export function AppBreadcrumbs({
   );
 
   const workspace = WORKSPACE_LABELS[`/${segments[0]}/${segments[1]}`];
+  const extra = useBreadcrumbExtraContext()?.extra ?? null;
+  const extraCrumb = extra?.label ?? null;
+  const extraOnParentClick = extra?.onParentClick;
 
   return (
     <Breadcrumb
@@ -140,7 +144,7 @@ export function AppBreadcrumbs({
           </>
         )}
         {crumbs.map((crumb, index) => {
-          const last = index === crumbs.length - 1;
+          const last = index === crumbs.length - 1 && !extraCrumb;
           return (
             <React.Fragment key={crumb.href}>
               <BreadcrumbSeparator className="[&>svg]:size-3" />
@@ -149,6 +153,18 @@ export function AppBreadcrumbs({
                   <BreadcrumbPage className="max-w-[11rem] truncate font-semibold">
                     {crumb.label}
                   </BreadcrumbPage>
+                ) : extraOnParentClick && index === crumbs.length - 1 ? (
+                  // The parent crumb doubles as "back to the list" on pages
+                  // that push a depth crumb (e.g. Students → section).
+                  <BreadcrumbLink asChild>
+                    <button
+                      type="button"
+                      onClick={extraOnParentClick}
+                      className="max-w-[8rem] cursor-pointer truncate font-semibold"
+                    >
+                      {crumb.label}
+                    </button>
+                  </BreadcrumbLink>
                 ) : (
                   <BreadcrumbLink asChild>
                     <Link href={crumb.href} className="max-w-[8rem] truncate font-semibold">
@@ -160,6 +176,16 @@ export function AppBreadcrumbs({
             </React.Fragment>
           );
         })}
+        {extraCrumb ? (
+          <>
+            <BreadcrumbSeparator className="[&>svg]:size-3" />
+            <BreadcrumbItem className="min-w-0">
+              <BreadcrumbPage className="max-w-[11rem] truncate font-semibold">
+                {extraCrumb}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </>
+        ) : null}
       </BreadcrumbList>
     </Breadcrumb>
   );

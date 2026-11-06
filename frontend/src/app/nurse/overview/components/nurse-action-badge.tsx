@@ -1,7 +1,20 @@
 "use client";
-import { Badge } from "@/components/ui/badge";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { deriveActionStatus } from "@/services/nurse/labels";
 import type { NurseQueueRow } from "@/services/nurse/nurse.types";
+
+/* Action → shared Pill tone. One palette with every desk's status pills. */
+const ACTION_TONE: Record<string, PillTone> = {
+  endorsed: "green",
+  done: "green",
+  done_session: "green",
+  rejected: "red",
+  escalated: "red",
+  needs_review: "amber",
+  booked: "blue",
+  followup: "blue",
+};
+
 export function NurseActionBadge({
   row,
   className,
@@ -10,23 +23,15 @@ export function NurseActionBadge({
   className?: string;
 }) {
   const action = deriveActionStatus(row.type, row.status, row.sessions);
-  switch (action.key) {
-    case "endorsed":
-    case "done":
-    case "done_session":
-      return <Badge variant="green" className={className}>{action.label}</Badge>;
-    case "rejected":
-      return <Badge variant="red" className={className}>{action.label}</Badge>;
-    case "needs_review":
-      return <Badge variant="amber" className={className}>{action.label}</Badge>;
-    case "escalated":
-      return <Badge variant="red" className={className}>{action.label}</Badge>;
-    case "booked":
-    case "followup":
-      return <Badge variant="blue" className={className}>{action.label}</Badge>;
-    default:
-      return <Badge variant="outline" className={className}>{action.label}</Badge>;
-  }
+  return (
+    <Pill
+      tone={ACTION_TONE[action.key] ?? "neutral"}
+      label="Case status"
+      className={className}
+    >
+      {action.label}
+    </Pill>
+  );
 }
 export function waitingElapsed(referredAt: string, nowMs: number): string {
   if (!referredAt) return "—";

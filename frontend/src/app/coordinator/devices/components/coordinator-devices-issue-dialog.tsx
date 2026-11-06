@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { Pill } from "@/components/ui/pill";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { useDock } from "@/components/dock/dock-store";
@@ -193,25 +195,40 @@ export function CoordinatorDevicesIssueDialog({
                   <Button
                     id="dev-profile"
                     variant="outline"
-                    style={{ width: "100%", justifyContent: "space-between" }}
+                    className={styles.candidateTrigger}
                   >
-                    <span className={styles.pickerLabel}>
-                      {selectedCandidate
-                        ? `${selectedCandidate.student} · ${selectedCandidate.lrn}`
-                        : "Select an approved case…"}
-                    </span>
+                    {selectedCandidate ? (
+                      <span className={styles.candidateValue}>
+                        <StudentMascot
+                          name={selectedCandidate.student}
+                          seed={selectedCandidate.lrn}
+                          character={selectedCandidate.mascot ?? undefined}
+                          size={24}
+                        />
+                        <span className={styles.candidateText}>
+                          <span className={styles.candidateName}>
+                            {selectedCandidate.student}
+                          </span>
+                          <Pill
+                            tone="neutral"
+                            label="LRN"
+                            className={styles.candidateLrn}
+                          >
+                            {selectedCandidate.lrn}
+                          </Pill>
+                        </span>
+                      </span>
+                    ) : (
+                      <span className={styles.pickerLabel}>
+                        Select an approved case…
+                      </span>
+                    )}
                     <ChevronDown aria-hidden />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
-                  className="z-[70]"
-                  style={
-                    {
-                      width: "var(--radix-dropdown-menu-trigger-width)",
-                      maxWidth: "22rem",
-                    } as React.CSSProperties
-                  }
+                  className={`z-[70] ${styles.candidateMenu}`}
                 >
                   <div style={{ padding: "0.375rem" }}>
                     <Input
@@ -237,14 +254,26 @@ export function CoordinatorDevicesIssueDialog({
                         <DropdownMenuItem
                           key={r.id}
                           onSelect={() => setProfileId(r.id)}
-                          title={
-                            r.approvalDate
-                              ? `Approved ${r.approvalDate}`
-                              : "Approved by the Principal"
-                          }
+                          className={styles.candidateItem}
                         >
-                          {r.student} · {r.lrn}
-                          {r.approvalDate ? ` · ${r.approvalDate}` : ""}
+                          <StudentMascot
+                            name={r.student}
+                            seed={r.lrn}
+                            character={r.mascot ?? undefined}
+                            size={32}
+                          />
+                          <span className={styles.candidateText}>
+                            <span className={styles.candidateName}>
+                              {r.student}
+                            </span>
+                            <Pill
+                              tone="neutral"
+                              label="LRN"
+                              className={styles.candidateLrn}
+                            >
+                              {r.lrn}
+                            </Pill>
+                          </span>
                         </DropdownMenuItem>
                       ))
                     )}

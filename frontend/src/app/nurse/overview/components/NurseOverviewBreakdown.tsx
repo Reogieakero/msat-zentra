@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import {
   Bar,
   BarChart,
@@ -16,7 +17,9 @@ import type { NurseBreakdownRow } from "@/services/nurse/nurse.types";
 import type { LucideIcon } from "lucide-react";
 import { Activity, ClipboardList, Send } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
+import { NurseChartTooltip, NURSE_TOOLTIP_Z_INDEX } from "./nurse-chart-tooltip";
 import styles from "./nurse-overview.module.css";
 
 // Amber ramp — the rail's accent (tailwind amber-500), so the donut slices
@@ -54,6 +57,18 @@ function BoardIcon({ icon: Icon }: { icon: LucideIcon }) {
     <span className="text-primary" aria-hidden>
       <Icon size={14} />
     </span>
+  );
+}
+
+/** Uniform "What it means" footer — the shared insight callout, pinned low. */
+function Interpretation({ children }: { children: React.ReactNode }) {
+  return (
+    <div className={styles.footerSlot}>
+      <InsightCallout className={styles.interpretation}>
+        <span className={styles.interpretationLabel}>What it means · </span>
+        {children}
+      </InsightCallout>
+    </div>
   );
 }
 
@@ -100,17 +115,18 @@ function BarPanel({
               <YAxis type="category" dataKey="label" width={104} tickLine={false} axisLine={false} />
               <Tooltip
                 cursor={false}
-                contentStyle={{
-                  borderRadius: "8px",
-                  border: "1px solid var(--border)",
-                  background: "var(--card)",
-                  color: "var(--foreground)",
-                  fontSize: "0.75rem",
-                }}
-                formatter={(value) => [value, "Cases"]}
-                labelFormatter={() => ""}
+                content={
+                  <NurseChartTooltip
+                    formatValue={(item) =>
+                      item.payload?.percent !== undefined
+                        ? `${item.value} (${item.payload.percent}%)`
+                        : item.value
+                    }
+                  />
+                }
+                wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
               />
-              <Bar dataKey="count" barSize={12} radius={[2, 4, 4, 2]}>
+              <Bar dataKey="count" name="Cases" barSize={12} radius={[2, 4, 4, 2]}>
                 {slices.map((d) => (
                   <Cell key={d.key} fill={d.fill} />
                 ))}
@@ -120,6 +136,13 @@ function BarPanel({
           </ResponsiveContainer>
         </div>
       )}
+      <Interpretation>
+        {isEmpty
+          ? "No cases in this view yet — referrals will fill the bars as they arrive."
+          : `${slices[0].label} leads with ${slices[0].count} ${
+              slices[0].count === 1 ? "case" : "cases"
+            } — ${slices[0].percent}% of ${total}.`}
+      </Interpretation>
     </KanbanBoard>
   );
 }
@@ -178,6 +201,18 @@ function DonutPanel({
                     <Cell key={d.key} fill={d.fill} />
                   ))}
                 </Pie>
+                <Tooltip
+                  content={
+                    <NurseChartTooltip
+                      formatValue={(item) =>
+                        item.payload?.percent !== undefined
+                          ? `${item.value} (${item.payload.percent}%)`
+                          : item.value
+                      }
+                    />
+                  }
+                  wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
+                />
               </PieChart>
             </ResponsiveContainer>
             <div className={styles.center} aria-hidden="true">
@@ -204,6 +239,11 @@ function DonutPanel({
           </ul>
         </div>
       )}
+      <Interpretation>
+        {isEmpty
+          ? `No ${unit} yet — referred cases will fill this once the desk receives them.`
+          : `${slices[0].label} is the largest share — ${slices[0].percent}% of ${total} ${unit}.`}
+      </Interpretation>
     </KanbanBoard>
   );
 }

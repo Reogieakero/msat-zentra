@@ -1,10 +1,50 @@
 "use client";
 
+import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./coordinator-overview-states.module.css";
 
+/** Footer interpretation shimmer, pinned to the board bottom like the callout. */
+function InterpSkeleton() {
+  return (
+    <div className={styles.footerSlot}>
+      <Skeleton className={styles.skelInterp} />
+    </div>
+  );
+}
+
+/** Shared board chrome — the real shell so nothing shifts when data lands. */
+function SkelBoard({
+  children,
+  footer,
+  showCount = true,
+}: {
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  showCount?: boolean;
+}) {
+  return (
+    <KanbanBoard
+      title={<Skeleton className={styles.skelTitle} />}
+      icon={<Skeleton className={styles.skelIcon} />}
+      count={showCount ? <Skeleton className={styles.skelCount} /> : undefined}
+      description={<Skeleton className={styles.skelDesc} />}
+      className="flex-1"
+      footer={footer}
+    >
+      {children}
+    </KanbanBoard>
+  );
+}
+
+/**
+ * Loading skeleton for /coordinator/overview — mirrors the loaded layout
+ * board-for-board: the KPI strip, then the three-board section (stage donut,
+ * learning devices, booked meetings) and the Recent forwards card grid.
+ */
 export function CoordinatorOverviewSkeleton() {
   return (
     <section className={styles.page} aria-busy="true">
@@ -25,45 +65,46 @@ export function CoordinatorOverviewSkeleton() {
           </div>
         ))}
       </div>
-      <div className={styles.card} aria-hidden="true">
-        <Skeleton style={{ width: "16rem", height: "0.9375rem" }} />
-        <Skeleton
-          style={{ width: "60%", height: "0.8rem", marginTop: "0.375rem" }}
-        />
-        <div className={styles.caseGrid}>
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className={styles.caseCard} />
-          ))}
-        </div>
+
+      {/* Cases by stage · Learning devices · Booked meetings. */}
+      <div className={styles.boardGrid} aria-hidden="true">
+        <SkelBoard footer={<InterpSkeleton />} showCount={false}>
+          <div className={styles.skelDonutRow}>
+            <Skeleton className={styles.skelDonut} />
+            <div className={styles.skelLegend}>
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} className={styles.skelLegendRow} />
+              ))}
+            </div>
+          </div>
+        </SkelBoard>
+
+        <SkelBoard footer={<InterpSkeleton />} showCount={false}>
+          <div className={styles.skelList}>
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className={styles.skelListRow} />
+            ))}
+          </div>
+        </SkelBoard>
+
+        <SkelBoard footer={<InterpSkeleton />}>
+          <div className={styles.skelList}>
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className={styles.skelListRow} />
+            ))}
+          </div>
+        </SkelBoard>
       </div>
-      <hr className={styles.divider} aria-hidden="true" />
-      <div className={styles.chartRow} aria-hidden="true">
-        <div className={styles.card}>
-          <Skeleton style={{ width: "12rem", height: "0.9375rem" }} />
-          <Skeleton
-            style={{ width: "100%", height: "10rem", marginTop: "0.75rem" }}
-          />
-          {[0, 1, 2].map((i) => (
-            <Skeleton
-              key={i}
-              style={{ width: "100%", height: "1.25rem", marginTop: "0.5rem" }}
-            />
-          ))}
-          <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.75rem" }} />
-        </div>
-        <div className={styles.card}>
-          <Skeleton style={{ width: "16rem", height: "0.9375rem" }} />
-          <Skeleton
-            style={{ width: "60%", height: "0.8rem", marginTop: "0.375rem" }}
-          />
-          {[0, 1, 2].map((i) => (
-            <Skeleton
-              key={i}
-              style={{ width: "100%", height: "2rem", marginTop: "0.5rem" }}
-            />
-          ))}
-          <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.75rem" }} />
-        </div>
+
+      {/* Recent forwards board over its case-card grid. */}
+      <div aria-hidden="true">
+        <SkelBoard footer={<InterpSkeleton />} showCount={false}>
+          <div className={styles.caseGrid}>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className={styles.caseCard} />
+            ))}
+          </div>
+        </SkelBoard>
       </div>
     </section>
   );

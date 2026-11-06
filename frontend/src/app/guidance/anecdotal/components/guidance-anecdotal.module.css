@@ -257,3 +257,9 @@
   height: 0.75rem;
   border-radius: 0.25rem;
 }
+
+/* Dark mode: let the aurora canvas painted by the shell show through the
+   page surface instead of a flat --background fill. */
+:global(.dark) .page {
+  background-color: transparent;
+}

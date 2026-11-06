@@ -8,6 +8,7 @@ import { writeCachedAdviser, writeCachedMasterTeacher } from "./flagCache";
 import type {
   TeacherOverviewCritical,
   TeacherOverviewGradebook,
+  TeacherOverviewInsights,
   TeacherOverviewSecondary,
 } from "./overview.types";
 
@@ -56,6 +57,14 @@ export function teacherOverviewGradebookKey(
   return ["teacher-overview-gradebook", teacherId ?? "anon", termKey] as const;
 }
 
+export function teacherOverviewInsightsKey(
+  teacherId: string | null | undefined,
+  termKey = "",
+  days = 14,
+) {
+  return ["teacher-overview-insights", teacherId ?? "anon", termKey, days] as const;
+}
+
 export function useTeacherOverview() {
   const session = useSession();
   const { activeTerm } = useTerm();
@@ -87,6 +96,32 @@ export function useTeacherOverviewGradebook() {
     queryKey: teacherOverviewGradebookKey(teacherId, termKey),
     queryFn: fetchTeacherOverviewGradebook,
     enabled: !!teacherId,
+    staleTime: OVERVIEW_STALE_MS,
+    gcTime: OVERVIEW_GC_MS,
+    placeholderData: (previous) => previous,
+  });
+}
+
+export async function fetchTeacherOverviewInsights(days = 14): Promise<TeacherOverviewInsights> {
+  const { data } = await apiClient.get<TeacherOverviewInsights>(
+    `/api/teacher/overview/insights?days=${days}`,
+  );
+  return data;
+}
+
+/**
+ * Day-by-day risk + attendance series for the overview charts. Same term
+ * scope as the overview itself (x-term-id headers ride on apiClient).
+ */
+export function useTeacherOverviewInsights(days = 14, enabled = true) {
+  const session = useSession();
+  const { activeTerm } = useTerm();
+  const teacherId = session?.sub ?? null;
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  return useQuery<TeacherOverviewInsights>({
+    queryKey: teacherOverviewInsightsKey(teacherId, termKey, days),
+    queryFn: () => fetchTeacherOverviewInsights(days),
+    enabled: enabled && !!teacherId,
     staleTime: OVERVIEW_STALE_MS,
     gcTime: OVERVIEW_GC_MS,
     placeholderData: (previous) => previous,

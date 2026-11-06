@@ -2,25 +2,26 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CalendarPlus,
   Clock,
   History,
   Loader2,
-  MoreHorizontal,
   Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   admCaseStatusVariant,
   consultReviewerLabel,
@@ -29,6 +30,7 @@ import {
   latestActionFallback,
 } from "@/services/coordinator/labels";
 import { formatElapsedShort, msSinceDate } from "@/lib/clock";
+import { toSlug } from "@/lib/slug";
 import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { historyTargetFor } from "../../components/CaseHistoryDialog";
@@ -62,6 +64,20 @@ const REVIEWER_MASCOT: Record<string, string> = {
 function reviewerMascot(value: string | null | undefined): string {
   return value ? REVIEWER_MASCOT[value] ?? "postbot" : "postbot";
 }
+
+// Badge variants from `admCaseStatusVariant` mapped onto the shared pill tones.
+const STATUS_TONE: Record<
+  ReturnType<typeof admCaseStatusVariant>,
+  PillTone
+> = {
+  amber: "amber",
+  success: "green",
+  default: "blue",
+  destructive: "red",
+  secondary: "violet",
+  outline: "neutral",
+  red: "red",
+};
 
 function Num({ children }: { children: React.ReactNode }) {
   return <span className={styles.interpretNum}>{children}</span>;
@@ -122,6 +138,7 @@ export function CoordinatorOverviewForwards({
   onBook,
 }: CoordinatorOverviewForwardsProps) {
   const [page, setPage] = React.useState(1);
+  const router = useRouter();
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * PAGE_SIZE;
@@ -136,20 +153,23 @@ export function CoordinatorOverviewForwards({
           <Share2 size={14} />
         </span>
       }
-      count={isPending || isError ? undefined : rows.length}
       description="The freshest consultation hand-offs waiting for your learner profile."
       ariaLabel="Recent ADM forwards"
       actions={
-        <Button asChild size="sm" variant="outline">
+        <Button asChild size="sm" className="h-6 px-2 text-xs">
           <Link href="/coordinator/referrals">See all</Link>
         </Button>
       }
       footer={
         !isPending && !isError && !isEmpty ? (
-          <p className={styles.interpretation}>
-            <span className={styles.interpretationLabel}>What it means · </span>
-            {buildInterpretation(rows, now)}
-          </p>
+          <div className={styles.footerSlot}>
+            <InsightCallout className={styles.interpretation}>
+              <span className={styles.interpretationLabel}>
+                What it means ·{" "}
+              </span>
+              {buildInterpretation(rows, now)}
+            </InsightCallout>
+          </div>
         ) : null
       }
     >
@@ -210,8 +230,22 @@ export function CoordinatorOverviewForwards({
               const closedRow =
                 r.referralStatus === "dismissed" ||
                 r.referralStatus === "resolved";
+              const detailsHref = `/coordinator/referrals/${encodeURIComponent(toSlug(r.student))}`;
               return (
-                <li key={r.id} className={styles.caseCard}>
+                <li
+                  key={r.id}
+                  className={styles.caseCard}
+                  role="link"
+                  tabIndex={0}
+                  aria-label={`Open details for ${r.student}`}
+                  onClick={() => router.push(detailsHref)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(detailsHref);
+                    }
+                  }}
+                >
                   <div className={styles.caseHead}>
                     <StudentMascot name={r.student} seed={r.lrn} size={36} />
                     <div className={styles.caseId}>
@@ -220,26 +254,27 @@ export function CoordinatorOverviewForwards({
                       </p>
                       <p className={styles.caseLrn}>{r.lrn}</p>
                     </div>
-                    <Badge
-                      variant={admCaseStatusVariant(caseStatus.key)}
+                    <Pill
+                      tone={STATUS_TONE[admCaseStatusVariant(caseStatus.key)]}
                       className="shrink-0 rounded-md"
+                      label="Status"
                     >
                       {caseStatus.label}
-                    </Badge>
+                    </Pill>
                   </div>
 
                   <div className={styles.caseMeta}>
-                    <span className={styles.metaPill} title="Time elapsed">
+                    <Pill tone="red" label="Time elapsed">
                       <Clock size={11} aria-hidden />
                       {elapsed === null
                         ? "—"
                         : `${formatElapsedShort(elapsed)} ago`}
-                    </span>
-                    <span className={styles.metaPill} title="Date referred">
+                    </Pill>
+                    <Pill tone="neutral" label="Date referred">
                       {r.endorsedAt
                         ? r.endorsedAt.slice(0, 10)
                         : (r.datePrepared ?? "—")}
-                    </span>
+                    </Pill>
                   </div>
 
                   <div className={styles.caseChain}>
@@ -312,7 +347,11 @@ export function CoordinatorOverviewForwards({
                         })()
                       )}
                     </span>
-                    <div className={styles.caseActions}>
+                    <div
+                      className={styles.caseActions}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
                       {r.meeting == null ? (
                         <Button
                           size="sm"
@@ -335,32 +374,24 @@ export function CoordinatorOverviewForwards({
                           {bookingThis ? "Booking…" : "Book schedule"}
                         </Button>
                       ) : null}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={styles.cardMenuBtn}
-                            aria-label={`Actions for ${r.student}`}
-                          >
-                            <MoreHorizontal aria-hidden />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link
-                              href={`/coordinator/referrals/${encodeURIComponent(r.id)}`}
+                      <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={styles.cardMenuBtn}
+                              aria-label={`Track case for ${r.student}`}
+                              onClick={() => onHistory(historyTargetFor(r))}
                             >
-                              See details
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => onHistory(historyTargetFor(r))}
-                          >
+                              <History aria-hidden />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" sideOffset={6}>
                             Track case
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </div>
                 </li>

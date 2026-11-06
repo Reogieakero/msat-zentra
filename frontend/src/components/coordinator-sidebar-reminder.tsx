@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { toSlug } from "@/lib/slug";
 import styles from "./coordinator-sidebar-reminder.module.css";
 
 const UPCOMING_WINDOW_MS = 5 * 60 * 1000;
@@ -29,8 +30,7 @@ function sessionDue(s: DeskSession, now: number): boolean {
 }
 
 function hrefForSession(s: DeskSession): string | null {
-  const id = s.sourceTable === "adm_profiles" ? s.sourceId : `referral:${s.sourceId}`;
-  return `/coordinator/referrals/${encodeURIComponent(id)}`;
+  return `/coordinator/referrals/${encodeURIComponent(toSlug(s.student))}`;
 }
 
 const SESSION_KIND_LABELS: Record<string, string> = {

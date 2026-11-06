@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { FolderOpen, Search, SearchX } from "lucide-react";
+import { FolderOpen, Search } from "lucide-react";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { ImageViewer } from "@/components/image-viewer/ImageViewer";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { type ClinicAttachment } from "@/services/nurse/nurse.types";
 import { type NurseAlertItem } from "@/services/nurse/nurse.types";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
@@ -101,11 +102,13 @@ export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] })
       </div>
 
       {visible.length === 0 ? (
-        <NurseEmptyState
-          icon={SearchX}
-          title="No records match your search"
-          hint="Try a different student name, LRN, section, or type."
-        />
+        <div className="flex w-full justify-center px-1 py-6">
+          <InsightCallout role="status" className="w-full max-w-xl text-left">
+            <strong>No records match your search.</strong> Try a different
+            student name, LRN, section, or type — or clear the search to see
+            every record.
+          </InsightCallout>
+        </div>
       ) : (
         <>
           <div className={styles.grid} role="list" aria-label="Health records">

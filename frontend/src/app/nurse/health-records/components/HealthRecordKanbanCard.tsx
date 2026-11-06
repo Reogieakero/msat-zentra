@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import { Pill } from "@/components/ui/pill";
 import {
   ArrowRight,
   FileText,
@@ -18,10 +19,7 @@ import {
   MessageSquareText,
   Target,
 } from "lucide-react";
-import {
-  anecdotalCategoryPillClass,
-  formatDate,
-} from "../../referrals/components/nurse-referrals-format";
+import { formatDate } from "../../referrals/components/nurse-referrals-format";
 import {
   entryStatusLabel,
   entryStatusVariant,
@@ -34,22 +32,11 @@ import {
   ACCENT_FILES,
   ACCENT_NOTES,
   ACCENT_OUTCOME,
-  BOARD_PILL,
-  statusToneClass,
-  TONE_AMBER,
-  TONE_BLUE,
-  TONE_GREEN,
-  TONE_VIOLET,
+  categoryPillTone,
+  statusPillTone,
   TYPE_COLORS,
   TYPE_TONES,
 } from "./record-tones";
-
-/* Same pill recipe as the anecdotal shared folder card (student = amber,
-   meta = secondary). */
-const PILL_NAME =
-  "inline-flex max-w-full items-center truncate rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold leading-tight text-amber-700 dark:text-amber-400";
-const PILL_META =
-  "inline-flex max-w-full items-center truncate rounded-md border border-border bg-secondary px-2 py-0.5 text-[11px] font-medium leading-tight text-secondary-foreground";
 
 /* Right-side detail trigger — clicking floats the content as a kanban board
    beside the card (same icon language as the nurse case cards). */
@@ -171,19 +158,28 @@ export function HealthRecordKanbanCard({
           <FileText size={14} aria-hidden style={{ color }} />
           <span className="truncate">{title}</span>
         </span>
-        <span className={`${BOARD_PILL} shrink-0 ${statusToneClass(statusVariant)}`}>
+        <Pill
+          tone={statusPillTone(statusVariant)}
+          label="Record status"
+          className="shrink-0"
+        >
           {statusLabel}
-        </span>
+        </Pill>
       </header>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border bg-white p-2.5 shadow-sm dark:bg-card">
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <span className={PILL_NAME} title={entry.row.student}>
-            {entry.row.student}
-          </span>
-          <span className={PILL_META} title={meta}>
-            {meta}
-          </span>
+          <Pill
+            tone="amber"
+            label="Student"
+            title={entry.row.student}
+            className="max-w-full overflow-hidden"
+          >
+            <span className="truncate">{entry.row.student}</span>
+          </Pill>
+          <Pill label="Grade level" title={meta} className="max-w-full overflow-hidden">
+            <span className="truncate">{meta}</span>
+          </Pill>
         </span>
 
         <span className="flex w-full items-center justify-between gap-3">
@@ -205,9 +201,9 @@ export function HealthRecordKanbanCard({
         </span>
 
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <span className={PILL_META}>{entry.row.type}</span>
+          <Pill label="Record type">{entry.row.type}</Pill>
           {dateLabel && dateLabel !== "—" ? (
-            <span className={PILL_META}>{dateLabel}</span>
+            <Pill label="Record date">{dateLabel}</Pill>
           ) : null}
         </span>
 
@@ -300,43 +296,47 @@ export function HealthRecordKanbanCard({
             <dl className="m-0 flex flex-col gap-1.5 px-1 text-[12px] leading-relaxed">
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-muted-foreground">Referred</dt>
-                <dd
-                  className={`${BOARD_PILL} ${
-                    type === "ADM" ? TONE_BLUE : TONE_GREEN
-                  }`}
-                >
-                  {entry.isEndorse
-                    ? "Endorse ADM"
-                    : type === "ADM"
-                      ? "Teacher / ADM referral"
-                      : "Clinic referral"}
+                <dd className="m-0">
+                  <Pill tone={type === "ADM" ? "blue" : "green"} label="Referred by">
+                    {entry.isEndorse
+                      ? "Endorse ADM"
+                      : type === "ADM"
+                        ? "Teacher / ADM referral"
+                        : "Clinic referral"}
+                  </Pill>
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-muted-foreground">Category</dt>
-                <dd
-                  className={`${BOARD_PILL} ${
-                    anecdotalCategoryPillClass(entry.row.category) ?? TONE_AMBER
-                  }`}
-                >
-                  {entry.row.category}
+                <dd className="m-0">
+                  <Pill tone={categoryPillTone(entry.row.category)} label="Category">
+                    {entry.row.category}
+                  </Pill>
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-muted-foreground">Status</dt>
-                <dd className={`${BOARD_PILL} ${statusToneClass(statusVariant)}`}>
-                  {statusLabel}
+                <dd className="m-0">
+                  <Pill tone={statusPillTone(statusVariant)} label="Record status">
+                    {statusLabel}
+                  </Pill>
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-muted-foreground">Date</dt>
-                <dd className={`${BOARD_PILL} ${TONE_AMBER}`}>{dateLabel}</dd>
+                <dd className="m-0">
+                  <Pill tone="amber" label="Record date">
+                    {dateLabel}
+                  </Pill>
+                </dd>
               </div>
               {entry.row.followUpDate ? (
                 <div className="flex items-baseline justify-between gap-3">
                   <dt className="text-muted-foreground">Follow-up due</dt>
-                  <dd className={`${BOARD_PILL} ${TONE_VIOLET}`}>
-                    {formatDate(entry.row.followUpDate)}
+                  <dd className="m-0">
+                    <Pill tone="violet" label="Follow-up due">
+                      {formatDate(entry.row.followUpDate)}
+                    </Pill>
                   </dd>
                 </div>
               ) : null}

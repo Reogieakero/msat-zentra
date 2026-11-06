@@ -11,6 +11,10 @@ import {
 } from "recharts";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import {
+  NurseChartTooltip,
+  NURSE_TOOLTIP_Z_INDEX,
+} from "../../../nurse/overview/components/nurse-chart-tooltip";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -121,26 +125,24 @@ function StageDonutChart({ rows }: { rows: StageDonutEntry[] }) {
           <RechartsPieChart>
             <RechartsTooltip
               cursor={false}
-              wrapperStyle={{ zIndex: 60 }}
+              wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
               animationDuration={150}
               animationEasing="ease-out"
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid var(--border)",
-                background: "var(--card)",
-                color: "var(--foreground)",
-                fontSize: "0.75rem",
-              }}
-              formatter={(value, _name, item) => [
-                `${value} case(s)`,
-                (item?.payload as StageDonutEntry | undefined)?.full ?? "",
-              ]}
-              labelFormatter={() => ""}
+              content={
+                <NurseChartTooltip
+                  formatValue={(item) => {
+                    const count = Number(item.value);
+                    const pct =
+                      total > 0 ? Math.round((count / total) * 100) : 0;
+                    return `${item.value} (${pct}%)`;
+                  }}
+                />
+              }
             />
             <Pie
               data={data}
               dataKey="value"
-              nameKey="name"
+              nameKey="full"
               innerRadius="62%"
               outerRadius="100%"
               paddingAngle={2}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Loader2, TriangleAlert } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { Button } from "@/components/ui/button";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import type { AttentionItem } from "./coordinator-overview-helpers";
@@ -74,9 +74,9 @@ export function CoordinatorOverviewAttentionDialog({
               <div style={{ minWidth: 0, flex: 1 }}>
                 <p className={styles.historyItemTitle}>
                   {a.label}{" "}
-                  <Badge variant={(a.count ?? 0) > 0 ? "secondary" : "outline"}>
+                  <Pill tone={(a.count ?? 0) > 0 ? "violet" : "neutral"}>
                     {a.count === null ? "…" : a.count}
-                  </Badge>
+                  </Pill>
                 </p>
                 <p className={styles.historyItemSub}>{a.hint}</p>
               </div>

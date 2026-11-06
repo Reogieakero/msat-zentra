@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { useDock } from "@/components/dock/dock-store";
@@ -42,7 +43,12 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import ThoughtLine from "@/components/ui/thought-line/ThoughtLine";
-import { StatusBadge, displaySubjectName, formatRelativeTime } from "@/components/registry/sf10/shared";
+import {
+  AdviserAccessBadge,
+  StatusBadge,
+  displaySubjectName,
+  formatRelativeTime,
+} from "@/components/registry/sf10/shared";
 import {
   GRADE_LABEL,
   SF10_SOURCE_LABEL,
@@ -334,7 +340,7 @@ export function Sf10MetaToggles({ desk, id }: { desk: "registrar" | "record-keep
                   <div className="grid grid-cols-2 gap-2">
                     <MetaCell label="Uploaded" value={formatRelativeTime(record.uploadedAt)} />
                     <MetaCell label="Version" value={`v${record.currentVersion}`} />
-                    <MetaCell label="Released" value={formatRelativeTime(record.releasedAt)} />
+                    <MetaCell label="Released to school" value={formatRelativeTime(record.releasedAt)} />
                     <MetaCell label="Updated" value={formatRelativeTime(record.updatedAt)} />
                   </div>
                   <MetaStampRow
@@ -487,8 +493,11 @@ export function Sf10DetailContent({ desk, id }: { desk: "registrar" | "record-ke
     try {
       await releaseSf10(record.id);
       markNotified(record.id);
-      if (taskId) dock.completeTask(taskId, "Released & archived.");
-      toast.success({ title: "Released", description: `${record.fullName} released & archived.` });
+      if (taskId) dock.completeTask(taskId, "Released to another school & archived.");
+      toast.success({
+        title: "Released",
+        description: `${record.fullName} released to another school & archived.`,
+      });
       refresh();
     } catch {
       if (taskId) dock.failTask(taskId, "Nothing was changed.");
@@ -758,13 +767,14 @@ export function Sf10DetailContent({ desk, id }: { desk: "registrar" | "record-ke
                 <div className="min-w-0 flex-1">
                   <h3 className="text-base font-semibold">{record.fullName}</h3>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <Badge variant="secondary" className="rounded-md font-normal">
+                    <Pill tone="neutral" label="LRN">
                       {record.lrn}
-                    </Badge>
+                    </Pill>
                     <StatusBadge status={record.status} className="rounded-md" />
-                    <Badge variant="amber" className="rounded-md font-normal">
+                    {record.adviserAccess ? <AdviserAccessBadge className="rounded-md" /> : null}
+                    <Pill tone="amber" label="Upload source">
                       {SF10_SOURCE_LABEL[record.source]}
-                    </Badge>
+                    </Pill>
                   </div>
                 </div>
                 <StudentMascot name={record.fullName} seed={record.id} size={56} />
@@ -997,19 +1007,18 @@ export function Sf10DetailContent({ desk, id }: { desk: "registrar" | "record-ke
               <div className="grid grid-cols-[auto_1fr] items-start gap-x-2 gap-y-1.5 px-0.5 pb-0.5">
                 {deficiencyGroups.map(([grade, items]) => (
                   <React.Fragment key={grade}>
-                    <Badge variant="amber" className="rounded-md font-medium">
+                    <Pill tone="amber" label="Grade level">
                       {GRADE_LABEL[grade] ?? grade}
-                    </Badge>
+                    </Pill>
                     <div className="flex flex-wrap gap-1.5">
                       {items.map((d) => (
-                        <Badge
+                        <Pill
                           key={d.code}
-                          variant="red"
-                          className="rounded-md font-normal"
-                          title={`${d.category} · blank or 0 rating in the file`}
+                          tone="red"
+                          label={`${d.category} · blank or 0 rating in the file`}
                         >
                           {displaySubjectName(d.name)}
-                        </Badge>
+                        </Pill>
                       ))}
                     </div>
                   </React.Fragment>
@@ -1075,10 +1084,12 @@ export function Sf10DetailContent({ desk, id }: { desk: "registrar" | "record-ke
                 ) : (
                   <Archive aria-hidden />
                 )}
-                {acting === "release" ? "Releasing…" : "Release & archive"}
+                {acting === "release" ? "Releasing…" : "Release to another school"}
               </Button>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Uploads are stored as-is — no approval needed. Releasing archives the record.
+                Uploads are stored as-is — no approval needed. Releasing issues the SF10 to
+                another school and archives it. Adviser read access is granted separately on the
+                adviser-access desk.
               </p>
             </div>
           </KanbanBoard>

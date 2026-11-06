@@ -3,6 +3,38 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./coordinator-referrals-skeleton.module.css";
 
+function SkeletonCards({ rows }: { rows: number }) {
+  return (
+    <div className={styles.grid}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className={styles.skelCard}>
+          <div className={styles.skelHead}>
+            <Skeleton className={styles.skelAvatar} />
+            <div className={styles.skelId}>
+              <Skeleton className={styles.line} />
+              <Skeleton className={styles.lineSm} />
+            </div>
+          </div>
+          <div className={styles.skelPills}>
+            <Skeleton className={styles.skelPill} />
+            <Skeleton className={styles.skelPillSm} />
+          </div>
+          <Skeleton className={styles.skelBlock} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Card-grid-only skeleton used while a page/filter fetch swaps the rows. */
+export function CoordinatorReferralsCardsSkeleton({ rows = 9 }: { rows?: number }) {
+  return (
+    <div aria-busy="true" aria-label="Loading referrals">
+      <SkeletonCards rows={rows} />
+    </div>
+  );
+}
+
 function BoardSkeleton({ rows }: { rows: number }) {
   return (
     <div className={styles.boardShell} aria-hidden="true">
@@ -16,24 +48,7 @@ function BoardSkeleton({ rows }: { rows: number }) {
           <Skeleton className={styles.filterBtn} />
         </div>
       </div>
-      <div className={styles.grid}>
-        {Array.from({ length: rows }).map((_, i) => (
-          <div key={i} className={styles.skelCard}>
-            <div className={styles.skelHead}>
-              <Skeleton className={styles.skelAvatar} />
-              <div className={styles.skelId}>
-                <Skeleton className={styles.line} />
-                <Skeleton className={styles.lineSm} />
-              </div>
-            </div>
-            <div className={styles.skelPills}>
-              <Skeleton className={styles.skelPill} />
-              <Skeleton className={styles.skelPillSm} />
-            </div>
-            <Skeleton className={styles.skelBlock} />
-          </div>
-        ))}
-      </div>
+      <SkeletonCards rows={rows} />
       <Skeleton className={styles.interpretation} />
     </div>
   );

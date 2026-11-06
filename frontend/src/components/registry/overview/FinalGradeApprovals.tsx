@@ -7,6 +7,7 @@ import { FileSignature, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import { apiClient } from "@/lib/api/client";
 import { formatSection } from "@/lib/utils";
 import type { RegistryDesk } from "@/services/registry/overview.service";
@@ -106,11 +107,13 @@ export function FinalGradeApprovals({
           <div className={styles.itemInfo}>
             <span className={styles.itemName}>{g.name}</span>
             <span className={styles.itemMeta}>
-              <span className={styles.metaPill}>{formatSection(g.section)}</span>
-              <span className={styles.metaPill}>{g.term}</span>
+              <Pill label="Section">{formatSection(g.section)}</Pill>
+              <Pill label="Term">{g.term}</Pill>
             </span>
           </div>
-          <span className={styles.itemGrade}>{g.overall ?? "—"}</span>
+          <Pill tone="amber" label="Final grade" className="tabular-nums">
+            {g.overall ?? "—"}
+          </Pill>
         </li>
       ))}
     </ul>

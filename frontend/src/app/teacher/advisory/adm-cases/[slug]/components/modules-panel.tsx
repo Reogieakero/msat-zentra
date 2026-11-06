@@ -31,7 +31,8 @@ export function ModulesPanel({
   onEdit,
 }: {
   modules: AdmMonitoredModule[];
-  onEdit: (module: AdmMonitoredModule) => void;
+  /** Omit for read-only desks (the coordinator) — hides the edit affordances. */
+  onEdit?: (module: AdmMonitoredModule) => void;
 }) {
   const submitted = modules.filter((m) => m.submitted).length;
   const [filter, setFilter] = React.useState<"all" | "submitted" | "pending" | "overdue">(
@@ -52,7 +53,7 @@ export function ModulesPanel({
         : modules.filter((m) => m.status === filter);
 
   return (
-    <section className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4" aria-label="Modules">
+    <section className="flex min-w-0 flex-col gap-3" aria-label="Modules">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="m-0 text-sm font-bold tracking-[-0.01em] text-foreground">Modules</h2>
 
@@ -117,9 +118,11 @@ export function ModulesPanel({
                 <th scope="col" className="border-b px-2 py-1.5 font-semibold">Status</th>
                 <th scope="col" className="border-b px-2 py-1.5 font-semibold">Submitted on</th>
                 <th scope="col" className="border-b px-2 py-1.5 font-semibold">Module link</th>
-                <th scope="col" className="border-b px-2 py-1.5 font-semibold">
-                  <span className="sr-only">Actions</span>
-                </th>
+                {onEdit ? (
+                  <th scope="col" className="border-b px-2 py-1.5 font-semibold">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -190,26 +193,28 @@ export function ModulesPanel({
                         </a>
                       ) : null}
                     </td>
-                    <td className="border-b px-2 py-2 text-right">
-                      {m.source === "section" ? (
-                        <span
-                          className="text-[11px] text-muted-foreground"
-                          title="Edit this module from the advisory Modules desk"
-                        >
-                          Modules desk
-                        </span>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="h-6 px-2 text-[11px]"
-                          onClick={() => onEdit(m)}
-                          aria-label={`Edit ${m.moduleName}`}
-                        >
-                          <Pencil size={11} aria-hidden /> Edit
-                        </Button>
-                      )}
-                    </td>
+                    {onEdit ? (
+                      <td className="border-b px-2 py-2 text-right">
+                        {m.source === "section" ? (
+                          <span
+                            className="text-[11px] text-muted-foreground"
+                            title="Edit this module from the advisory Modules desk"
+                          >
+                            Modules desk
+                          </span>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-6 px-2 text-[11px]"
+                            onClick={() => onEdit(m)}
+                            aria-label={`Edit ${m.moduleName}`}
+                          >
+                            <Pencil size={11} aria-hidden /> Edit
+                          </Button>
+                        )}
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })}

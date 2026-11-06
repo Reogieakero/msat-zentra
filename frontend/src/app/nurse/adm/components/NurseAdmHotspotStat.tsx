@@ -4,7 +4,7 @@ import { MapPin } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Skeleton } from "@/components/ui/skeleton";
 import { findHotspot } from "@/components/risk-dashboard/RiskHotspot";
-import { STAT_PILL } from "./nurse-adm-pills";
+import { Pill } from "@/components/ui/pill";
 import { useNurseAdmRiskData } from "./use-nurse-risk-data";
 import styles from "./nurse-adm.module.css";
 
@@ -29,7 +29,7 @@ export function NurseAdmHotspotStat() {
       <KanbanBoard
         title="Busiest spot"
         icon={icon}
-        description={<span className={STAT_PILL}>Loading…</span>}
+        description={<Pill tone="amber" label="Summary">Loading…</Pill>}
         className="flex-1"
       >
         <Skeleton className="h-8 w-24" />
@@ -42,13 +42,13 @@ export function NurseAdmHotspotStat() {
       title="Busiest spot"
       icon={icon}
       description={
-        <span className={STAT_PILL}>
+        <Pill tone="amber" label="Summary">
           {hotspot
             ? `${hotspot.count} ${hotspot.category.toLowerCase()} case${
                 hotspot.count === 1 ? "" : "s"
               }`
             : "No cases yet"}
-        </span>
+        </Pill>
       }
       className="flex-1"
     >

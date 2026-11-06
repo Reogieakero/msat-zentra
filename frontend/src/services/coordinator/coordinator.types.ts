@@ -22,6 +22,7 @@ export interface AdmCaseRow {
   lrn: string;
   student: string;
   grade: string;
+  mascot?: string | null;
   stage: AdmStage | string;
   eligibilityStatus: AdmEligibility;
   preparedBy: string;
@@ -108,6 +109,7 @@ export interface AdmDeviceRow {
   student: string;
   lrn: string;
   grade: string;
+  mascot?: string | null;
   stage: string;
   deviceType: string;
   deviceSerial: string;

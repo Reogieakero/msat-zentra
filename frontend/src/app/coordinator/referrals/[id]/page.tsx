@@ -13,9 +13,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { KanbanOverlay, KanbanPill } from "@/components/ui/kanban-overlay";
+import { Pill } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { useDock } from "@/components/dock/dock-store";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
@@ -132,36 +133,59 @@ function ForwardToPrincipalGate({
     if (eligible && !forwardOpen) setForwardOpen(true);
   }
   return (
-    <CoordinatorReferralsForwardDialog
-      target={
-        forwardOpen && caseData
-          ? {
-              student: caseData.student,
-              lrn: caseData.lrn,
-              grade: caseData.grade,
-            }
-          : null
-      }
-      onClose={() => setForwardOpen(false)}
-      onConfirm={() => {
-        if (!caseData?.profileId || forwardMutation.isPending) return;
-        const profileId = caseData.profileId;
-        const student = caseData.student;
-        // Close at once — the shared Dock reports the request until it settles.
-        setForwardOpen(false);
-        let taskId: string | null = null;
-        try {
-          taskId = dock.startTask({
-            kind: "adm-endorse",
-            title: "Endorsing to Principal",
-            description: `${student} → Principal`,
-          });
-        } catch {
-          taskId = null;
+    <>
+      {eligible && !forwardOpen && caseData ? (
+        <div className={styles.endorseBanner} role="status">
+          <span className={styles.endorseBannerIcon} aria-hidden="true">
+            <BadgeCheck size={16} />
+          </span>
+          <div className={styles.endorseBannerText}>
+            <p className={styles.endorseBannerTitle}>Recommendation ready</p>
+            <p className={styles.endorseBannerBody}>
+              {caseData.student}&apos;s certification is complete — endorse the
+              case to the Principal for signature.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className={styles.endorseBannerBtn}
+            onClick={() => setForwardOpen(true)}
+          >
+            Endorse
+          </Button>
+        </div>
+      ) : null}
+      <CoordinatorReferralsForwardDialog
+        target={
+          forwardOpen && caseData
+            ? {
+                student: caseData.student,
+                lrn: caseData.lrn,
+                grade: caseData.grade,
+              }
+            : null
         }
-        forwardMutation.mutate({ profileId, student, taskId });
-      }}
-    />
+        onClose={() => setForwardOpen(false)}
+        onConfirm={() => {
+          if (!caseData?.profileId || forwardMutation.isPending) return;
+          const profileId = caseData.profileId;
+          const student = caseData.student;
+          // Close at once — the shared Dock reports the request until it settles.
+          setForwardOpen(false);
+          let taskId: string | null = null;
+          try {
+            taskId = dock.startTask({
+              kind: "adm-endorse",
+              title: "Endorsing to Principal",
+              description: `${student} → Principal`,
+            });
+          } catch {
+            taskId = null;
+          }
+          forwardMutation.mutate({ profileId, student, taskId });
+        }}
+      />
+    </>
   );
 }
 function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
@@ -255,13 +279,20 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
   return (
     <section className={styles.page} aria-label={`Case file for ${d.student}`}>
       <BackButton />
+      <ForwardToPrincipalGate caseData={v.detailQuery.data ?? null} onForwarded={() => { void v.detailQuery.refetch(); }} />
       <KanbanBoard
         title={
           <span className={styles.boardTitle}>
             <span className={styles.boardTitleName}>{d.student}</span>
             <span className={styles.boardTitlePills}>
-              <span className={styles.pill}>{d.lrn}</span>
-              {d.grade ? <span className={styles.pill}>{d.grade}</span> : null}
+              <Pill tone="neutral" label="LRN">
+                {d.lrn}
+              </Pill>
+              {d.grade ? (
+                <Pill tone="neutral" label="Grade level">
+                  {d.grade}
+                </Pill>
+              ) : null}
             </span>
           </span>
         }
@@ -270,10 +301,12 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
         boardLabel="Case workflow board"
         actions={
           <>
-            <span className={styles.pill}>{stageLabel(d.stage)}</span>
-            <span className={styles.pill}>
-              Referred by {d.preparedBy || "—"}
-            </span>
+            <Pill tone="blue" label="Case stage">
+              {stageLabel(d.stage)}
+            </Pill>
+            <Pill tone="neutral" label="Referred by">
+              {d.preparedBy || "—"}
+            </Pill>
             {headerActions}
           </>
         }
@@ -316,23 +349,24 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
         title="Eligibility checklist"
         description={`${v.checklist.filter((c) => c.ok).length} of ${v.checklist.length} complete`}
         actions={
-          <Badge
-            variant={
+          <Pill
+            tone={
               d.eligibilityStatus === "eligible"
-                ? "secondary"
+                ? "green"
                 : d.eligibilityStatus === "ineligible"
-                  ? "destructive"
-                  : "outline"
+                  ? "red"
+                  : "amber"
             }
+            label="Eligibility status"
           >
             {eligibilityLabel(d.eligibilityStatus)}
-          </Badge>
+          </Pill>
         }
         footer={
-          <p className={styles.checklistNote}>
+          <InsightCallout>
             Eligibility is derived from the checklist — it cannot be typed
             manually.
-          </p>
+          </InsightCallout>
         }
       >
         <EligibilityChecklistCard checklist={v.checklist} />
@@ -366,7 +400,6 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
       </KanbanOverlay>
       <CoordinatorReferralsCreateDialog target={v.createTarget} scopeLabel={v.scopeLabel} onClose={() => v.setCreateTarget(null)} onConfirm={v.confirmCreate} />
       <CertificationSheet open={v.certSheetOpen} context={v.certContext} onClose={() => v.setCertSheetOpen(false)} onCertified={() => { void v.detailQuery.refetch(); }} />
-      <ForwardToPrincipalGate caseData={v.detailQuery.data ?? null} onForwarded={() => { void v.detailQuery.refetch(); }} />
       <EvidenceDetailsDialog target={v.evidenceTarget} meetings={v.orderedMeetings} certificationDetails={d.certificationDetails} onClose={() => v.setEvidenceTarget(null)} />
       <CoordinatorReferralsBookDialog
         open={v.booking.bookOpen}

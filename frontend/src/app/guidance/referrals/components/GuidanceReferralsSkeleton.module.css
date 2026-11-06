@@ -455,3 +455,10 @@
     width: 100%;
   }
 }
+
+/* Dark mode: translucent canvas bar so the aurora shows while cases scroll. */
+:global(.dark) .toolbarSticky {
+  background-color: rgba(5, 8, 7, 0.85);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}

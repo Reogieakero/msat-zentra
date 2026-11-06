@@ -43,7 +43,9 @@ type NavGroup = {
   items: NavItem[];
 };
 
-function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
+export type { NavGroup, NavItem };
+
+export function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
   const workspaceItems = [
     { title: "Class", href: "/teacher/classes", icon: BookOpen },
     { title: "Gradebook", href: "/teacher/grading", icon: ClipboardCheck },

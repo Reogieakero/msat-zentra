@@ -2,14 +2,10 @@
 
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { BookOpen, CalendarClock, ClipboardCheck, Flag, Send } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShieldAlert, User } from "lucide-react";
 import { useSession } from "@/lib/auth/useSession";
 import { TeacherOverviewKanban } from "./components/teacher-overview-kanban";
-import { TeacherOverviewActions } from "./components/teacher-overview-actions";
-import { TeacherOverviewAnecdotes } from "./components/teacher-overview-anecdotes";
-import { TeacherOverviewAttendanceTable } from "./components/teacher-overview-attendance-table";
-import { TeacherOverviewClassStudents } from "./components/teacher-overview-class-students";
-import { TeacherOverviewRiskTable } from "./components/teacher-overview-risk-table";
+import { TeacherOverviewCharts } from "./components/teacher-overview-charts";
 import { TeacherOverviewSkeleton } from "./components/teacher-overview-skeleton";
 import {
   fetchTeacherOverviewGradebook,
@@ -19,18 +15,38 @@ import {
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/teacher-overview.module.css";
 
-const ADVISER_QUICK_ACTIONS = [
-  { title: "Take Attendance", description: "Record today's attendance", href: "/teacher/attendance", icon: CalendarClock },
-  { title: "Enter Scores", description: "Log grades for your classes", href: "/teacher/grading", icon: ClipboardCheck },
-  { title: "New Referral", description: "Refer from an anecdotal record", href: "/teacher/advisory/referrals", icon: Send },
-];
+/** Right-rail width is user-resizable between these bounds (px). */
 
-const CLASS_QUICK_ACTIONS = [
-  { title: "Take Attendance", description: "Record today's attendance", href: "/teacher/attendance", icon: CalendarClock },
-  { title: "Enter Scores", description: "Log grades for your classes", href: "/teacher/grading", icon: ClipboardCheck },
-  { title: "Flag Student", description: "Raise a concern for a student", href: "/teacher/grade-flags", icon: Flag },
-  { title: "My Classes", description: "Open your class timetable", href: "/teacher/classes", icon: BookOpen },
-];
+/** Right-rail width is user-resizable between these bounds (px). */
+const RAIL_STORAGE_KEY = "teacher-overview-rail";
+const RAIL_DEFAULT_WIDTH = 320;
+const RAIL_MIN_WIDTH = 264;
+const RAIL_MAX_WIDTH = 480;
+
+interface RailPrefs {
+  collapsed: boolean;
+  width: number;
+}
+
+function clampRailWidth(width: number): number {
+  return Math.min(RAIL_MAX_WIDTH, Math.max(RAIL_MIN_WIDTH, Math.round(width)));
+}
+
+function readRailPrefs(): RailPrefs {
+  try {
+    const raw = window.localStorage.getItem(RAIL_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<RailPrefs>;
+      return {
+        collapsed: parsed.collapsed === true,
+        width: clampRailWidth(Number(parsed.width) || RAIL_DEFAULT_WIDTH),
+      };
+    }
+  } catch {
+    // ignore corrupt/blocked storage
+  }
+  return { collapsed: false, width: RAIL_DEFAULT_WIDTH };
+}
 
 export default function TeacherOverviewPage() {
 
@@ -62,8 +78,76 @@ export default function TeacherOverviewPage() {
     }
   }, [queryClient, prefetchTeacherId, termKey]);
 
+  // Right rail: horizontal collapse to an icon strip + drag-resizable width.
+  // Preferences load after mount so prerender/hydration stay deterministic.
+  const [rail, setRail] = React.useState<RailPrefs>({
+    collapsed: false,
+    width: RAIL_DEFAULT_WIDTH,
+  });
+  const railDrag = React.useRef<{ startX: number; startWidth: number } | null>(null);
+  const [railResizing, setRailResizing] = React.useState(false);
+
+  React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot read of a local UI preference
+    setRail(readRailPrefs());
+  }, []);
+
+  const persistRail = React.useCallback((next: RailPrefs) => {
+    try {
+      window.localStorage.setItem(RAIL_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore quota/storage errors
+    }
+  }, []);
+
+  const updateRail = React.useCallback(
+    (updater: (prev: RailPrefs) => RailPrefs) => {
+      setRail((prev) => {
+        const next = updater(prev);
+        persistRail(next);
+        return next;
+      });
+    },
+    [persistRail],
+  );
+
+  const toggleRail = React.useCallback(() => {
+    updateRail((prev) => ({ ...prev, collapsed: !prev.collapsed }));
+  }, [updateRail]);
+
+  const onRailResizeStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (rail.collapsed) return;
+    railDrag.current = { startX: e.clientX, startWidth: rail.width };
+    setRailResizing(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onRailResizeMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = railDrag.current;
+    if (!drag) return;
+    // Dragging left widens the rail.
+    const width = clampRailWidth(drag.startWidth + (drag.startX - e.clientX));
+    updateRail((prev) => ({ ...prev, width }));
+  };
+
+  const onRailResizeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!railDrag.current) return;
+    railDrag.current = null;
+    setRailResizing(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  const onRailResizeKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const delta = e.key === "ArrowLeft" ? 16 : -16;
+    updateRail((prev) => ({ ...prev, width: clampRailWidth(prev.width + delta) }));
+  };
+
   if (isPending) {
-    return <TeacherOverviewSkeleton actions={ADVISER_QUICK_ACTIONS} />;
+    return <TeacherOverviewSkeleton />;
   }
 
   if (isError || !data) {
@@ -75,7 +159,6 @@ export default function TeacherOverviewPage() {
   }
 
   const isAdviser = !!data.advisorySection;
-  const quickActions = isAdviser ? ADVISER_QUICK_ACTIONS : CLASS_QUICK_ACTIONS;
   const classStudents = data.classStudents ?? [];
   const studentCount = isAdviser
     ? (data.advisoryTotal ?? data.advisory.students.length)
@@ -99,35 +182,106 @@ export default function TeacherOverviewPage() {
 
   return (
     <section className={styles.page}>
-      <div className={styles.body}>
+      <div
+        className={`${styles.body} ${rail.collapsed ? styles.bodyCollapsed : ""} ${railResizing ? styles.bodyResizing : ""}`}
+        style={{ ["--rail-width" as string]: `${rail.width}px` } as React.CSSProperties}
+      >
         <div className={styles.mainCol}>
-          <TeacherOverviewActions actions={quickActions} />
-
-          {isAdviser ? (
-            <TeacherOverviewRiskTable students={data.advisory.students} totalCount={data.advisoryTotal} />
-          ) : (
-            <TeacherOverviewClassStudents students={classStudents} totalCount={data.classStudentsTotal} />
-          )}
-
-          {data.advisorySection ? (
-            <TeacherOverviewAttendanceTable sectionId={data.advisorySection.id} />
-          ) : null}
-
-          {isAdviser ? <TeacherOverviewAnecdotes /> : null}
+          <TeacherOverviewCharts
+            overview={data}
+            factors={atRiskFactors}
+            hideBehavioral={!isAdviser}
+          />
         </div>
 
-        <aside className={styles.sideCol} style={{ top: "4rem" }}>
-          <TeacherOverviewKanban
-            teacherName={data.teacherName}
-            advisorySection={data.advisorySection}
-            classCount={data.kpi.classCount}
-            studentCount={studentCount}
-            atRiskFactors={atRiskFactors}
-            atRiskStudents={atRiskStudents}
-            populationLabel={isAdviser ? "advisees" : "students"}
-            hideBehavioral={!isAdviser}
-            storageKey={`teacher-kanban:${prefetchTeacherId ?? data.teacherName}:${termKey}`}
-          />
+        <aside
+          className={`${styles.sideCol} ${rail.collapsed ? styles.sideColCollapsed : ""}`}
+          style={{ top: "4rem" }}
+        >
+          <div
+            className={`${styles.railLayer} ${styles.railExpanded}`}
+            aria-hidden={rail.collapsed}
+            inert={rail.collapsed}
+          >
+            <div className={styles.railHead}>
+              <span className={styles.railTitle}>My day</span>
+              <button
+                type="button"
+                className={styles.railToggle}
+                onClick={toggleRail}
+                aria-label="Collapse side panel to icons"
+                title="Collapse to icons"
+              >
+                <ChevronRight size={16} aria-hidden />
+              </button>
+            </div>
+            <TeacherOverviewKanban
+              teacherName={data.teacherName}
+              advisorySection={data.advisorySection}
+              classCount={data.kpi.classCount}
+              studentCount={studentCount}
+              atRiskFactors={atRiskFactors}
+              atRiskStudents={atRiskStudents}
+              populationLabel={isAdviser ? "advisees" : "students"}
+              hideBehavioral={!isAdviser}
+              storageKey={`teacher-kanban:${prefetchTeacherId ?? data.teacherName}:${termKey}`}
+            />
+          </div>
+
+          <div
+            className={`${styles.railLayer} ${styles.railIcons}`}
+            aria-hidden={!rail.collapsed}
+            inert={!rail.collapsed}
+          >
+            <div className={styles.railStack}>
+              <button
+                type="button"
+                className={`${styles.railCard} ${styles.railCardNeutral}`}
+                onClick={toggleRail}
+                aria-label="Expand side panel"
+                title="Expand side panel"
+              >
+                <ChevronLeft size={16} aria-hidden className={styles.railIcon} />
+              </button>
+              <button
+                type="button"
+                className={styles.railCard}
+                onClick={toggleRail}
+                aria-label="Expand side panel to profile"
+                title={data.teacherName}
+              >
+                <User size={16} aria-hidden className={styles.railIcon} />
+              </button>
+              <button
+                type="button"
+                className={styles.railCard}
+                onClick={toggleRail}
+                aria-label={`Expand side panel to needs attention, ${atRiskStudents} at risk`}
+                title={`Needs attention · ${atRiskStudents}`}
+              >
+                <ShieldAlert size={16} aria-hidden className={styles.railIcon} />
+                <span className={styles.railBadge}>{atRiskStudents}</span>
+              </button>
+            </div>
+          </div>
+
+          {!rail.collapsed ? (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize side panel"
+              aria-valuemin={RAIL_MIN_WIDTH}
+              aria-valuemax={RAIL_MAX_WIDTH}
+              aria-valuenow={rail.width}
+              tabIndex={0}
+              className={styles.railResize}
+              onPointerDown={onRailResizeStart}
+              onPointerMove={onRailResizeMove}
+              onPointerUp={onRailResizeEnd}
+              onPointerCancel={onRailResizeEnd}
+              onKeyDown={onRailResizeKeyDown}
+            />
+          ) : null}
         </aside>
       </div>
     </section>

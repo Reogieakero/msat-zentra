@@ -180,6 +180,8 @@ export interface BookSessionDialogProps {
   variant?: "card" | "board";
 
   inviteStaff?: InviteStaffOption[];
+  /** True while the invitee list is still being fetched — renders a skeleton. */
+  inviteStaffLoading?: boolean;
   initialInviteIds?: string[];
   inviteHint?: string;
 
@@ -225,6 +227,7 @@ export function BookSessionDialog({
   idPrefix = "book-session",
   variant = "card",
   inviteStaff,
+  inviteStaffLoading = false,
   initialInviteIds = [],
   inviteHint,
   sectionAdviserId = null,
@@ -318,7 +321,7 @@ export function BookSessionDialog({
     return () => controller.abort();
   }, [open, date, fetchTakenTimes, takenLoading]);
 
-  const showInvites = inviteStaff !== undefined;
+  const showInvites = inviteStaff !== undefined || inviteStaffLoading;
   const inviteGroups = React.useMemo(() => {
     if (!inviteStaff) return [];
     const order = ["guidance_counselor", "nurse", "adviser"];
@@ -681,38 +684,54 @@ export function BookSessionDialog({
                         Invite staff
                         {invites.length > 0 ? ` · ${invites.length} invited` : ""}
                       </span>
-                      {inviteHint ? <p className={styles.hint}>{inviteHint}</p> : null}
-                      {inviteStaff!.length === 0 ? (
-                        <p className={styles.hint}>No invitable staff right now.</p>
-                      ) : (
-                        inviteGroups.map(([role, members]) => (
-                          <div key={role} className={styles.inviteGroup}>
-                            <p className={styles.inviteGroupLabel}>
-                              {inviteRoleLabel(role)}
-                            </p>
-                            <div
-                              className={board.invitePills}
-                              role="group"
-                              aria-label="Invite staff"
-                            >
-                              {members.map((s) => {
-                                const checked = invites.includes(s.id);
-                                return (
-                                  <button
-                                    key={s.id}
-                                    type="button"
-                                    className={`${board.invitePill}${checked ? ` ${board.invitePillSelected}` : ""}`}
-                                    aria-pressed={checked}
-                                    onClick={() => toggleInvite(s.id)}
-                                    title={s.fullName}
-                                  >
-                                    {s.fullName}
-                                  </button>
-                                );
-                              })}
-                            </div>
+                      {inviteStaffLoading ? (
+                        <div
+                          className={styles.inviteGroup}
+                          aria-busy="true"
+                          aria-label="Loading invitable staff"
+                        >
+                          <span className="block h-3 w-28 animate-pulse rounded bg-muted" />
+                          <div className={`${board.invitePills} pt-1`}>
+                            <span className="block h-7 w-28 animate-pulse rounded-md bg-muted" />
+                            <span className="block h-7 w-32 animate-pulse rounded-md bg-muted" />
                           </div>
-                        ))
+                        </div>
+                      ) : (
+                        <>
+                          {inviteHint ? <p className={styles.hint}>{inviteHint}</p> : null}
+                          {inviteStaff!.length === 0 ? (
+                            <p className={styles.hint}>No invitable staff right now.</p>
+                          ) : (
+                            inviteGroups.map(([role, members]) => (
+                              <div key={role} className={styles.inviteGroup}>
+                                <p className={styles.inviteGroupLabel}>
+                                  {inviteRoleLabel(role)}
+                                </p>
+                                <div
+                                  className={board.invitePills}
+                                  role="group"
+                                  aria-label="Invite staff"
+                                >
+                                  {members.map((s) => {
+                                    const checked = invites.includes(s.id);
+                                    return (
+                                      <button
+                                        key={s.id}
+                                        type="button"
+                                        className={`${board.invitePill}${checked ? ` ${board.invitePillSelected}` : ""}`}
+                                        aria-pressed={checked}
+                                        onClick={() => toggleInvite(s.id)}
+                                        title={s.fullName}
+                                      >
+                                        {s.fullName}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </>
                       )}
                     </div>
                   ) : null}
@@ -754,7 +773,7 @@ export function BookSessionDialog({
                 onClick={save}
                 disabled={busy}
                 aria-busy={busy || undefined}
-                className={`${board.footerBtn} ${PILL_BLUE_BUTTON}`}
+                className={board.footerBtn}
               >
                 {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
                 {busy ? (busyLabel ?? "Booking…") : submitLabel}
@@ -1003,37 +1022,53 @@ export function BookSessionDialog({
               <CardContent>
                 <div className={styles.formGrid}>
                   <div className={styles.inviteGroup}>
-                    {inviteHint ? <p className={styles.hint}>{inviteHint}</p> : null}
-                    {inviteStaff!.length === 0 ? (
-                      <p className={styles.hint}>No invitable staff right now.</p>
-                    ) : (
-                      inviteGroups.map(([role, members]) => (
-                        <div key={role} className={styles.inviteGroup}>
-                          <p className={styles.inviteGroupLabel}>{inviteRoleLabel(role)}</p>
-                          <div className={styles.inviteList}>
-                            {members.map((s) => {
-                              const checked = invites.includes(s.id);
-                              return (
-                                <label key={s.id} className={styles.inviteRow}>
-                                  <input
-                                    type="checkbox"
-                                    className={styles.inviteCheck}
-                                    checked={checked}
-                                    onChange={() => toggleInvite(s.id)}
-                                    aria-label={`Invite ${s.fullName}`}
-                                  />
-                                  <span className={styles.inviteName} title={s.fullName}>
-                                    {s.fullName}
-                                  </span>
-                                  <span className={styles.inviteRole}>
-                                    {inviteRoleLabel(s.role)}
-                                  </span>
-                                </label>
-                              );
-                            })}
-                          </div>
+                    {inviteStaffLoading ? (
+                      <div
+                        className={styles.inviteGroup}
+                        aria-busy="true"
+                        aria-label="Loading invitable staff"
+                      >
+                        <span className="block h-3 w-28 animate-pulse rounded bg-muted" />
+                        <div className="flex flex-col gap-1.5 pt-1">
+                          <span className="block h-8 w-full animate-pulse rounded-md bg-muted" />
+                          <span className="block h-8 w-full animate-pulse rounded-md bg-muted" />
                         </div>
-                      ))
+                      </div>
+                    ) : (
+                      <>
+                        {inviteHint ? <p className={styles.hint}>{inviteHint}</p> : null}
+                        {inviteStaff!.length === 0 ? (
+                          <p className={styles.hint}>No invitable staff right now.</p>
+                        ) : (
+                          inviteGroups.map(([role, members]) => (
+                            <div key={role} className={styles.inviteGroup}>
+                              <p className={styles.inviteGroupLabel}>{inviteRoleLabel(role)}</p>
+                              <div className={styles.inviteList}>
+                                {members.map((s) => {
+                                  const checked = invites.includes(s.id);
+                                  return (
+                                    <label key={s.id} className={styles.inviteRow}>
+                                      <input
+                                        type="checkbox"
+                                        className={styles.inviteCheck}
+                                        checked={checked}
+                                        onChange={() => toggleInvite(s.id)}
+                                        aria-label={`Invite ${s.fullName}`}
+                                      />
+                                      <span className={styles.inviteName} title={s.fullName}>
+                                        {s.fullName}
+                                      </span>
+                                      <span className={styles.inviteRole}>
+                                        {inviteRoleLabel(s.role)}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

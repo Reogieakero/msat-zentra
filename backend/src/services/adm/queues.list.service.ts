@@ -173,8 +173,11 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
           select: {
             lrn: true,
             gradeLevel: true,
+            mascot: true,
             user: { select: { fullName: true } },
-            section: { select: { name: true } },
+            // The section's grade is the current grade; StudentProfile.gradeLevel
+            // is the registration-time grade and can go stale after a transfer.
+            section: { select: { id: true, name: true, gradeLevel: true } },
           },
         },
 
@@ -219,8 +222,9 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
               select: {
                 lrn: true,
                 gradeLevel: true,
+                mascot: true,
                 user: { select: { fullName: true } },
-                section: { select: { name: true } },
+                section: { select: { name: true, gradeLevel: true } },
               },
             },
             roster: {
@@ -228,7 +232,8 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
                 lrn: true,
                 fullName: true,
                 gradeLevel: true,
-                section: { select: { name: true } },
+                mascot: true,
+                section: { select: { name: true, gradeLevel: true } },
               },
             },
             referredByUser: { select: { fullName: true } },
@@ -242,6 +247,47 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
       : Promise.resolve(0),
   ]);
 
+  // Module progress spans the case's own AdmModule rows and the section-wide
+  // ADM modules the adviser released from the Modules desk (kind: "adm").
+  // Same merge the teacher/ADM case desk uses, so the numbers match everywhere.
+  const sectionIds = [
+    ...new Set(
+      profileItems
+        .map((p) => p.student.section?.id)
+        .filter((v): v is string => !!v),
+    ),
+  ];
+  const profileStudentIds = profileItems.map((p) => p.studentId);
+  const sectionModules = sectionIds.length
+    ? await prisma.advisoryModule.findMany({
+        where: { sectionId: { in: sectionIds }, kind: "adm" },
+        select: { id: true, sectionId: true },
+      })
+    : [];
+  const sectionSubmissions =
+    sectionModules.length && profileStudentIds.length
+      ? await prisma.advisoryModuleSubmission.findMany({
+          where: {
+            moduleId: { in: sectionModules.map((m) => m.id) },
+            studentId: { in: profileStudentIds },
+            submitted: true,
+          },
+          select: { moduleId: true, studentId: true },
+        })
+      : [];
+  const sectionByModule = new Map(sectionModules.map((m) => [m.id, m.sectionId]));
+  const sectionModuleCount = new Map<string, number>();
+  for (const m of sectionModules) {
+    sectionModuleCount.set(m.sectionId, (sectionModuleCount.get(m.sectionId) ?? 0) + 1);
+  }
+  const sectionSubmittedCount = new Map<string, number>();
+  for (const s of sectionSubmissions) {
+    const sectionId = sectionByModule.get(s.moduleId);
+    if (!sectionId || !s.studentId) continue;
+    const key = `${s.studentId}:${sectionId}`;
+    sectionSubmittedCount.set(key, (sectionSubmittedCount.get(key) ?? 0) + 1);
+  }
+
   const countsByStage: Record<string, number> = {};
   for (const g of stageGroups) countsByStage[g.stage] = g._count?._all ?? 0;
   countsByStage.consultation = (countsByStage.consultation ?? 0) + earlyItems.length;
@@ -251,11 +297,24 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
   const profileRows = profileItems.map((p) => {
     const stage = p.stage;
     const latestMeeting = (p as unknown as { parentMeetings?: { id: string; meetingDatetime: Date; venue: string; attended: boolean; invitees?: { userId: string }[] }[] }).parentMeetings?.[0] ?? null;
+    // Prefer the section's grade — StudentProfile.gradeLevel is set at
+    // registration and can be stale after a mid-year transfer.
+    const currentGradeLevel =
+      p.student.section?.gradeLevel ?? p.student.gradeLevel;
+    const sectionId = p.student.section?.id ?? null;
+    const caseSubmitted = p.modules.filter((m) => m.submitted).length;
+    const sectionSubmitted = sectionId
+      ? (sectionSubmittedCount.get(`${p.studentId}:${sectionId}`) ?? 0)
+      : 0;
+    const sectionTotal = sectionId
+      ? (sectionModuleCount.get(sectionId) ?? 0)
+      : 0;
     const base = {
       id: p.id,
       lrn: p.student.lrn,
       student: p.student.user.fullName,
-      grade: GRADE_LABEL[p.student.gradeLevel] ?? p.student.gradeLevel,
+      grade: GRADE_LABEL[currentGradeLevel] ?? currentGradeLevel,
+      mascot: p.student.mascot ?? null,
       section: p.student.section?.name ?? "",
       anecdotalRecordId: p.referral?.anecdotalRecordId ?? null,
       anecdotalCategory: p.referral?.anecdotalRecord?.category ?? null,
@@ -296,8 +355,8 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
           }
         : null,
 
-      modulesSubmitted: p.modules.filter((m) => m.submitted).length,
-      modulesTotal: p.modules.length,
+      modulesSubmitted: caseSubmitted + sectionSubmitted,
+      modulesTotal: p.modules.length + sectionTotal,
     };
 
     return ctx.role === "principal" ? base : { ...base, studentId: p.studentId };
@@ -341,11 +400,18 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
   }
 
   const earlyRows = earlyItems.map((r) => {
+    const currentGradeLevel =
+      r.student?.section?.gradeLevel ??
+      r.roster?.section?.gradeLevel ??
+      r.student?.gradeLevel ??
+      r.roster?.gradeLevel ??
+      "";
     const base = {
       id: `referral:${r.id}`,
       lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
       student: r.student?.user.fullName ?? r.roster?.fullName ?? "",
-      grade: GRADE_LABEL[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
+      grade: GRADE_LABEL[currentGradeLevel] ?? "",
+      mascot: r.student?.mascot ?? r.roster?.mascot ?? null,
       section: r.student?.section?.name ?? r.roster?.section?.name ?? "",
       anecdotalRecordId: r.anecdotalRecordId ?? null,
       anecdotalCategory: r.anecdotalRecord.category ?? null,

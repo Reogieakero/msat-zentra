@@ -1,10 +1,16 @@
 .page {
+  /* Amber figures — same values as the teacher / guidance overview pages. */
+  --nurse-number: #b45309;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   /* 16px comes from the layout shell (.main padding); no extra top pad —
      same as the teacher overview page. */
   padding: 0 0 0.25rem;
+}
+
+:global(.dark) .page {
+  --nurse-number: #fbbf24;
 }
 
 /* Left stack (queue board + charts) + icon-only KPI rail on the right —
@@ -68,13 +74,31 @@
   border-bottom: none;
 }
 
-/* One horizontal line per case: mascot, name, then LRN/grade/category pills.
-   The name truncates first; pills and actions keep their width. */
+/* One row per case: mascot, then a stacked name block (name above the
+   LRN/grade/category pills). The name truncates first; pills and actions keep
+   their width. */
 .caseInfo {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex: 1;
+  min-width: 0;
+}
+
+/* Name + meta stack — keeps the identity pills directly under the student
+   name instead of trailing it on the same line. */
+.caseNameBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.caseMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
   min-width: 0;
 }
 
@@ -606,6 +630,87 @@
   font-size: 0.75rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+}
+
+/* Chart tooltip — popover surface tokens keep it readable in light (white
+   card) and dark (near-black card) mode, with amber figures matching the
+   legend pills. Identical to the teacher / guidance overview tooltip. */
+.chartTooltip {
+  min-width: 9.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  padding: 0.5rem 0.625rem;
+  box-shadow:
+    0 16px 40px -20px rgb(0 0 0 / 0.45),
+    0 4px 12px -6px rgb(0 0 0 / 0.3);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  position: relative;
+  z-index: 50;
+}
+
+.chartTooltipLabel {
+  margin: 0 0 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.chartTooltipList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.chartTooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+
+.chartTooltipDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.chartTooltipName {
+  color: var(--popover-foreground);
+}
+
+.chartTooltipValue {
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--nurse-number);
+}
+
+/* "What it means" label inside the shared InsightCallout footer. */
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* The callout's own `.callout { margin: 0 }` beats Tailwind's `mt-auto`, so the
+   bottom pin lives on this wrapper instead. */
+.footerSlot {
+  display: flex;
+  margin-top: auto;
+}
+
+/* The callout hugs its copy: the bottom pin lives on the wrapper. */
+.interpretation {
+  flex: 1;
 }
 
 /* Loading + error */

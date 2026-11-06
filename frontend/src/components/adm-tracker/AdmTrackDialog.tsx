@@ -4,6 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { History, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { AdmTrackingTimeline } from "./AdmTrackingTimeline";
 import type { TrackerCaseInput } from "./adm-stage-activity";
 import {
@@ -11,6 +12,17 @@ import {
   admTrackSummary,
   type AdmTrackInput,
 } from "./adm-track-data";
+
+/** Referral status → shared Pill tone (same map as the teacher track overlay). */
+const STATUS_TONE: Record<string, PillTone> = {
+  pending: "amber",
+  in_progress: "blue",
+  follow_up: "blue",
+  info_requested: "neutral",
+  escalated: "red",
+  resolved: "green",
+  dismissed: "red",
+};
 
 export interface AdmTrackCase {
   student: string;
@@ -80,8 +92,8 @@ export function AdmTrackDialog({
     approvedAt: track.approvedAt ?? null,
   };
   const { holder } = admTrackSummary(track);
-  const statusMeta = ADM_TRACK_STATUS_META[(track.referralStatus ?? "").toLowerCase()];
-  const dot = statusMeta?.color ?? "var(--muted-foreground)";
+  const statusKey = (track.referralStatus ?? "").toLowerCase();
+  const statusMeta = ADM_TRACK_STATUS_META[statusKey];
 
   return createPortal(
     <div
@@ -103,9 +115,16 @@ export function AdmTrackDialog({
             <h2 id="adm-track-title" className="truncate text-[13px] font-semibold">
               Track ADM referral
             </h2>
-            <p className="truncate text-[11px] text-muted-foreground">
-              {caseInfo.student} · {caseInfo.lrn}
-            </p>
+            <span className="mt-1 flex min-w-0 max-w-full flex-wrap items-center gap-1">
+              <Pill tone="amber" label="Student" className="max-w-full overflow-hidden">
+                <span className="truncate" title={caseInfo.student}>
+                  {caseInfo.student}
+                </span>
+              </Pill>
+              <Pill className="tabular-nums" label="LRN">
+                {caseInfo.lrn}
+              </Pill>
+            </span>
           </div>
           <Button
             type="button"
@@ -119,29 +138,13 @@ export function AdmTrackDialog({
         </div>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 px-1">
           {statusMeta ? (
-            <span
-              className="inline-flex max-w-full items-center truncate rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight"
-              style={{
-                color: dot,
-                borderColor: `color-mix(in srgb, ${dot} 40%, transparent)`,
-                backgroundColor: `color-mix(in srgb, ${dot} 12%, transparent)`,
-              }}
-              title={statusMeta.label}
-            >
+            <Pill tone={STATUS_TONE[statusKey] ?? "neutral"} label="Referral status">
               {statusMeta.label}
-            </span>
+            </Pill>
           ) : null}
-          <span
-            className="inline-flex max-w-full items-center truncate rounded-md border px-2 py-0.5 text-xs font-semibold leading-tight"
-            style={{
-              color: "#f59e0b",
-              borderColor: "color-mix(in srgb, #f59e0b 40%, transparent)",
-              backgroundColor: "color-mix(in srgb, #f59e0b 12%, transparent)",
-            }}
-            title="ADM case"
-          >
+          <Pill tone="amber" label="Referral type">
             ADM case
-          </span>
+          </Pill>
           <span className="text-[11px] text-muted-foreground">to {holder}</span>
         </div>
         <div className="flex min-w-0 flex-col gap-1.5 px-1">

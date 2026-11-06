@@ -10,6 +10,7 @@ import {
   ShieldQuestion,
   FileBarChart,
   FileText,
+  BookOpen,
   Settings,
   Upload,
   type LucideIcon,
@@ -32,7 +33,7 @@ type NavGroup = {
   items: NavItem[];
 };
 
-const NAV: NavGroup[] = [
+export const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
@@ -52,6 +53,7 @@ const NAV: NavGroup[] = [
       { title: "Report Cards", href: "/record-keeper/report-cards", icon: FileBarChart },
       { title: "SF10 Records", href: "/record-keeper/sf10", icon: FileText },
       { title: "Upload SF10", href: "/record-keeper/sf10/upload", icon: Upload },
+      { title: "Subjects", href: "/record-keeper/academics", icon: BookOpen },
     ],
   },
   {

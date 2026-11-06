@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import {
   entryStatusLabel,
   entryStatusVariant,
@@ -18,21 +19,14 @@ import {
   formatBytes,
   type DocEntry,
 } from "./documentaries-utils";
-import {
-  anecdotalCategoryPillClass,
-  formatDate,
-} from "../../referrals/components/nurse-referrals-format";
+import { formatDate } from "../../referrals/components/nurse-referrals-format";
 import {
   ACCENT_CASE,
   ACCENT_FILES,
   ACCENT_NOTES,
   ACCENT_OUTCOME,
-  BOARD_PILL,
-  statusToneClass,
-  TONE_AMBER,
-  TONE_BLUE,
-  TONE_GREEN,
-  TONE_VIOLET,
+  categoryPillTone,
+  statusPillTone,
   TYPE_COLORS,
 } from "./record-tones";
 import styles from "./NurseDocumentariesList.module.css";
@@ -42,11 +36,6 @@ export interface DocumentaryDetailsProps {
   onOpenViewer: (entry: DocEntry, index: number) => void;
   onClose: () => void;
 }
-
-/* Metadata pills in the board title (LRN / grade / section) — separated by
-   pills instead of a dot-joined string. */
-const META_PILL =
-  "inline-flex shrink-0 items-center rounded-md border border-border bg-secondary px-2 py-0.5 text-[11px] font-medium leading-tight text-secondary-foreground";
 
 /**
  * Health-record details overlay — the same kanban board language as the other
@@ -75,9 +64,11 @@ export function DocumentaryDetails({
       : entry.session
         ? "Clinic session"
         : "Resolved case";
-  const meta = [entry.row.lrn, entry.row.grade, entry.row.section].filter(
-    (v) => v && v !== "—",
-  );
+  const meta = [
+    { label: "LRN", value: entry.row.lrn },
+    { label: "Grade level", value: entry.row.grade },
+    { label: "Section", value: entry.row.section },
+  ].filter((m) => m.value && m.value !== "—");
   const hasNotes = entry.details.trim() !== "" && entry.details !== "—";
   const hasOutcome = entry.outcome.trim() !== "";
 
@@ -85,45 +76,40 @@ export function DocumentaryDetails({
     {
       label: "Time referred",
       value: (
-        <span className={`${BOARD_PILL} ${TONE_AMBER}`}>
+        <Pill tone="amber" label="Time referred">
           {formatDate(entry.row.date)}
-        </span>
+        </Pill>
       ),
     },
     {
       label: "Referred",
       value: (
-        <span
-          className={`${BOARD_PILL} ${type === "ADM" ? TONE_BLUE : TONE_GREEN}`}
-        >
+        <Pill tone={type === "ADM" ? "blue" : "green"} label="Referred by">
           {entry.isEndorse
             ? "Endorse ADM"
             : type === "ADM"
               ? "Teacher / ADM referral"
               : "Clinic referral"}
-        </span>
+        </Pill>
       ),
     },
     {
       label: "Category",
       value: (
-        <span
-          className={`${BOARD_PILL} ${
-            anecdotalCategoryPillClass(entry.row.category) ?? TONE_AMBER
-          }`}
-        >
+        <Pill tone={categoryPillTone(entry.row.category)} label="Category">
           {entry.row.category}
-        </span>
+        </Pill>
       ),
     },
     {
       label: "Status",
       value: (
-        <span
-          className={`${BOARD_PILL} ${statusToneClass(entryStatusVariant(entry))}`}
+        <Pill
+          tone={statusPillTone(entryStatusVariant(entry))}
+          label="Record status"
         >
           {entryStatusLabel(entry)}
-        </span>
+        </Pill>
       ),
     },
   ];
@@ -131,9 +117,9 @@ export function DocumentaryDetails({
     fields.push({
       label: "Follow-up due",
       value: (
-        <span className={`${BOARD_PILL} ${TONE_VIOLET}`}>
+        <Pill tone="violet" label="Follow-up due">
           {formatDate(entry.row.followUpDate)}
-        </span>
+        </Pill>
       ),
     });
   }
@@ -158,9 +144,9 @@ export function DocumentaryDetails({
             <span className="inline-flex min-w-0 items-center gap-1.5">
               <span className="truncate">{entry.row.student}</span>
               {meta.map((m) => (
-                <span key={m} className={META_PILL}>
-                  {m}
-                </span>
+                <Pill key={m.label} label={m.label}>
+                  {m.value}
+                </Pill>
               ))}
             </span>
           }
@@ -209,16 +195,18 @@ export function DocumentaryDetails({
                 </span>
               }
             >
-              <dl className="m-0 flex flex-col gap-1.5 px-1 text-[12px] leading-relaxed">
+              {/* One mini card per field — 2 per row, even with the optional
+                  follow-up card. */}
+              <dl className="m-0 grid grid-cols-1 gap-2 px-1 pb-1 text-[12px] leading-relaxed sm:grid-cols-2">
                 {fields.map((f) => (
                   <div
                     key={f.label}
-                    className="flex items-baseline justify-between gap-3 border-b border-border/60 pb-1 last:border-b-0 last:pb-0"
+                    className="flex min-w-0 flex-col gap-1 rounded-md border border-border bg-muted/30 p-2"
                   >
-                    <dt className="shrink-0 text-muted-foreground">
+                    <dt className="text-[11px] font-medium text-muted-foreground">
                       {f.label}
                     </dt>
-                    <dd className="m-0 min-w-0 text-right">{f.value}</dd>
+                    <dd className="m-0 min-w-0">{f.value}</dd>
                   </div>
                 ))}
               </dl>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,35 +68,31 @@ function formatCountdown(targetMs: number, nowMs: number): string {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
+/** Session state → shared Pill tone (blue upcoming, green done, neutral cancelled). */
+const STATUS_TONE: Record<string, PillTone> = {
+  completed: "green",
+  cancelled: "neutral",
+  upcoming: "blue",
+  ready: "green",
+};
+
 function StatusPill({ status, started }: { status: string; started: boolean }) {
-  if (status === "completed") {
-    return (
-      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600 dark:border-[#1c5a37] dark:bg-[#0f2a1c] dark:text-[#86efac]">
-        <Check className="size-3" strokeWidth={3} aria-hidden="true" />
-        Done
-      </span>
-    );
-  }
-  if (status === "cancelled") {
-    return (
-      <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-        Cancelled
-      </span>
-    );
-  }
-  if (started) {
-    return (
-      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600 dark:border-[#1c5a37] dark:bg-[#0f2a1c] dark:text-[#86efac]">
-        <Check className="size-3" strokeWidth={3} aria-hidden="true" />
-        Ready to record
-      </span>
-    );
-  }
+  const key = status === "completed" ? "completed" : status === "cancelled" ? "cancelled" : started ? "ready" : "upcoming";
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-800 dark:border-[#1e3a6e] dark:bg-[#0f1a33] dark:text-[#bfdbfe]">
-      <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-      Upcoming
-    </span>
+    <Pill tone={STATUS_TONE[key] ?? "neutral"} label="Session status">
+      {key === "completed" || key === "ready" ? (
+        <Check className="size-3" strokeWidth={3} aria-hidden="true" />
+      ) : key === "upcoming" ? (
+        <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+      ) : null}
+      {key === "completed"
+        ? "Done"
+        : key === "cancelled"
+          ? "Cancelled"
+          : key === "ready"
+            ? "Ready to record"
+            : "Upcoming"}
+    </Pill>
   );
 }
 
@@ -168,7 +165,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                  card anatomy: kind + status on top, facts, countdown, actions. */
               <li
                 key={s.id}
-                className="flex min-w-0 flex-col gap-2.5 rounded-md border border-border bg-card p-2.5"
+                className="flex min-w-0 flex-col gap-2.5 rounded-md p-2.5"
               >
                 <div className="flex items-center gap-2">
                   <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground">
@@ -359,7 +356,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                           <Button
                             type="button"
                             size="xs"
-                            variant="outline"
+                            variant="default"
                             className="h-6 rounded-md px-2.5 text-xs"
                             disabled={disabled || locked}
                             title={

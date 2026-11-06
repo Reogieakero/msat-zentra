@@ -53,3 +53,9 @@
   border: none;
   border-top: 1px solid var(--border, #e5e5e5);
 }
+
+/* Dark mode: let the aurora canvas painted by the shell show through the
+   page surface instead of a flat --background fill. */
+:global(.dark) .page {
+  background-color: transparent;
+}

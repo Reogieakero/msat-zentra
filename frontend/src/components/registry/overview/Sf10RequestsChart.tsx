@@ -2,16 +2,24 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Tooltip,
+  XAxis,
+} from "recharts";
 import { FileStack } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import {
+  ChartTooltip,
+  CHART_TOOLTIP_WRAPPER,
+} from "@/components/ui/chart-tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
 import {
@@ -145,19 +153,20 @@ export function Sf10RequestsChart({
             minTickGap={32}
             tickFormatter={(value) => formatDay(value as string)}
           />
-          <ChartTooltip
+          <Tooltip
             cursor={false}
             content={
-              <ChartTooltipContent
-                indicator="dot"
-                labelFormatter={(value) => formatDay(value as string)}
+              <ChartTooltip
+                formatLabel={(value) => formatDay(String(value))}
               />
             }
+            wrapperStyle={CHART_TOOLTIP_WRAPPER}
           />
           {activeSeries.map((key) => (
             <Area
               key={key}
               dataKey={key}
+              name={chartConfig[key].label}
               type="monotone"
               stackId="a"
               fill={`url(#fill-sf10-${key})`}

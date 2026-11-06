@@ -5,26 +5,23 @@ import { useRouter } from "next/navigation";
 import {
   CalendarClock,
   CalendarPlus,
-  Eye,
   History,
   Inbox,
   Loader2,
-  MoreHorizontal,
   Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { KanbanBoard } from "@/components/ui/kanban-board";
-import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import {
   admCaseStatusVariant,
   deriveAdmCaseStatus,
@@ -37,14 +34,15 @@ import {
   venueLabel,
 } from "@/services/coordinator/labels";
 import { formatElapsedShort, msSinceDate } from "@/lib/clock";
+import { toSlug } from "@/lib/slug";
 import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { historyTargetFor } from "../../components/CaseHistoryDialog";
 import { CoordinatorEmptyState } from "../../components/CoordinatorEmptyCard";
-import { CoordinatorReferralsSkeleton } from "./coordinator-referrals-skeleton";
+import { CoordinatorReferralsSkeleton, CoordinatorReferralsCardsSkeleton } from "./coordinator-referrals-skeleton";
 import { CoordinatorReferralsFilters } from "./coordinator-referrals-header";
 import {
-  BookedMeetingInfoPanel,
+  BookedMeetingInfoContent,
   type BookedMeetingInfo,
 } from "@/components/session-booking/BookedMeetingInfoPanel";
 import { buildInterpretation, isBookableRow } from "./coordinator-referrals-interpretation";
@@ -58,6 +56,20 @@ const STATUS_TABS: { key: StatusTabKey; label: string }[] = [
   { key: "need_review", label: "Need review" },
   { key: "endorsed", label: "Endorsed" },
 ];
+
+// Badge variants from `admCaseStatusVariant` mapped onto the shared pill tones.
+const STATUS_TONE: Record<
+  ReturnType<typeof admCaseStatusVariant>,
+  PillTone
+> = {
+  amber: "amber",
+  success: "green",
+  default: "blue",
+  destructive: "red",
+  secondary: "violet",
+  outline: "neutral",
+  red: "red",
+};
 
 function rowMeetingInfo(r: AdmCaseRow): BookedMeetingInfo | null {
   const m = r.meeting;
@@ -78,6 +90,7 @@ interface CoordinatorReferralsBoardProps {
 
   isInitialLoading: boolean;
 
+  isPageLoading: boolean;
   isSyncing: boolean;
   isError: boolean;
   isRefetching: boolean;
@@ -85,7 +98,6 @@ interface CoordinatorReferralsBoardProps {
   query: string;
   onQueryChange: (v: string) => void;
   hasActiveFilters: boolean;
-  onClear: () => void;
 
   bookPendingId: string | null;
 
@@ -104,14 +116,12 @@ interface CoordinatorReferralsBoardProps {
 export function CoordinatorReferralsBoard({
   rows,
   isInitialLoading,
-  isSyncing,
+  isPageLoading,
   isError,
   isRefetching,
-  total,
   query,
   onQueryChange,
   hasActiveFilters,
-  onClear,
   bookPendingId,
   now,
   onRetry,
@@ -140,31 +150,43 @@ export function CoordinatorReferralsBoard({
     return { all: rows.length, booked, need_review: needReview, endorsed };
   }, [rows]);
 
+  const searchTerm = query.trim().toLowerCase();
+
   const filteredRows = React.useMemo(() => {
-    if (statusTab === "all") return rows;
-    if (statusTab === "booked") return rows.filter((r) => r.meeting != null);
-    return rows.filter(
-      (r) =>
-        deriveAdmCaseStatus(
-          r.stage,
-          r.eligibilityStatus,
-          r.approvedBy,
-          r.referralStatus,
-        ).key === statusTab,
+    const base =
+      statusTab === "all"
+        ? rows
+        : statusTab === "booked"
+          ? rows.filter((r) => r.meeting != null)
+          : rows.filter(
+              (r) =>
+                deriveAdmCaseStatus(
+                  r.stage,
+                  r.eligibilityStatus,
+                  r.approvedBy,
+                  r.referralStatus,
+                ).key === statusTab,
+            );
+    if (searchTerm === "") return base;
+    // Filter the loaded page instantly as the clerk types (same feel as the
+    // nurse desks); the debounced server query then swaps in matches from the
+    // rest of the desk.
+    return base.filter((r) =>
+      `${r.student} ${r.lrn} ${r.id} ${stageLabel(r.stage)}`
+        .toLowerCase()
+        .includes(searchTerm),
     );
-  }, [rows, statusTab]);
+  }, [rows, statusTab, searchTerm]);
 
   const filters = (
     <CoordinatorReferralsFilters
       query={query}
       onQueryChange={onQueryChange}
-      hasActiveFilters={hasActiveFilters}
-      onClear={onClear}
     />
   );
 
   const statusTabs = (
-    <div className={styles.statusTabs} role="tablist" aria-label="Filter cases by status">
+    <div className={styles.filterRow} role="tablist" aria-label="Filter cases by status">
       {STATUS_TABS.map((t) => {
         const active = statusTab === t.key;
         return (
@@ -173,11 +195,14 @@ export function CoordinatorReferralsBoard({
             type="button"
             role="tab"
             aria-selected={active}
-            className={`${styles.statusTab}${active ? ` ${styles.statusTabActive}` : ""}`}
+            aria-pressed={active}
+            className={styles.filterButton}
             onClick={() => setStatusTab(t.key)}
           >
-            {t.label}
-            <span className={styles.statusTabCount}>{counts[t.key]}</span>
+            <Pill tone={active ? "blue" : "neutral"}>
+              {t.label}
+              <span className={styles.statusTabCount}>{counts[t.key]}</span>
+            </Pill>
           </button>
         );
       })}
@@ -219,7 +244,6 @@ export function CoordinatorReferralsBoard({
             <Share2 size={14} />
           </span>
         }
-        count={total}
         description="Every student referred for Alternative Delivery Mode."
         ariaLabel="ADM referrals"
         actions={filters}
@@ -241,37 +265,29 @@ export function CoordinatorReferralsBoard({
           <Share2 size={14} />
         </span>
       }
-      count={isSyncing ? undefined : total}
       description="Every student referred for Alternative Delivery Mode."
       ariaLabel="ADM referrals"
       actions={filters}
       headerCenter={statusTabs}
       footer={
-        filteredRows.length > 0 ? (
-          <p className={styles.interpretation}>
+        !isPageLoading && filteredRows.length > 0 ? (
+          <InsightCallout className={styles.interpretation}>
             <span className={styles.interpretationLabel}>What it means · </span>
             {buildInterpretation(filteredRows)}
-          </p>
+          </InsightCallout>
         ) : null
       }
     >
-      {rows.length === 0 ? (
-        <CoordinatorEmptyState
-          icon={Inbox}
-          title="No cases match your filters"
-          hint="Try a different search or clear the eligibility filter."
-          action={
-            <Button size="sm" variant="outline" onClick={onClear}>
-              Show all
-            </Button>
-          }
-        />
-      ) : filteredRows.length === 0 ? (
-        <CoordinatorEmptyState
-          icon={Inbox}
-          title="No cases in this view"
-          hint="Try a different status tab."
-        />
+      {isPageLoading ? (
+        <CoordinatorReferralsCardsSkeleton rows={9} />
+      ) : rows.length === 0 || filteredRows.length === 0 ? (
+        <div className={styles.emptyCallout}>
+          <InsightCallout role="status">
+            {rows.length === 0 || searchTerm !== "" || hasActiveFilters
+              ? "No referrals match your search or filters. Try a different name, LRN, or case ID."
+              : "No cases in this view. Try a different status tab."}
+          </InsightCallout>
+        </div>
       ) : (
         <ul className={styles.caseGrid} aria-label="ADM referrals">
           {filteredRows.map((r) => {
@@ -288,10 +304,23 @@ export function CoordinatorReferralsBoard({
             const bookable = isBookableRow(r);
             const closedRow =
               r.referralStatus === "dismissed" || r.referralStatus === "resolved";
-            const meetingPill = `${styles.metaPill}${meeting && !meeting.attended ? ` ${styles.metaPillBooked}` : ""}`;
+            const detailsHref = `/coordinator/referrals/${encodeURIComponent(toSlug(r.student))}`;
 
             return (
-              <li key={r.id} className={styles.caseCard}>
+              <li
+                key={r.id}
+                className={styles.caseCard}
+                role="link"
+                tabIndex={0}
+                aria-label={`Open details for ${r.student}`}
+                onClick={() => router.push(detailsHref)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(detailsHref);
+                  }
+                }}
+              >
                 <div className={styles.caseHead}>
                   <StudentMascot name={r.student} seed={r.lrn} size={36} />
                   <div className={styles.caseId}>
@@ -303,42 +332,42 @@ export function CoordinatorReferralsBoard({
                 </div>
 
                 <div className={styles.caseMeta}>
-                  <Badge
-                    variant={admCaseStatusVariant(caseStatus.key)}
+                  <Pill
+                    tone={STATUS_TONE[admCaseStatusVariant(caseStatus.key)]}
                     className="shrink-0 rounded-md"
-                    title={stageLabel(r.stage)}
+                    label={stageLabel(r.stage)}
                   >
                     {caseStatus.label}
-                  </Badge>
-                  <span
-                    className={styles.metaPill}
-                    title={`Eligibility: ${eligibilityLabel(r.eligibilityStatus)}`}
+                  </Pill>
+                  <Pill
+                    tone="neutral"
+                    label={`Eligibility: ${eligibilityLabel(r.eligibilityStatus)}`}
                   >
                     {eligibilityLabel(r.eligibilityStatus)}
-                  </span>
+                  </Pill>
                   {meeting ? (
                     <>
-                      <span
-                        className={meetingPill}
-                        title={meeting.attended ? "Meeting attended" : "Booked meeting"}
+                      <Pill
+                        tone={meeting.attended ? "green" : "blue"}
+                        label={meeting.attended ? "Meeting attended" : "Booked meeting"}
                       >
                         <CalendarClock size={11} aria-hidden />
                         {meeting.attended ? "Attended" : "Booked"}
-                      </span>
-                      <span className={meetingPill} title="Meeting date">
+                      </Pill>
+                      <Pill tone="neutral" label="Meeting date">
                         {formatManilaDateLong(meeting.datetime)}
-                      </span>
-                      <span className={meetingPill} title="Meeting time">
+                      </Pill>
+                      <Pill tone="neutral" label="Meeting time">
                         {formatManilaTime(meeting.datetime)}
-                      </span>
-                      <span className={meetingPill} title="Venue">
+                      </Pill>
+                      <Pill tone="neutral" label="Venue">
                         {venueLabel(meeting.venue)}
-                      </span>
+                      </Pill>
                     </>
                   ) : (
-                    <span className={styles.metaPill} title="Date referred">
+                    <Pill tone="neutral" label="Date referred">
                       {rowDate ? formatManilaDateLong(rowDate) : "—"}
-                    </span>
+                    </Pill>
                   )}
                 </div>
 
@@ -380,7 +409,11 @@ export function CoordinatorReferralsBoard({
                       })()
                     )}
                   </span>
-                  <div className={styles.caseActions}>
+                  <div
+                    className={styles.caseActions}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     {meeting === null ? (
                       <Button
                         size="sm"
@@ -403,54 +436,50 @@ export function CoordinatorReferralsBoard({
                         {bookingThis ? "Booking…" : "Book schedule"}
                       </Button>
                     ) : null}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={styles.cardMenuBtn}
-                          aria-label={`Actions for ${r.student}`}
-                        >
-                          <MoreHorizontal aria-hidden />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className={styles.menu}>
-                        <DropdownMenuItem
-                          onSelect={() =>
-                            router.push(
-                              `/coordinator/referrals/${encodeURIComponent(r.id)}`,
-                            )
-                          }
-                        >
-                          <Eye aria-hidden />
-                          See details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() => onHistory(historyTargetFor(r))}
-                        >
-                          <History aria-hidden />
-                          Track case
-                        </DropdownMenuItem>
-                        {meetingInfo !== null ? (
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                              <CalendarClock aria-hidden />
+                    {meetingInfo !== null ? (
+                      <Popover>
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={styles.cardMenuBtn}
+                                  aria-label={`Booked meeting info for ${r.student}`}
+                                >
+                                  <CalendarClock aria-hidden />
+                                </Button>
+                              </PopoverTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" sideOffset={6}>
                               Booked info
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent
-                              sideOffset={8}
-                              className={styles.infoSub}
-                            >
-                              <BookedMeetingInfoPanel
-                                info={meetingInfo}
-                                onReschedule={() => onBook(r)}
-                                reschedulePending={bookingThis}
-                              />
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-                        ) : null}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <PopoverContent align="end" sideOffset={8} className="w-80 p-3">
+                          <BookedMeetingInfoContent info={meetingInfo} />
+                        </PopoverContent>
+                      </Popover>
+                    ) : null}
+                    <TooltipProvider delayDuration={100}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={styles.cardMenuBtn}
+                            aria-label={`Track case for ${r.student}`}
+                            onClick={() => onHistory(historyTargetFor(r))}
+                          >
+                            <History aria-hidden />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" sideOffset={6}>
+                          Track case
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
               </li>

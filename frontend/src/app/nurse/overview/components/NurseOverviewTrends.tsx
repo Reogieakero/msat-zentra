@@ -15,12 +15,27 @@ import type { NurseQueueRow, NurseTrendPoint } from "@/services/nurse/nurse.type
 import type { LucideIcon } from "lucide-react";
 import { CalendarClock, Hourglass } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
+import { NurseChartTooltip, NURSE_TOOLTIP_Z_INDEX } from "./nurse-chart-tooltip";
+import { formatDate } from "@/lib/labels/datetime";
 import styles from "./nurse-overview.module.css";
 
 // Amber — the rail's accent (tailwind amber-500), same palette as the
 // breakdown charts.
 const AMBER = "oklch(0.769 0.188 70.08)";
+
+/** Uniform "What it means" footer — the shared insight callout, pinned low. */
+function Interpretation({ children }: { children: React.ReactNode }) {
+  return (
+    <div className={styles.footerSlot}>
+      <InsightCallout className={styles.interpretation}>
+        <span className={styles.interpretationLabel}>What it means · </span>
+        {children}
+      </InsightCallout>
+    </div>
+  );
+}
 
 function useNowMs(intervalMs = 30_000): number {
   const [nowMs, setNowMs] = React.useState(() => Date.now());
@@ -70,13 +85,8 @@ function CaseLoadLine({ trend }: { trend: NurseTrendPoint[] }) {
             allowDecimals={false}
           />
           <Tooltip
-            contentStyle={{
-              borderRadius: "8px",
-              border: "1px solid var(--border)",
-              background: "var(--card)",
-              color: "var(--foreground)",
-              fontSize: "0.75rem",
-            }}
+            content={<NurseChartTooltip />}
+            wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
           />
           <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
           <Line
@@ -141,6 +151,9 @@ function WaitingTimeLine({ rows }: { rows: NurseQueueRow[] }) {
     };
   }, [rows, nowMs]);
 
+  const overDay = points.filter((p) => p.hours >= 24).length;
+  const oldest = points[0]?.label ?? "—";
+
   return (
     <>
       <p className={styles.legendTotal}>
@@ -164,17 +177,12 @@ function WaitingTimeLine({ rows }: { rows: NurseQueueRow[] }) {
               tickFormatter={(v) => (typeof v === "number" ? `${v}h` : v)}
             />
             <Tooltip
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid var(--border)",
-                background: "var(--card)",
-                color: "var(--foreground)",
-                fontSize: "0.75rem",
-              }}
-              formatter={(_value, _name, item) => [
-                item?.payload?.label ?? _value,
-                "Waiting",
-              ]}
+              content={
+                <NurseChartTooltip
+                  formatValue={(item) => item.payload?.label ?? item.value}
+                />
+              }
+              wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
             />
             <Line
               type="monotone"
@@ -188,6 +196,13 @@ function WaitingTimeLine({ rows }: { rows: NurseQueueRow[] }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
+      <Interpretation>
+        {overDay === 0
+          ? `No case has passed 24 hours yet — oldest is at ${oldest}.`
+          : `${overDay} of ${waited} waiting ${
+              waited === 1 ? "case has" : "cases have"
+            } passed 24 hours — oldest is at ${oldest}.`}
+      </Interpretation>
     </>
   );
 }
@@ -201,6 +216,15 @@ export function NurseOverviewTrends({
 }) {
   const caseTotal = dailyTrend.reduce((n, d) => n + d.adm + d.clinic, 0);
   const caseEmpty = caseTotal === 0;
+  const busiest = React.useMemo(() => {
+    let best: { date: string; count: number } | null = null;
+    for (const d of dailyTrend) {
+      const count = d.adm + d.clinic;
+      if (count <= 0) continue;
+      if (!best || count > best.count) best = { date: d.date, count };
+    }
+    return best;
+  }, [dailyTrend]);
   // Cases with a parseable referred time — matches WaitingTimeLine's filter.
   const waited = needsReview.filter((r) =>
     Number.isFinite(new Date(r.referredAt).getTime()),
@@ -225,6 +249,19 @@ export function NurseOverviewTrends({
         ) : (
           <CaseLoadLine trend={dailyTrend} />
         )}
+        <Interpretation>
+          {caseEmpty
+            ? "No referrals landed in the last 14 days."
+            : busiest
+              ? `${caseTotal} referral${
+                  caseTotal === 1 ? "" : "s"
+                } in the last 14 days — busiest on ${formatDate(
+                  busiest.date,
+                )} with ${busiest.count}.`
+              : `${caseTotal} referral${
+                  caseTotal === 1 ? "" : "s"
+                } in the last 14 days.`}
+        </Interpretation>
       </KanbanBoard>
 
       <KanbanBoard
@@ -235,11 +272,16 @@ export function NurseOverviewTrends({
         className="flex-1"
       >
         {waitEmpty ? (
-          <NurseEmptyState
-            icon={Hourglass}
-            title="No cases waiting"
-            hint="Cases awaiting action will appear here."
-          />
+          <>
+            <NurseEmptyState
+              icon={Hourglass}
+              title="No cases waiting"
+              hint="Cases awaiting action will appear here."
+            />
+            <Interpretation>
+              No cases are waiting — every referral has been actioned.
+            </Interpretation>
+          </>
         ) : (
           <WaitingTimeLine rows={needsReview} />
         )}

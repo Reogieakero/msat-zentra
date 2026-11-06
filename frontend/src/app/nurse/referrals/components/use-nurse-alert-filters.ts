@@ -19,6 +19,7 @@ export function useNurseAlertFilters({
   serverPage,
   serverTotal,
   serverTotalPages,
+  search = "",
   pageSize = PAGE_SIZE,
 }: {
   alerts: NurseAlertItem[];
@@ -28,6 +29,8 @@ export function useNurseAlertFilters({
   serverPage?: number;
   serverTotal?: number;
   serverTotalPages?: number;
+  /** Live search text — filters the loaded page as the user types. */
+  search?: string;
   /** Records per page. Defaults to the global 15; the ADM kanban pages 16. */
   pageSize?: number;
 }) {
@@ -53,9 +56,19 @@ export function useNurseAlertFilters({
       ? highlightPage
       : page;
   const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
     const rows = alerts.filter((a) => {
       if (typeFilter !== "" && a.row.type !== typeFilter) return false;
       if (actionFilter !== "" && !matchesActionFilter(a.row, actionFilter)) return false;
+      // Instant search on the loaded page (the debounced server query then
+      // brings in matches from the rest of the desk).
+      if (
+        q !== "" &&
+        !`${a.row.student} ${a.row.lrn} ${a.row.section} ${a.row.reason} ${a.row.category}`
+          .toLowerCase()
+          .includes(q)
+      )
+        return false;
       return true;
     });
     rows.sort((a, b) => {
@@ -66,7 +79,7 @@ export function useNurseAlertFilters({
       return b.sortTime - a.sortTime;
     });
     return rows;
-  }, [alerts, typeFilter, actionFilter]);
+  }, [alerts, typeFilter, actionFilter, search]);
   const actionCounts = React.useMemo(() => {
     const counts: Record<ActionValue, number> = {
       adm_needs: 0,

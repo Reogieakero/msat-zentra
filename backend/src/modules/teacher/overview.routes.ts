@@ -3,9 +3,10 @@ import { validate } from "../../middleware/validate.js";
 import { cache } from "../../lib/cache.js";
 import { etag } from "../../lib/etag.js";
 import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
-import { teacherOverviewQuerySchema } from "./teacher.schemas.js";
+import { teacherOverviewInsightsQuerySchema, teacherOverviewQuerySchema } from "./teacher.schemas.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { getOverview } from "../../services/teacher/overview.service.js";
+import { getOverviewInsights } from "../../services/teacher/overview-insights.service.js";
 import { getStudentList } from "../../services/teacher/overview-students.service.js";
 
 const router = Router();
@@ -55,6 +56,37 @@ router.get(
             ...(classPage && classLimit ? { classPage, classLimit } : {}),
             ...(advisoryPage && advisoryLimit ? { advisoryPage, advisoryLimit } : {}),
           },
+        ),
+      );
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
+  "/overview/insights",
+  requireAuth,
+  requireRole("subject_teacher", "adviser"),
+
+  validate("query", teacherOverviewInsightsQuerySchema),
+  cache({
+    ttl: CACHE_TTLS.dashboard,
+    tags: [CACHE_TAGS.teacher, CACHE_TAGS.overview, CACHE_TAGS.risk],
+  }),
+  etag(),
+  async (req, res, next) => {
+    try {
+      const termId = await resolveActiveTermId(req);
+      res.json(
+        await getOverviewInsights(
+          {
+            userId: req.user!.id,
+            role: req.user!.role,
+            termId,
+            schoolYearId: req.termScope?.schoolYearId ?? null,
+          },
+          Number(req.query.days) || undefined,
         ),
       );
     } catch (e) {

@@ -27,7 +27,7 @@ function StudentShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className="desk-canvas flex min-h-dvh flex-col bg-background">
       <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4">
           <Link

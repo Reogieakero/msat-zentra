@@ -29,7 +29,7 @@ import {
 import { CoordinatorDevicesIssueDialog } from "./components/coordinator-devices-issue-dialog";
 import { CoordinatorDeviceReturnOverlay } from "./components/coordinator-device-return-overlay";
 import pageStyles from "../pages.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
 const DEVICE_PAGE_SIZE = PAGE_SIZE;
@@ -162,7 +162,6 @@ function CoordinatorDevicesPageInner() {
   const deviceTotalPages = devicesQuery.data?.totalPages ?? 1;
 
   const deviceSafePage = Math.min(page, deviceTotalPages);
-  const deviceBackground = devicesQuery.isFetching && !devicesQuery.isPending;
 
   // Prefetch the next page while the user views the current one.
   React.useEffect(() => {
@@ -238,18 +237,6 @@ function CoordinatorDevicesPageInner() {
         />
       ) : (
         <>
-          {showNeeds ? (
-            <div className={pageStyles.needsPrompt}>
-              <p className={pageStyles.needsMessage}>
-                <TabletSmartphone aria-hidden="true" />
-                {needsCountText}
-              </p>
-              <Button onClick={() => setIssueOpen(true)}>
-                Issue device
-              </Button>
-            </div>
-          ) : null}
-
           <CoordinatorDevicesBoard
             rows={rows}
             isPending={devicesQuery.isPending}
@@ -262,17 +249,20 @@ function CoordinatorDevicesPageInner() {
               setFilter(v);
               setPage(1);
             }}
-            hasActiveFilters={hasActiveFilters}
             onClear={clearFilters}
             returningId={returningId}
-            total={deviceTotal}
-            page={deviceSafePage}
-            isBackground={deviceBackground}
             onRetry={() => devicesQuery.refetch()}
-            onPageChange={(next) => setPage(next)}
             onRecordReturn={setReturnTarget}
             onIssueDevice={() => setIssueOpen(true)}
           />
+
+          {deviceTotal > 0 ? (
+            <Pagination
+              currentPage={deviceSafePage}
+              totalItems={deviceTotal}
+              onPageChange={(next) => setPage(next)}
+            />
+          ) : null}
         </>
       )}
 

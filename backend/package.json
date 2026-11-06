@@ -29,6 +29,7 @@
     "prisma:seed:reogie-adm": "tsx prisma/seed-reogie-adm-3.ts",
     "prisma:seed:newton-adm": "tsx prisma/seed-adm-newton-5.ts",
     "prisma:seed:honor-roll-5": "tsx prisma/seed-honor-roll-5.ts",
+    "prisma:seed:pending-students-5": "tsx prisma/seed-pending-student-accounts-5.ts",
     "prisma:seed:guidance-session-docs": "tsx prisma/seed-guidance-session-docs.ts",
     "prisma:seed:wipe": "tsx prisma/seed/wipe.ts",
     "test": "vitest run --testTimeout=15000",

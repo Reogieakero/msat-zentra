@@ -16,6 +16,8 @@ export interface MyAnecdotalRecord {
   studentId: string;
   studentName: string;
   lrn: string;
+  /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
+  mascot?: string | null;
   section: string;
   signed?: boolean;
   folderId: string | null;

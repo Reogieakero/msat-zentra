@@ -1,0 +1,101 @@
+.shell {
+  /* Landing palette, re-pointed at the shadcn tokens so the term cards,
+     select trigger and button inherit the same dark, mint-accented theme. */
+  --ink: #f3f7f5;
+  --muted: rgba(228, 241, 236, 0.58);
+  --faint: rgba(228, 241, 236, 0.38);
+  --line: rgba(228, 241, 236, 0.12);
+  --accent-a: #7ef5d0;
+  --accent-b: #a99cff;
+  --accent-a-rgb: 126, 245, 208;
+  --accent-b-rgb: 169, 156, 255;
+  --accent-ink: #eafff8;
+  --accent-icon: #b8ffe7;
+  --page-bg: #050807;
+  --panel-bg: #070d0b;
+
+  --background: var(--page-bg);
+  --foreground: var(--ink);
+  --card: var(--panel-bg);
+  --card-foreground: var(--ink);
+  --popover: var(--panel-bg);
+  --popover-foreground: var(--ink);
+  --primary: #f3f7f5;
+  --primary-foreground: #08110e;
+  --secondary: rgba(228, 241, 236, 0.1);
+  --secondary-foreground: var(--ink);
+  --muted: rgba(228, 241, 236, 0.08);
+  --muted-foreground: rgba(228, 241, 236, 0.56);
+  --accent: rgba(228, 241, 236, 0.08);
+  --accent-foreground: var(--ink);
+  --destructive: #ff9f9f;
+  --border: rgba(228, 241, 236, 0.14);
+  --input: rgba(228, 241, 236, 0.18);
+  --ring: rgba(126, 245, 208, 0.5);
+
+  color: var(--ink);
+  background-color: var(--page-bg);
+  animation: shellIn 460ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 300ms ease-out;
+}
+
+/* Smooth hand-off to the workspace: the overlay fades out before the term is
+   committed, so the shell never pops in behind it. */
+.shell[data-leaving="true"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stage {
+  position: relative;
+  z-index: 1;
+  animation: stageIn 620ms cubic-bezier(0.16, 1, 0.3, 1) 90ms;
+}
+
+/* Cards sit on the particle field: translucent enough that the sculpture reads
+   behind them, blurred so the labels stay legible. */
+.termCard {
+  background:
+    linear-gradient(180deg, rgba(228, 241, 236, 0.05), rgba(228, 241, 236, 0.014)),
+    color-mix(in srgb, var(--panel-bg) 78%, transparent);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  transition: border-color 160ms ease-out, box-shadow 160ms ease-out,
+    background-color 160ms ease-out;
+}
+
+.title {
+  font-family: var(--font-geist), var(--font-inter), sans-serif;
+  font-size: clamp(1.7rem, 3vw, 2.2rem);
+  font-weight: 300;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+
+.titleAccent {
+  background: linear-gradient(104deg, var(--accent-a), var(--accent-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes shellIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes stageIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell,
+  .stage {
+    animation: none;
+    transition: none;
+  }
+}

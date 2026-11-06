@@ -16,6 +16,7 @@ export const TEACHER_QUERY_KEYS = [
   ["teacher-overview"],
   ["teacher-overview-secondary"],
   ["teacher-overview-gradebook"],
+  ["teacher-overview-insights"],
   ["teacher-student-list"],
   ["teacher-reports"],
   ["advisory-students"],
@@ -62,6 +63,7 @@ export const TEACHER_SCOPE_KEYS = {
     ["attendance-section-matrix"],
     ["attendance-section-roster"],
     ["offered-subjects"],
+    ["teacher-overview-insights"],
   ],
   grading: [
     ["teacher-grading-class"],
@@ -70,6 +72,7 @@ export const TEACHER_SCOPE_KEYS = {
     ["teacher-overview"],
     ["teacher-overview-secondary"],
     ["teacher-overview-gradebook"],
+    ["teacher-overview-insights"],
     ["teacher-reports"],
   ],
   schedule: [
@@ -87,6 +90,7 @@ export const TEACHER_SCOPE_KEYS = {
     ["teacher-overview"],
     ["teacher-overview-secondary"],
     ["teacher-overview-gradebook"],
+    ["teacher-overview-insights"],
     ["teacher-student-list"],
     ["teacher-reports"],
   ],

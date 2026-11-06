@@ -1,28 +1,24 @@
 "use client";
 
-import * as React from "react";
 import {
   Cell,
   Pie,
   PieChart,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
 } from "recharts";
 import { CERT_STATUS_META } from "@/services/coordinator/certifications.service";
 import type {
   CertStatus,
   CertSummary,
 } from "@/services/coordinator/certifications.types";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import {
+  NurseChartTooltip,
+  NURSE_TOOLTIP_Z_INDEX,
+} from "../../../nurse/overview/components/nurse-chart-tooltip";
 import { AMBER_RAMP } from "../../overview/components/coordinator-overview-helpers";
 import styles from "./coordinator-certifications-charts.module.css";
-
-const TOOLTIP_STYLE: React.CSSProperties = {
-  borderRadius: 8,
-  border: "1px solid var(--border)",
-  background: "var(--card)",
-  color: "var(--foreground)",
-  fontSize: 12,
-};
 
 const ORDER: CertStatus[] = ["prepared", "awaiting", "revision", "approved"];
 
@@ -56,6 +52,7 @@ export function CoordinatorCertificationsCharts({
     count: summary[status],
     color: AMBER_RAMP[i % AMBER_RAMP.length],
   }));
+  const total = summary.total;
 
   return (
     <div
@@ -95,7 +92,22 @@ export function CoordinatorCertificationsCharts({
                       <Cell key={r.status} fill={r.color} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <RechartsTooltip
+                    cursor={false}
+                    wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
+                    animationDuration={150}
+                    animationEasing="ease-out"
+                    content={
+                      <NurseChartTooltip
+                        formatValue={(item) => {
+                          const count = Number(item.value);
+                          const pct =
+                            total > 0 ? Math.round((count / total) * 100) : 0;
+                          return `${item.value} (${pct}%)`;
+                        }}
+                      />
+                    }
+                  />
                 </PieChart>
               </ResponsiveContainer>
               <div className={styles.donutCenter}>
@@ -121,7 +133,10 @@ export function CoordinatorCertificationsCharts({
           </div>
         )}
         {summary.total > 0 ? (
-          <p className={styles.interpretation}>{interpretSummary(summary)}</p>
+          <InsightCallout className={styles.interpretation}>
+            <span className={styles.interpretationLabel}>What it means · </span>
+            {interpretSummary(summary)}
+          </InsightCallout>
         ) : null}
       </div>
     </div>

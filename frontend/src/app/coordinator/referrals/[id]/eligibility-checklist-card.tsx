@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { Pill } from "@/components/ui/pill";
 import styles from "./case-page.module.css";
 
 export interface ChecklistInput {
@@ -73,11 +74,12 @@ export function EligibilityChecklistCard({
             <span className={styles.checkLabel}>{c.label}</span>
             <span className={styles.checkHint}>{c.hint}</span>
           </span>
-          <span
-            className={`${styles.checkPill} ${c.ok ? styles.checkPillGreen : styles.checkPillRed}`}
+          <Pill
+            tone={c.ok ? "green" : "red"}
+            label="Checklist status"
           >
             {c.ok ? "On file" : "Missing"}
-          </span>
+          </Pill>
         </li>
       ))}
     </ul>

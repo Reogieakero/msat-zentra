@@ -30,6 +30,9 @@ const FACTOR_BADGE: Record<AdviseeRiskFlag, { label: string; variant: "amber" | 
   behavioral: { label: "Behavioral", variant: "blue" },
 };
 
+/* Loading placeholders — one per lane of the loaded board. */
+const LANE_PLACEHOLDERS = ["risk", "attendance", "academics", "anecdotal"] as const;
+
 interface AnecdotalRecordItem {
   id: string;
   observationDatetime: string;
@@ -190,11 +193,37 @@ export function AdvisoryInsightBoard({
       </header>
 
       {loading ? (
-        <div className={styles.skel} aria-busy="true" aria-label="Loading insight">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-md" />
-          ))}
-        </div>
+        <section
+          className={styles.plainSection}
+          aria-busy="true"
+          aria-label="Loading insight"
+        >
+          <header className={styles.laneHead}>
+            <span className={styles.laneDot} style={{ background: "var(--border)" }} aria-hidden />
+            <h3 className={styles.laneTitle}>Risk &amp; records</h3>
+          </header>
+          {/* Same four lanes as the loaded board: head + one card each. */}
+          <ul className={styles.cardGrid} aria-hidden>
+            {LANE_PLACEHOLDERS.map((lane) => (
+              <li key={lane} className="min-w-0">
+                <section className={styles.lane}>
+                  <header className={styles.colHead}>
+                    <Skeleton className="size-4 shrink-0 rounded-sm" />
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="ml-auto h-5 w-16 rounded-full" />
+                  </header>
+                  <div className={styles.kCard}>
+                    <Skeleton className="h-3 w-20" />
+                    <div className="flex items-center justify-between gap-2">
+                      <Skeleton className="h-3.5 w-24" />
+                      <Skeleton className="h-6 w-10" />
+                    </div>
+                  </div>
+                </section>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : (
         <section className={styles.plainSection} aria-label="Risk and records">
           <header className={styles.laneHead}>
@@ -372,15 +401,18 @@ export function AdvisoryInsightBoard({
                         const count = anecdotalRecords.filter(
                           (r) => String(r.category) === c,
                         ).length;
+                        // Categories come from the DB lowercase ("attendance");
+                        // display them sentence-cased.
+                        const label = c.charAt(0).toUpperCase() + c.slice(1);
                         return (
                           <li
                             key={c}
                             className={styles.kCard}
-                            aria-label={`${c} anecdotal records for ${student.name}`}
+                            aria-label={`${label} anecdotal records for ${student.name}`}
                           >
                             <div className={styles.kTop}>
                               <Pill tone="amber" label="Anecdotal category">
-                                {c}
+                                {label}
                               </Pill>
                               <span className={styles.kCircle} aria-hidden>
                                 <FilePenLine size={14} />
@@ -388,7 +420,7 @@ export function AdvisoryInsightBoard({
                             </div>
                             <p className={styles.kLabel}>Records filed</p>
                             <div className={styles.kBottom}>
-                              <p className={styles.kTitle}>{c}</p>
+                              <p className={styles.kTitle}>{label}</p>
                               <p className={styles.kBig}>
                                 {count}
                                 <span className={styles.kUnit}>filed</span>

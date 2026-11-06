@@ -1,6 +1,9 @@
 "use client";
 
+import { Activity } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { Pill } from "@/components/ui/pill";
 import type { TeacherReportsPayload } from "@/services/teacher/reports.types";
 import { REFERRAL_STATUS_LABELS } from "./reports-format";
@@ -75,16 +78,20 @@ export function ReportsActivity({
     percent: total > 0 ? Math.round((item.value / total) * 100) : 0,
     fill: SHADES[i] ?? SHADES[SHADES.length - 1],
   }));
+  const top = slices.reduce((lead, slice) => (slice.value > lead.value ? slice : lead), slices[0]);
 
   return (
-    <div className={styles.card}>
-      <div className={styles.cardHead}>
-        <div className="min-w-0">
-          <h2 className={styles.cardTitle}>Case activity</h2>
-          <p className={styles.cardSub}>Records and referrals you filed this term.</p>
-        </div>
-      </div>
-
+    <KanbanBoard
+      title="Case activity"
+      icon={
+        <span className={styles.boardIcon} aria-hidden>
+          <Activity size={14} />
+        </span>
+      }
+      count={<span className={styles.amberNumber}>{total}</span>}
+      description="Records and referrals you filed this term."
+      className="flex-1"
+    >
       <div className={styles.activityBody}>
         <div className={styles.donutWrap}>
           <ResponsiveContainer width="100%" height={176}>
@@ -100,7 +107,7 @@ export function ReportsActivity({
                 innerRadius="62%"
                 outerRadius="92%"
                 paddingAngle={total > 0 ? 2 : 0}
-                stroke="var(--card)"
+                stroke="transparent"
                 strokeWidth={2}
                 isAnimationActive
                 animationDuration={700}
@@ -151,6 +158,14 @@ export function ReportsActivity({
           </div>
         ) : null}
       </div>
-    </div>
+      <div className={styles.footerSlot}>
+        <InsightCallout className={styles.interpretation}>
+          <span className={styles.interpretationLabel}>What it means · </span>
+          {total === 0
+            ? "No anecdotal records, referrals or final grades yet this term."
+            : `${top.label} make up ${top.percent}% of your case activity.`}
+        </InsightCallout>
+      </div>
+    </KanbanBoard>
   );
 }

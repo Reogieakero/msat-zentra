@@ -171,3 +171,14 @@
     display: none;
   }
 }
+
+/* Dark mode: the rail and mobile tab bar stay transparent so the wrapper's
+   landing-style hero canvas runs edge to edge, sidebar included. */
+:global(.dark) .rail,
+:global(.dark) .navbar {
+  background-color: transparent;
+}
+
+:global(.dark) .railHintWrap {
+  background: linear-gradient(to top, rgba(5, 8, 7, 0.95) 35%, transparent);
+}

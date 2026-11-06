@@ -108,12 +108,27 @@ export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
     Math.max(1, Math.floor(pageSize) || 15),
     NURSE_QUEUE_MAX_PAGE_SIZE,
   );
+  // `Referral.status` is a Prisma enum: an arbitrary free-text `equals` casts
+  // to the enum in Postgres and throws 22P02, 500-ing the whole search. Only
+  // offer the status clause when the query is an actual status slug.
+  const REFERRAL_STATUS_VALUES = [
+    "pending",
+    "in_progress",
+    "resolved",
+    "escalated",
+    "info_requested",
+    "dismissed",
+    "follow_up",
+  ] as const;
+  const statusMatch = REFERRAL_STATUS_VALUES.find(
+    (value) => value === q?.toLowerCase(),
+  );
   const searchWhere: any = q
     ? {
         OR: [
           { reason: { contains: q, mode: "insensitive" } },
           { notes: { contains: q, mode: "insensitive" } },
-          { status: { equals: q } },
+          ...(statusMatch ? [{ status: statusMatch }] : []),
           { student: { user: { fullName: { contains: q, mode: "insensitive" } } } },
           { student: { lrn: { contains: q, mode: "insensitive" } } },
           { roster: { fullName: { contains: q, mode: "insensitive" } } },

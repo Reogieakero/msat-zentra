@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { ShieldQuestion } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { TeacherEmptyCard } from "../../components/TeacherEmptyCard";
@@ -77,6 +78,13 @@ export default function TeacherSf10AccessPage() {
     verification.isError || unionVerifications.some((q) => q.isError);
 
   const [query, setQuery] = React.useState("");
+
+  // Deep link from the topbar record search: `?lrn=…` prefilters the desk.
+  const searchParams = useSearchParams();
+  const lrnParam = searchParams.get("lrn");
+  React.useEffect(() => {
+    if (lrnParam) setQuery(lrnParam);
+  }, [lrnParam]);
 
   // View-only: opens the file in a new tab rendered inline (never saved).
   // Public storage URLs carry the upload content type and serve inline, so a

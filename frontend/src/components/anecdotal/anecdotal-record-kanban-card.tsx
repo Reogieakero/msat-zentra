@@ -47,6 +47,8 @@ export interface AnecdotalRecordKanbanCardProps {
   lrn?: string;
   /** Render the student name as 14px text instead of an amber pill. */
   plainName?: boolean;
+  /** Stack the meta pill(s) under the student name instead of inline. */
+  stackIdentity?: boolean;
   /** Seed for the student's mascot; renders the mascot when provided. */
   mascotSeed?: string;
   /** Mascot sprite assigned to the student in their profile (takes precedence). */
@@ -88,6 +90,7 @@ export function AnecdotalRecordKanbanCard({
   metaTone,
   lrn,
   plainName = false,
+  stackIdentity = false,
   mascotSeed,
   mascotCharacter,
   fileName,
@@ -172,7 +175,7 @@ export function AnecdotalRecordKanbanCard({
           ) : null}
           <span
             className={
-              mascotSeed
+              mascotSeed || stackIdentity
                 ? "flex min-w-0 flex-col items-start gap-1"
                 : "flex min-w-0 flex-wrap items-center gap-1.5"
             }
@@ -192,7 +195,7 @@ export function AnecdotalRecordKanbanCard({
             )}
             <span
               className={
-                mascotSeed
+                mascotSeed || stackIdentity
                   ? "flex min-w-0 max-w-full flex-wrap items-center gap-1"
                   : "contents"
               }

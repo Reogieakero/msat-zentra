@@ -43,10 +43,14 @@ export default function NurseOverviewPage() {
                   <li key={i} className={styles.caseRow} aria-hidden="true">
                     <div className={styles.caseInfo}>
                       <Skeleton className="size-8 shrink-0 rounded-full" />
-                      <Skeleton className="h-4 w-40 min-w-0" />
-                      <Skeleton className="h-5 w-20 shrink-0 rounded-md" />
-                      <Skeleton className="h-5 w-10 shrink-0 rounded-md" />
-                      <Skeleton className="h-5 w-16 shrink-0 rounded-md" />
+                      <div className={styles.caseNameBlock}>
+                        <Skeleton className="h-4 w-40 min-w-0" />
+                        <div className={styles.caseMeta}>
+                          <Skeleton className="h-5 w-24 shrink-0 rounded-md" />
+                          <Skeleton className="h-5 w-10 shrink-0 rounded-md" />
+                          <Skeleton className="h-5 w-20 shrink-0 rounded-md" />
+                        </div>
+                      </div>
                     </div>
                     <div className={styles.cellActions}>
                       <Skeleton className="h-5 w-16 shrink-0 rounded-md" />

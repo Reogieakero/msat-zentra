@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { FolderCard, type FolderFile } from "@/components/ui/FolderCard";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import {
   HoverCard,
   HoverCardContent,
@@ -57,31 +57,14 @@ import {
   timeAgo,
 } from "./nurse-referrals-format";
 
-/* Same pill recipe as the anecdotal shared folder card (student = amber,
-   meta = secondary) — the ADM board reuses the identical language. */
-const PILL_NAME =
-  "inline-flex max-w-full items-center truncate rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold leading-tight text-amber-700 dark:text-amber-400";
-const PILL_META =
-  "inline-flex max-w-full items-center truncate rounded-md border border-border bg-secondary px-2 py-0.5 text-[11px] font-medium leading-tight text-secondary-foreground";
-const PILL_SOFT =
-  "inline-flex max-w-full items-center truncate rounded-md border border-border bg-background px-2 py-0.5 text-[11px] font-medium leading-tight text-foreground";
-
-/* Session state reads at a glance — booked = blue, cancelled = red (same
-   tone recipe as the anecdotal category pills). */
-const PILL_BOOKED =
-  "inline-flex max-w-full items-center truncate rounded-md border border-blue-500/40 bg-blue-500/15 px-2 py-0.5 text-[11px] font-medium leading-tight text-blue-700 dark:bg-blue-500/20 dark:text-blue-400";
-const PILL_CANCELLED =
-  "inline-flex max-w-full items-center truncate rounded-md border border-red-500/40 bg-red-500/15 px-2 py-0.5 text-[11px] font-medium leading-tight text-red-700 dark:bg-red-500/20 dark:text-red-400";
-
-/* Stage badge border — matches each stage tone so the header pill reads like
-   the other coloured pills on the card. */
-const STAGE_BORDER: Record<string, string> = {
-  amber: "border-amber-500/40",
-  blue: "border-blue-500/40",
-  green: "border-green-500/40",
-  violet: "border-violet-500/40",
-  red: "border-red-500/40",
-  outline: "border-border",
+/* Case-stage chip colours carried by the shared Pill (one tone per stage). */
+const STAGE_TONE: Record<string, PillTone> = {
+  amber: "amber",
+  blue: "blue",
+  green: "green",
+  violet: "violet",
+  red: "red",
+  outline: "neutral",
 };
 
 /* Icon-only detail trigger — reason / observed / latest update / escalation
@@ -276,7 +259,7 @@ export function NurseCaseKanbanCard({
     <article
       id={`nurse-case-${row.id}`}
       role="listitem"
-      className={`flex min-w-0 flex-col gap-2 rounded-xl border bg-muted/60 p-2.5 transition-colors [font-family:var(--font-inter)] hover:border-primary/60 hover:shadow dark:bg-muted/20 ${
+      className={`flex min-w-0 flex-col gap-2 rounded-xl border bg-muted/60 p-2.5 transition-colors [font-family:var(--font-inter)] dark:bg-muted/20 ${
         highlighted
           ? "border-amber-400 ring-2 ring-amber-400/40"
           : "border-border"
@@ -291,15 +274,16 @@ export function NurseCaseKanbanCard({
           />
           <span className="truncate">{title}</span>
         </span>
-        <Badge
-          variant={stage.variant}
-          className={`shrink-0 rounded-md ${STAGE_BORDER[stage.variant]}`}
+        <Pill
+          tone={STAGE_TONE[stage.variant] ?? "neutral"}
+          label="Case stage"
+          className="shrink-0"
         >
           {stage.label}
-        </Badge>
+        </Pill>
       </header>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border bg-white p-2.5 shadow-sm dark:bg-card">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
           <StudentMascot
             name={row.student}
@@ -307,16 +291,22 @@ export function NurseCaseKanbanCard({
             character={row.mascot ?? undefined}
             size={28}
           />
-          <span className={PILL_NAME} title={row.student}>
-            {row.student}
-          </span>
-          <span className={PILL_META} title={metaLine}>
-            {metaLine}
-          </span>
-          {row.lrn && row.lrn !== "—" ? (
-            <span className={PILL_META} title={`LRN ${row.lrn}`}>
-              ID {row.lrn}
+          <Pill
+            tone="amber"
+            label="Student"
+            className="max-w-full overflow-hidden"
+          >
+            <span className="truncate" title={row.student}>
+              {row.student}
             </span>
+          </Pill>
+          <Pill label="Section" title={metaLine} className="max-w-full overflow-hidden">
+            <span className="truncate">{metaLine}</span>
+          </Pill>
+          {row.lrn && row.lrn !== "—" ? (
+            <Pill label="LRN" className="tabular-nums">
+              ID {row.lrn}
+            </Pill>
           ) : null}
         </span>
 
@@ -344,23 +334,33 @@ export function NurseCaseKanbanCard({
 
         {/* Folder caption as rectangle pills — case type, then date. */}
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <span className={PILL_META}>{row.type}</span>
+          <Pill label="Referral type">{row.type}</Pill>
           {row.date && row.date !== "—" ? (
-            <span className={PILL_META}>{formatDate(row.date)}</span>
+            <Pill label="Referred date">{formatDate(row.date)}</Pill>
+          ) : null}
+          {waiting ? (
+            <Pill tone="red" label="Waiting time">
+              {waiting}
+            </Pill>
           ) : null}
         </span>
 
-        {waiting || row.followUpDate || booked || cancelled ? (
+        {row.followUpDate || booked || cancelled ? (
           <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-            {waiting ? <span className={PILL_SOFT}>{waiting}</span> : null}
             {row.followUpDate ? (
-              <span className={PILL_SOFT}>
+              <Pill label="Follow-up date">
                 Follow-up {formatDate(row.followUpDate)}
-              </span>
+              </Pill>
             ) : null}
-            {booked ? <span className={PILL_BOOKED}>Session booked</span> : null}
+            {booked ? (
+              <Pill tone="blue" label="Session status">
+                Session booked
+              </Pill>
+            ) : null}
             {cancelled ? (
-              <span className={PILL_CANCELLED}>Session cancelled</span>
+              <Pill tone="red" label="Session status">
+                Session cancelled
+              </Pill>
             ) : null}
           </span>
         ) : null}
@@ -501,7 +501,6 @@ export function NurseCaseKanbanCard({
             {row.sessions.length === 1 ? "session" : "sessions"} on this case.
           </DialogDescription>
           <KanbanBoard
-            className="bg-card"
             title={`Clinic sessions for ${row.student}`}
             icon={<CalendarClock className="size-3.5" aria-hidden="true" />}
             actions={

@@ -56,8 +56,28 @@ export async function deleteFolder(ctx: AnecdotalContext, folderId: string) {
 }
 
 export async function listMine(ownerId: string) {
+  // The anecdotal desk is advisory-scoped: only records this teacher filed
+  // about their own advisees surface here. A teacher with no advisory section
+  // (subject teacher) keeps seeing every record they filed.
+  const advised = await prisma.section.findMany({
+    where: { adviserId: ownerId },
+    select: { id: true },
+  });
+  const sectionIds = advised.map((s) => s.id);
+  const where: { observerId: string; OR?: object[] } = { observerId: ownerId };
+  if (sectionIds.length > 0) {
+    // Advisees are resolved through the student/roster section (or the
+    // record's own section), so a learner moved into the advisory section
+    // still shows their earlier records and outsiders never appear.
+    where.OR = [
+      { student: { sectionId: { in: sectionIds } } },
+      { roster: { sectionId: { in: sectionIds } } },
+      { sectionId: { in: sectionIds } },
+    ];
+  }
+
   const records = await prisma.anecdotalRecord.findMany({
-    where: { observerId: ownerId },
+    where: where as never,
     orderBy: { observationDatetime: "desc" },
     select: {
       id: true,
@@ -71,6 +91,7 @@ export async function listMine(ownerId: string) {
         select: {
           userId: true,
           lrn: true,
+          mascot: true,
           user: { select: { fullName: true } },
           section: { select: { name: true } },
         },
@@ -80,6 +101,7 @@ export async function listMine(ownerId: string) {
           id: true,
           lrn: true,
           fullName: true,
+          mascot: true,
           section: { select: { name: true } },
         },
       },
@@ -96,6 +118,7 @@ export async function listMine(ownerId: string) {
     studentId: r.student?.userId ?? (r.roster ? `roster:${r.roster.id}` : ""),
     studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
     lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+    mascot: r.student?.mascot ?? r.roster?.mascot ?? null,
     section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
     signed: r.signedAt != null,
     folderId: r.folderId,

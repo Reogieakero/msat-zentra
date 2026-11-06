@@ -4,7 +4,6 @@ import * as React from "react";
 import { Loader2, SearchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
-import { ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import ovStyles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
 import { Pagination } from "@/components/shared/pagination";
@@ -15,6 +14,7 @@ import { admStageTone } from "@/lib/labels/status-tone";
 import { AdmCaseCard } from "./AdmCaseCard";
 import { AdmStarterKanban } from "./AdmEmptyKanban";
 import { AdmStarterSidebar } from "./AdmStarterSidebar";
+import { AdmCasesSkeleton } from "./AdmCasesSkeleton";
 import refStyles from "../../referrals/components/referrals.module.css";
 
 function formatPreparedDate(iso: string | null): string {
@@ -70,12 +70,7 @@ export function AdmCasesTable({
   const isPageLoading =
     casesQuery.isFetching && !casesQuery.isPending && cases.length === 0;
   if (casesQuery.isPending) {
-    return (
-      <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading ADM cases">
-        <ZentraFilterBarSkeleton selects={1} />
-        <ZentraTableSkeleton rows={8} columns={5} />
-      </div>
-    );
+    return <AdmCasesSkeleton />;
   }
   if (casesQuery.isError) {
     return (

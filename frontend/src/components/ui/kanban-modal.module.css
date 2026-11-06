@@ -17,6 +17,12 @@
   animation: kanban-modal-overlay-in 160ms ease-out;
 }
 
+/* Opened from inside another dialog (e.g. the record-folder overlay):
+   same shell, but painted above the dialog that launched it. */
+.raised {
+  z-index: 60;
+}
+
 @keyframes kanban-modal-overlay-in {
   from {
     opacity: 0;

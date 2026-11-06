@@ -4,7 +4,10 @@ import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { Button } from "@/components/ui/button";
-import { Award, HelpCircle, Loader2, SearchX } from "lucide-react";
+import { Award, HelpCircle, Loader2 } from "lucide-react";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { useDock } from "@/components/dock/dock-store";
@@ -13,14 +16,16 @@ import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { useNowTick } from "@/lib/clock";
+import { toSlug } from "@/lib/slug";
 import { CERT_STATUS_META } from "@/services/coordinator/certifications.service";
 import type {
   CertRecord,
+  CertStatus,
   CertStatusFilter,
 } from "@/services/coordinator/certifications.types";
 import { CoordinatorCertificationsFilters } from "./coordinator-certifications-filters";
 import { CoordinatorCertificationsEndorseConfirm } from "./coordinator-certifications-endorse-confirm";
-import { CoordinatorEmptyCard, CoordinatorEmptyState } from "../../components/CoordinatorEmptyCard";
+import { CoordinatorEmptyCard } from "../../components/CoordinatorEmptyCard";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import styles from "./coordinator-certifications-folders.module.css";
 
@@ -53,6 +58,22 @@ const DISPLAY_LIMIT = PAGE_SIZE;
 
 /** Amber folder body — matches the coordinator desk accent. */
 const CERT_FOLDER_COLOR = "#f59e0b";
+
+/** Centered status tabs — same pattern as the referrals desk. */
+const STATUS_TABS: { value: CertStatusFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "prepared", label: "Prepared" },
+  { value: "awaiting", label: "Awaiting" },
+  { value: "revision", label: "Needs revision" },
+  { value: "approved", label: "Approved" },
+];
+
+const STATUS_TONE: Record<CertStatus, PillTone> = {
+  prepared: "amber",
+  awaiting: "blue",
+  revision: "red",
+  approved: "green",
+};
 
 export function CoordinatorCertificationsFolders({
   records,
@@ -131,9 +152,37 @@ export function CoordinatorCertificationsFolders({
     });
   };
 
+  const counts = React.useMemo<Record<CertStatusFilter, number>>(() => {
+    const out: Record<CertStatusFilter, number> = {
+      all: records.length,
+      prepared: 0,
+      awaiting: 0,
+      revision: 0,
+      approved: 0,
+    };
+    for (const record of records) out[record.status] += 1;
+    return out;
+  }, [records]);
+
+  // Filter the loaded rows instantly as the clerk types (same feel as the
+  // referrals desk); the debounced server query then swaps in matches from the
+  // rest of the desk.
+  const searchTerm = query.trim().toLowerCase();
+  const searched = React.useMemo(() => {
+    if (searchTerm === "") return records;
+    return records.filter((record) =>
+      `${record.student} ${record.lrn} ${record.grade}`
+        .toLowerCase()
+        .includes(searchTerm),
+    );
+  }, [records, searchTerm]);
+
   const filtered = React.useMemo(
-    () => (status === "all" ? records : records.filter((r) => r.status === status)),
-    [records, status],
+    () =>
+      status === "all"
+        ? searched
+        : searched.filter((r) => r.status === status),
+    [searched, status],
   );
   const total = filtered.length;
 
@@ -157,7 +206,7 @@ export function CoordinatorCertificationsFolders({
 
   const openRecord = (record: CertRecord) => {
     window.open(
-      `/coordinator/referrals/${encodeURIComponent(record.id)}`,
+      `/coordinator/referrals/${encodeURIComponent(toSlug(record.student))}`,
       "_blank",
       "noopener,noreferrer",
     );
@@ -177,185 +226,209 @@ export function CoordinatorCertificationsFolders({
 
   return (
     <>
-
-      <div className={styles.panel}>
-        <div className={styles.header}>
-          <div className={styles.headerText}>
-            <div className={styles.titleRow}>
-              <h3 className={styles.sectionTitle}>
-                Certification files
-              </h3>
-              <button
-                type="button"
-                className={styles.helpBtn}
-                onClick={() => setHelpOpen(true)}
-                aria-label="What do the certification status labels mean?"
-                title="What do the certification status labels mean?"
-              >
-                <HelpCircle aria-hidden="true" />
-              </button>
-            </div>
-            <p className={styles.sectionDesc}>
-              One folder per certification you issued — {total} record
-              {total === 1 ? "" : "s"}
-              {isSyncing ? " · Syncing…" : ""}.
-            </p>
+      <KanbanBoard
+        title="Certification files"
+        icon={
+          <span className="text-amber-500" aria-hidden>
+            <Award size={14} />
+          </span>
+        }
+        description={
+          <>
+            One folder per certification you issued — {total} record
+            {total === 1 ? "" : "s"}
+            {isSyncing ? " · Syncing…" : ""}.
+          </>
+        }
+        ariaLabel="Certification files"
+        headerCenter={
+          <div
+            className={styles.filterRow}
+            role="tablist"
+            aria-label="Filter certifications by status"
+          >
+            {STATUS_TABS.map((tab) => {
+              const active = status === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={styles.filterButton}
+                  onClick={() => {
+                    setPage(1);
+                    onStatusChange(tab.value);
+                  }}
+                >
+                  <Pill
+                    tone={active ? "blue" : "neutral"}
+                    label={`${tab.label} certifications`}
+                  >
+                    {tab.label}
+                    <span className={styles.statusTabCount}>
+                      {counts[tab.value]}
+                    </span>
+                  </Pill>
+                </button>
+              );
+            })}
           </div>
+        }
+        actions={
           <div className={styles.headerActions}>
+            <button
+              type="button"
+              className={styles.helpBtn}
+              onClick={() => setHelpOpen(true)}
+              aria-label="What do the certification status labels mean?"
+              title="What do the certification status labels mean?"
+            >
+              <HelpCircle aria-hidden="true" />
+            </button>
             <CoordinatorCertificationsFilters
               query={query}
               onQueryChange={(v) => {
                 setPage(1);
                 onQueryChange(v);
               }}
-              status={status}
-              onStatusChange={(v) => {
-                setPage(1);
-                onStatusChange(v);
-              }}
             />
           </div>
-        </div>
-        <div className={styles.content}>
-          {visible.length === 0 ? (
-            <CoordinatorEmptyState
-              icon={SearchX}
-              title="No matching certifications"
-              hint="No certification files match the current filters."
+        }
+        footer={
+          visible.length > 0 ? (
+            <Pagination
+              currentPage={safePage}
+              totalItems={total}
+              onPageChange={setPage}
             />
-          ) : (
-            <div className={styles.studentGrid}>
-              {visible.map(({ record, date }) => {
-                const meta = CERT_STATUS_META[record.status];
-                return (
-                  <article key={record.id} className={styles.certCard}>
-                    <div className={styles.certCardHead}>
-                      <span
-                        className={styles.certStatusPill}
-                        title={meta.label}
-                        style={{
-                          color: `color-mix(in srgb, ${meta.color} 70%, var(--foreground))`,
-                          borderColor: `color-mix(in srgb, ${meta.color} 45%, transparent)`,
-                          backgroundColor: `color-mix(in srgb, ${meta.color} 16%, transparent)`,
-                        }}
-                      >
-                        <Award size={13} aria-hidden />
-                        {meta.label}
-                      </span>
-                      <span className={styles.certCardAge}>{timeAgo(date)}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className={styles.certCardBody}
-                      onClick={() => openRecord(record)}
-                      aria-label={`Open ${record.student}'s certification file`}
+          ) : null
+        }
+      >
+        {visible.length === 0 ? (
+          <div className={styles.emptyCallout}>
+            <InsightCallout role="status">
+              {searchTerm !== "" || status !== "all"
+                ? "No certification files match your search or filters. Try a different name, LRN, or status."
+                : "No certification files to show."}
+            </InsightCallout>
+          </div>
+        ) : (
+          <div className={styles.studentGrid}>
+            {visible.map(({ record, date }, index) => {
+              const meta = CERT_STATUS_META[record.status];
+              return (
+                <article
+                  key={record.id}
+                  className={styles.certCard}
+                  style={{ animationDelay: `${Math.min(index, 11) * 60}ms` }}
+                >
+                  <div className={styles.certCardHead}>
+                    <Pill
+                      tone={STATUS_TONE[record.status]}
+                      label="Certification status"
                     >
-                      <span className={styles.certPills}>
-                        <span
-                          className={`${styles.certPill} ${styles.certStudentPill}`}
-                          title={record.student}
-                        >
-                          {record.student}
-                        </span>
-                        <span
-                          className={`${styles.certPill} ${styles.certMetaPill}`}
-                          title={`LRN ${record.lrn}`}
-                        >
-                          {record.lrn}
-                        </span>
-                        <span
-                          className={`${styles.certPill} ${styles.certMetaPill}`}
-                          title={`Grade ${record.grade}`}
-                        >
-                          {record.grade}
-                        </span>
+                      <Award size={13} aria-hidden />
+                      {meta.label}
+                    </Pill>
+                    <span className={styles.certCardAge}>{timeAgo(date)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.certCardBody}
+                    onClick={() => openRecord(record)}
+                    aria-label={`Open ${record.student}'s certification file`}
+                  >
+                    <span className={styles.certPills}>
+                      <Pill tone="amber" label="Learner">
+                        {record.student}
+                      </Pill>
+                      <Pill tone="neutral" label="LRN">
+                        {record.lrn}
+                      </Pill>
+                      <Pill tone="neutral" label="Grade level">
+                        {record.grade}
+                      </Pill>
+                    </span>
+                    <span className={styles.certFolderRow}>
+                      <span className={styles.certFolderWrap}>
+                        <FolderCard
+                          label=""
+                          folderColor={CERT_FOLDER_COLOR}
+                          files={[
+                            {
+                              name: `CERT_${(date ?? "").slice(0, 10) || record.id.slice(0, 8)}`,
+                              tag: `${record.formsCount} evidence file${record.formsCount === 1 ? "" : "s"} • ${timeAgo(date)}`,
+                              tone: 1 as const,
+                              icon: "doc" as const,
+                            },
+                          ]}
+                        />
                       </span>
-                      <span className={styles.certFolderRow}>
-                        <span className={styles.certFolderWrap}>
-                          <FolderCard
-                            label=""
-                            folderColor={CERT_FOLDER_COLOR}
-                            files={[
-                              {
-                                name: `CERT_${(date ?? "").slice(0, 10) || record.id.slice(0, 8)}`,
-                                tag: `${record.formsCount} evidence file${record.formsCount === 1 ? "" : "s"} • ${timeAgo(date)}`,
-                                tone: 1 as const,
-                                icon: "doc" as const,
-                              },
-                            ]}
-                          />
-                        </span>
-                        <span className={styles.certMascot} aria-hidden="true">
-                          <StudentMascot
-                            name={record.student}
-                            seed={record.lrn}
-                            size={52}
-                          />
-                        </span>
+                      <span className={styles.certMascot} aria-hidden="true">
+                        <StudentMascot
+                          name={record.student}
+                          seed={record.lrn}
+                          size={52}
+                        />
                       </span>
-                    </button>
-                    <div className={styles.folderActions}>
-                      {record.status === "prepared" ? (
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          className="h-6 px-2 text-xs"
-                          disabled={forwardingId === record.id}
-                          onClick={() => setForwardTarget(record)}
-                        >
-                          {forwardingId === record.id ? (
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "0.375rem",
-                              }}
-                            >
-                              <Loader2
-                                className="animate-spin"
-                                aria-hidden
-                                style={{ width: "0.875rem", height: "0.875rem" }}
-                              />
-                              Endorsing…
-                            </span>
-                          ) : (
-                            "Endorse"
-                          )}
-                        </Button>
-                      ) : record.status === "awaiting" ? (
-                        <p className={styles.lockedNote}>
-                          Locked · awaiting signature
-                        </p>
-                      ) : record.status === "revision" ? (
-                        <p className={styles.lockedNote}>
-                          Revise evidence, then forward
-                        </p>
-                      ) : (
-                        <span className={styles.signedRow}>
-                          <span className={styles.signedPill}>Signed</span>
-                          {record.approvedBy ? (
-                            <span
-                              className={styles.approverPill}
-                              title={`Signed by ${record.approvedBy}`}
-                            >
-                              {record.approvedBy}
-                            </span>
-                          ) : null}
-                        </span>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-          <Pagination
-            currentPage={safePage}
-            totalItems={total}
-            onPageChange={setPage}
-          />
-        </div>
-      </div>
+                    </span>
+                  </button>
+                  <div className={styles.folderActions}>
+                    {record.status === "prepared" ? (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        className="h-6 px-2 text-xs"
+                        disabled={forwardingId === record.id}
+                        onClick={() => setForwardTarget(record)}
+                      >
+                        {forwardingId === record.id ? (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.375rem",
+                            }}
+                          >
+                            <Loader2
+                              className="animate-spin"
+                              aria-hidden
+                              style={{ width: "0.875rem", height: "0.875rem" }}
+                            />
+                            Endorsing…
+                          </span>
+                        ) : (
+                          "Endorse"
+                        )}
+                      </Button>
+                    ) : record.status === "awaiting" ? (
+                      <p className={styles.lockedNote}>
+                        Locked · awaiting signature
+                      </p>
+                    ) : record.status === "revision" ? (
+                      <p className={styles.lockedNote}>
+                        Revise evidence, then forward
+                      </p>
+                    ) : (
+                      <span className={styles.signedRow}>
+                        <Pill tone="green" label="Signature">
+                          Signed
+                        </Pill>
+                        {record.approvedBy ? (
+                          <Pill tone="neutral" label="Signed by">
+                            {record.approvedBy}
+                          </Pill>
+                        ) : null}
+                      </span>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </KanbanBoard>
 
       {forwardTarget ? (
         <CoordinatorCertificationsEndorseConfirm

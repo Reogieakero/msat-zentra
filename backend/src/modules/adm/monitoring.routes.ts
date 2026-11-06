@@ -6,6 +6,7 @@ import { etag } from "../../lib/etag.js";
 import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { admModuleUpdateSchema } from "./adm.schemas.js";
 import {
+  getCoordinatorMonitoredCase,
   getMonitoredCase,
   updateModule,
   type AdmModuleInput,
@@ -14,6 +15,27 @@ import {
 const router = Router();
 
 const MONITORING_TAGS = [CACHE_TAGS.adm, "adm-case", "teacher", "teacher-adm-cases"];
+
+/**
+ * Read-only monitoring view for the coordinator (and principal) desks. Unlike
+ * `/my-cases/:caseId` this is not section-scoped — those desks oversee every
+ * ADM case — but there is no matching PATCH: editing stays with the adviser.
+ */
+router.get(
+  "/cases/:caseId",
+  requireAuth,
+  requireRole("adm_coordinator", "principal"),
+  cache({ tags: [...MONITORING_TAGS, CACHE_TAGS.overview], ttl: CACHE_TTLS.list }),
+  etag(),
+  async (req, res, next) => {
+    try {
+      res.json(await getCoordinatorMonitoredCase(String(req.params.caseId)));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 
 /**
  * Adviser monitoring desk for one advisee's ADM case. Access is section-scoped

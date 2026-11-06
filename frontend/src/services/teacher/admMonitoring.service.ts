@@ -95,12 +95,27 @@ export interface AdmModulePayload {
 
 export const admMonitoringKey = (caseId: string) => ["adm-monitoring", caseId] as const;
 
+export const coordinatorAdmMonitoringKey = (caseId: string) =>
+  ["coordinator-adm-monitoring", caseId] as const;
+
 export async function fetchAdmMonitoringCase(
   caseId: string,
   signal?: AbortSignal
 ): Promise<AdmMonitoringCase> {
   const { data } = await apiClient.get<AdmMonitoringCase>(
     `/api/adm/my-cases/${caseId}`,
+    { signal }
+  );
+  return data;
+}
+
+/** Read-only monitoring payload for the coordinator desk (any ADM case). */
+export async function fetchCoordinatorMonitoringCase(
+  caseId: string,
+  signal?: AbortSignal
+): Promise<AdmMonitoringCase> {
+  const { data } = await apiClient.get<AdmMonitoringCase>(
+    `/api/adm/cases/${caseId}`,
     { signal }
   );
   return data;

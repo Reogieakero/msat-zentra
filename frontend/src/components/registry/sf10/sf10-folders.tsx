@@ -8,7 +8,7 @@ import {
   type Sf10Record,
   type Sf10Status,
 } from "@/services/registry/sf10.types";
-import { StatusBadge } from "./shared";
+import { StatusBadge, AdviserAccessBadge } from "./shared";
 import styles from "./sf10.module.css";
 
 const STATUS_TONES: Record<Sf10Status, 1 | 2 | 3 | 4 | 5> = {
@@ -53,7 +53,11 @@ export function Sf10FolderGrid({
           <FolderCard
             label={r.fullName}
             sublabel={`${GRADE_LABEL[r.gradeLevel] ?? r.gradeLevel} · ${r.section}`}
-            cornerTag={SF10_STATUS_LABEL[r.status]}
+            cornerTag={
+              r.adviserAccess
+                ? `${SF10_STATUS_LABEL[r.status]} · Adviser access`
+                : SF10_STATUS_LABEL[r.status]
+            }
             folderColor="var(--primary)"
             files={[
               {
@@ -96,9 +100,15 @@ export function Sf10RecordKanbanGrid({
           studentName={r.fullName}
           metaText={r.lrn}
           metaTitle={`${r.lrn} · ${GRADE_LABEL[r.gradeLevel] ?? r.gradeLevel} · ${r.section}`}
+          stackIdentity
           fileName={fileNameFor(r.uploadedFileUrl)}
           fileTag={`${GRADE_LABEL[r.gradeLevel] ?? r.gradeLevel} · ${r.section} · v${r.currentVersion}`}
-          headerRight={<StatusBadge status={r.status} />}
+          headerRight={
+            <div className="flex items-center gap-1.5">
+              {r.adviserAccess ? <AdviserAccessBadge /> : null}
+              <StatusBadge status={r.status} />
+            </div>
+          }
           categoryColor={SF10_FOLDER_COLOR}
           folderColor={SF10_FOLDER_COLOR}
           tone={3}

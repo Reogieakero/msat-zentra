@@ -11,9 +11,9 @@ import {
   User,
   X,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { KanbanBoardHeader } from "@/components/ui/kanban-board";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import {
   Tooltip,
   TooltipContent,
@@ -21,7 +21,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import { cn, formatGrade, formatSection } from "@/lib/utils";
+import { formatGrade, formatSection } from "@/lib/utils";
 import type { RegistryDesk } from "@/services/registry/overview.service";
 import dialogStyles from "./FinalGradeSetDialog.module.css";
 
@@ -54,32 +54,33 @@ const MILESTONES = [25, 50, 75, 100];
 /** Amber chip matching the final-grades row's subject/grade/section pills. */
 function AmberPill({
   label,
+  tooltip,
   title,
   className,
 }: {
   label: string;
+  /** Field name shown in the shared pill tooltip (e.g. "Section"). */
+  tooltip?: string;
   title?: string;
   className?: string;
 }) {
   return (
-    <span
+    <Pill
+      tone="amber"
+      label={tooltip ?? label}
       title={title ?? label}
-      className={cn(
-        "inline-flex max-w-full items-center truncate rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold leading-tight text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
-        className
-      )}
+      className={`max-w-full truncate ${className ?? ""}`}
     >
       {label}
-    </span>
+    </Pill>
   );
 }
 
 /* Traffic-light tones for risk pills: green safe / amber moderate / red high. */
-const RISK_TONE: Record<"Low" | "Moderate" | "High", string> = {
-  Low: "border-green-500/40 bg-green-500/15 text-green-700 dark:bg-green-500/20 dark:text-green-400",
-  Moderate:
-    "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
-  High: "border-red-500/40 bg-red-500/15 text-red-600 dark:bg-red-500/20 dark:text-red-400",
+const RISK_TONE: Record<"Low" | "Moderate" | "High", PillTone> = {
+  Low: "green",
+  Moderate: "amber",
+  High: "red",
 };
 
 /** Rectangle status pill (not a "·"-joined badge) for risk segments. */
@@ -95,13 +96,15 @@ function RiskPill({
   title?: string;
 }) {
   return (
-    <span
+    <Pill
+      tone={RISK_TONE[level]}
+      label="Academic risk"
       title={title}
-      className={`inline-flex max-w-full items-center gap-1 truncate rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight ${RISK_TONE[level]}`}
+      className="max-w-full truncate"
     >
       {icon}
       {children}
-    </span>
+    </Pill>
   );
 }
 
@@ -109,12 +112,14 @@ function RiskPill({
 function RemarkPill({ remarks }: { remarks: string }) {
   const failed = remarks === "Failed";
   return (
-    <span
+    <Pill
+      tone={failed ? "red" : "green"}
+      label="Remarks"
       title={`Remarks: ${remarks}`}
-      className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight ${failed ? RISK_TONE.High : RISK_TONE.Low}`}
+      className="shrink-0"
     >
       {remarks}
-    </span>
+    </Pill>
   );
 }
 
@@ -189,20 +194,24 @@ export function FinalGradeSetDialog({
             <h2 id="final-grade-set-title" className="truncate text-[13px] font-semibold">
               Final grade set
             </h2>
-            {/* Name + LRN as separate pills (12px) — no "·" separator. */}
+            {/* Name + LRN as separate pills — no "·" separator. */}
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <span
-                className="inline-flex max-w-full items-center truncate rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-xs font-medium leading-tight text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
+              <Pill
+                tone="amber"
+                label="Student"
                 title={student.name}
+                className="max-w-full truncate text-xs"
               >
                 {student.name}
-              </span>
-              <span
-                className="inline-flex max-w-full items-center truncate rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-xs font-medium leading-tight text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
+              </Pill>
+              <Pill
+                tone="amber"
+                label="LRN"
                 title={student.lrn}
+                className="text-xs"
               >
                 {student.lrn}
-              </span>
+              </Pill>
             </div>
           </div>
           <Button
@@ -217,15 +226,18 @@ export function FinalGradeSetDialog({
         </div>
 
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 px-1">
-          <Badge variant="green" className="rounded-md px-2 py-0.5 text-[10px] font-semibold">
-            Complete
-          </Badge>
+          <Pill tone="green" label="Grade set status">Complete</Pill>
           {codes.map((code) => (
-            <AmberPill key={code} label={code} title={`Subject code: ${code}`} />
+            <AmberPill
+              key={code}
+              label={code}
+              tooltip="Subject code"
+              title={`Subject code: ${code}`}
+            />
           ))}
-          <AmberPill label={formatGrade(student.gradeLevel)} />
-          <AmberPill label={formatSection(student.section)} />
-          <AmberPill label={student.term} />
+          <AmberPill label={formatGrade(student.gradeLevel)} tooltip="Grade level" />
+          <AmberPill label={formatSection(student.section)} tooltip="Section" />
+          <AmberPill label={student.term} tooltip="Term" />
         </div>
 
         <div className="grid min-w-0 items-start gap-2.5 lg:grid-cols-3">
@@ -243,9 +255,9 @@ export function FinalGradeSetDialog({
                 {student.overall}
               </span>
               <span className="text-xs font-medium text-muted-foreground">Overall Average</span>
-              <Badge variant="green" className="rounded-md px-2.5 font-semibold">
+              <Pill tone="green" label="Grade set status" className="px-2.5">
                 Complete
-              </Badge>
+              </Pill>
             </div>
             <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-card p-3 shadow-sm">
               {/* Bar + milestone nodes share one track, so each number sits
@@ -316,12 +328,13 @@ export function FinalGradeSetDialog({
                   <p className="truncate text-sm font-semibold text-foreground" title={student.name}>
                     {student.name}
                   </p>
-                  <span
-                    className="inline-flex w-fit max-w-full items-center truncate rounded-md border border-border bg-secondary px-2 py-0.5 text-[10px] font-medium leading-tight text-secondary-foreground"
+                  <Pill
+                    label="LRN"
                     title={student.lrn}
+                    className="w-fit max-w-full truncate"
                   >
                     {student.lrn}
-                  </span>
+                  </Pill>
                 </div>
               </div>
               {riskLevel === "Low" ? (
@@ -396,9 +409,17 @@ export function FinalGradeSetDialog({
                     <span className="truncate text-sm font-semibold text-foreground" title={sub.subject}>
                       {sub.subject}
                     </span>
-                    <AmberPill label={sub.code} title={`Subject code: ${sub.code}`} />
+                    <AmberPill
+                      label={sub.code}
+                      tooltip="Subject code"
+                      title={`Subject code: ${sub.code}`}
+                    />
                   </div>
-                  <AmberPill label={sub.teacher} className="w-fit text-xs" />
+                  <AmberPill
+                    label={sub.teacher}
+                    tooltip="Subject teacher"
+                    className="w-fit text-xs"
+                  />
                   <div className="flex min-w-0 flex-wrap items-center justify-between gap-1.5">
                     <span className="text-[11px] text-muted-foreground">
                       Computed{" "}

@@ -41,16 +41,9 @@ import { AdmValuePill } from "./NurseAdmValuePill";
 import { watchSummary, type RiskWatchData } from "./nurse-adm-risk-watch";
 import { useNurseAdmRiskData } from "./use-nurse-risk-data";
 import { AMBER_STEPS } from "./nurse-adm-palette";
-import { SECTION_PILL, STUDENT_PILL, TYPE_PILL, TYPE_TONE } from "./nurse-adm-pills";
+import { Pill } from "@/components/ui/pill";
+import { NurseChartTooltip, NURSE_TOOLTIP_Z_INDEX } from "../../overview/components/nurse-chart-tooltip";
 import styles from "./nurse-adm.module.css";
-
-const TOOLTIP_STYLE: React.CSSProperties = {
-  borderRadius: 8,
-  border: "1px solid var(--border)",
-  background: "var(--card)",
-  color: "var(--foreground)",
-  fontSize: 12,
-};
 
 const LEVEL_COLORS: Record<RiskLevelBucket, string> = {
   High: AMBER_STEPS[0],
@@ -109,31 +102,19 @@ function StudentsByLevel({
                 </Pie>
                 <Tooltip
                   cursor={false}
-                  wrapperStyle={{ zIndex: 50 }}
-                  content={({ active, payload }) => {
-                    const row = active
-                      ? (payload?.[0]?.payload as LevelSlice | undefined)
-                      : undefined;
-                    if (!row) return null;
-                    const pct =
-                      totalStudents > 0
-                        ? Math.round((row.count / totalStudents) * 100)
-                        : 0;
-                    return (
-                      <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-card-foreground shadow-lg">
-                        <p className="font-semibold">{row.label}</p>
-                        <p className="mt-1 text-muted-foreground">
-                          <span className="font-semibold text-foreground">
-                            {row.count}
-                          </span>{" "}
-                          {row.count === 1 ? "student" : "students"} ·{" "}
-                          <span className="font-semibold text-amber-600 dark:text-amber-400">
-                            {pct}%
-                          </span>
-                        </p>
-                      </div>
-                    );
-                  }}
+                  wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
+                  content={
+                    <NurseChartTooltip
+                      formatValue={(item) => {
+                        const count = Number(item.value);
+                        const pct =
+                          totalStudents > 0
+                            ? Math.round((count / totalStudents) * 100)
+                            : 0;
+                        return `${item.value} (${pct}%)`;
+                      }}
+                    />
+                  }
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -215,28 +196,17 @@ function RiskCasesByCategory({
               />
               <Tooltip
                 cursor={false}
-                wrapperStyle={{ zIndex: 50 }}
-                content={({ active, payload }) => {
-                  const row = active
-                    ? (payload?.[0]?.payload as CategorySlice | undefined)
-                    : undefined;
-                  if (!row) return null;
-                  const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
-                  return (
-                    <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-card-foreground shadow-lg">
-                      <p className="font-semibold">{row.label}</p>
-                      <p className="mt-1 text-muted-foreground">
-                        <span className="font-semibold text-foreground">
-                          {row.count}
-                        </span>{" "}
-                        {row.count === 1 ? "case" : "cases"} ·{" "}
-                        <span className="font-semibold text-amber-600 dark:text-amber-400">
-                          {pct}%
-                        </span>
-                      </p>
-                    </div>
-                  );
-                }}
+                wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
+                content={
+                  <NurseChartTooltip
+                    formatValue={(item) => {
+                      const count = Number(item.value);
+                      const pct =
+                        total > 0 ? Math.round((count / total) * 100) : 0;
+                      return `${item.value} (${pct}%)`;
+                    }}
+                  />
+                }
               />
               <Bar dataKey="count" barSize={12} radius={[2, 4, 4, 2]}>
                 {rows.map((d, i) => (
@@ -309,9 +279,8 @@ function RiskTrend({
                   width={32}
                 />
                 <Tooltip
-                  wrapperStyle={{ zIndex: 50 }}
-                  contentStyle={TOOLTIP_STYLE}
-                  labelFormatter={(label) => `Week of ${label}`}
+                  wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
+                  content={<NurseChartTooltip />}
                 />
                 {trend.series.map((s, i) => (
                   <Line
@@ -396,25 +365,23 @@ function WhoNeedsAttention({ data }: { data: RiskWatchData }) {
                 <span className={styles.bottleneckMain}>
                   <span className={styles.bottleneckName}>
                     {s.kind ? (
-                      <span
-                        className={`${TYPE_PILL} ${
-                          TYPE_TONE[s.kind] ??
-                          "border-border bg-secondary text-secondary-foreground"
-                        }`}
+                      <Pill
+                        tone={s.kind === "ADM" ? "blue" : "green"}
+                        label="Referral type"
                       >
                         {s.kind}
-                      </span>
+                      </Pill>
                     ) : null}
                     <span className="shrink-0" aria-hidden>
                       <StudentMascot name={s.student} seed={s.student} size={28} />
                     </span>
-                    <span className={STUDENT_PILL} title={s.student}>
-                      {s.student}
-                    </span>
+                    <Pill tone="amber" label="Student" title={s.student} className="min-w-0 max-w-full overflow-hidden">
+                      <span className="truncate">{s.student}</span>
+                    </Pill>
                     {s.section ? (
-                      <span className={SECTION_PILL} title={s.section}>
-                        {s.section}
-                      </span>
+                      <Pill label="Section" title={s.section} className="min-w-0 max-w-full overflow-hidden">
+                        <span className="truncate">{s.section}</span>
+                      </Pill>
                     ) : null}
                   </span>
                   {s.drivers.length > 0 ? (

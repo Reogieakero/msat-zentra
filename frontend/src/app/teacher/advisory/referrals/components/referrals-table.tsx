@@ -9,7 +9,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { Loader2, MessageSquareText, RotateCcw, SearchIcon, X } from "lucide-react";
+import { FilePlus2, Loader2, MessageSquareText, SearchIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Pill } from "@/components/ui/pill";
@@ -26,16 +26,17 @@ import {
 } from "@/components/ui/table";
 import { Pagination } from "@/components/shared/pagination";
 import { PAGE_SIZE } from "@/components/shared/pagination";
-import { ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
 import listStyles from "../../list/components/advisory-list.module.css";
+import refStyles from "./referrals.module.css";
 import { formatSurnameFirst } from "@/lib/names";
 import { typeForDesk } from "./referral-types";
 import { isWithdrawnDismissal, type ReferralRow } from "./use-my-referrals";
 import { StudentMascot } from "./StudentMascot";
 import { ReferralEmptyKanban, ReferralStarterKanban } from "./ReferralEmptyKanban";
 import { ReferralStarterSidebar } from "./ReferralStarterSidebar";
+import { ReferralsSkeleton } from "./ReferralsSkeleton";
 
 type StatusMeta = { variant: "amber" | "blue" | "green" | "red" | "outline"; label: string };
 
@@ -119,9 +120,6 @@ export function ReferralsTable({
   referralsQuery,
   onTrack,
   onRequestCancel,
-  reopenPending,
-  reopenRowId,
-  onReferAgain,
   onNewReferral,
 }: {
   referrals: ReferralRow[];
@@ -133,9 +131,6 @@ export function ReferralsTable({
   referralsQuery: { isPending: boolean; isError: boolean; isFetching: boolean; refetch: () => void };
   onTrack: (row: ReferralRow) => void;
   onRequestCancel: (row: ReferralRow) => void;
-  reopenPending: boolean;
-  reopenRowId: string | null;
-  onReferAgain: (row: ReferralRow) => void;
   onNewReferral?: () => void;
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([
@@ -257,15 +252,18 @@ export function ReferralsTable({
                   size="xs"
                   variant="outline"
                   className="h-6 gap-1 px-2 text-[11px]"
-                  disabled={reopenPending}
-                  onClick={() => onReferAgain(r)}
+                  title="A cancelled referral stays closed — file a new anecdotal record to start a fresh referral"
+                  aria-label={`File a new anecdotal record to refer ${r.studentName} again`}
+                  onClick={() =>
+                    window.open(
+                      "/teacher/chat?standalone=1&new=anecdotal",
+                      "_blank",
+                      "noopener,noreferrer",
+                    )
+                  }
                 >
-                  {reopenRowId === r.id ? (
-                    <Loader2 size={12} className="animate-spin" aria-hidden />
-                  ) : (
-                    <RotateCcw size={12} aria-hidden />
-                  )}
-                  {reopenRowId === r.id ? "Re-submitting…" : "Refer again"}
+                  <FilePlus2 size={12} aria-hidden />
+                  New record
                 </Button>
               ) : (
                 <Button
@@ -298,7 +296,7 @@ export function ReferralsTable({
         },
       },
     ],
-    [onTrack, onRequestCancel, onReferAgain, reopenPending, reopenRowId],
+    [onTrack, onRequestCancel],
   );
 
   const table = useReactTable({
@@ -314,12 +312,7 @@ export function ReferralsTable({
   });
 
   if (referralsQuery.isPending) {
-    return (
-      <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading referrals">
-        <ZentraFilterBarSkeleton selects={1} />
-        <ZentraTableSkeleton rows={8} columns={5} />
-      </div>
-    );
+    return <ReferralsSkeleton />;
   }
 
   if (referralsQuery.isError) {
@@ -390,7 +383,7 @@ export function ReferralsTable({
 
           {isPageLoading ? (
             <div className="relative" aria-hidden>
-              <div className={`${listStyles.tableWrap} p-2`}>
+              <div className={`${listStyles.tableWrap} ${refStyles.flatTable} p-2`}>
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={`skeleton-${i}`} className="flex items-center gap-3 border-b border-border/60 px-2 py-3 last:border-b-0">
                     <Skeleton className="h-7 w-7 rounded-full" />
@@ -403,7 +396,7 @@ export function ReferralsTable({
             </div>
           ) : (
             <>
-              <div className={listStyles.tableWrap}>
+              <div className={`${listStyles.tableWrap} ${refStyles.flatTable}`}>
                 <Table className="w-full table-fixed">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (

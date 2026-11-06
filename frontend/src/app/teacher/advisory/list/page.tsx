@@ -13,7 +13,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { KanbanSquare, Loader2, MousePointerClick, Pencil, SearchIcon, UserPlus, Users } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
@@ -27,7 +27,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useDock } from "@/components/dock/dock-store";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
@@ -52,11 +51,12 @@ import { InsightCallout } from "@/components/ui/insight-callout";
 import { riskBadgeVariant } from "@/lib/risk/status";
 import { Pagination } from "@/components/shared/pagination";
 import { useAdvisoryRoster } from "@/services/teacher/advisory.service";
-import type { AdviseeRow } from "@/services/teacher/advisory.types";
+import type { AdvisoryRoster, AdviseeRow } from "@/services/teacher/advisory.types";
 import { compareSurnameFirst, formatSurnameFirst } from "@/lib/names";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 import { AdvisoryInsightBoard } from "./components/advisory-insight-board";
+import { AdvisoryListSkeleton } from "./components/advisory-list-skeleton";
 import { StudentMascot } from "../referrals/components/StudentMascot";
 import listStyles from "./components/advisory-list.module.css";
 
@@ -70,6 +70,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 export default function TeacherAdvisoryListPage() {
   const rosterQuery = useAdvisoryRoster();
+  const queryClient = useQueryClient();
   const invalidateTeacher = useTeacherInvalidate();
   const students = React.useMemo(
     () =>
@@ -284,7 +285,46 @@ export default function TeacherAdvisoryListPage() {
       const { data } = await apiClient.post<{ studentId?: string }>("/api/teacher/advisory/roster", payload);
       return data;
     },
-    onError: (err) => {
+    // Show the new advisee immediately — the refetch on settle only reconciles
+    // the server-assigned id, never the row's presence.
+    onMutate: async (payload) => {
+      const root = ["advisory-students"] as const;
+      await queryClient.cancelQueries({ queryKey: root });
+      const previous = queryClient.getQueriesData<AdvisoryRoster>({ queryKey: root });
+      const optimisticId = `pending:${payload.lrn}`;
+      queryClient.setQueriesData<AdvisoryRoster>({ queryKey: root }, (current) => {
+        if (!current) return current;
+        if (current.students.some((s) => s.lrn === payload.lrn)) return current;
+        const section =
+          current.advisorySections.find((s) => s.id === payload.sectionId) ??
+          current.advisorySections[0];
+        const row: AdviseeRow = {
+          studentId: optimisticId,
+          name: payload.fullName,
+          lrn: payload.lrn,
+          mascot: null,
+          birthdate: null,
+          gender: null,
+          section: section?.name ?? "",
+          riskLevel: "Low",
+          flags: [],
+          attendanceRate: 1,
+          anecdotalCount: 0,
+          confidentialityTiers: [],
+          hasOpenFlag: false,
+          openFlagCount: 0,
+          hasAccount: false,
+          admExempt: false,
+          grades: [],
+          liveGrades: [],
+        };
+        return { ...current, students: [...current.students, row] };
+      });
+      setSelectedId(optimisticId);
+      return { previous };
+    },
+    onError: (err, _payload, context) => {
+      context?.previous?.forEach(([key, data]) => queryClient.setQueryData(key, data));
       const message = getErrorMessage(err, "Could not enlist this student.");
       setAddError(message);
       if (dockTaskRef.current) {
@@ -296,10 +336,26 @@ export default function TeacherAdvisoryListPage() {
       toast.error({ title: "Could not enlist student", description: message });
     },
     onSuccess: (data, payload) => {
-
-      const rosterId = data?.studentId?.startsWith("roster:")
-        ? data.studentId.slice("roster:".length)
-        : undefined;
+      const optimisticId = `pending:${payload.lrn}`;
+      const newId = data?.studentId;
+      if (newId) {
+        // Swap the placeholder id for the real one so the selection survives
+        // the roster refetch.
+        setSelectedId(newId);
+        queryClient.setQueriesData<AdvisoryRoster>(
+          { queryKey: ["advisory-students"] },
+          (current) =>
+            current
+              ? {
+                  ...current,
+                  students: current.students.map((s) =>
+                    s.studentId === optimisticId ? { ...s, studentId: newId } : s,
+                  ),
+                }
+              : current,
+        );
+      }
+      const rosterId = newId?.startsWith("roster:") ? newId.slice("roster:".length) : undefined;
       if (rosterId) markSelfNotified(rosterId);
       if (dockTaskRef.current) {
         dock.completeTask(
@@ -349,41 +405,7 @@ export default function TeacherAdvisoryListPage() {
   }
 
   if (rosterQuery.isPending) {
-    return (
-      <section aria-label="Advisory list" className="flex min-w-0 flex-col gap-3">
-        <div className={assign.card} aria-busy="true" aria-label="Loading advisory list" aria-hidden>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="mt-1 h-4 w-52" />
-            </div>
-            <Skeleton className="h-9 w-40 shrink-0" />
-          </div>
-          <div className="relative overflow-x-auto rounded-md border">
-            <div className="flex bg-muted/50" aria-hidden>
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 170 }} />
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 100 }} />
-            </div>
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div key={i} className="flex items-center gap-2 border-t px-3 py-2">
-                <div className="flex min-w-0 flex-col gap-1.5" style={{ width: 170 }}>
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-                <Skeleton className="h-5 rounded-full" style={{ width: 100 }} />
-              </div>
-            ))}
-          </div>
-          <div className="relative flex items-center justify-end space-x-2">
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-8 w-20" />
-          </div>
-        </div>
-      </section>
-    );
+    return <AdvisoryListSkeleton />;
   }
 
   if (rosterQuery.isError) {
@@ -398,9 +420,12 @@ export default function TeacherAdvisoryListPage() {
   }
 
   return (
-    <section aria-label="Advisory list" className="flex min-w-0 flex-col gap-3">
+    <section
+      aria-label="Advisory list"
+      className={`${listStyles.pageLock} flex min-w-0 flex-col gap-3`}
+    >
       {students.length === 0 ? (
-        <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center">
           <div className={`${assign.card} w-full max-w-md`}>
             <span className={assign.glowClip} aria-hidden="true">
               <span className={assign.cardGlow} />
@@ -544,8 +569,9 @@ export default function TeacherAdvisoryListPage() {
           </div>
 
           {/* Right side bar — sits outside the advisory kanban board, same
-              gutter pattern as the classes page. */}
-          <div className="flex flex-row justify-end gap-2 self-start lg:sticky lg:top-16 lg:flex-col lg:items-end">
+              gutter pattern as the classes page. Top-aligned with the panel,
+              i.e. exactly the shell's 16px gutter under the navbar. */}
+          <div className="flex flex-row justify-end gap-2 self-start lg:flex-col lg:items-end">
             <div className="relative">
               <TooltipProvider delayDuration={100}>
                 <Tooltip>
@@ -625,7 +651,6 @@ export default function TeacherAdvisoryListPage() {
                         <Button
                           type="button"
                           size="sm"
-                          variant="ghost"
                           className="h-6 px-2 text-xs"
                           onClick={() => setEditArmed(false)}
                         >

@@ -95,6 +95,12 @@
   min-height: 0;
 }
 
+/* Student list mode: the collapsed cards wrapper still occupies a gap slot, so
+   drop the column gap to keep the roster exactly 16px under the navbar. */
+.mainColCompact {
+  gap: 0;
+}
+
 /* The table panel wraps its full content — rows never scroll inside, so
    the header, filter, count, and pager are all reachable with no table
    scroll. */
@@ -164,9 +170,8 @@
   align-items: stretch;
   min-width: 0;
   margin: 0;
-  /* Headroom for the hover lift — the reveal wrapper clips its content, so
-     without this the first card's top edge gets shaved off on hover. */
-  padding: 0.5rem 0 0;
+  /* Flush to the page top: the shell's 16px padding is the only offset. */
+  padding: 0;
   list-style: none;
 }
 
@@ -321,9 +326,15 @@
    principal academics student grid. */
 .studentCardGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.625rem;
   min-width: 0;
+}
+
+@media (max-width: 1440px) {
+  .studentCardGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1024px) {

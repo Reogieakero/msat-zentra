@@ -7,24 +7,53 @@
   padding: 0 0 0.25rem;
 }
 
-/* Board toolbar controls — search + risk filter row. */
-.filterBtn {
+/* Filter tab strips — stage group, a vertical rule, then the risk group.
+   Same selector as the principal schedule board: pill tabs, blue when
+   active (wrapped in a bare button for keyboard + aria-pressed). */
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.375rem;
+  padding: 0 0.25rem;
 }
 
-.filterActive {
-  border-color: var(--ring);
+/* Header-centered strip: one line, horizontal scroll when the stage tabs
+   outgrow their max width (never wraps inside the title row). */
+.filterRowScroll {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.filterDot {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 999px;
-  background-color: var(--primary);
+.filterGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
 }
 
-.filterMenu {
-  min-width: 12rem;
+.filterDivider {
+  font-size: 0.875rem;
+  line-height: 1;
+  color: color-mix(in oklch, var(--foreground), transparent 65%);
+  user-select: none;
+}
+
+.filterButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.filterButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 /* Referred-cases board — flat kanban rows inside the shared KanbanBoard
@@ -53,13 +82,31 @@
   border-bottom: none;
 }
 
-/* One horizontal line per case: mascot, name, then LRN/grade/category pills.
-   The name truncates first; pills and actions keep their width. */
+/* One row per case: mascot, then a stacked name block (name above the
+   LRN/grade/category pills). The name truncates first; pills and actions keep
+   their width. */
 .caseInfo {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex: 1;
+  min-width: 0;
+}
+
+/* Name + meta stack — keeps the identity pills directly under the student
+   name instead of trailing it on the same line. */
+.caseNameBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.caseMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
   min-width: 0;
 }
 
@@ -135,11 +182,6 @@
   width: 10rem;
 }
 
-.skelDrop {
-  height: 2rem;
-  width: 5rem;
-}
-
 /* Centered stage-tab placeholder — same 24px pill height as the tabs. */
 .skelTab {
   height: 1.5rem;
@@ -162,7 +204,6 @@
 .skelCaseName {
   height: 0.875rem;
   width: 10rem;
-  max-width: 45%;
 }
 
 .skelPill {

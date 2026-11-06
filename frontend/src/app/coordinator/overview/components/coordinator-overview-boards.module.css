@@ -1,24 +1,21 @@
-/* Icon-rail flyout menus — smooth open/close in both themes, same ease and
-   top-right origin as the nurse / registry KPI rails. */
-.railMenu {
-  transform-origin: top right;
-  transition:
-    opacity 180ms ease-out,
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 180ms;
+/* Three-board section under the KPI strip — same responsive rhythm as the
+   nurse / coordinator chart rows. */
+.boardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
-.railMenuOpen {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  visibility: visible;
+@media (max-width: 1100px) {
+  .boardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.railMenuClosed {
-  opacity: 0;
-  transform: translateY(-6px) scale(0.98);
-  visibility: hidden;
-  pointer-events: none;
+@media (max-width: 767px) {
+  .boardGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .railList {
@@ -43,13 +40,6 @@
   border-bottom: none;
 }
 
-.railSwatch {
-  width: 0.5rem;
-  height: 0.5rem;
-  flex-shrink: 0;
-  border-radius: 2px;
-}
-
 .railName {
   min-width: 0;
   flex: 1;
@@ -58,14 +48,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.railCount {
-  flex-shrink: 0;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--foreground);
-  font-variant-numeric: tabular-nums;
 }
 
 .railWait {
@@ -179,8 +161,20 @@
   background-color: color-mix(in oklch, var(--foreground), transparent 94%);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .railMenu {
-    transition: none;
-  }
+/* "What it means" footer — the shared insight callout. The callout's own
+   `.callout { margin: 0 }` beats Tailwind's `mt-auto`, so the bottom pin
+   lives on this wrapper instead. */
+.footerSlot {
+  display: flex;
+  margin-top: auto;
+}
+
+/* The callout hugs its copy: the bottom pin lives on the wrapper. */
+.interpretation {
+  flex: 1;
+}
+
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
 }

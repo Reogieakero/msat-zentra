@@ -20,6 +20,8 @@ const TONE_CLASSES = [
   styles.bamaToneViolet,
 ] as const;
 
+export { TONE_CLASSES };
+
 export function TeacherBamaPill() {
   const pathname = usePathname();
   const session = useSession();

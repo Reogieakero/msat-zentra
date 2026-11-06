@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/ui/pill";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { CalendarClock, Clock } from "lucide-react";
@@ -17,12 +17,6 @@ import type {
   NurseSessionItem,
 } from "@/services/nurse/nurse.types";
 import { useNowMs } from "./use-now-ms";
-
-/* Same rectangle pill metric as the board rows. */
-const PILL_BASE =
-  "inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-xs font-medium whitespace-nowrap";
-const PILL_SECONDARY = "border-border bg-secondary text-secondary-foreground";
-const PILL_MUTED = "border-border bg-muted text-muted-foreground";
 
 /**
  * Booked-session schedule board — shows the booking beside the queue row's
@@ -65,14 +59,11 @@ export function NurseSessionScheduleBoard({
           <span className="min-w-0 truncate text-sm font-semibold text-primary">
             {row.student}
           </span>
-          <span
-            className={`${PILL_BASE} ${PILL_SECONDARY} tabular-nums`}
-            title={row.lrn}
-          >
+          <Pill label="LRN" className="tabular-nums">
             {row.lrn}
-          </span>
+          </Pill>
           {row.section && row.section !== "—" && (
-            <span className={`${PILL_BASE} ${PILL_MUTED}`}>{row.section}</span>
+            <Pill label="Section">{row.section}</Pill>
           )}
         </div>
         <dl className="grid grid-cols-2 gap-x-3 gap-y-2 px-1">
@@ -100,19 +91,19 @@ export function NurseSessionScheduleBoard({
           </div>
         </dl>
         <div className="flex flex-wrap items-center gap-1.5 px-1">
-          <Badge variant="blue" className="rounded-md">
+          <Pill tone="blue" label="Session status">
             Scheduled
-          </Badge>
+          </Pill>
           {Number.isFinite(startsAt) && startsAt > 0 ? (
-            <span
-              className={`${PILL_BASE} ${PILL_MUTED} gap-1 tabular-nums`}
-              title={`Starts ${formatDate(dateKey)} ${formatTime(session.scheduledAt)}`}
+            <Pill
+              label={`Starts ${formatDate(dateKey)} ${formatTime(session.scheduledAt)}`}
+              className="gap-1 tabular-nums"
             >
               <Clock size={11} aria-hidden />
               {started
                 ? "Due now"
                 : `starts in ${formatCountdown(startsAt, nowMs)}`}
-            </span>
+            </Pill>
           ) : null}
         </div>
       </KanbanBoard>

@@ -114,6 +114,9 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
                   key={c.id}
                   category={c.category}
                   studentName={c.studentName}
+                  mascotSeed={c.lrn}
+                  mascotCharacter={c.mascot ?? undefined}
+                  mascotSize={44}
                   metaText={c.lrn}
                   metaTitle={`${c.lrn} · ${c.section}`}
                   fileName={`GCForm-01_${recordDate(c.observationDatetime)}`}

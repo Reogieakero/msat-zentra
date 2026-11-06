@@ -1,33 +1,210 @@
-/* Device ledger table — At-Risk table design: section title/desc,
-   two-line truncate cells, modal detail rows, skeleton mirrors. The glow
-   shell, header layout, footer, and empty state ride Tailwind + the shared
-   section card, same as the reference. */
+/* Device ledger — a single KanbanBoard shell wrapping a data table (one row
+   per issued device), matching the enrolled desk's board + table chrome.
+   Only the row cells are bespoke so the table reads compact yet scannable. */
 
-/* Ledger shell sits still — the shared glow card lifts on hover, which
-   reads as a glitch on a full-width table panel. This outranks
-   assign.card:hover (later in the bundle via import order). */
-.steady,
-.steady:hover {
-  transform: none;
-  border-color: var(--border);
-  box-shadow: none;
+.boardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
 }
 
-.sectionTitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+/* Search sits in the board header, alongside the status filter and actions.
+   16px radius, compact, mirrors the enrolled desk. */
+.searchWrap {
+  position: relative;
+  width: 13rem;
+  max-width: 100%;
+  flex-shrink: 0;
 }
 
-.sectionDesc {
-  margin: 0.125rem 0 0;
-  font-size: 0.8125rem;
+.searchIcon {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.8125rem;
+  height: 0.8125rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  height: 1.75rem;
+  padding: 0 0.625rem 0 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background-color: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  outline: none;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+
+.searchInput::placeholder {
   color: var(--muted-foreground);
 }
 
+.searchInput:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring), transparent 55%);
+}
+
+/* Hide the browser's native search clear button (keeps the pill clean). */
+.searchInput::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Centered status pill-tabs in the board header — same pattern as the
+   certifications and referrals desks. */
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.filterButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.filterButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Table sits flush inside the board card; the shared Table wrapper already
+   handles horizontal overflow on narrow screens. */
+.table {
+  font-size: 0.75rem;
+}
+
+/* The shared Table wrapper is the scroll container — hide its bar so the
+   board never shows a scrollbar. Horizontal panning still works. */
+.boardIn :global([data-slot="table-container"]) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.boardIn :global([data-slot="table-container"])::-webkit-scrollbar {
+  display: none;
+}
+
+.table thead tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.row td {
+  padding: 0.5rem;
+  vertical-align: middle;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+}
+
+.row:last-child td {
+  border-bottom: 0;
+}
+
+/* Board entrance + row cascade — same motion as the enrolled desk. */
+.boardIn {
+  animation: board-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.table tbody tr {
+  animation: row-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Learner identity cell — mascot + name, issuer context underneath. */
+.learnerCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 12rem;
+}
+
+.mascot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+
+.learnerText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.learnerName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.learnerMeta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6563rem;
+  color: var(--muted-foreground);
+}
+
+/* Device cell — type over serial, keeps rows one line tall. */
+.deviceCell {
+  min-width: 10rem;
+}
+
 .cellMain {
-  margin: 0;
+  display: block;
   min-width: 0;
   overflow: hidden;
   font-size: 0.8125rem;
@@ -38,8 +215,9 @@
 }
 
 .cellSub {
-  margin: 0.125rem 0 0;
-  font-size: 0.75rem;
+  display: block;
+  margin-top: 0.0625rem;
+  font-size: 0.6563rem;
   color: var(--muted-foreground);
   white-space: nowrap;
 }
@@ -47,6 +225,141 @@
 .mono {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
+}
+
+.dateCell {
+  white-space: nowrap;
+  color: var(--foreground);
+}
+
+.dash {
+  color: var(--muted-foreground);
+}
+
+/* Red 10px warning: the learner's ADM case is complete but still holds a device. */
+.returnWarning {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #dc2626;
+}
+
+:global(.dark) .returnWarning {
+  color: #f87171;
+}
+
+/* Actions cell — details then the return CTA, right aligned. */
+.actionsCell {
+  text-align: right;
+}
+
+.actionsHead {
+  text-align: right;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+.cta {
+  flex: 0 0 auto;
+  height: 1.5rem;
+  padding-inline: 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3125rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.cta:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.cta:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.cta:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.ctaSecondary {
+  flex: 0 0 auto;
+  height: 1.5rem;
+  padding-inline: 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3125rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.ctaSecondary:hover {
+  opacity: 0.85;
+}
+
+.ctaSecondary:active {
+  transform: scale(0.98);
+}
+
+.ctaSecondary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Empty/search-miss callout sits centred inside the board card. */
+.emptyCallout {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+/* Error state. */
+.errorBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  padding: 1rem;
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--foreground);
 }
 
 .spin {
@@ -61,264 +374,7 @@
   }
 }
 
-/* Details modal rows. */
-.modalRows {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.modalRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.375rem 0;
-  border-top: 1px solid var(--border);
-}
-
-.modalRow:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
-.modalTerm {
-  margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--primary);
-  flex-shrink: 0;
-}
-
-.modalValue {
-  margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-align: right;
-  color: var(--foreground);
-  min-width: 0;
-}
-
-/* Loading mirrors. */
-.skelTitle {
-  width: 9rem;
-  height: 1rem;
-  border-radius: 0.25rem;
-}
-
-.skelDesc {
-  width: 12rem;
-  height: 0.8rem;
-  border-radius: 0.25rem;
-  margin-top: 0.375rem;
-}
-
-.skelSearch {
-  width: 10rem;
-  height: 2rem;
-  border-radius: var(--radius-md);
-  flex-shrink: 0;
-}
-
-.skelTable {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.skelTable td {
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.skelTable tr:last-child td {
-  border-bottom: none;
-}
-
-.skelRow {
-  width: 100%;
-  height: 2.25rem;
-  border-radius: 0.25rem;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .spin {
-    animation: none;
-  }
-}
-
-/* ── Kanban board ─────────────────────────────────────────────────────── */
-
-.board {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.count {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.empty {
-  margin: 0;
-  padding: 2.5rem 1rem;
-  text-align: center;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.375rem;
-  flex-wrap: nowrap;
-}
-
-.searchGroup {
-  width: 20rem;
-  max-width: 100%;
-  flex: 0 1 auto;
-}
-
-@media (max-width: 639px) {
-  .headerActions {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .searchGroup {
-    width: 100%;
-  }
-}
-
-.filterDot {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-
-.optionDot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-
-/* Card grid — 5 across on wide desks, stepping down as width shrinks. */
-.deviceGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: stretch;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  min-width: 0;
-}
-
-@media (min-width: 640px) {
-  .deviceGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 900px) {
-  .deviceGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1100px) {
-  .deviceGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1280px) {
-  .deviceGrid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
-
-/* Device card — muted outer shell (certification folder) holding an inner
-   white panel for the learner + device details. */
-.deviceCard {
-  position: relative;
-  display: flex;
-  min-width: 0;
-  height: 100%;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.625rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background-color: color-mix(in oklch, var(--muted), transparent 40%);
-  overflow: hidden;
-  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
-  animation: device-card-in 220ms ease-out backwards;
-}
-
-.deviceCard:hover {
-  border-color: color-mix(in oklch, #f59e0b, transparent 55%);
-  box-shadow: 0 8px 20px -14px color-mix(in oklch, var(--foreground), transparent 60%);
-}
-
-.deviceCardHead {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin: -0.625rem -0.625rem 0;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.deviceTop {
-  display: flex;
-  min-width: 0;
-  flex: 1 1 auto;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.deviceIdentity {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-/* Inner card — the pill content sits on its own elevated panel. */
-.deviceCardBody {
-  display: flex;
-  min-width: 0;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 0.375rem;
-  padding: 0.625rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background-color: var(--card);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
-}
-
-/* Hover/click info board shown from the card's Details button. */
+/* Hover/click info board shown from each row's Details button. */
 .infoCard {
   display: flex;
   min-width: 0;
@@ -379,22 +435,6 @@
   line-height: 1.4;
 }
 
-/* Red 10px warning: the learner's ADM case is complete but still holds a device. */
-.returnWarning {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin: 0.125rem 0 0;
-  font-size: 0.625rem;
-  font-weight: 600;
-  line-height: 1.3;
-  color: #dc2626;
-}
-
-:global(.dark) .returnWarning {
-  color: #f87171;
-}
-
 /* ADM stage pill — amber while in progress, green once complete. */
 .stagePillAmber {
   border-color: color-mix(in oklch, #f59e0b, transparent 55%);
@@ -423,78 +463,68 @@
   gap: 0.375rem;
 }
 
-.deviceActions {
+/* Loading mirror — table-shaped rows inside the single board shell. */
+.skelTable {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.skelRow {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.375rem;
-  flex-wrap: wrap;
-  margin-top: auto;
+  gap: 0.625rem;
+  padding: 0.375rem 0.25rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
 }
 
-@keyframes device-card-in {
-  from {
-    opacity: 0;
-    transform: translateY(0.25rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.skelRow:last-child {
+  border-bottom: 0;
 }
 
-.deviceGrid > .deviceCard:nth-child(2) {
-  animation-delay: 0.06s;
+.skelMascot {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  flex-shrink: 0;
 }
 
-.deviceGrid > .deviceCard:nth-child(3) {
-  animation-delay: 0.12s;
+.skelName {
+  width: 8rem;
+  height: 0.8125rem;
+}
+
+.skelMeta {
+  width: 5rem;
+  height: 0.6875rem;
+}
+
+.skelTrack {
+  flex: 1;
+  height: 0.3125rem;
+  border-radius: 999px;
+}
+
+.skelCta {
+  width: 5.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+  margin-left: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .deviceCard {
+  .boardIn,
+  .table tbody tr {
     animation: none;
   }
-}
 
-/* Error state + loading mirrors. */
-.stateCard {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  background-color: var(--card);
-  padding: 1.125rem;
-}
+  .spin {
+    animation: none;
+  }
 
-.stateTitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-.stateDesc {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-}
-
-.skeletonShell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.skeletonHead {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.skelCard {
-  width: 100%;
-  height: 6.5rem;
-  border-radius: var(--radius-md);
+  .cta:active:not(:disabled),
+  .ctaSecondary:active {
+    transform: none;
+  }
 }

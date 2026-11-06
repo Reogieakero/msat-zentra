@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import ThoughtLine from "@/components/ui/thought-line/ThoughtLine";
 import { apiClient, getAccessToken, getActiveTermScope } from "@/lib/api/client";
+import { useDock } from "@/components/dock/dock-store";
 import { recordConfirmedMarks } from "./adviser-access-types";
 
 export type AdviserAccessDesk = "record-keeper" | "registrar";
@@ -222,6 +223,7 @@ function patchRequestMarks(
 
 export function AdviserAccessCheckProvider({ children }: { children: React.ReactNode }) {
   const qc = useQueryClient();
+  const dock = useDock();
   const pathname = usePathname();
   const [run, setRun] = React.useState<CheckRun | null>(null);
   const [phase, setPhase] = React.useState<CheckPhase | null>(null);
@@ -316,6 +318,13 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
       setSummary(null);
       setError(null);
       setMinimized(false);
+      const dockTaskId = dock.startTask({
+        kind: "generic",
+        title: `Checking SF10 records${adviserName ? ` — ${adviserName}` : ""}`,
+        description: section
+          ? `${section} · ${advisees.length} student${advisees.length === 1 ? "" : "s"}`
+          : `${advisees.length} student${advisees.length === 1 ? "" : "s"}`,
+      });
       const controller = new AbortController();
       abortRef.current = controller;
       void (async () => {
@@ -422,6 +431,10 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
                 );
                 setSummary(d.summary);
                 setPhase("done");
+                dock.completeTask(
+                  dockTaskId,
+                  `${d.summary.has} attached · ${d.summary.missing} missing of ${d.summary.total} requested.`,
+                );
                 toast.success({
                   title: "SF10 check complete",
                   description: `${d.summary.has} attached · ${d.summary.missing} missing of ${d.summary.total} requested. Approve is now unlocked.`,
@@ -496,6 +509,7 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
               }
             }
           }
+          if (!streamDone) dock.completeTask(dockTaskId, "Check finished.");
         } catch (e) {
           if (token !== runToken.current || isCancelError(e)) return;
           // A failed run stops the whole sweep — the remaining requests stay
@@ -505,11 +519,12 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
           const message = getErrorMessage(e, "Could not run the SF10 check.");
           setError(message);
           setPhase("error");
+          dock.failTask(dockTaskId, message);
           toast.error({ title: "Check failed", description: message });
         }
       })();
     },
-    [qc],
+    [qc, dock],
   );
   React.useEffect(() => {
     beginCheckRef.current = beginCheck;
@@ -544,6 +559,13 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
       if (approvingLrns.includes(lrn) || reportingLrns.includes(lrn)) return;
       setApprovingLrns((prev) => (prev.includes(lrn) ? prev : [...prev, lrn]));
       setError(null);
+      const studentName =
+        findCachedRequest(qc, requestId)?.affectedAdvisees.find((a) => a.lrn === lrn)?.name ?? lrn;
+      const dockTaskId = dock.startTask({
+        kind: "generic",
+        title: "Granting adviser access",
+        description: studentName,
+      });
       void (async () => {
         try {
           const res = await apiClient.post(`/api/${desk}/adviser-access-requests/${requestId}/approve-lrn`, { lrn });
@@ -570,17 +592,19 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
           for (const key of deskFullKeys(desk)) {
             void qc.invalidateQueries({ queryKey: key });
           }
+          dock.completeTask(dockTaskId, "Access granted.");
           toast.success({ title: "Access granted", description: "This student can now be read by the adviser." });
         } catch (e) {
           const message = getErrorMessage(e, "Could not approve this student.");
           setError(message);
+          dock.failTask(dockTaskId, message);
           toast.error({ title: "Action failed", description: message });
         } finally {
           setApprovingLrns((prev) => prev.filter((x) => x !== lrn));
         }
       })();
     },
-    [approvingLrns, reportingLrns, qc],
+    [approvingLrns, reportingLrns, qc, dock],
   );
 
   // "Report as missing" — same honest-pending contract: spinner first,
@@ -590,6 +614,13 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
       if (approvingLrns.includes(lrn) || reportingLrns.includes(lrn)) return;
       setReportingLrns((prev) => (prev.includes(lrn) ? prev : [...prev, lrn]));
       setError(null);
+      const studentName =
+        findCachedRequest(qc, requestId)?.affectedAdvisees.find((a) => a.lrn === lrn)?.name ?? lrn;
+      const dockTaskId = dock.startTask({
+        kind: "generic",
+        title: "Reporting missing SF10 record",
+        description: studentName,
+      });
       void (async () => {
         try {
           const res = await apiClient.post(`/api/${desk}/adviser-access-requests/${requestId}/report-missing`, { lrn });
@@ -610,17 +641,19 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
           for (const key of deskFullKeys(desk)) {
             void qc.invalidateQueries({ queryKey: key });
           }
+          dock.completeTask(dockTaskId, "Reported to the adviser.");
           toast.success({ title: "Reported missing", description: "The adviser has been notified." });
         } catch (e) {
           const message = getErrorMessage(e, "Could not report this student.");
           setError(message);
+          dock.failTask(dockTaskId, message);
           toast.error({ title: "Report failed", description: message });
         } finally {
           setReportingLrns((prev) => prev.filter((x) => x !== lrn));
         }
       })();
     },
-    [approvingLrns, reportingLrns, qc],
+    [approvingLrns, reportingLrns, qc, dock],
   );
 
   // Bulk "approve all matched": processing state first, commit on success.
@@ -632,6 +665,12 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
       setBulkApproving(true);
       setError(null);
       const matchedLrns = matched.map((r) => r.lrn);
+      const dockTaskId = dock.startTask({
+        kind: "generic",
+        title: "Approving matched students",
+        description: run ? `${run.adviserName}${run.section ? ` · ${run.section}` : ""}` : "Adviser access",
+        total: matchedLrns.length,
+      });
       void (async () => {
         try {
           const res = await apiClient.post(`/api/${desk}/adviser-access-requests/${requestId}/approve-all`);
@@ -666,6 +705,7 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
           for (const key of deskFullKeys(desk)) {
             void qc.invalidateQueries({ queryKey: key });
           }
+          dock.completeTask(dockTaskId, `${matchedLrns.length} matched student${matchedLrns.length === 1 ? "" : "s"} approved.`);
           toast.success({
             title: "Access granted",
             description: `${matchedLrns.length} matched student${matchedLrns.length === 1 ? "" : "s"} approved.`,
@@ -673,13 +713,14 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
         } catch (e) {
           const message = getErrorMessage(e, "Could not approve matched students.");
           setError(message);
+          dock.failTask(dockTaskId, message);
           toast.error({ title: "Action failed", description: message });
         } finally {
           setBulkApproving(false);
         }
       })();
     },
-    [bulkApproving, phase, run, rows, qc],
+    [bulkApproving, phase, run, rows, qc, dock],
   );
 
   // Board "Approve all" — one bulk grant per request, sequential so the
@@ -692,8 +733,15 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
       if (unique.length === 0) return;
       setBulkApproving(true);
       setError(null);
+      const dockTaskId = dock.startTask({
+        kind: "generic",
+        title: "Approving adviser access",
+        description: `${unique.length} request${unique.length === 1 ? "" : "s"}`,
+        total: unique.length,
+      });
       void (async () => {
         let grantedTotal = 0;
+        let processed = 0;
         try {
           for (const requestId of unique) {
             const res = await apiClient.post(`/api/${desk}/adviser-access-requests/${requestId}/approve-all`);
@@ -711,10 +759,18 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
               approvedLrnAt: { ...(r.approvedLrnAt ?? {}), ...(serverAt ?? {}) },
             }));
             grantedTotal += Array.isArray(data?.granted) ? data.granted.length : 0;
+            processed += 1;
+            dock.updateTask(dockTaskId, { progress: { done: processed, total: unique.length } });
           }
           for (const key of deskFullKeys(desk)) {
             void qc.invalidateQueries({ queryKey: key });
           }
+          dock.completeTask(
+            dockTaskId,
+            grantedTotal > 0
+              ? `${grantedTotal} matched student${grantedTotal === 1 ? "" : "s"} approved.`
+              : "Every matched student was already approved.",
+          );
           toast.success({
             title: "Access granted",
             description:
@@ -725,13 +781,14 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
         } catch (e) {
           const message = getErrorMessage(e, "Could not approve matched students.");
           setError(message);
+          dock.failTask(dockTaskId, message);
           toast.error({ title: "Action failed", description: message });
         } finally {
           setBulkApproving(false);
         }
       })();
     },
-    [acting, qc],
+    [acting, qc, dock],
   );
 
   // Board "Report all" — sequential per-LRN reports: the server appends to
@@ -742,8 +799,15 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
       if (acting || targets.length === 0) return;
       setBulkReporting(true);
       setError(null);
+      const dockTaskId = dock.startTask({
+        kind: "generic",
+        title: "Reporting missing SF10 records",
+        description: `${targets.length} student${targets.length === 1 ? "" : "s"}`,
+        total: targets.length,
+      });
       void (async () => {
         let reportedCount = 0;
+        let processed = 0;
         try {
           for (const t of targets) {
             const res = await apiClient.post(`/api/${desk}/adviser-access-requests/${t.requestId}/report-missing`, {
@@ -758,10 +822,16 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
                 : [...new Set([...(r.reportedMissingLrns ?? []), t.lrn])],
             }));
             reportedCount += 1;
+            processed += 1;
+            dock.updateTask(dockTaskId, { progress: { done: processed, total: targets.length } });
           }
           for (const key of deskFullKeys(desk)) {
             void qc.invalidateQueries({ queryKey: key });
           }
+          dock.completeTask(
+            dockTaskId,
+            `${reportedCount} student${reportedCount === 1 ? "" : "s"} reported — the adviser has been notified.`,
+          );
           toast.success({
             title: "Reported missing",
             description: `${reportedCount} student${reportedCount === 1 ? "" : "s"} reported — the adviser has been notified.`,
@@ -769,13 +839,14 @@ export function AdviserAccessCheckProvider({ children }: { children: React.React
         } catch (e) {
           const message = getErrorMessage(e, "Could not report missing students.");
           setError(message);
+          dock.failTask(dockTaskId, message);
           toast.error({ title: "Report failed", description: message });
         } finally {
           setBulkReporting(false);
         }
       })();
     },
-    [acting, qc],
+    [acting, qc, dock],
   );
 
   const dismiss = React.useCallback(() => {
