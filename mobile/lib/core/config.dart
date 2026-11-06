@@ -24,6 +24,7 @@ class AppConfig {
   /// the login/refresh `Set-Cookie` header and replays it as a Cookie header.
   static const refreshCookieName = 'zentra.refresh';
   static const termScopeBox = 'zentra.term';
+  static const portalBox = 'zentra.portal';
   static const outboxBox = 'zentra.outbox';
   static const cacheBox = 'zentra.cache';
   static const bamaBox = 'zentra.bama';

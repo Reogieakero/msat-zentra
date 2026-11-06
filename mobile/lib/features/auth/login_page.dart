@@ -22,13 +22,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _pass = TextEditingController();
   bool _busy = false;
   bool _googleBusy = false;
+  String _portal = 'staff';
 
   Future<void> _submit() async {
     setState(() => _busy = true);
     try {
-      final ok = await ref.read(authProvider.notifier).login(email: _email.text.trim(), password: _pass.text);
+      final ok = await ref.read(authProvider.notifier).login(
+            email: _email.text.trim(),
+            password: _pass.text,
+            portal: _portal,
+          );
       if (!mounted) return;
-      if (ok) context.go('/term');
+      if (ok) context.go(_portal == 'staff' ? '/term' : '/$_portal/home');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -38,7 +43,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     setState(() => _googleBusy = true);
     try {
       final ok = await launchUrl(
-        Uri.parse('${AppConfig.apiBaseUrl}/api/auth/google?role=staff'),
+        Uri.parse('${AppConfig.apiBaseUrl}/api/auth/google?role=$_portal'),
         mode: LaunchMode.externalApplication,
       );
       if (!mounted || ok) return;
@@ -72,8 +77,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   const SizedBox(height: 12),
                   const Text('Zentra', textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.4)),
                   const SizedBox(height: 4),
-                  Text('Staff workspace — Advisers and Subject Teachers sign in with staff accounts.',
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  Text(
+                    _portal == 'staff'
+                        ? 'Staff workspace — Advisers and Subject Teachers sign in with staff accounts.'
+                        : _portal == 'student'
+                            ? 'Student portal — view your grades, attendance, schedule, and modules.'
+                            : 'Parent portal — follow your linked child\'s progress.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 16),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'staff', label: Text('Staff')),
+                      ButtonSegment(value: 'student', label: Text('Student')),
+                      ButtonSegment(value: 'parent', label: Text('Parent')),
+                    ],
+                    selected: {_portal},
+                    onSelectionChanged: _busy
+                        ? null
+                        : (value) => setState(() => _portal = value.first),
+                    showSelectedIcon: false,
+                  ),
                   const SizedBox(height: 16),
                   TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email'), keyboardType: TextInputType.emailAddress),
                   const SizedBox(height: 12),

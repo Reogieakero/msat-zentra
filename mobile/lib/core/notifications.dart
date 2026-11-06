@@ -36,7 +36,7 @@ class ZNotification {
       );
 }
 
-final notificationsProvider = FutureProvider<List<ZNotification>>((ref) async {
+final notificationsProvider = FutureProvider.autoDispose<List<ZNotification>>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {
     final res = await api.dio.get('/api/notifications/');
@@ -133,4 +133,18 @@ String? teacherNotificationTarget(ZNotification n, {required bool isAdviser}) {
     return isAdviser ? '/adviser/referrals' : null;
   }
   return null;
+}
+
+/// Portal titles: module releases get a first-class title; everything else
+/// reuses the staff label map.
+String portalNotificationTitle(ZNotification n) {
+  if (n.type == 'module_released' || n.sourceTable == 'advisory_modules') return 'New module released';
+  return teacherNotificationTitle(n);
+}
+
+/// Portal notification taps: modules land on the module list, everything
+/// learner-related lands on the portal home (where sessions are surfaced).
+String portalNotificationTarget(ZNotification n, String portal) {
+  if (n.sourceTable == 'advisory_modules') return '/$portal/modules';
+  return '/$portal/home';
 }

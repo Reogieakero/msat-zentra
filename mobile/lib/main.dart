@@ -16,6 +16,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await Hive.openBox(AppConfig.termScopeBox);
+  await Hive.openBox(AppConfig.portalBox);
   await Hive.openBox(AppConfig.outboxBox);
   await Hive.openBox(AppConfig.bamaBox);
   await openThemeSettingsBox();

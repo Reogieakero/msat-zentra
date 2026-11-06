@@ -11,6 +11,10 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../core/api_client.dart';
 import '../core/config.dart';
+import '../design/portal_shell.dart';
+import 'student/student_pages.dart';
+import 'parent/parent_pages.dart';
+import 'portal/portal_views.dart';
 import '../shared/models.dart';
 import 'adviser/academic_overview_page.dart';
 import 'adviser/adm_cases_page.dart';
@@ -42,6 +46,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       final token = await container.read(apiClientProvider).accessToken();
       final loc = state.matchedLocation;
       if (token == null && loc != '/login') return '/login';
+      if (token != null) {
+        final portal = container.read(authProvider).portal ??
+            Hive.box(AppConfig.portalBox).get('portal') as String? ?? 'staff';
+        if (portal == 'student' || portal == 'parent') {
+          if (loc == '/portal/notifications' || loc.startsWith('/$portal/')) return null;
+          return '/$portal/home';
+        }
+        if (loc.startsWith('/student') || loc.startsWith('/parent') || loc.startsWith('/portal/')) {
+          return hasTerm ? '/gate' : '/term';
+        }
+      }
       if (token != null && loc == '/login') return hasTerm ? '/gate' : '/term';
       if (token != null && !hasTerm && loc != '/term') return '/term';
       // Role gate for adviser routes (cached role set by overviewProvider).
@@ -54,6 +69,23 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/login', builder: (context, _) => const LoginPage()),
+      GoRoute(path: '/student/home', builder: (context, _) => const StudentHomePage()),
+      GoRoute(path: '/student/grades', builder: (context, _) => const StudentGradesPage()),
+      GoRoute(path: '/student/attendance', builder: (context, _) => const StudentAttendancePage()),
+      GoRoute(path: '/student/schedule', builder: (context, _) => const StudentSchedulePage()),
+      GoRoute(path: '/student/modules', builder: (context, _) => const StudentModulesPage()),
+      GoRoute(path: '/student/sessions', builder: (context, _) => const StudentSessionsPage()),
+      GoRoute(path: '/parent/home', builder: (context, _) => const ParentHomePage()),
+      GoRoute(path: '/parent/grades', builder: (context, _) => const ParentGradesPage()),
+      GoRoute(path: '/parent/attendance', builder: (context, _) => const ParentAttendancePage()),
+      GoRoute(path: '/parent/schedule', builder: (context, _) => const ParentSchedulePage()),
+      GoRoute(path: '/parent/modules', builder: (context, _) => const ParentModulesPage()),
+      GoRoute(path: '/parent/sessions', builder: (context, _) => const ParentSessionsPage()),
+      GoRoute(path: '/portal/notifications', builder: (context, _) => PortalShell(
+        portal: Hive.box(AppConfig.portalBox).get('portal') as String? ?? 'student',
+        selectedPath: '/portal/notifications',
+        child: const PortalNotificationsPage(),
+      )),
       GoRoute(path: '/term', builder: (context, _) => const TermSelectPage()),
       GoRoute(path: '/gate', builder: (context, _) => const FirstTimeGate()),
       // Adviser section (drawer replace-targets; no Advisory attendance)

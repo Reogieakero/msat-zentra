@@ -11,10 +11,11 @@ import '../shared/models.dart';
 
 class AuthState {
   final bool loading;
-  final String? role; // adviser | subject_teacher
+  final String? role; // adviser | subject_teacher | student | parent
+  final String? portal; // staff | student | parent
   final String? error;
   final bool loggedIn;
-  const AuthState({this.loading = false, this.role, this.error, this.loggedIn = false});
+  const AuthState({this.loading = false, this.role, this.portal, this.error, this.loggedIn = false});
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
@@ -30,19 +31,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _restore() async {
     final token = await api.accessToken();
     if (token == null) return;
-    // Role is re-hydrated lazily via overview; keep session alive.
-    state = const AuthState(loggedIn: true);
+    final box = Hive.box(AppConfig.portalBox);
+    final portal = box.get('portal') as String?;
+    final role = box.get('role') as String?;
+    // Role is re-hydrated lazily via overview for staff; portal sessions
+    // persist both values so cold-start redirects land in the right shell.
+    state = AuthState(loggedIn: true, portal: portal ?? 'staff', role: role);
   }
 
-  Future<bool> login({required String email, required String password}) async {
-    state = const AuthState(loading: true);
+  Future<bool> login({
+    required String email,
+    required String password,
+    String portal = 'staff',
+  }) async {
+    state = AuthState(loading: true, portal: portal);
     try {
-      // Backend expects role:'staff' for both adviser + subject_teacher and
-      // returns the concrete role. 403 ROLE_MISMATCH if wrong portal.
+      // Staff covers both adviser + subject_teacher (server returns the concrete
+      // role). Student/parent portals pass their own role. 403 ROLE_MISMATCH if
+      // the account belongs to another portal.
       final res = await api.dio.post('/api/auth/login', data: {
         'email': email,
         'password': password,
-        'role': 'staff',
+        'role': portal,
       });
       final data = res.data is Map ? res.data as Map : const {};
       final access = data['accessToken']?.toString();
@@ -55,7 +65,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final refresh = api.refreshCookieFrom(res) ?? data['refreshToken']?.toString();
       await api.saveSession(access: access, refresh: refresh);
       final role = data['role']?.toString();
-      state = AuthState(loggedIn: true, role: role);
+      final box = Hive.box(AppConfig.portalBox);
+      await box.put('portal', portal);
+      if (role != null) await box.put('role', role);
+      if (portal != 'staff') {
+        // Staff term headers never apply to portals; clear stale scope.
+        await Hive.box(AppConfig.termScopeBox).clear();
+      }
+      state = AuthState(loggedIn: true, role: role, portal: portal);
       return true;
     } on DioException catch (e) {
       try {
@@ -72,10 +89,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     await api.logout();
+    await Hive.box(AppConfig.portalBox).clear();
     state = const AuthState();
   }
 
-  void setRole(String role) => state = AuthState(loggedIn: true, role: role);
+  void setRole(String role) {
+    final portal = state.portal ?? 'staff';
+    Hive.box(AppConfig.portalBox).put('role', role);
+    state = AuthState(loggedIn: true, role: role, portal: portal);
+  }
 }
 
 // --- Term scope: persisted in Hive, sent as headers by ApiClient ---
