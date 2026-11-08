@@ -124,7 +124,9 @@ export async function listModules(
   const { section, sections } = await resolveSection(ctx, query.sectionId);
   const [modules, admLearners] = await Promise.all([
     prisma.advisoryModule.findMany({
-      where: { sectionId: section.id },
+      // Modules belong to the term they were released in; the desk follows the
+      // teacher's selected term.
+      where: { sectionId: section.id, termId: ctx.termId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     }),
     sectionLearners(section.id, true),
@@ -251,7 +253,11 @@ export async function getModuleSubmissions(
 async function loadModule(ctx: AdvisoryContext, moduleId: string) {
   const sections = await adviserSectionsOr404(ctx.userId, ctx.schoolYearId);
   const module = await prisma.advisoryModule.findFirst({
-    where: { id: moduleId, sectionId: { in: sections.map((s) => s.id) } },
+    where: {
+      id: moduleId,
+      sectionId: { in: sections.map((s) => s.id) },
+      termId: ctx.termId,
+    },
   });
   if (!module) {
     throw new AppError(404, "MODULE_NOT_FOUND", "Module not found in your advisory");
@@ -277,6 +283,7 @@ export async function createModule(
   const created = await prisma.advisoryModule.create({
     data: {
       sectionId: section.id,
+      termId: ctx.termId,
       kind: input.kind ?? "general",
       moduleName: input.moduleName.trim(),
       moduleUrl,

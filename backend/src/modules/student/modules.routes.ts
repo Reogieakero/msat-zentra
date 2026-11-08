@@ -6,6 +6,7 @@ import { cache } from "../../lib/cache.js";
 import { AppError } from "../../lib/errors.js";
 import { etag } from "../../lib/etag.js";
 import { CACHE_TTLS } from "../../lib/cacheTags.js";
+import { resolveActiveTermId } from "../../services/risk.js";
 import { MODULE_TAGS } from "../../services/advisory/modules.service.js";
 import {
   listStudentModules,
@@ -48,8 +49,8 @@ const submissionUpload = multer({
   },
 });
 
-function ctxOf(req: Request): StudentCtx {
-  return { userId: req.user!.id };
+async function ctxOf(req: Request): Promise<StudentCtx> {
+  return { userId: req.user!.id, termId: await resolveActiveTermId(req) };
 }
 
 router.get(
@@ -67,7 +68,7 @@ router.get(
         status?: ModuleStatus;
       };
       res.json(
-        await listStudentModules(ctxOf(req), {
+        await listStudentModules(await ctxOf(req), {
           page: query.page,
           pageSize: query.pageSize,
           status: query.status,
@@ -88,7 +89,7 @@ router.put(
   async (req, res, next) => {
     try {
       const body = req.body as { submissionUrl: string; remarks?: string | null };
-      const id = await submitStudentLink(ctxOf(req), String(req.params.moduleId), {
+      const id = await submitStudentLink(await ctxOf(req), String(req.params.moduleId), {
         submissionUrl: body.submissionUrl,
         remarks: body.remarks ?? null,
       });
@@ -106,7 +107,7 @@ router.post(
   requireRole("student"),
   async (req, res, next) => {
     try {
-      const id = await submitStudentPhysical(ctxOf(req), String(req.params.moduleId), {
+      const id = await submitStudentPhysical(await ctxOf(req), String(req.params.moduleId), {
         remarks: null,
       });
       res.status(201).json({ id });
@@ -134,7 +135,7 @@ router.post(
       }
       const file = (req as unknown as { file?: SubmissionFile }).file;
       const id = await uploadStudentSubmission(
-        ctxOf(req),
+        await ctxOf(req),
         String(req.params.moduleId),
         {
           kind: parsed.data.kind ?? "file",

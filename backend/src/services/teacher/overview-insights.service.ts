@@ -89,12 +89,26 @@ function shortLabel(key: string): string {
   });
 }
 
-/** Last `days` calendar days (Manila today inclusive), weekends dropped. */
-function buildAxis(days: number): string[] {
+/**
+ * Last `days` calendar days ending at min(Manila today, term end), weekends
+ * dropped and never before the term start. For a past term this anchors on
+ * its end date instead of today, so the window cannot drift outside it.
+ */
+function buildAxis(
+  days: number,
+  termStart?: Date | null,
+  termEnd?: Date | null,
+): string[] {
   const keys: string[] = [];
   const today = new Date(`${phTodayKey()}T00:00:00Z`);
+  const end = termEnd ? new Date(`${dayKey(new Date(termEnd))}T00:00:00Z`) : null;
+  const anchor = end && end < today ? end : today;
+  const lower = termStart
+    ? new Date(`${dayKey(new Date(termStart))}T00:00:00Z`)
+    : null;
   for (let offset = days - 1; offset >= 0; offset -= 1) {
-    const d = new Date(today.getTime() - offset * 86_400_000);
+    const d = new Date(anchor.getTime() - offset * 86_400_000);
+    if (lower && d < lower) continue;
     const dow = d.getUTCDay();
     if (dow === 0 || dow === 6) continue;
     keys.push(dayKey(d));
@@ -169,7 +183,13 @@ export async function getOverviewInsights(
     MAX_DAYS,
     Math.max(7, Math.floor(Number(daysParam) || OVERVIEW_INSIGHTS_DEFAULT_DAYS)),
   );
-  const axis = buildAxis(days);
+  const term = ctx.termId
+    ? await prisma.term.findUnique({
+        where: { id: ctx.termId },
+        select: { startDate: true, endDate: true },
+      })
+    : null;
+  const axis = buildAxis(days, term?.startDate ?? null, term?.endDate ?? null);
   const empty: TeacherOverviewInsights = {
     days,
     rangeStart: axis[0] ?? null,

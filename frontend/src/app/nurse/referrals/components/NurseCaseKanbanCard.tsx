@@ -48,6 +48,7 @@ import {
   caseStage,
   formatDate,
   hasScheduledSession,
+  isCaseDone,
   isEndorsed,
   isWithdrawn,
   latestActionOf,
@@ -184,6 +185,9 @@ export function NurseCaseKanbanCard({
   const canReviewAdm = isAdm && !isWithdrawn(row) && row.status !== "dismissed";
   const canManageSessions = !isAdm || (isAdm && row.status === "pending");
   const booked = hasScheduledSession(row.sessions);
+  /* Done cases keep their completed session rows but must not offer another
+     booking — the case is finished. */
+  const done = isCaseDone(row);
   // A cancelled most recent session leaves no scheduled one behind — say so
   // on the card instead of silently dropping the "Session booked" pill.
   const cancelled =
@@ -200,7 +204,6 @@ export function NurseCaseKanbanCard({
       : isAdm
         ? "ADM case"
         : "Clinic case";
-  const metaLine = `${row.section}${row.grade && row.grade !== "—" ? ` · ${row.grade}` : ""}`;
   const statusHelp = rowStatusHelp(row.type, row.status, row);
   const stage = caseStage(row);
   const waiting =
@@ -259,7 +262,7 @@ export function NurseCaseKanbanCard({
     <article
       id={`nurse-case-${row.id}`}
       role="listitem"
-      className={`flex min-w-0 flex-col gap-2 rounded-xl border bg-muted/60 p-2.5 transition-colors [font-family:var(--font-inter)] dark:bg-muted/20 ${
+      className={`flex min-w-0 flex-col gap-2 rounded-xl border bg-muted/60 p-2.5 transition-colors [font-family:var(--font-inter)] hover:border-primary/60 hover:shadow dark:bg-muted/20 ${
         highlighted
           ? "border-amber-400 ring-2 ring-amber-400/40"
           : "border-border"
@@ -283,31 +286,36 @@ export function NurseCaseKanbanCard({
         </Pill>
       </header>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border bg-white p-2.5 shadow-sm dark:bg-card">
+        <span className="flex min-w-0 items-center gap-1.5">
           <StudentMascot
             name={row.student}
             seed={row.lrn}
             character={row.mascot ?? undefined}
             size={28}
           />
-          <Pill
-            tone="amber"
-            label="Student"
-            className="max-w-full overflow-hidden"
-          >
-            <span className="truncate" title={row.student}>
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="truncate text-[14px] font-semibold leading-tight">
               {row.student}
             </span>
-          </Pill>
-          <Pill label="Section" title={metaLine} className="max-w-full overflow-hidden">
-            <span className="truncate">{metaLine}</span>
-          </Pill>
-          {row.lrn && row.lrn !== "—" ? (
-            <Pill label="LRN" className="tabular-nums">
-              ID {row.lrn}
-            </Pill>
-          ) : null}
+            <span className="flex min-w-0 flex-wrap items-center gap-1">
+              {row.lrn && row.lrn !== "—" ? (
+                <Pill label="LRN" className="tabular-nums">
+                  {row.lrn}
+                </Pill>
+              ) : null}
+              {row.section && row.section !== "—" ? (
+                <Pill
+                  tone="amber"
+                  aria-label={`Section ${row.section}`}
+                  label={row.grade && row.grade !== "—" ? row.grade : "Grade level"}
+                  className="min-w-0 max-w-full overflow-hidden"
+                >
+                  <span className="truncate">{row.section}</span>
+                </Pill>
+              ) : null}
+            </span>
+          </span>
         </span>
 
         {statusHelp ? (
@@ -334,9 +342,11 @@ export function NurseCaseKanbanCard({
 
         {/* Folder caption as rectangle pills — case type, then date. */}
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <Pill label="Referral type">{row.type}</Pill>
+          <Pill tone="blue" label="Referral type">
+            {row.type}
+          </Pill>
           {row.date && row.date !== "—" ? (
-            <Pill label="Referred date">{formatDate(row.date)}</Pill>
+            <Pill label="Date referred">{formatDate(row.date)}</Pill>
           ) : null}
           {waiting ? (
             <Pill tone="red" label="Waiting time">
@@ -455,7 +465,7 @@ export function NurseCaseKanbanCard({
           ) : null}
           {/* Accepted clinic cases book their next session from the card —
               same action the one-per-row list offered. */}
-          {!isAdm && !isPending && !isClosed && !booked ? (
+          {!isAdm && !isPending && !isClosed && !booked && !done ? (
             <Button
               type="button"
               size="xs"
@@ -489,7 +499,7 @@ export function NurseCaseKanbanCard({
       <Dialog open={boardOpen} onOpenChange={onBoardChange}>
         <DialogContent
           showCloseButton={false}
-          className={`max-h-[85vh] overflow-y-auto ${sessionBoardDialogWidth(row.sessions.length)}`}
+          className={`max-h-[85vh] overflow-y-auto shadow-none ${sessionBoardDialogWidth(row.sessions.length)}`}
         >
           {/* Title/description live on the kanban board below (the sr-only
               pair keeps the dialog labelled for screen readers). */}

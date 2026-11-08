@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Ban, FileX } from "lucide-react";
 import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import {
   Tooltip,
   TooltipContent,
@@ -62,16 +63,13 @@ export function RejectedRequestsCard({
                 Access request denied
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-md border border-red-500/40 bg-red-500/15 px-1.5 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-500/20 dark:text-red-400">
+                <Pill tone="red" className="gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
                   Denied
-                </span>
-                <span
-                  className="inline-flex max-w-full items-center rounded-md border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
-                  title={r.decisionReason ?? r.reason}
-                >
+                </Pill>
+                <Pill tone="amber" className="max-w-full" title={r.decisionReason ?? r.reason}>
                   <span className="truncate">{r.decisionReason ?? r.reason}</span>
-                </span>
+                </Pill>
               </div>
             </li>
           ))}
@@ -124,25 +122,18 @@ export function Sf10MissingCard({
                   <p className="truncate text-sm font-semibold leading-snug" title={m.name}>
                     {m.name}
                   </p>
-                  <span
-                    className="inline-flex w-fit max-w-full items-center truncate rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[12px] font-medium text-secondary-foreground"
-                    title={m.lrn}
-                  >
-                    {m.lrn}
-                  </span>
+                  <Pill tone="neutral" label="LRN" className="w-fit max-w-full" title={m.lrn}>
+                    <span className="truncate">{m.lrn}</span>
+                  </Pill>
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-md border border-red-500/40 bg-red-500/15 px-1.5 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-500/20 dark:text-red-400">
+                <Pill tone="red" className="gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
                   Missing
-                </span>
-                <span className="inline-flex items-center rounded-md border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
-                  {m.gradeLevel}
-                </span>
-                <span className="inline-flex items-center rounded-md border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
-                  {m.section}
-                </span>
+                </Pill>
+                <Pill tone="amber" label="Grade level">{m.gradeLevel}</Pill>
+                <Pill tone="amber" label="Section">{m.section}</Pill>
               </div>
             </li>
           ))}

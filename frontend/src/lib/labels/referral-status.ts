@@ -1,4 +1,6 @@
 import { formatStatus } from "./text";
+import type { PillTone } from "@/components/ui/pill";
+
 export const NURSE_STATUS_LABELS: Record<string, string> = {
   pending: "Pending review",
   in_progress: "In progress",
@@ -20,6 +22,37 @@ export const STATUS_BADGE_LABELS: Record<string, string> = {
 export function isEndorsed(type: string, status: string): boolean {
   return type === "ADM" && status === "in_progress";
 }
+
+/** Referral status → shared chip tone (matches the legend on the referral desk). */
+export const REFERRAL_STATUS_TONE: Record<string, PillTone> = {
+  pending: "amber",
+  in_progress: "blue",
+  info_requested: "blue",
+  follow_up: "amber",
+  resolved: "green",
+  dismissed: "red",
+  rejected: "red",
+};
+
+export function referralStatusTone(status: string): PillTone {
+  return REFERRAL_STATUS_TONE[status] ?? "neutral";
+}
+
+/** Legend rows for the referral status chips — `hint` feeds the pill tooltip. */
+export const REFERRAL_STATUS_LEGEND: {
+  key: string;
+  label: string;
+  hint: string;
+  tone: PillTone;
+}[] = [
+  { key: "pending", label: "Pending", hint: "Submitted — waiting for the receiving desk", tone: "amber" },
+  { key: "in_progress", label: "In progress", hint: "The receiving desk is handling the referral", tone: "blue" },
+  { key: "info_requested", label: "Info requested", hint: "The desk needs more information before acting", tone: "blue" },
+  { key: "follow_up", label: "Follow up", hint: "Still being watched after a first response", tone: "amber" },
+  { key: "resolved", label: "Resolved", hint: "Closed with a recorded outcome", tone: "green" },
+  { key: "dismissed", label: "Cancelled", hint: "Withdrawn before the desk acted", tone: "red" },
+  { key: "rejected", label: "Rejected", hint: "Declined by the receiving desk", tone: "red" },
+];
 export function isWithdrawn(row: { status: string; dismissedByRole?: string | null }): boolean {
   return (
     row.status === "dismissed" &&
@@ -28,6 +61,36 @@ export function isWithdrawn(row: { status: string; dismissedByRole?: string | nu
 }
 export function hasScheduledSession(sessions: { status?: string | null }[]): boolean {
   return sessions.some((s) => s.status === "scheduled");
+}
+
+type CaseStateShape = {
+  status: string;
+  sessions: { status?: string | null }[];
+  dismissedByRole?: string | null;
+};
+
+/**
+ * A case is Done once it is resolved or has a completed session. Follow-up
+ * cases are owned by the Follow-up lens, and cancelled/rejected cases are
+ * never Done — so the card badge and the Done tab always agree.
+ */
+export function isCaseDone(row: CaseStateShape): boolean {
+  if (row.status === "follow_up" || row.status === "dismissed") return false;
+  if (row.status === "resolved") return true;
+  return row.sessions.some((s) => s.status === "completed");
+}
+
+/**
+ * "Booked session" means an open case with an upcoming scheduled session.
+ * Done cases keep their completed session rows, so counting every case that
+ * has sessions would leak them into the Booked lens.
+ */
+export function hasOpenBooking(row: CaseStateShape): boolean {
+  if (row.status === "follow_up" || row.status === "resolved" || row.status === "dismissed") {
+    return false;
+  }
+  if (row.sessions.some((s) => s.status === "completed")) return false;
+  return row.sessions.some((s) => s.status === "scheduled");
 }
 export function activeSessionOf<T extends { status: string; scheduledAt: string }>(sessions: T[]): T | null {
   const actives = sessions

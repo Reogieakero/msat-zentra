@@ -13,13 +13,13 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { PrincipalEmptyState } from "../../../components/PrincipalEmptyCard";
-import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import { riskTone } from "@/lib/labels/status-tone";
 import { Input } from "@/components/ui/input";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import {
   Table,
   TableBody,
@@ -27,7 +27,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { FACTOR_LABELS, type BackendStudent, type RiskFactor, type RiskLevelKey } from "@/services/principal/riskStudents.types";
-import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { fetchAllRiskStudents } from "@/services/principal/riskStudents.service";
 import styles from "./StudentsListTable.module.css";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
@@ -56,62 +56,70 @@ export function StudentsListTable({
     "all"
   );
   const [page, setPage] = React.useState(1);
-  const debouncedQuery = useDebouncedValue(query, 300);
 
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
   const schoolYearId = activeTerm?.schoolYearId ?? null;
-  // Remember the last-visited page per heatmap selection: drilling back
-  // into a previously visited section restores its cached page (which is
-  // also still in the query cache, so it renders instantly with no
-  // skeleton); brand-new selections start at page 1.
-  const pageMemory = React.useRef<Record<string, number>>({});
-  React.useEffect(() => {
-    setPage(pageMemory.current[selectedSection] ?? 1);
-  }, [selectedSection]);
-  React.useEffect(() => {
-    pageMemory.current[selectedSection] = page;
-  }, [selectedSection, page]);
-  const { data, isPending, isFetching, isError, refetch } = useQuery({
-    queryKey: ["risk-students-list", termId, schoolYearId, page, debouncedQuery, riskFilter, selectedSection],
-    queryFn: async ({ signal }) => {
-      const params: Record<string, string | number> = {
-        page,
-        pageSize: PAGE_SIZE,
-      };
-      if (debouncedQuery.trim()) params.q = debouncedQuery.trim();
-      if (selectedSection !== "all") params.section = selectedSection;
-      if (riskFilter !== "all") params.riskLevel = riskFilter;
-      const res = await apiClient.get<{ students: BackendStudent[]; total: number }>(
-        "/api/risk/students",
-        { params, signal }
-      );
-      return res.data;
-    },
-    // Visited pages stay cached: back/forward navigation within the
-    // stale window serves instantly with no skeleton or refetch.
+  // Whole at-risk roster (High + Moderate) loaded once per term. Search,
+  // section/risk filters and paging then run in memory — typing never fires
+  // a request and no stale page of rows is left behind.
+  const { data, isPending, isError, refetch } = useQuery({
+    queryKey: ["risk-students-all", termId, schoolYearId],
+    queryFn: fetchAllRiskStudents,
     staleTime: 120_000,
     gcTime: 600_000,
     refetchOnWindowFocus: false,
   });
-  // Refetch for a new section (not first load): replace rows with skeleton.
-  const isSectionLoading = isFetching && !isPending;
 
-  const students = React.useMemo(() => data?.students ?? [], [data]);
-  const total = data?.total ?? 0;
+  // A new heatmap selection is a new result set — start at page 1.
+  React.useEffect(() => {
+    setPage(1);
+  }, [selectedSection]);
+
+  const roster = React.useMemo(() => data ?? [], [data]);
+
+  const sectionStudents = React.useMemo(
+    () =>
+      selectedSection === "all"
+        ? roster
+        : roster.filter((student) => student.section === selectedSection),
+    [roster, selectedSection],
+  );
+
+  const needle = query.trim().toLowerCase();
+  const filtered = React.useMemo(() => {
+    let list =
+      riskFilter === "all"
+        ? sectionStudents
+        : sectionStudents.filter((student) => student.riskLevel === riskFilter);
+    if (needle) {
+      list = list.filter(
+        (student) =>
+          student.name.toLowerCase().includes(needle) ||
+          student.lrn.toLowerCase().includes(needle),
+      );
+    }
+    return list;
+  }, [sectionStudents, riskFilter, needle]);
+
+  const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
+
+  // Client-side slice of the filtered roster — no fetch, no stale rows.
+  const rows = React.useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, safePage]);
 
   // If filters shrink the result set under the current page, step back to
   // the last valid page so footer label, requested page, and rows agree.
   React.useEffect(() => {
-    if (!isPending && totalPages >= 1 && page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [isPending, totalPages, page]);
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const hasActiveFilters =
-    debouncedQuery.trim() !== "" || selectedSection !== "all" || riskFilter !== "all";
+    needle !== "" || selectedSection !== "all" || riskFilter !== "all";
 
   const applySearch = (value: string) => {
     setQuery(value);
@@ -203,15 +211,15 @@ export function StudentsListTable({
   );
 
   const table = useReactTable({
-    data: students,
+    data: rows,
     columns,
     getRowId: (row) => row.studentId,
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const rows = table.getRowModel().rows;
+  const tableRows = table.getRowModel().rows;
 
-  const showSkeleton = isPending || isSectionLoading;
+  const showSkeleton = isPending;
   return (
     <KanbanBoard
       title="At-Risk Students"
@@ -225,7 +233,6 @@ export function StudentsListTable({
             <Search className={styles.searchIcon} aria-hidden />
             <Input
               className={`${styles.search} rounded-[16px]`}
-              style={{ height: "2rem" }}
               placeholder="Search name or LRN…"
               value={query}
               onChange={(e) => applySearch(e.target.value)}
@@ -277,36 +284,41 @@ export function StudentsListTable({
                 </TableBody>
               </Table>
             </div>
-          ) : isError && rows.length === 0 ? (
+          ) : isError && tableRows.length === 0 ? (
             <div className={styles.empty} role="alert">
               <p className={styles.empty}>Couldn&apos;t load at-risk students.</p>
               <Button variant="outline" size="sm" onClick={() => refetch()}>
                 Retry
               </Button>
             </div>
-          ) : rows.length === 0 ? (
-            <PrincipalEmptyState
-              icon={ShieldCheck}
-              title={
-                debouncedQuery.trim()
-                  ? "No matching students"
-                  : hasActiveFilters
-                    ? "No matching students"
-                    : "No at-risk students"
-              }
-              hint={
-                debouncedQuery.trim()
-                  ? `No students match “${debouncedQuery}”.`
-                  : hasActiveFilters
-                    ? "No students match the selected filters."
-                    : "No at-risk students — nothing needs attention right now."
-              }
-            />
+          ) : filtered.length === 0 ? (
+            needle ? (
+              <div className={styles.noMatch}>
+                <InsightCallout role="status" className={styles.noMatchCallout}>
+                  <strong>No students match “{query.trim()}”.</strong> Try a
+                  different name or LRN — or clear the search to see every
+                  at-risk student.
+                </InsightCallout>
+              </div>
+            ) : hasActiveFilters ? (
+              <div className={styles.noMatch}>
+                <InsightCallout role="status" className={styles.noMatchCallout}>
+                  <strong>No students match the selected filters.</strong> Try a
+                  different section or risk level, or reset to “All levels”.
+                </InsightCallout>
+              </div>
+            ) : (
+              <PrincipalEmptyState
+                icon={ShieldCheck}
+                title="No at-risk students"
+                hint="No at-risk students — nothing needs attention right now."
+              />
+            )
           ) : (
             <div className={styles.tableWrap}>
               <Table aria-label="At-risk students" className="w-full table-fixed">
                 <TableBody>
-                  {rows.map((row, index) => (
+                  {tableRows.map((row, index) => (
                     <TableRow
                       key={row.id}
                       className={styles.rowIn}

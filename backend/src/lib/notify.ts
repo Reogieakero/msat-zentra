@@ -31,6 +31,7 @@ const TYPE_MAP: Record<string, string> = {
   "final_grades:adviser_approved": "finals_ready",
   "final_grades:grade_locked": "grade_locked",
   "sf10_records:verified": "sf10_needs_validation",
+  "sf10_records:autofill": "sf10_needs_validation",
   "sf10_records:validate_self": "sf10_validated",
   "sf10_records:release_self": "sf10_released",
   "subjects:mutate_self": "academics_updated",

@@ -23,13 +23,16 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklch, var(--muted-foreground), transparent 40%) transparent;
   padding-right: 0.25rem;
+  /* Scrolling stays, but the bar itself is hidden. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .scrollArea::-webkit-scrollbar {
-  width: 8px;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .scrollArea::-webkit-scrollbar-button {
@@ -43,10 +46,8 @@
 }
 
 .scrollArea::-webkit-scrollbar-thumb {
-  background: color-mix(in oklch, var(--muted-foreground), transparent 55%);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: content-box;
+  background: transparent;
+  border: none;
 }
 
 @media (max-width: 900px) {
@@ -56,11 +57,15 @@
 }
 
 .header {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  /* Breathing room so the search field's 3px focus ring is not clipped by
+     the panel's overflow:hidden edge. */
+  padding: 0.25rem 0.25rem 0;
 }
 
 .headerText {
@@ -73,6 +78,26 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   margin-left: auto;
+}
+
+/* Type tabs ride the centre of the title row, like the interventions board. */
+.headerCenter {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  min-height: 1.5rem;
+}
+
+@media (max-width: 1100px) {
+  .headerCenter {
+    position: static;
+    transform: none;
+    order: 3;
+    width: 100%;
+  }
 }
 
 .sectionTitle {
@@ -176,8 +201,14 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.875rem;
+}
+
+@media (max-width: 1600px) {
+  .studentGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1400px) {

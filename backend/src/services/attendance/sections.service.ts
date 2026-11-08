@@ -7,6 +7,7 @@ import {
   studentDayOutcomes,
   sectionStrictDays,
   buildOfferedMap,
+  termHasStarted,
   type AttendanceStatus,
 } from "../attendance.js";
 import {
@@ -39,15 +40,16 @@ export interface SectionStudentsQuery {
   session: "AM" | "PM";
   termId?: string;
   startDate?: Date | null;
+  endDate?: Date | null;
 }
 
 export async function getSectionStudents(query: SectionStudentsQuery) {
-  const { sectionId, session, termId, startDate } = query;
+  const { sectionId, session, termId, startDate, endDate } = query;
   if (!termId) {
     return { sectionId, students: [] };
   }
 
-  const totalSchoolDays = countSchoolDays(buildDayAxis(startDate ?? null));
+  const totalSchoolDays = countSchoolDays(buildDayAxis(startDate ?? null, endDate ?? null));
   // Signed ADM cases: the sheet shows them as an exempt group, not absent.
   const admExempt = await admExemptStudentIds(termId);
 
@@ -227,7 +229,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
     });
   }
 
-  const outcomeKeys = buildDayAxis(startDate ?? null).filter(
+  const outcomeKeys = buildDayAxis(startDate ?? null, endDate ?? null).filter(
     (k) => !isWeekendKey(k)
   );
   const outcomes = studentDayOutcomes(
@@ -498,6 +500,9 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
     where: { id: termId },
     select: { startDate: true, endDate: true },
   });
+  // A term that has not started yet is outside its scope period: do not derive
+  // rates from seeded/staged rows. `null` renders as "No marks yet" in the UI.
+  const termStarted = termHasStarted(term?.startDate);
   const startStr = term?.startDate?.toISOString().slice(0, 10) ?? null;
   const todayStr = new Date().toISOString().slice(0, 10);
   const endStr = (() => {
@@ -545,7 +550,8 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
       present.add(dateStr);
     }
   }
-  const rateOf = (studentKey: string, subjectId: string) => {
+  const rateOf = (studentKey: string, subjectId: string): number | null => {
+    if (!termStarted) return null;
     const elapsed = elapsedDatesBySubject.get(subjectId);
     const present = presentDatesByStudentSubject.get(`${studentKey}|${subjectId}`);
     if (elapsed && elapsed.size > 0) {
@@ -555,7 +561,7 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
     }
 
     const recorded = recordedDatesBySubject.get(subjectId)?.size ?? 0;
-    if (recorded === 0) return 0;
+    if (recorded === 0) return null;
     let n = 0;
     for (const d of present ?? []) {
       if (recordedDatesBySubject.get(subjectId)?.has(d)) n += 1;

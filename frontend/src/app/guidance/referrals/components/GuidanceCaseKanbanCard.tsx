@@ -1,15 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pill } from "@/components/ui/pill";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { FolderCard, type FolderFile } from "@/components/ui/FolderCard";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import {
@@ -29,7 +22,7 @@ import {
   MessageSquareText,
   Send,
 } from "lucide-react";
-import { fetchOcForm01Detail, type OcForm01Detail } from "@/components/ocform01/ocform01";
+import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
 import {
   buildGcForm03Data,
   consultRecommendation,
@@ -40,11 +33,13 @@ import type {
   CounselingSessionItem,
   GuidanceReferralItem,
 } from "@/services/guidance/guidance.types";
+import { guidanceWaitingDays } from "@/services/guidance/adm.reports";
 import {
   anecdotalCategoryColor,
   formatActionTime,
   formatDate,
   hasScheduledSession,
+  isCaseDone,
   isEndorsed,
   isWithdrawn,
   latestActionOf,
@@ -56,21 +51,20 @@ import {
 import { latestActionDay } from "./use-guidance-entry-meta";
 import { GuidanceEntryDocsHost } from "./guidance-entry-docs-host";
 
-/* Pill recipe (shape/palette) now comes from the shared ui/Pill; the board
-   still pins the header stage badge to its per-stage border colour. */
-const STAGE_BORDER: Record<string, string> = {
-  amber: "border-amber-500/40",
-  blue: "border-blue-500/40",
-  green: "border-green-500/40",
-  violet: "border-violet-500/40",
-  red: "border-red-500/40",
-  outline: "border-border",
-};
-
+/* Pill recipe (shape/palette) comes from the shared ui/Pill. */
 const ICON_BTN =
   "inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted hover:text-foreground";
 
 type StageVariant = "amber" | "blue" | "green" | "violet" | "red" | "outline";
+
+const STAGE_TONE: Record<StageVariant, PillTone> = {
+  amber: "amber",
+  blue: "blue",
+  green: "green",
+  violet: "violet",
+  red: "red",
+  outline: "neutral",
+};
 
 function caseStage(row: GuidanceReferralItem): {
   label: string;
@@ -197,11 +191,13 @@ export function GuidanceCaseKanbanCard({
     !isAdm &&
     !isPending &&
     !isClosed &&
+    !isCaseDone(row) &&
     !hasScheduledSession(row.sessions);
   const canManageSessions = !isAdm || isPending;
   const booked = hasScheduledSession(row.sessions);
   const cancelled = !booked && latestSessionOf(row.sessions)?.status === "cancelled";
   const latest = latestActionOf(row);
+  const waitingDays = guidanceWaitingDays(row);
   const category =
     row.category?.trim() && row.category !== "—"
       ? row.category
@@ -224,27 +220,32 @@ export function GuidanceCaseKanbanCard({
   const [gcLoading, setGcLoading] = React.useState(false);
 
   async function openGcForm() {
-    if (gcLoading) return;
-    if (gcData) {
-      setGcOpen(true);
-      return;
-    }
-    setGcLoading(true);
-    try {
-      let report: OcForm01Detail | null = null;
-      try {
-        if (row.anecdotalId) report = await fetchOcForm01Detail(row.anecdotalId);
-      } catch {
-        report = null;
-      }
-      const data = buildGcForm03Data(row, report, consultRecommendation(row.notes));
+    if (gcLoading || gcOpen) return;
+    const stamped = (data: GcForm03Data): GcForm03Data => {
       const day = latestActionDay(latest.time);
       if (day) {
         data.receivedDate = day;
         data.counselorDate = day;
       }
-      setGcData(data);
+      return data;
+    };
+    // Show the form immediately from the case card, then refine it once the
+    // full OCForm-01 report arrives.
+    if (gcData) {
       setGcOpen(true);
+      return;
+    }
+    setGcData(stamped(buildGcForm03Data(row, null, consultRecommendation(row.notes))));
+    setGcOpen(true);
+    if (!row.anecdotalId) return;
+    setGcLoading(true);
+    try {
+      const report = await fetchOcForm01Detail(row.anecdotalId).catch(() => null);
+      if (report) {
+        setGcData(
+          stamped(buildGcForm03Data(row, report, consultRecommendation(row.notes))),
+        );
+      }
     } finally {
       setGcLoading(false);
     }
@@ -303,21 +304,13 @@ export function GuidanceCaseKanbanCard({
           />
           <span className="truncate capitalize">{category}</span>
         </span>
-        <TooltipProvider delayDuration={100}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge
-                variant={stage.variant}
-                className={`shrink-0 rounded-md ${STAGE_BORDER[stage.variant]}`}
-              >
-                {stage.label}
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={6}>
-              Case status
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Pill
+          tone={STAGE_TONE[stage.variant]}
+          label="Case status"
+          className="shrink-0"
+        >
+          {stage.label}
+        </Pill>
       </header>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border bg-white p-2.5 shadow-sm dark:bg-card">
@@ -375,6 +368,11 @@ export function GuidanceCaseKanbanCard({
           </Pill>
           {row.date && row.date !== "—" ? (
             <Pill label="Date referred">{formatDate(row.date)}</Pill>
+          ) : null}
+          {waitingDays !== null && waitingDays > 0 ? (
+            <Pill tone="red" label="Waiting time">
+              waiting {waitingDays}d
+            </Pill>
           ) : null}
         </span>
 
@@ -496,15 +494,17 @@ export function GuidanceCaseKanbanCard({
             </Button>
           ) : null}
           {canBook ? (
-            <button
+            <Button
               type="button"
-              className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-blue-500/15 px-2 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-blue-400"
+              size="xs"
+              variant="default"
+              className="h-6 px-2 text-[11px]"
               disabled={actionPending}
               onClick={() => onBookSession(row)}
             >
               <CalendarPlus size={12} aria-hidden />
               Book session
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>

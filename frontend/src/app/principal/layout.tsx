@@ -6,14 +6,15 @@ import { useRouter } from "next/navigation";
 import { logout } from "@/lib/api/client";
 import { PrincipalSidebar } from "@/components/principal-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
+import { BreadcrumbExtraProvider } from "@/components/nav/BreadcrumbExtra";
 import { PrincipalBell } from "./components/PrincipalBell";
+import { PrincipalGlobalSearch } from "./components/PrincipalGlobalSearch";
 import { usePrincipalRealtime } from "@/lib/realtime/principalChannel";
 import {
   PrincipalPaletteGate,
@@ -23,7 +24,6 @@ import styles from "./principal.module.css";
 
 function PrincipalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [query, setQuery] = React.useState("");
 
   const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.principal.sidebar.collapsed");
@@ -41,6 +41,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
+    <BreadcrumbExtraProvider>
     <div className={styles.wrapper}>
       <PrincipalPaletteGate />
       <header className={styles.topbar}>
@@ -55,14 +56,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
         <ActiveTermBadge />
 
         <div className={styles.search}>
-
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search…"
-            aria-label="Search"
-            className={styles.searchCommand}
-          />
+          <PrincipalGlobalSearch />
         </div>
 
         <PrincipalBell />
@@ -106,6 +100,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
         <main className={styles.main}>{children}</main>
       </div>
     </div>
+    </BreadcrumbExtraProvider>
   );
 }
 

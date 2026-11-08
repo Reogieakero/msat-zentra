@@ -132,6 +132,8 @@ export function Sf10AttachFeed({
             headerTitle="SF10 Record"
             studentName={f.student}
             metaText={f.lrn}
+            metaLabel="LRN"
+            stackIdentity
             fileName={`SF10_${f.lrn}.pdf`}
             fileTag={`${f.grade} • ${timeAgo(f.when)}`}
             categoryColor={SF10_FOLDER_COLOR}

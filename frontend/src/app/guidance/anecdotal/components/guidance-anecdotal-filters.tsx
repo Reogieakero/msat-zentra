@@ -1,15 +1,8 @@
 "use client";
 
-import { ChevronDown, Search, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Pill } from "@/components/ui/pill";
 import styles from "./guidance-anecdotal-filters.module.css";
 
 export type CategoryFilter = "";
@@ -28,68 +21,81 @@ interface GuidanceAnecdotalFiltersProps {
   onTypeChange: (value: TypeFilter) => void;
 }
 
+/** Pill tab group — same markup/behaviour as the interventions desk. */
+function FilterTabs({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: { value: TypeFilter; label: string }[];
+  value: TypeFilter;
+  onChange: (next: TypeFilter) => void;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1" role="tablist" aria-label={label}>
+      {options.map((option) => {
+        const active = value === option.value;
+        return (
+          <button
+            key={option.label}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(option.value)}
+            className="inline-flex cursor-pointer rounded-md p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <Pill tone={active ? "blue" : "neutral"}>{option.label}</Pill>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function GuidanceAnecdotalTypeTabs({
+  type,
+  onTypeChange,
+}: Pick<GuidanceAnecdotalFiltersProps, "type" | "onTypeChange">) {
+  return (
+    <FilterTabs
+      label="Filter records by case type"
+      options={TYPES}
+      value={type}
+      onChange={onTypeChange}
+    />
+  );
+}
+
+export function GuidanceAnecdotalSearch({
+  query,
+  onQueryChange,
+}: Pick<GuidanceAnecdotalFiltersProps, "query" | "onQueryChange">) {
+  return (
+    <div className={styles.searchWrap}>
+      <Search className={styles.searchIcon} aria-hidden />
+      <Input
+        className={`${styles.search} focus-visible:ring-2 focus-visible:ring-inset`}
+        placeholder="Search student, LRN, observer…"
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        aria-label="Search anecdotal records"
+      />
+    </div>
+  );
+}
+
 export function GuidanceAnecdotalFilters({
   query,
   onQueryChange,
   type,
   onTypeChange,
 }: GuidanceAnecdotalFiltersProps) {
-  const hasActiveFilters = type !== "";
-  const typeLabel = TYPES.find((t) => t.value === type)?.label ?? "Type";
-
   return (
     <div className={styles.filters}>
-      <div className={styles.searchWrap}>
-        <Search className={styles.searchIcon} aria-hidden />
-        <Input
-          className={styles.search}
-          placeholder="Search student, LRN, observer…"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          aria-label="Search anecdotal records"
-        />
-      </div>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className={`${styles.filterBtn} ${type !== "" ? styles.filterActive : ""}`}
-          >
-            {type === "" ? "Type" : typeLabel}
-            {type !== "" && <span className={styles.filterDot} aria-hidden />}
-            <ChevronDown aria-hidden />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className={styles.filterMenu}>
-          {TYPES.map((item, index) => (
-            <div key={item.label}>
-              {index === 1 && <DropdownMenuSeparator />}
-              <DropdownMenuCheckboxItem
-                checked={type === item.value}
-                onCheckedChange={() => onTypeChange(item.value)}
-              >
-                {item.label}
-              </DropdownMenuCheckboxItem>
-            </div>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {hasActiveFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className={styles.clearBtn}
-          onClick={() => {
-            onTypeChange("");
-          }}
-        >
-          <X aria-hidden />
-          Clear
-        </Button>
-      )}
+      <GuidanceAnecdotalTypeTabs type={type} onTypeChange={onTypeChange} />
+      <GuidanceAnecdotalSearch query={query} onQueryChange={onQueryChange} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ export type InterventionApproval =
 export type InterventionOutcome = "ongoing" | "resolved" | "unresolved";
 
 export type RiskLevelFilter = "High" | "Moderate" | "All";
+export type GradeFilter = "" | "G7" | "G8" | "G9" | "G10" | "G11" | "G12";
 export type FactorFilter =
   | ""
   | "Academic"
@@ -73,6 +74,8 @@ export interface AtRiskStudentItem {
   grade: string;
   riskLevel: string;
   riskCount: number;
+  /** Persisted sprite mascot; null falls back to the `${name}:${lrn}` pick. */
+  mascot?: string | null;
 
   detectedAt: string | null;
   factors: AtRiskFactors;
@@ -105,6 +108,7 @@ export interface GuidanceInterventionsData {
 export interface GuidanceInterventionsParams {
   q?: string;
   level?: RiskLevelFilter;
+  grade?: GradeFilter;
   factor?: FactorFilter;
   outcome?: FollowUpStatusFilter;
   mine?: boolean;

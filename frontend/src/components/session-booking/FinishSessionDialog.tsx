@@ -184,7 +184,7 @@ export function FinishSessionDialog({
       />
       <div className="relative w-full max-w-2xl">
         <KanbanBoard
-          className={`bg-card max-h-[90vh] overflow-y-auto shadow-2xl ${styles.dialogScrollHidden}`}
+          className={`bg-card max-h-[90vh] overflow-y-auto ${styles.dialogScrollHidden}`}
           title="Mark session done"
           icon={
             <span className={BOARD_ICON} aria-hidden>

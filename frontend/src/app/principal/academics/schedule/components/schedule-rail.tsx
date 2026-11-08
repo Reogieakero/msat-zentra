@@ -121,6 +121,11 @@ function GutterIconButton({
  */
 export function ScheduleRail({ sections }: { sections: ScheduleSection[] }) {
   const [openKey, setOpenKey] = React.useState<RailKey | null>(null);
+  // Controlled hover label — Radix's uncontrolled tooltips can leave a stale
+  // label behind (or skip one) while a flyout is open, because the clicked
+  // trigger keeps focus. Driving `open` from pointer/focus keeps every rail
+  // icon labelled no matter which panel is expanded.
+  const [hoverKey, setHoverKey] = React.useState<RailKey | null>(null);
   const railRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -147,7 +152,12 @@ export function ScheduleRail({ sections }: { sections: ScheduleSection[] }) {
     };
   }, [openKey]);
 
-  const toggle = (key: RailKey) => setOpenKey((prev) => (prev === key ? null : key));
+  const toggle = (key: RailKey) => {
+    setHoverKey(null);
+    setOpenKey((prev) => (prev === key ? null : key));
+  };
+  const clearHover = (key: RailKey) =>
+    setHoverKey((prev) => (prev === key ? null : prev));
   const items = buildItems(sections);
 
   return (
@@ -163,12 +173,21 @@ export function ScheduleRail({ sections }: { sections: ScheduleSection[] }) {
             const opened = openKey === item.key;
             return (
               <div key={item.key} className="relative">
-                <Tooltip>
+                <Tooltip
+                  open={hoverKey === item.key}
+                  onOpenChange={(next) => {
+                    if (!next) clearHover(item.key);
+                  }}
+                >
                   <TooltipTrigger asChild>
                     <GutterIconButton
                       label={item.title}
                       expanded={opened}
                       onToggle={() => toggle(item.key)}
+                      onPointerEnter={() => setHoverKey(item.key)}
+                      onPointerLeave={() => clearHover(item.key)}
+                      onFocus={() => setHoverKey(item.key)}
+                      onBlur={() => clearHover(item.key)}
                     >
                       <span className={rail.icon} aria-hidden>
                         <Icon size={16} />

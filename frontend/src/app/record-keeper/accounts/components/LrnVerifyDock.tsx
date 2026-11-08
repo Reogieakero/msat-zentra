@@ -7,19 +7,17 @@ import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { ProgressDock } from "@/components/ui/progress-dock";
 import { Textarea } from "@/components/ui/textarea";
+import { Pill } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { formatGrade, formatSection } from "@/lib/utils";
 import type { LrnMatchResult, PendingStudent } from "./types";
 import styles from "./lrn-verification.module.css";
 
-/* Rectangle pills — same amber / green / red tones as the board rows. */
-const PILL =
-  "inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium";
-const PILL_AMBER =
-  "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400";
-const PILL_GREEN =
-  "border-green-500/40 bg-green-500/15 text-green-700 dark:bg-green-500/20 dark:text-green-400";
-const PILL_RED =
-  "border-red-500/40 bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400";
+/* Solid action colours — same red / green as the shared desk tables. */
+const RED_BTN =
+  "h-6 px-2 text-xs bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700";
+const GREEN_BTN =
+  "h-6 px-2 text-xs border border-transparent bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700";
 
 type MatchState =
   | { status: "loading" }
@@ -216,9 +214,8 @@ function RejectForm({
           Cancel
         </Button>
         <Button
-          variant="destructive"
           size="sm"
-          className="h-6 px-2 text-xs"
+          className={RED_BTN}
           onClick={submit}
           disabled={busy || submitting || !reason.trim()}
           aria-busy={busy || submitting || undefined}
@@ -262,7 +259,6 @@ function ErrorActions({
     <div className={styles.actions}>
       {canRetry ? (
         <Button
-          variant="outline"
           size="sm"
           className="h-6 px-2 text-xs"
           onClick={onRetry}
@@ -272,9 +268,8 @@ function ErrorActions({
         </Button>
       ) : null}
       <Button
-        variant="destructive"
         size="sm"
-        className="h-6 px-2 text-xs"
+        className={RED_BTN}
         onClick={() => setRejectOpen(true)}
         disabled={busy}
         aria-label={`Reject ${student.name}`}
@@ -356,9 +351,11 @@ function Result({
       </section>
 
       {!match ? (
-        <motion.p className={styles.hint} {...enter(0.3)}>
-          Record keeper: confirm with the official SF10 / enrollment record before approving.
-        </motion.p>
+        <motion.div {...enter(0.3)}>
+          <InsightCallout>
+            Record keeper: confirm with the official SF10 / enrollment record before approving.
+          </InsightCallout>
+        </motion.div>
       ) : null}
 
       <motion.div className={styles.actions} {...enter(0.34)}>
@@ -372,16 +369,14 @@ function Result({
         ) : (
           <>
             <Button
-              variant="destructive"
               size="sm"
-              className="h-6 px-2 text-xs"
+              className={RED_BTN}
               onClick={() => setRejectOpen(true)}
               disabled={approving}
             >
               Reject…
             </Button>
             <Button
-              variant="outline"
               size="sm"
               className="h-6 px-2 text-xs"
               onClick={onRecheck}
@@ -392,7 +387,7 @@ function Result({
             {match ? (
               <Button
                 size="sm"
-                className="h-6 px-2 text-xs"
+                className={GREEN_BTN}
                 disabled={approving}
                 aria-busy={approving || undefined}
                 onClick={() => {
@@ -445,29 +440,37 @@ function CompareRow({
     >
       <div className={styles.compareCell}>
         <span className={styles.cellLabel}>{label}</span>
-        <span className={`${PILL} ${PILL_AMBER} tabular-nums`} title={submitted}>
+        <Pill
+          tone="amber"
+          label={`${label} · submitted: ${submitted}`}
+          className="max-w-full truncate tabular-nums"
+        >
           {submitted}
-        </span>
+        </Pill>
       </div>
       <div className={styles.compareCell}>
         {record ? (
-          <span className={`${PILL} ${PILL_AMBER} tabular-nums`} title={record}>
+          <Pill
+            tone="amber"
+            label={`${label} · official record: ${record}`}
+            className="max-w-full truncate tabular-nums"
+          >
             {record}
-          </span>
+          </Pill>
         ) : (
           <span className={styles.valueMuted}>not found</span>
         )}
         <span className={styles.cellStatus}>
           {ok ? (
-            <span className={`${PILL} ${PILL_GREEN}`}>
+            <Pill tone="green" label={`${label} · match`}>
               <CircleCheck className="size-3" aria-hidden />
               Match
-            </span>
+            </Pill>
           ) : (
-            <span className={`${PILL} ${PILL_RED}`}>
+            <Pill tone="red" label={`${label} · no match`}>
               <CircleX className="size-3" aria-hidden />
               No match
-            </span>
+            </Pill>
           )}
           {note ? <span className={styles.note}>{note}</span> : null}
         </span>

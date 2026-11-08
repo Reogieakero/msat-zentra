@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, SearchIcon } from "lucide-react";
+import { useBreadcrumbExtra } from "@/components/nav/BreadcrumbExtra";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,15 @@ export function StudentsAcademicsGrid() {
     setSelectedSectionId(id);
   }, []);
 
+  // Stable so registering the crumb doesn't re-run on every render.
+  const showAllSections = React.useCallback(
+    () => selectSection(null),
+    [selectSection],
+  );
+  // Append the open section to the shell breadcrumb
+  // (Principal › Academics › Section); "Academics" becomes the back control.
+  useBreadcrumbExtra(selectedSection?.section ?? null, showAllSections);
+
   // Opening a section pulls the roster into view; returning restores the board
   // to the top so the cascade is actually seen. Reduced motion scrolls plainly.
   React.useEffect(() => {
@@ -93,9 +103,9 @@ export function StudentsAcademicsGrid() {
           <div className={styles.detailBar}>
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              className={styles.backBtn}
+              variant="default"
+              size="xs"
+              className={cn(styles.backBtn, "h-6 px-2")}
               onClick={() => selectSection(null)}
             >
               <ArrowLeft data-icon="inline-start" aria-hidden />

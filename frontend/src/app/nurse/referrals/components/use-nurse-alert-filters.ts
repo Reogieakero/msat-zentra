@@ -4,6 +4,8 @@ import type { NurseAlertItem } from "@/services/nurse/nurse.types";
 import {
   isEndorsed,
   isWithdrawn,
+  isCaseDone,
+  hasOpenBooking,
   matchesActionFilter,
   type ActionFilter,
   type ActionValue,
@@ -99,24 +101,31 @@ export function useNurseAlertFilters({
         if (a.row.status === "pending") counts.adm_needs += 1;
         if (isEndorsed(a.row.type, a.row.status)) counts.endorse += 1;
         if (a.row.status === "follow_up") counts.followup += 1;
-        if (a.row.sessions.length > 0) counts.booked += 1;
+        if (hasOpenBooking(a.row)) counts.booked += 1;
         if (a.row.status === "dismissed" && !isWithdrawn(a.row)) counts.reject += 1;
         if (isWithdrawn(a.row)) counts.adm_cancelled += 1;
       } else if (a.row.type === "Clinic") {
         if (a.row.status === "pending") counts.clinic_needs += 1;
-        if (a.row.sessions.length > 0) counts.clinic_booked += 1;
-        if (a.row.sessions.some((s) => s.status === "completed")) counts.clinic_done += 1;
+        if (hasOpenBooking(a.row)) counts.clinic_booked += 1;
+        if (isCaseDone(a.row)) counts.clinic_done += 1;
         if (a.row.status === "follow_up") counts.clinic_followup += 1;
         if (isWithdrawn(a.row)) counts.clinic_cancelled += 1;
       }
     }
     return counts;
   }, [alerts]);
-  const total = serverDriven ? (serverTotal ?? filtered.length) : filtered.length;
+  const total = serverDriven
+    ? actionFilter !== ""
+      ? filtered.length
+      : (serverTotal ?? filtered.length)
+    : filtered.length;
   const totalPages = serverDriven
-    ? Math.max(1, serverTotalPages ?? 1)
+    ? actionFilter !== ""
+      ? 1
+      : Math.max(1, serverTotalPages ?? 1)
     : Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(effPage, totalPages);
+  const safePage =
+    actionFilter !== "" ? 1 : Math.min(effPage, totalPages);
   return {
     typeFilter,
     setTypeFilter,

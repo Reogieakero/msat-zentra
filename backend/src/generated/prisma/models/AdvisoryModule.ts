@@ -27,6 +27,7 @@ export type AggregateAdvisoryModule = {
 export type AdvisoryModuleMinAggregateOutputType = {
   id: string | null
   sectionId: string | null
+  termId: string | null
   kind: $Enums.AdvisoryModuleKind | null
   moduleName: string | null
   moduleUrl: string | null
@@ -41,6 +42,7 @@ export type AdvisoryModuleMinAggregateOutputType = {
 export type AdvisoryModuleMaxAggregateOutputType = {
   id: string | null
   sectionId: string | null
+  termId: string | null
   kind: $Enums.AdvisoryModuleKind | null
   moduleName: string | null
   moduleUrl: string | null
@@ -55,6 +57,7 @@ export type AdvisoryModuleMaxAggregateOutputType = {
 export type AdvisoryModuleCountAggregateOutputType = {
   id: number
   sectionId: number
+  termId: number
   kind: number
   moduleName: number
   moduleUrl: number
@@ -71,6 +74,7 @@ export type AdvisoryModuleCountAggregateOutputType = {
 export type AdvisoryModuleMinAggregateInputType = {
   id?: true
   sectionId?: true
+  termId?: true
   kind?: true
   moduleName?: true
   moduleUrl?: true
@@ -85,6 +89,7 @@ export type AdvisoryModuleMinAggregateInputType = {
 export type AdvisoryModuleMaxAggregateInputType = {
   id?: true
   sectionId?: true
+  termId?: true
   kind?: true
   moduleName?: true
   moduleUrl?: true
@@ -99,6 +104,7 @@ export type AdvisoryModuleMaxAggregateInputType = {
 export type AdvisoryModuleCountAggregateInputType = {
   id?: true
   sectionId?: true
+  termId?: true
   kind?: true
   moduleName?: true
   moduleUrl?: true
@@ -186,6 +192,7 @@ export type AdvisoryModuleGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 export type AdvisoryModuleGroupByOutputType = {
   id: string
   sectionId: string
+  termId: string | null
   kind: $Enums.AdvisoryModuleKind
   moduleName: string
   moduleUrl: string | null
@@ -221,6 +228,7 @@ export type AdvisoryModuleWhereInput = {
   NOT?: Prisma.AdvisoryModuleWhereInput | Prisma.AdvisoryModuleWhereInput[]
   id?: Prisma.StringFilter<"AdvisoryModule"> | string
   sectionId?: Prisma.StringFilter<"AdvisoryModule"> | string
+  termId?: Prisma.StringNullableFilter<"AdvisoryModule"> | string | null
   kind?: Prisma.EnumAdvisoryModuleKindFilter<"AdvisoryModule"> | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringFilter<"AdvisoryModule"> | string
   moduleUrl?: Prisma.StringNullableFilter<"AdvisoryModule"> | string | null
@@ -231,6 +239,7 @@ export type AdvisoryModuleWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"AdvisoryModule"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"AdvisoryModule"> | Date | string
   section?: Prisma.XOR<Prisma.SectionScalarRelationFilter, Prisma.SectionWhereInput>
+  term?: Prisma.XOR<Prisma.TermNullableScalarRelationFilter, Prisma.TermWhereInput> | null
   creator?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   submissions?: Prisma.AdvisoryModuleSubmissionListRelationFilter
 }
@@ -238,6 +247,7 @@ export type AdvisoryModuleWhereInput = {
 export type AdvisoryModuleOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
+  termId?: Prisma.SortOrderInput | Prisma.SortOrder
   kind?: Prisma.SortOrder
   moduleName?: Prisma.SortOrder
   moduleUrl?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -248,6 +258,7 @@ export type AdvisoryModuleOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   section?: Prisma.SectionOrderByWithRelationInput
+  term?: Prisma.TermOrderByWithRelationInput
   creator?: Prisma.UserOrderByWithRelationInput
   submissions?: Prisma.AdvisoryModuleSubmissionOrderByRelationAggregateInput
 }
@@ -258,6 +269,7 @@ export type AdvisoryModuleWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.AdvisoryModuleWhereInput[]
   NOT?: Prisma.AdvisoryModuleWhereInput | Prisma.AdvisoryModuleWhereInput[]
   sectionId?: Prisma.StringFilter<"AdvisoryModule"> | string
+  termId?: Prisma.StringNullableFilter<"AdvisoryModule"> | string | null
   kind?: Prisma.EnumAdvisoryModuleKindFilter<"AdvisoryModule"> | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringFilter<"AdvisoryModule"> | string
   moduleUrl?: Prisma.StringNullableFilter<"AdvisoryModule"> | string | null
@@ -268,6 +280,7 @@ export type AdvisoryModuleWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"AdvisoryModule"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"AdvisoryModule"> | Date | string
   section?: Prisma.XOR<Prisma.SectionScalarRelationFilter, Prisma.SectionWhereInput>
+  term?: Prisma.XOR<Prisma.TermNullableScalarRelationFilter, Prisma.TermWhereInput> | null
   creator?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   submissions?: Prisma.AdvisoryModuleSubmissionListRelationFilter
 }, "id">
@@ -275,6 +288,7 @@ export type AdvisoryModuleWhereUniqueInput = Prisma.AtLeast<{
 export type AdvisoryModuleOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
+  termId?: Prisma.SortOrderInput | Prisma.SortOrder
   kind?: Prisma.SortOrder
   moduleName?: Prisma.SortOrder
   moduleUrl?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -295,6 +309,7 @@ export type AdvisoryModuleScalarWhereWithAggregatesInput = {
   NOT?: Prisma.AdvisoryModuleScalarWhereWithAggregatesInput | Prisma.AdvisoryModuleScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"AdvisoryModule"> | string
   sectionId?: Prisma.StringWithAggregatesFilter<"AdvisoryModule"> | string
+  termId?: Prisma.StringNullableWithAggregatesFilter<"AdvisoryModule"> | string | null
   kind?: Prisma.EnumAdvisoryModuleKindWithAggregatesFilter<"AdvisoryModule"> | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringWithAggregatesFilter<"AdvisoryModule"> | string
   moduleUrl?: Prisma.StringNullableWithAggregatesFilter<"AdvisoryModule"> | string | null
@@ -317,6 +332,7 @@ export type AdvisoryModuleCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutAdvisoryModulesInput
+  term?: Prisma.TermCreateNestedOneWithoutAdvisoryModulesInput
   creator: Prisma.UserCreateNestedOneWithoutAdvisoryModulesInput
   submissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutModuleInput
 }
@@ -324,6 +340,7 @@ export type AdvisoryModuleCreateInput = {
 export type AdvisoryModuleUncheckedCreateInput = {
   id?: string
   sectionId: string
+  termId?: string | null
   kind?: $Enums.AdvisoryModuleKind
   moduleName: string
   moduleUrl?: string | null
@@ -347,6 +364,7 @@ export type AdvisoryModuleUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutAdvisoryModulesNestedInput
+  term?: Prisma.TermUpdateOneWithoutAdvisoryModulesNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutAdvisoryModulesNestedInput
   submissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutModuleNestedInput
 }
@@ -354,6 +372,7 @@ export type AdvisoryModuleUpdateInput = {
 export type AdvisoryModuleUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  termId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAdvisoryModuleKindFieldUpdateOperationsInput | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringFieldUpdateOperationsInput | string
   moduleUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -369,6 +388,7 @@ export type AdvisoryModuleUncheckedUpdateInput = {
 export type AdvisoryModuleCreateManyInput = {
   id?: string
   sectionId: string
+  termId?: string | null
   kind?: $Enums.AdvisoryModuleKind
   moduleName: string
   moduleUrl?: string | null
@@ -395,6 +415,7 @@ export type AdvisoryModuleUpdateManyMutationInput = {
 export type AdvisoryModuleUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  termId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAdvisoryModuleKindFieldUpdateOperationsInput | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringFieldUpdateOperationsInput | string
   moduleUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -419,6 +440,7 @@ export type AdvisoryModuleOrderByRelationAggregateInput = {
 export type AdvisoryModuleCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
+  termId?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   moduleName?: Prisma.SortOrder
   moduleUrl?: Prisma.SortOrder
@@ -433,6 +455,7 @@ export type AdvisoryModuleCountOrderByAggregateInput = {
 export type AdvisoryModuleMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
+  termId?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   moduleName?: Prisma.SortOrder
   moduleUrl?: Prisma.SortOrder
@@ -447,6 +470,7 @@ export type AdvisoryModuleMaxOrderByAggregateInput = {
 export type AdvisoryModuleMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
+  termId?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   moduleName?: Prisma.SortOrder
   moduleUrl?: Prisma.SortOrder
@@ -502,6 +526,48 @@ export type AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput = {
   connect?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
   update?: Prisma.AdvisoryModuleUpdateWithWhereUniqueWithoutCreatorInput | Prisma.AdvisoryModuleUpdateWithWhereUniqueWithoutCreatorInput[]
   updateMany?: Prisma.AdvisoryModuleUpdateManyWithWhereWithoutCreatorInput | Prisma.AdvisoryModuleUpdateManyWithWhereWithoutCreatorInput[]
+  deleteMany?: Prisma.AdvisoryModuleScalarWhereInput | Prisma.AdvisoryModuleScalarWhereInput[]
+}
+
+export type AdvisoryModuleCreateNestedManyWithoutTermInput = {
+  create?: Prisma.XOR<Prisma.AdvisoryModuleCreateWithoutTermInput, Prisma.AdvisoryModuleUncheckedCreateWithoutTermInput> | Prisma.AdvisoryModuleCreateWithoutTermInput[] | Prisma.AdvisoryModuleUncheckedCreateWithoutTermInput[]
+  connectOrCreate?: Prisma.AdvisoryModuleCreateOrConnectWithoutTermInput | Prisma.AdvisoryModuleCreateOrConnectWithoutTermInput[]
+  createMany?: Prisma.AdvisoryModuleCreateManyTermInputEnvelope
+  connect?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
+}
+
+export type AdvisoryModuleUncheckedCreateNestedManyWithoutTermInput = {
+  create?: Prisma.XOR<Prisma.AdvisoryModuleCreateWithoutTermInput, Prisma.AdvisoryModuleUncheckedCreateWithoutTermInput> | Prisma.AdvisoryModuleCreateWithoutTermInput[] | Prisma.AdvisoryModuleUncheckedCreateWithoutTermInput[]
+  connectOrCreate?: Prisma.AdvisoryModuleCreateOrConnectWithoutTermInput | Prisma.AdvisoryModuleCreateOrConnectWithoutTermInput[]
+  createMany?: Prisma.AdvisoryModuleCreateManyTermInputEnvelope
+  connect?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
+}
+
+export type AdvisoryModuleUpdateManyWithoutTermNestedInput = {
+  create?: Prisma.XOR<Prisma.AdvisoryModuleCreateWithoutTermInput, Prisma.AdvisoryModuleUncheckedCreateWithoutTermInput> | Prisma.AdvisoryModuleCreateWithoutTermInput[] | Prisma.AdvisoryModuleUncheckedCreateWithoutTermInput[]
+  connectOrCreate?: Prisma.AdvisoryModuleCreateOrConnectWithoutTermInput | Prisma.AdvisoryModuleCreateOrConnectWithoutTermInput[]
+  upsert?: Prisma.AdvisoryModuleUpsertWithWhereUniqueWithoutTermInput | Prisma.AdvisoryModuleUpsertWithWhereUniqueWithoutTermInput[]
+  createMany?: Prisma.AdvisoryModuleCreateManyTermInputEnvelope
+  set?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
+  disconnect?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
+  delete?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
+  connect?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
+  update?: Prisma.AdvisoryModuleUpdateWithWhereUniqueWithoutTermInput | Prisma.AdvisoryModuleUpdateWithWhereUniqueWithoutTermInput[]
+  updateMany?: Prisma.AdvisoryModuleUpdateManyWithWhereWithoutTermInput | Prisma.AdvisoryModuleUpdateManyWithWhereWithoutTermInput[]
+  deleteMany?: Prisma.AdvisoryModuleScalarWhereInput | Prisma.AdvisoryModuleScalarWhereInput[]
+}
+
+export type AdvisoryModuleUncheckedUpdateManyWithoutTermNestedInput = {
+  create?: Prisma.XOR<Prisma.AdvisoryModuleCreateWithoutTermInput, Prisma.AdvisoryModuleUncheckedCreateWithoutTermInput> | Prisma.AdvisoryModuleCreateWithoutTermInput[] | Prisma.AdvisoryModuleUncheckedCreateWithoutTermInput[]
+  connectOrCreate?: Prisma.AdvisoryModuleCreateOrConnectWithoutTermInput | Prisma.AdvisoryModuleCreateOrConnectWithoutTermInput[]
+  upsert?: Prisma.AdvisoryModuleUpsertWithWhereUniqueWithoutTermInput | Prisma.AdvisoryModuleUpsertWithWhereUniqueWithoutTermInput[]
+  createMany?: Prisma.AdvisoryModuleCreateManyTermInputEnvelope
+  set?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
+  disconnect?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
+  delete?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
+  connect?: Prisma.AdvisoryModuleWhereUniqueInput | Prisma.AdvisoryModuleWhereUniqueInput[]
+  update?: Prisma.AdvisoryModuleUpdateWithWhereUniqueWithoutTermInput | Prisma.AdvisoryModuleUpdateWithWhereUniqueWithoutTermInput[]
+  updateMany?: Prisma.AdvisoryModuleUpdateManyWithWhereWithoutTermInput | Prisma.AdvisoryModuleUpdateManyWithWhereWithoutTermInput[]
   deleteMany?: Prisma.AdvisoryModuleScalarWhereInput | Prisma.AdvisoryModuleScalarWhereInput[]
 }
 
@@ -576,12 +642,14 @@ export type AdvisoryModuleCreateWithoutCreatorInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutAdvisoryModulesInput
+  term?: Prisma.TermCreateNestedOneWithoutAdvisoryModulesInput
   submissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutModuleInput
 }
 
 export type AdvisoryModuleUncheckedCreateWithoutCreatorInput = {
   id?: string
   sectionId: string
+  termId?: string | null
   kind?: $Enums.AdvisoryModuleKind
   moduleName: string
   moduleUrl?: string | null
@@ -625,6 +693,7 @@ export type AdvisoryModuleScalarWhereInput = {
   NOT?: Prisma.AdvisoryModuleScalarWhereInput | Prisma.AdvisoryModuleScalarWhereInput[]
   id?: Prisma.StringFilter<"AdvisoryModule"> | string
   sectionId?: Prisma.StringFilter<"AdvisoryModule"> | string
+  termId?: Prisma.StringNullableFilter<"AdvisoryModule"> | string | null
   kind?: Prisma.EnumAdvisoryModuleKindFilter<"AdvisoryModule"> | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringFilter<"AdvisoryModule"> | string
   moduleUrl?: Prisma.StringNullableFilter<"AdvisoryModule"> | string | null
@@ -634,6 +703,62 @@ export type AdvisoryModuleScalarWhereInput = {
   createdBy?: Prisma.StringFilter<"AdvisoryModule"> | string
   createdAt?: Prisma.DateTimeFilter<"AdvisoryModule"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"AdvisoryModule"> | Date | string
+}
+
+export type AdvisoryModuleCreateWithoutTermInput = {
+  id?: string
+  kind?: $Enums.AdvisoryModuleKind
+  moduleName: string
+  moduleUrl?: string | null
+  description?: string | null
+  releaseDate?: Date | string | null
+  dueDate?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  section: Prisma.SectionCreateNestedOneWithoutAdvisoryModulesInput
+  creator: Prisma.UserCreateNestedOneWithoutAdvisoryModulesInput
+  submissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutModuleInput
+}
+
+export type AdvisoryModuleUncheckedCreateWithoutTermInput = {
+  id?: string
+  sectionId: string
+  kind?: $Enums.AdvisoryModuleKind
+  moduleName: string
+  moduleUrl?: string | null
+  description?: string | null
+  releaseDate?: Date | string | null
+  dueDate?: Date | string | null
+  createdBy: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  submissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutModuleInput
+}
+
+export type AdvisoryModuleCreateOrConnectWithoutTermInput = {
+  where: Prisma.AdvisoryModuleWhereUniqueInput
+  create: Prisma.XOR<Prisma.AdvisoryModuleCreateWithoutTermInput, Prisma.AdvisoryModuleUncheckedCreateWithoutTermInput>
+}
+
+export type AdvisoryModuleCreateManyTermInputEnvelope = {
+  data: Prisma.AdvisoryModuleCreateManyTermInput | Prisma.AdvisoryModuleCreateManyTermInput[]
+  skipDuplicates?: boolean
+}
+
+export type AdvisoryModuleUpsertWithWhereUniqueWithoutTermInput = {
+  where: Prisma.AdvisoryModuleWhereUniqueInput
+  update: Prisma.XOR<Prisma.AdvisoryModuleUpdateWithoutTermInput, Prisma.AdvisoryModuleUncheckedUpdateWithoutTermInput>
+  create: Prisma.XOR<Prisma.AdvisoryModuleCreateWithoutTermInput, Prisma.AdvisoryModuleUncheckedCreateWithoutTermInput>
+}
+
+export type AdvisoryModuleUpdateWithWhereUniqueWithoutTermInput = {
+  where: Prisma.AdvisoryModuleWhereUniqueInput
+  data: Prisma.XOR<Prisma.AdvisoryModuleUpdateWithoutTermInput, Prisma.AdvisoryModuleUncheckedUpdateWithoutTermInput>
+}
+
+export type AdvisoryModuleUpdateManyWithWhereWithoutTermInput = {
+  where: Prisma.AdvisoryModuleScalarWhereInput
+  data: Prisma.XOR<Prisma.AdvisoryModuleUpdateManyMutationInput, Prisma.AdvisoryModuleUncheckedUpdateManyWithoutTermInput>
 }
 
 export type AdvisoryModuleCreateWithoutSectionInput = {
@@ -646,12 +771,14 @@ export type AdvisoryModuleCreateWithoutSectionInput = {
   dueDate?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  term?: Prisma.TermCreateNestedOneWithoutAdvisoryModulesInput
   creator: Prisma.UserCreateNestedOneWithoutAdvisoryModulesInput
   submissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutModuleInput
 }
 
 export type AdvisoryModuleUncheckedCreateWithoutSectionInput = {
   id?: string
+  termId?: string | null
   kind?: $Enums.AdvisoryModuleKind
   moduleName: string
   moduleUrl?: string | null
@@ -701,12 +828,14 @@ export type AdvisoryModuleCreateWithoutSubmissionsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutAdvisoryModulesInput
+  term?: Prisma.TermCreateNestedOneWithoutAdvisoryModulesInput
   creator: Prisma.UserCreateNestedOneWithoutAdvisoryModulesInput
 }
 
 export type AdvisoryModuleUncheckedCreateWithoutSubmissionsInput = {
   id?: string
   sectionId: string
+  termId?: string | null
   kind?: $Enums.AdvisoryModuleKind
   moduleName: string
   moduleUrl?: string | null
@@ -745,12 +874,14 @@ export type AdvisoryModuleUpdateWithoutSubmissionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutAdvisoryModulesNestedInput
+  term?: Prisma.TermUpdateOneWithoutAdvisoryModulesNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutAdvisoryModulesNestedInput
 }
 
 export type AdvisoryModuleUncheckedUpdateWithoutSubmissionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  termId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAdvisoryModuleKindFieldUpdateOperationsInput | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringFieldUpdateOperationsInput | string
   moduleUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -765,6 +896,7 @@ export type AdvisoryModuleUncheckedUpdateWithoutSubmissionsInput = {
 export type AdvisoryModuleCreateManyCreatorInput = {
   id?: string
   sectionId: string
+  termId?: string | null
   kind?: $Enums.AdvisoryModuleKind
   moduleName: string
   moduleUrl?: string | null
@@ -786,12 +918,14 @@ export type AdvisoryModuleUpdateWithoutCreatorInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutAdvisoryModulesNestedInput
+  term?: Prisma.TermUpdateOneWithoutAdvisoryModulesNestedInput
   submissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutModuleNestedInput
 }
 
 export type AdvisoryModuleUncheckedUpdateWithoutCreatorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  termId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAdvisoryModuleKindFieldUpdateOperationsInput | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringFieldUpdateOperationsInput | string
   moduleUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -806,6 +940,7 @@ export type AdvisoryModuleUncheckedUpdateWithoutCreatorInput = {
 export type AdvisoryModuleUncheckedUpdateManyWithoutCreatorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  termId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAdvisoryModuleKindFieldUpdateOperationsInput | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringFieldUpdateOperationsInput | string
   moduleUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -816,8 +951,67 @@ export type AdvisoryModuleUncheckedUpdateManyWithoutCreatorInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type AdvisoryModuleCreateManyTermInput = {
+  id?: string
+  sectionId: string
+  kind?: $Enums.AdvisoryModuleKind
+  moduleName: string
+  moduleUrl?: string | null
+  description?: string | null
+  releaseDate?: Date | string | null
+  dueDate?: Date | string | null
+  createdBy: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type AdvisoryModuleUpdateWithoutTermInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumAdvisoryModuleKindFieldUpdateOperationsInput | $Enums.AdvisoryModuleKind
+  moduleName?: Prisma.StringFieldUpdateOperationsInput | string
+  moduleUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  section?: Prisma.SectionUpdateOneRequiredWithoutAdvisoryModulesNestedInput
+  creator?: Prisma.UserUpdateOneRequiredWithoutAdvisoryModulesNestedInput
+  submissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutModuleNestedInput
+}
+
+export type AdvisoryModuleUncheckedUpdateWithoutTermInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumAdvisoryModuleKindFieldUpdateOperationsInput | $Enums.AdvisoryModuleKind
+  moduleName?: Prisma.StringFieldUpdateOperationsInput | string
+  moduleUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  submissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutModuleNestedInput
+}
+
+export type AdvisoryModuleUncheckedUpdateManyWithoutTermInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumAdvisoryModuleKindFieldUpdateOperationsInput | $Enums.AdvisoryModuleKind
+  moduleName?: Prisma.StringFieldUpdateOperationsInput | string
+  moduleUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type AdvisoryModuleCreateManySectionInput = {
   id?: string
+  termId?: string | null
   kind?: $Enums.AdvisoryModuleKind
   moduleName: string
   moduleUrl?: string | null
@@ -839,12 +1033,14 @@ export type AdvisoryModuleUpdateWithoutSectionInput = {
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  term?: Prisma.TermUpdateOneWithoutAdvisoryModulesNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutAdvisoryModulesNestedInput
   submissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutModuleNestedInput
 }
 
 export type AdvisoryModuleUncheckedUpdateWithoutSectionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  termId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAdvisoryModuleKindFieldUpdateOperationsInput | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringFieldUpdateOperationsInput | string
   moduleUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -859,6 +1055,7 @@ export type AdvisoryModuleUncheckedUpdateWithoutSectionInput = {
 
 export type AdvisoryModuleUncheckedUpdateManyWithoutSectionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  termId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAdvisoryModuleKindFieldUpdateOperationsInput | $Enums.AdvisoryModuleKind
   moduleName?: Prisma.StringFieldUpdateOperationsInput | string
   moduleUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -904,6 +1101,7 @@ export type AdvisoryModuleCountOutputTypeCountSubmissionsArgs<ExtArgs extends ru
 export type AdvisoryModuleSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   sectionId?: boolean
+  termId?: boolean
   kind?: boolean
   moduleName?: boolean
   moduleUrl?: boolean
@@ -914,6 +1112,7 @@ export type AdvisoryModuleSelect<ExtArgs extends runtime.Types.Extensions.Intern
   createdAt?: boolean
   updatedAt?: boolean
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  term?: boolean | Prisma.AdvisoryModule$termArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   submissions?: boolean | Prisma.AdvisoryModule$submissionsArgs<ExtArgs>
   _count?: boolean | Prisma.AdvisoryModuleCountOutputTypeDefaultArgs<ExtArgs>
@@ -922,6 +1121,7 @@ export type AdvisoryModuleSelect<ExtArgs extends runtime.Types.Extensions.Intern
 export type AdvisoryModuleSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   sectionId?: boolean
+  termId?: boolean
   kind?: boolean
   moduleName?: boolean
   moduleUrl?: boolean
@@ -932,12 +1132,14 @@ export type AdvisoryModuleSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   createdAt?: boolean
   updatedAt?: boolean
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  term?: boolean | Prisma.AdvisoryModule$termArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["advisoryModule"]>
 
 export type AdvisoryModuleSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   sectionId?: boolean
+  termId?: boolean
   kind?: boolean
   moduleName?: boolean
   moduleUrl?: boolean
@@ -948,12 +1150,14 @@ export type AdvisoryModuleSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   createdAt?: boolean
   updatedAt?: boolean
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  term?: boolean | Prisma.AdvisoryModule$termArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["advisoryModule"]>
 
 export type AdvisoryModuleSelectScalar = {
   id?: boolean
   sectionId?: boolean
+  termId?: boolean
   kind?: boolean
   moduleName?: boolean
   moduleUrl?: boolean
@@ -965,19 +1169,22 @@ export type AdvisoryModuleSelectScalar = {
   updatedAt?: boolean
 }
 
-export type AdvisoryModuleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "sectionId" | "kind" | "moduleName" | "moduleUrl" | "description" | "releaseDate" | "dueDate" | "createdBy" | "createdAt" | "updatedAt", ExtArgs["result"]["advisoryModule"]>
+export type AdvisoryModuleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "sectionId" | "termId" | "kind" | "moduleName" | "moduleUrl" | "description" | "releaseDate" | "dueDate" | "createdBy" | "createdAt" | "updatedAt", ExtArgs["result"]["advisoryModule"]>
 export type AdvisoryModuleInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  term?: boolean | Prisma.AdvisoryModule$termArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   submissions?: boolean | Prisma.AdvisoryModule$submissionsArgs<ExtArgs>
   _count?: boolean | Prisma.AdvisoryModuleCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AdvisoryModuleIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  term?: boolean | Prisma.AdvisoryModule$termArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 export type AdvisoryModuleIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  term?: boolean | Prisma.AdvisoryModule$termArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 
@@ -985,12 +1192,14 @@ export type $AdvisoryModulePayload<ExtArgs extends runtime.Types.Extensions.Inte
   name: "AdvisoryModule"
   objects: {
     section: Prisma.$SectionPayload<ExtArgs>
+    term: Prisma.$TermPayload<ExtArgs> | null
     creator: Prisma.$UserPayload<ExtArgs>
     submissions: Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     sectionId: string
+    termId: string | null
     kind: $Enums.AdvisoryModuleKind
     moduleName: string
     moduleUrl: string | null
@@ -1395,6 +1604,7 @@ readonly fields: AdvisoryModuleFieldRefs;
 export interface Prisma__AdvisoryModuleClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   section<T extends Prisma.SectionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SectionDefaultArgs<ExtArgs>>): Prisma.Prisma__SectionClient<runtime.Types.Result.GetResult<Prisma.$SectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  term<T extends Prisma.AdvisoryModule$termArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AdvisoryModule$termArgs<ExtArgs>>): Prisma.Prisma__TermClient<runtime.Types.Result.GetResult<Prisma.$TermPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   creator<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   submissions<T extends Prisma.AdvisoryModule$submissionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AdvisoryModule$submissionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdvisoryModuleSubmissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -1428,6 +1638,7 @@ export interface Prisma__AdvisoryModuleClient<T, Null = never, ExtArgs extends r
 export interface AdvisoryModuleFieldRefs {
   readonly id: Prisma.FieldRef<"AdvisoryModule", 'String'>
   readonly sectionId: Prisma.FieldRef<"AdvisoryModule", 'String'>
+  readonly termId: Prisma.FieldRef<"AdvisoryModule", 'String'>
   readonly kind: Prisma.FieldRef<"AdvisoryModule", 'AdvisoryModuleKind'>
   readonly moduleName: Prisma.FieldRef<"AdvisoryModule", 'String'>
   readonly moduleUrl: Prisma.FieldRef<"AdvisoryModule", 'String'>
@@ -1835,6 +2046,25 @@ export type AdvisoryModuleDeleteManyArgs<ExtArgs extends runtime.Types.Extension
    * Limit how many AdvisoryModules to delete.
    */
   limit?: number
+}
+
+/**
+ * AdvisoryModule.term
+ */
+export type AdvisoryModule$termArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Term
+   */
+  select?: Prisma.TermSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Term
+   */
+  omit?: Prisma.TermOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TermInclude<ExtArgs> | null
+  where?: Prisma.TermWhereInput
 }
 
 /**

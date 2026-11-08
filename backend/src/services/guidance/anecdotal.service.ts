@@ -136,6 +136,7 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
         select: {
           lrn: true,
           gradeLevel: true,
+          mascot: true,
           user: { select: { fullName: true } },
           section: { select: { name: true } },
         },
@@ -145,6 +146,7 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
           lrn: true,
           fullName: true,
           gradeLevel: true,
+          mascot: true,
           section: { select: { name: true } },
         },
       },
@@ -189,6 +191,7 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
     date: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
     confidentiality: r.anecdotalRecord.confidentialityLevel,
     referralStatus: r.status,
+    mascot: r.student?.mascot ?? r.roster?.mascot ?? null,
     sessionDocs: r.counselingSessions
       .filter((s) => (s.attachments ?? []).length > 0)
       .map((s) => ({
@@ -271,13 +274,13 @@ async function buildAnecdotalSummary(summaryWhere: any) {
     topProfileIds.length
       ? prisma.studentProfile.findMany({
           where: { userId: { in: topProfileIds } },
-          select: { userId: true, lrn: true, user: { select: { fullName: true } }, section: { select: { name: true } } },
+          select: { userId: true, lrn: true, mascot: true, user: { select: { fullName: true } }, section: { select: { name: true } } },
         })
       : Promise.resolve([]),
     topRosterIds.length
       ? prisma.studentRoster.findMany({
           where: { id: { in: topRosterIds } },
-          select: { id: true, lrn: true, fullName: true, section: { select: { name: true } } },
+          select: { id: true, lrn: true, fullName: true, mascot: true, section: { select: { name: true } } },
         })
       : Promise.resolve([]),
   ]);
@@ -288,22 +291,26 @@ async function buildAnecdotalSummary(summaryWhere: any) {
     ...topProfiles.map((p) => ({
       student: p.user.fullName,
       lrn: p.lrn,
+      mascot: p.mascot ?? null,
       section: p.section?.name ?? "—",
       count: topCountById.get(p.userId) ?? 0,
     })),
     ...topRosters.map((r) => ({
       student: r.fullName,
       lrn: r.lrn,
+      mascot: r.mascot ?? null,
       section: r.section?.name ?? "—",
       count: topCountById.get(`roster:${r.id}`) ?? 0,
     })),
   ];
-  const mergedTops = new Map<string, { student: string; lrn: string; section: string; count: number }>();
+  const mergedTops = new Map<string, { student: string; lrn: string; mascot: string | null; section: string; count: number }>();
   for (const c of topCandidates) {
     const key = c.lrn || c.student;
     const prev = mergedTops.get(key);
-    if (prev) prev.count += c.count;
-    else mergedTops.set(key, { ...c });
+    if (prev) {
+      prev.count += c.count;
+      if (!prev.mascot) prev.mascot = c.mascot;
+    } else mergedTops.set(key, { ...c });
   }
   const topStudents = [...mergedTops.values()].sort((a, b) => b.count - a.count).slice(0, 5);
   return {

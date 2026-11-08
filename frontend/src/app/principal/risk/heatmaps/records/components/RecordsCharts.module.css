@@ -1,0 +1,51 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1rem;
+  min-width: 0;
+}
+
+.chart {
+  width: 100%;
+}
+
+.lineChart {
+  width: 100%;
+}
+
+.lineChart text {
+  fill: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skeletonChart {
+  height: 260px;
+  border-radius: var(--radius-md);
+}
+
+.skeletonLine {
+  display: block;
+  height: 0.75rem;
+  width: 60%;
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonLine {
+    animation: none;
+  }
+}

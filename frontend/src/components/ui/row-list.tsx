@@ -9,6 +9,10 @@ import styles from "./row-list.module.css";
 
 export type RowTone = "red" | "amber" | "green" | "blue" | "muted";
 
+/** Row entrance timing: the default quick stagger, or the registry desks'
+    long CSS-style cascade used by `/record-keeper/academics`. */
+export type RowListMotionPreset = "default" | "desk";
+
 export interface RowListMetaPill {
   label: string;
   tone?: RowTone;
@@ -100,6 +104,7 @@ function RowListRow({
   index = 0,
   reduceMotion = false,
   hasLead = false,
+  motionPreset = "default",
 }: {
   item: RowListItem;
   index?: number;
@@ -107,23 +112,36 @@ function RowListRow({
   /** Whether the list renders the lead pill column (keeps rows aligned
       when only some items carry a lead pill). */
   hasLead?: boolean;
+  motionPreset?: RowListMotionPreset;
 }) {
+  // "desk" mirrors the registry tables' CSS cascade: a ~1s glide, rows
+  // starting 450ms after mount and stepping 140ms apart (capped at 12 rows).
+  const desk = motionPreset === "desk";
   return (
     <motion.li
       layout={!reduceMotion}
       className={`${styles.row}${hasLead ? ` ${styles.rowLead}` : ""}`}
       aria-label={item.ariaLabel ?? `${item.status.label} risk: ${item.title}`}
-      initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+      initial={reduceMotion ? false : { opacity: 0, y: desk ? 8 : 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={reduceMotion ? undefined : { opacity: 0, y: -6, transition: { duration: 0.18 } }}
-      transition={{
-        duration: 0.38,
-        ease: "easeOut",
-        // Stagger the first ~10 rows; cap delay so long lists stay snappy
-        // and filtering feels instant.
-        delay: reduceMotion ? 0 : Math.min(index * 0.035, 0.35),
-        layout: { duration: 0.28, ease: "easeOut" },
-      }}
+      transition={
+        desk
+          ? {
+              duration: 1,
+              ease: [0.22, 1, 0.36, 1],
+              delay: reduceMotion ? 0 : Math.min(0.45 + Math.min(index, 11) * 0.14, 1.99),
+              layout: { duration: 0.28, ease: "easeOut" },
+            }
+          : {
+              duration: 0.38,
+              ease: "easeOut",
+              // Stagger the first ~10 rows; cap delay so long lists stay snappy
+              // and filtering feels instant.
+              delay: reduceMotion ? 0 : Math.min(index * 0.035, 0.35),
+              layout: { duration: 0.28, ease: "easeOut" },
+            }
+      }
       style={{ willChange: "transform, opacity" }}
     >
       {hasLead ? (
@@ -216,6 +234,7 @@ export function RowList({
   bleed = false,
   gutter,
   animateOnMount = false,
+  motionPreset = "default",
 }: {
   items: RowListItem[];
   emptyText?: string;
@@ -228,6 +247,8 @@ export function RowList({
       that cascade like their KPI stats). Off by default so refetches and
       filter changes don't re-animate existing rows. */
   animateOnMount?: boolean;
+  /** Row entrance timing — `desk` matches the registry tables' cascade. */
+  motionPreset?: RowListMotionPreset;
 }) {
   if (items.length === 0) {
     return <p className={styles.empty}>{emptyText}</p>;
@@ -239,6 +260,7 @@ export function RowList({
       bleed={bleed}
       gutter={gutter}
       animateOnMount={animateOnMount}
+      motionPreset={motionPreset}
     />
   );
 }
@@ -249,12 +271,14 @@ function AnimatedRowUl({
   bleed,
   gutter,
   animateOnMount,
+  motionPreset,
 }: {
   items: RowListItem[];
   ariaLabel: string;
   bleed: boolean;
   gutter?: string;
   animateOnMount: boolean;
+  motionPreset: RowListMotionPreset;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
   const hasLead = items.some((item) => item.leadPill != null);
@@ -274,6 +298,7 @@ function AnimatedRowUl({
             index={index}
             reduceMotion={reduceMotion}
             hasLead={hasLead}
+            motionPreset={motionPreset}
           />
         ))}
       </AnimatePresence>

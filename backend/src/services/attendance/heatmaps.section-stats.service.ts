@@ -41,16 +41,14 @@ export async function getSectionStats(query: SectionStatsQuery) {
     orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
   });
 
-  const headcounts = await sectionHeadcounts(sections.map((s) => s.id));
-  const enrolledBySection: Record<string, number> = {};
-  for (const s of sections) enrolledBySection[s.id] = headcounts.get(s.id) ?? 0;
-  const totalEnrolled = Object.values(enrolledBySection).reduce((a, b) => a + b, 0);
-
-  const dayKeys = buildDayAxis(displayTerm.startDate);
+  const dayKeys = buildDayAxis(displayTerm.startDate, displayTerm.endDate);
   const schoolDays = countSchoolDays(dayKeys);
 
   const sectionIds = sections.map((s) => s.id);
-  const [subjectTakes, entries, profiles, rosterEntries] = await Promise.all([
+  // Headcounts is its own chain of 3–4 round-trips; run it alongside the data
+  // reads instead of ahead of them. Against the remote pooler every serial
+  // query costs ~0.5s, so this is the difference between a ~9s and a ~4s page.
+  const [subjectTakes, entries, profiles, rosterEntries, headcounts] = await Promise.all([
     prisma.attendanceRecord.findMany({
       where: { termId, sectionId: { in: sectionIds }, NOT: { subjectId: null } },
       select: {
@@ -78,7 +76,12 @@ export async function getSectionStats(query: SectionStatsQuery) {
       where: { sectionId: { in: sectionIds } },
       select: { id: true, lrn: true, sectionId: true },
     }),
+    sectionHeadcounts(sectionIds),
   ]);
+
+  const enrolledBySection: Record<string, number> = {};
+  for (const s of sections) enrolledBySection[s.id] = headcounts.get(s.id) ?? 0;
+  const totalEnrolled = Object.values(enrolledBySection).reduce((a, b) => a + b, 0);
 
   if (subjectTakes.length === 0) {
 

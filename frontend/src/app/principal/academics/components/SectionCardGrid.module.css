@@ -192,11 +192,53 @@
   white-space: nowrap;
 }
 
-.skeletonCard {
-  min-height: 7.25rem;
+/* Loading shell mirrors .cardBtn so the board keeps its exact size/shape. */
+.cardSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.625rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background-color: var(--card);
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent);
+}
+
+.skeletonName {
+  height: 1rem;
+  width: 7rem;
+  max-width: 60%;
+}
+
+.skeletonGrade {
+  height: 1rem;
+  width: 3.5rem;
+  border-radius: 9999px;
+}
+
+.skeletonSource {
+  height: 1rem;
+  width: 5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+
+.skeletonStatIcon {
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+}
+
+.skeletonStatPill {
+  height: 1.125rem;
+  width: 2.25rem;
+  border-radius: 9999px;
+}
+
+.skeletonStatLabel {
+  height: 0.5rem;
+  width: 2.75rem;
 }
 
 .empty {

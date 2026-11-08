@@ -29,6 +29,7 @@ import { formatGrade, formatSection } from "@/lib/utils";
 import type { PendingStudent, PendingStudentsResponse } from "./components/types";
 import { formatRelativeTime } from "./components/types";
 import styles from "./accounts.module.css";
+import cascade from "@/components/shared/desk-cascade.module.css";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 import { useSearchParams } from "next/navigation";
@@ -365,6 +366,7 @@ function AccountApprovalsPageInner() {
         <div className={styles.queueAnchor}>
           <KanbanBoard
             title="Pending Students"
+            className={cascade.boardIn}
             icon={<UserPlus size={14} className="text-primary" aria-hidden />}
             description="Review student account requests for grades 7–10."
             ariaLabel="Pending student accounts"
@@ -420,6 +422,7 @@ function AccountApprovalsPageInner() {
                 bleed
                 gutter="0.625rem"
                 animateOnMount
+                motionPreset="desk"
                 items={rowItems}
                 emptyText="No pending student accounts."
                 ariaLabel="Pending student accounts"

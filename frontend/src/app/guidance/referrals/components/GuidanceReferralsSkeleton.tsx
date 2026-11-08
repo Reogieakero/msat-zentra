@@ -1,21 +1,24 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPaginationSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import styles from "./GuidanceReferralsSkeleton.module.css";
+import tableStyles from "./guidance-referrals-table.module.css";
 
 export function GuidanceReferralsSkeleton({
   lockType = false,
-  menuRows,
 }: {
   lockType?: boolean;
-  menuRows?: number;
 }) {
-  const sideGroups: { label: string; rows: number }[] = lockType
-    ? [{ label: "Actions", rows: menuRows ?? 4 }]
-    : [
-        { label: "ADM actions", rows: 5 },
-        { label: "Counseling actions", rows: 4 },
-      ];
+  /* The locked ADM / Counseling desks are kanban boards: mirror the real
+     board (action tabs + search, 4×4 folder-card grid, pager), same as the
+     nurse ADM skeleton. */
+  if (lockType) return <GuidanceBoardSkeleton />;
+
+  const sideGroups: { label: string; rows: number }[] = [
+    { label: "ADM actions", rows: 5 },
+    { label: "Counseling actions", rows: 4 },
+  ];
   return (
     <div className={styles.layout} aria-busy="true" aria-label="Loading your cases">
       <div className={styles.feed}>
@@ -105,5 +108,84 @@ export function GuidanceReferralsSkeleton({
         ))}
       </div>
     </div>
+  );
+}
+
+/* Mirrors the real guidance kanban board: action-tab pills + search row,
+   4×4 folder cards (the page size), then the shared pager. The caller wraps
+   this in the referrals page <section>, so no extra page padding here. */
+function GuidanceBoardSkeleton() {
+  return (
+    <div
+      className={tableStyles.layout}
+      aria-busy="true"
+      aria-label="Loading your cases"
+    >
+      <div className={`${tableStyles.feed} ${tableStyles.feedWide}`}>
+        <div
+          className="flex flex-wrap items-center justify-between gap-2"
+          aria-hidden="true"
+        >
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[72, 96, 84, 92, 74, 78, 84].map((width, index) => (
+              <Skeleton
+                key={index}
+                className="h-7 rounded-full"
+                style={{ width }}
+              />
+            ))}
+          </div>
+          <Skeleton className="h-8 w-40 max-w-full shrink-0 rounded-[16px]" />
+        </div>
+        <div className={tableStyles.kanbanGrid} aria-hidden="true">
+          {Array.from({ length: 16 }).map((_, i) => (
+            <GuidanceCaseCardSkeleton key={i} />
+          ))}
+        </div>
+        <ZentraPaginationSkeleton />
+      </div>
+    </div>
+  );
+}
+
+/* Same shell as the real GuidanceCaseKanbanCard: muted outer card with a
+   bordered header (category + status pill), then the inner white card holding
+   the identity row, status line, metadata pills and action row. */
+function GuidanceCaseCardSkeleton() {
+  return (
+    <article
+      className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 dark:bg-muted/20"
+      aria-hidden="true"
+    >
+      <header className="-mx-2.5 flex min-w-0 items-center justify-between gap-1.5 border-b border-border px-3.5 pb-2">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-5 w-20 rounded-md" />
+      </header>
+      <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border border-border bg-white p-2.5 shadow-sm dark:bg-card">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Skeleton className="size-7 shrink-0 rounded-full" />
+          <span className="flex min-w-0 flex-col gap-1">
+            <Skeleton className="h-4 w-32" />
+            <span className="flex min-w-0 flex-wrap items-center gap-1">
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-24 rounded-full" />
+            </span>
+          </span>
+        </span>
+        <Skeleton className="h-3 w-full" />
+        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-24 rounded-full" />
+        </span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Skeleton className="size-5 rounded-md" />
+          <Skeleton className="size-5 rounded-md" />
+        </span>
+        <div className="mt-auto flex flex-wrap items-center justify-end gap-1.5 pt-0.5">
+          <Skeleton className="h-6 w-16 rounded-md" />
+          <Skeleton className="h-6 w-20 rounded-md" />
+        </div>
+      </div>
+    </article>
   );
 }

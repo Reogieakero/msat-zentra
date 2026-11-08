@@ -6,7 +6,7 @@ import type {
 import { formatDate as sharedFormatDate, timeAgo as sharedTimeAgo, formatTime as sharedFormatTime, formatActionTime as sharedFormatActionTime, formatCountdown as sharedFormatCountdown, isSessionStarted as sharedIsSessionStarted } from "@/lib/labels/datetime";
 import { initials as sharedInitials } from "@/lib/labels/text";
 import { ANECDOTAL_CATEGORY_COLORS as sharedAnecdotalColors, anecdotalCategoryColor as sharedAnecdotalCategoryColor, anecdotalCategoryPillClass as sharedAnecdotalCategoryPillClass, anecdotalCategoryBadgeVariant as sharedAnecdotalCategoryBadgeVariant } from "@/lib/labels/anecdotal";
-import { isEndorsed as sharedIsEndorsed, isWithdrawn as sharedIsWithdrawn, hasScheduledSession as sharedHasScheduledSession, activeSessionOf as sharedActiveSessionOf, latestSessionOf as sharedLatestSessionOf, statusLabel as sharedStatusLabel, statusHelp as sharedStatusHelp, rowStatusLabel as sharedRowStatusLabel, rowStatusHelp as sharedRowStatusHelp, statusVariant as sharedStatusVariant, watermarkLabel as sharedWatermarkLabel, watermarkColor as sharedWatermarkColor } from "@/lib/labels/referral-status";
+import { isEndorsed as sharedIsEndorsed, isWithdrawn as sharedIsWithdrawn, hasScheduledSession as sharedHasScheduledSession, activeSessionOf as sharedActiveSessionOf, latestSessionOf as sharedLatestSessionOf, statusLabel as sharedStatusLabel, statusHelp as sharedStatusHelp, rowStatusLabel as sharedRowStatusLabel, rowStatusHelp as sharedRowStatusHelp, statusVariant as sharedStatusVariant, watermarkLabel as sharedWatermarkLabel, watermarkColor as sharedWatermarkColor, isCaseDone as sharedIsCaseDone, hasOpenBooking as sharedHasOpenBooking } from "@/lib/labels/referral-status";
 import { labelForActionType as sharedLabelForActionType, latestActionOf as sharedLatestActionOf } from "@/lib/labels/referral-activity";
 import { sessionKindLabel as sharedSessionKindLabel } from "@/lib/labels/sessions";
 export const ANECDOTAL_CATEGORY_COLORS = sharedAnecdotalColors;
@@ -57,7 +57,7 @@ export function matchesActionFilter(row: NurseQueueRow, filter: ActionValue): bo
     case "followup":
       return row.type === "ADM" && row.status === "follow_up";
     case "booked":
-      return row.type === "ADM" && row.sessions.length > 0;
+      return row.type === "ADM" && sharedHasOpenBooking(row);
     case "reject":
       return row.type === "ADM" && row.status === "dismissed" && !sharedIsWithdrawn(row);
     case "adm_cancelled":
@@ -65,9 +65,9 @@ export function matchesActionFilter(row: NurseQueueRow, filter: ActionValue): bo
     case "clinic_needs":
       return row.type === "Clinic" && row.status === "pending";
     case "clinic_booked":
-      return row.type === "Clinic" && row.sessions.length > 0;
+      return row.type === "Clinic" && sharedHasOpenBooking(row);
     case "clinic_done":
-      return row.type === "Clinic" && row.sessions.some((s) => s.status === "completed");
+      return row.type === "Clinic" && sharedIsCaseDone(row);
     case "clinic_followup":
       return row.type === "Clinic" && row.status === "follow_up";
     case "clinic_cancelled":
@@ -170,6 +170,8 @@ export function latestSessionOf(sessions: NurseSessionItem[]): NurseSessionItem 
   return sharedLatestSessionOf(sessions);
 }
 export const isWithdrawn = sharedIsWithdrawn;
+export const isCaseDone = sharedIsCaseDone;
+export const hasOpenBooking = sharedHasOpenBooking;
 export function watermarkLabel(row: NurseQueueRow): string {
   return sharedWatermarkLabel(row, { escalatedText: "Sent to clinic", rawFallback: true });
 }

@@ -51,7 +51,29 @@ export function KpiStrip({
       >
       {isPending ? (
         Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className={styles.kpiSkel} />
+          <KanbanBoard
+            key={i}
+            className={styles.board}
+            title={<Skeleton className="h-3.5 w-28" />}
+            icon={
+              <span className={styles.icon} aria-hidden="true">
+                <Skeleton className="h-3.5 w-3.5 rounded-full" />
+              </span>
+            }
+            ariaLabel="Loading academic stat"
+          >
+            <div className={styles.stat}>
+              <div className={styles.statTop}>
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-9 w-9 rounded-full" />
+              </div>
+              <Skeleton className="h-3 w-40" />
+              <div className={styles.kpiPills}>
+                <Skeleton className="h-5 w-28 rounded-md" />
+                <Skeleton className="h-5 w-20 rounded-md" />
+              </div>
+            </div>
+          </KanbanBoard>
         ))
       ) : (
         <>

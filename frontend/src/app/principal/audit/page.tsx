@@ -6,14 +6,14 @@ import { AuditToolbar, type ActorScope } from "./components/AuditToolbar";
 import { AuditTable } from "./components/AuditTable";
 import { AuditSkeleton } from "./components/AuditSkeleton";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
-import { PrincipalEmptyState } from "../components/PrincipalEmptyCard";
 import { Button } from "@/components/ui/button";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { useSession } from "@/lib/auth/useSession";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { toast } from "@/components/ui/sonner";
 import {
   fetchAuditEntries,
-  exportAuditCsv,
+  exportAuditExcel,
 } from "@/services/principal/audit.service";
 import type {
   AuditActionType,
@@ -106,7 +106,10 @@ function PrincipalAuditPageInner() {
 
   const entries: AuditEntry[] = auditQuery.data?.data ?? [];
   const total = auditQuery.data?.total ?? 0;
-  const loading = auditQuery.isPending;
+  // keepPreviousData keeps the last page on screen while the next request runs;
+  // gate on isFetching so filter/page changes show the skeleton instead of
+  // stale rows.
+  const showSkeleton = auditQuery.isPending || auditQuery.isFetching;
   const error = auditQuery.isError
     ? (() => {
         const status = (auditQuery.error as { response?: { status?: number } })?.response?.status;
@@ -134,14 +137,14 @@ function PrincipalAuditPageInner() {
   const handleExport = () => {
     if (exporting) return;
     setExporting(true);
-    exportAuditCsv({
+    exportAuditExcel({
       actionType,
       actorRole,
       sourceTable,
       userId: actorScope === "me" ? currentUserId : undefined,
       q: debouncedQuery || undefined,
     })
-      .then(() => toast.success({ title: "Audit log exported" }))
+      .then(() => toast.success({ title: "Audit log exported to Excel" }))
       .catch((err) => {
         console.error("[/api/audit/export] failed:", err);
         toast.error({ title: "Export failed", description: "Could not export the audit log." });
@@ -172,15 +175,17 @@ function PrincipalAuditPageInner() {
   }, [debouncedQuery]);
 
   return (
-    <section className={styles.page} aria-busy={loading || undefined}>
+    <section className={styles.page} aria-busy={showSkeleton || undefined}>
       <KanbanBoard
         title="Audit Log"
         icon={<ShieldCheck size={14} aria-hidden="true" />}
-        count={totalCount}
+        count={showSkeleton ? undefined : totalCount}
         description={
-          totalCount === 0
+          showSkeleton
             ? "Immutable record of sensitive actions — entries cannot be edited or deleted."
-            : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school. Immutable — entries cannot be edited or deleted.`
+            : totalCount === 0
+              ? "Immutable record of sensitive actions — entries cannot be edited or deleted."
+              : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school. Immutable — entries cannot be edited or deleted.`
         }
         headerToolbar={
           <AuditToolbar
@@ -214,12 +219,14 @@ function PrincipalAuditPageInner() {
           />
         }
         footer={
-          <Pagination
-            currentPage={safePage}
-            totalItems={totalCount}
-            pageSize={PAGE_SIZE}
-            onPageChange={pager.setPage}
-          />
+          showSkeleton ? null : (
+            <Pagination
+              currentPage={safePage}
+              totalItems={totalCount}
+              pageSize={PAGE_SIZE}
+              onPageChange={pager.setPage}
+            />
+          )
         }
       >
         {error ? (
@@ -236,22 +243,33 @@ function PrincipalAuditPageInner() {
               Retry
             </Button>
           </div>
-        ) : loading ? (
+        ) : showSkeleton ? (
           <div className="relative overflow-x-auto rounded-md border">
             <AuditSkeleton rows={PAGE_SIZE} />
           </div>
         ) : entries.length === 0 ? (
-          <PrincipalEmptyState
-            icon={ShieldCheck}
-            title="No audit entries"
-            hint={
-              query.trim()
-                ? `No audit entries match "${query}".`
-                : hasActiveFilters
-                  ? "No audit entries match the selected filters."
-                  : "Sensitive actions will appear here once recorded."
-            }
-          />
+          <div className={styles.noMatch}>
+            <InsightCallout role="status" className={styles.noMatchCallout}>
+              {query.trim() ? (
+                <>
+                  <strong>No audit entries match “{query.trim()}”.</strong> Try a
+                  different user, reason, or id — or clear the search to see
+                  every entry.
+                </>
+              ) : (
+                <>
+                  <strong>
+                    {hasActiveFilters
+                      ? "No audit entries match the selected filters."
+                      : "No audit entries yet."}
+                  </strong>{" "}
+                  {hasActiveFilters
+                    ? "Try a different action, role, or source table."
+                    : "Sensitive actions will appear here once recorded."}
+                </>
+              )}
+            </InsightCallout>
+          </div>
         ) : (
           <div className="relative">
             <AuditTable entries={entries} />

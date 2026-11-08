@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, GraduationCap } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Pill } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import type { GuidanceGradeAttentionRow } from "@/services/guidance/overview.types";
 import styles from "./guidance-overview.module.css";
@@ -69,6 +70,7 @@ export function GuidanceOverviewGradeTable({
   return (
     <KanbanBoard
       title="Grade levels needing attention"
+      className={styles.boardIn}
       icon={
         <span className="text-primary" aria-hidden>
           <GraduationCap size={14} />
@@ -93,15 +95,17 @@ export function GuidanceOverviewGradeTable({
         />
       ) : (
         <ul className={styles.caseList}>
-          {ranked.map((row) => {
-            const visibleSections = row.sectionsList.slice(0, 3);
-            const hiddenSections = row.sectionsList.length - visibleSections.length;
+          {ranked.map((row, index) => {
             return (
-              <li key={row.short} className={styles.caseRow}>
+              <li
+                key={row.short}
+                className={styles.caseRow}
+                style={{ animationDelay: `${450 + Math.min(index, 11) * 140}ms` }}
+              >
                 <Link
-                  href="/guidance/interventions"
+                  href={`/guidance/interventions?grade=${row.short}&level=All`}
                   className={styles.rowLink}
-                  aria-label={`${row.grade}: ${row.atRisk} at-risk students — open interventions`}
+                  aria-label={`${row.grade}: ${row.atRisk} at-risk students — open interventions filtered to this grade`}
                 >
                   <div className={styles.caseInfo}>
                     <Pill
@@ -116,7 +120,7 @@ export function GuidanceOverviewGradeTable({
                     </Pill>
                   </div>
                   <div className={styles.sectionGroup}>
-                    {visibleSections.map((s) => (
+                    {row.sectionsList.map((s) => (
                       <Pill key={s.name} label="At-risk students in this section">
                         {s.name}
                         <span
@@ -127,9 +131,6 @@ export function GuidanceOverviewGradeTable({
                         </span>
                       </Pill>
                     ))}
-                    {hiddenSections > 0 ? (
-                      <Pill label="More sections not shown">+{hiddenSections}</Pill>
-                    ) : null}
                   </div>
                   <div className={styles.cellActions}>
                     <Pill tone="amber" label="Students at risk in this grade level">
@@ -148,10 +149,12 @@ export function GuidanceOverviewGradeTable({
           })}
         </ul>
       )}
-      <p className={styles.interpretation}>
-        <span className={styles.interpretationLabel}>What it means · </span>
-        {interpretation}
-      </p>
+      <div className={styles.footerSlot}>
+        <InsightCallout className={styles.interpretation} role="status">
+          <span className={styles.interpretationLabel}>What it means · </span>
+          {interpretation}
+        </InsightCallout>
+      </div>
     </KanbanBoard>
   );
 }

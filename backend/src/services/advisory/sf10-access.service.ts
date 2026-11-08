@@ -29,6 +29,8 @@ export interface VerificationRecord {
   verifiedAt: string | null;
   validatedAt: string | null;
   currentVersion: number;
+  /** Most recent Bama auto-fill render, kept separate from the original file. */
+  autoFill: { fileUrl: string; version: number; at: string | null } | null;
 }
 
 export interface HasRow {
@@ -61,6 +63,28 @@ function sf10StatusOf(status: string): HasRow["sf10Status"] {
   return "pending";
 }
 
+/**
+ * Latest Bama auto-fill render for a record. Auto-fill never replaces the
+ * uploaded file (the registrar/record keeper original stays in
+ * `uploadedFileUrl`); each run stores its generated spreadsheet in the version
+ * snapshot, so both files can be offered side by side.
+ */
+function autoFillOf(rec: {
+  versions: Array<{ versionNumber: number; dataSnapshot: unknown; changedAt: Date }>;
+}): VerificationRecord["autoFill"] {
+  for (const v of rec.versions) {
+    const snap = v.dataSnapshot as { engine?: string; generatedFileUrl?: string } | null;
+    if (snap?.engine === "grading-auto-fill-v1" && typeof snap.generatedFileUrl === "string") {
+      return {
+        fileUrl: snap.generatedFileUrl,
+        version: v.versionNumber,
+        at: v.changedAt.toISOString(),
+      };
+    }
+  }
+  return null;
+}
+
 /** Pure helper (unit-tested): trim, drop empties, dedupe, cap at 200 picks. */
 export function normalizePicks(input?: string[]): string[] {
   return [...new Set((input ?? []).map((l) => l.trim()).filter(Boolean))].slice(0, 200);
@@ -75,13 +99,27 @@ export function partitionVerification(
   return { has, missing: rows.length - has, total: rows.length };
 }
 
+/**
+ * Head-count only (no identities, no versions): the request list and the
+ * create-notification only need has/missing. Reusing matchAdvisoryLrns here
+ * pulled every SF10 version snapshot per advisee, which made listing N
+ * requests cost N full board builds.
+ */
 async function countAdvisees(
   sectionId: string,
   onlyLrns?: Set<string>,
+  lrnsPromise?: Promise<Set<string>>,
 ): Promise<{ total: number; has: number; missing: number }> {
-  const rows = await matchAdvisoryLrns(sectionId, onlyLrns ?? new Set(), "");
-  const has = rows.filter((r) => r.rec).length;
-  return { total: rows.length, has, missing: rows.length - has };
+  const all = [...(await (lrnsPromise ?? sectionLrns(sectionId)))];
+  const wanted =
+    onlyLrns && onlyLrns.size > 0 ? all.filter((l) => onlyLrns.has(l)) : all;
+  if (wanted.length === 0) return { total: 0, has: 0, missing: 0 };
+  const withRecords = await prisma.studentProfile.findMany({
+    where: { lrn: { in: wanted }, sf10Records: { some: {} } },
+    select: { lrn: true },
+  });
+  const has = new Set(withRecords.map((r) => r.lrn)).size;
+  return { total: wanted.length, has, missing: wanted.length - has };
 }
 
 interface LrnMatch {
@@ -99,6 +137,11 @@ interface LrnMatch {
     verifiedAt: Date | null;
     validatedAt: Date | null;
     currentVersion: number;
+    versions: Array<{
+      versionNumber: number;
+      dataSnapshot: unknown;
+      changedAt: Date;
+    }>;
   } | null;
 }
 
@@ -155,6 +198,10 @@ async function matchAdvisoryLrns(
           verifiedAt: true,
           validatedAt: true,
           currentVersion: true,
+          versions: {
+            orderBy: { versionNumber: "desc" },
+            select: { versionNumber: true, dataSnapshot: true, changedAt: true },
+          },
         },
       },
     },
@@ -192,27 +239,41 @@ export async function listMyRequests(userId: string): Promise<{ requests: MyAcce
     orderBy: [{ requestedAt: "desc" }],
   });
   const requests: MyAccessRequest[] = [];
-  for (const r of rows) {
-    const picked = new Set(r.requestedLrns ?? []);
-    const counts = r.sectionId
-      ? await countAdvisees(r.sectionId, picked)
-      : { total: 0, has: 0, missing: 0 };
-    requests.push({
-      id: r.id,
-      sectionId: r.sectionId,
-      section: r.section?.name ?? "Unsectioned",
-      gradeLevel: r.gradeLevel as GradeLevel,
-      reason: r.reason,
-      requestedLrns: [...picked],
-      status: r.status as MyAccessRequest["status"],
-      decisionReason: r.decisionReason,
-      requestedAt: r.requestedAt.toISOString(),
-      decidedAt: r.decidedAt?.toISOString() ?? null,
-      total: counts.total,
-      has: counts.has,
-      missing: counts.missing,
-    });
-  }
+  // Every request that shares a section reuses one LRN lookup, and the
+  // per-request counts resolve concurrently (was a serial N+1).
+  const lrnsBySection = new Map<string, Promise<Set<string>>>();
+  const lrnsFor = (sectionId: string) => {
+    let p = lrnsBySection.get(sectionId);
+    if (!p) {
+      p = sectionLrns(sectionId);
+      lrnsBySection.set(sectionId, p);
+    }
+    return p;
+  };
+  const built = await Promise.all(
+    rows.map(async (r) => {
+      const picked = new Set(r.requestedLrns ?? []);
+      const counts = r.sectionId
+        ? await countAdvisees(r.sectionId, picked, lrnsFor(r.sectionId))
+        : { total: 0, has: 0, missing: 0 };
+      return {
+        id: r.id,
+        sectionId: r.sectionId,
+        section: r.section?.name ?? "Unsectioned",
+        gradeLevel: r.gradeLevel as GradeLevel,
+        reason: r.reason,
+        requestedLrns: [...picked],
+        status: r.status as MyAccessRequest["status"],
+        decisionReason: r.decisionReason,
+        requestedAt: r.requestedAt.toISOString(),
+        decidedAt: r.decidedAt?.toISOString() ?? null,
+        total: counts.total,
+        has: counts.has,
+        missing: counts.missing,
+      } satisfies MyAccessRequest;
+    }),
+  );
+  requests.push(...built);
   return { requests };
 }
 
@@ -364,6 +425,7 @@ export async function getMyVerification(userId: string, requestId: string): Prom
           verifiedAt: rec.verifiedAt?.toISOString() ?? null,
           validatedAt: rec.validatedAt?.toISOString() ?? null,
           currentVersion: rec.currentVersion,
+          autoFill: granted ? autoFillOf(rec) : null,
         },
       });
     } else {

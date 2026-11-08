@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchMyRecords, type MyAnecdotalRecord } from "@/components/ocform01/folders";
@@ -18,7 +18,6 @@ export default function TeacherAnecdotalPage() {
   const recordsQuery = useQuery<MyAnecdotalRecord[]>({
     queryKey: ["anecdotal-mine", termKey],
     queryFn: fetchMyRecords,
-    placeholderData: keepPreviousData,
     retry: false,
     staleTime: 60_000,
   });

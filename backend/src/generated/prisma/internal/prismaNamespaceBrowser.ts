@@ -60,6 +60,7 @@ export const ModelName = {
   Term: 'Term',
   Section: 'Section',
   StudentRoster: 'StudentRoster',
+  TermRosterConfirmation: 'TermRosterConfirmation',
   Subject: 'Subject',
   TeacherSubjectAssignment: 'TeacherSubjectAssignment',
   ScheduleConfig: 'ScheduleConfig',
@@ -246,10 +247,25 @@ export const StudentRosterScalarFieldEnum = {
   riskLevel: 'riskLevel',
   academicFlag: 'academicFlag',
   attendanceFlag: 'attendanceFlag',
-  behavioralFlag: 'behavioralFlag'
+  behavioralFlag: 'behavioralFlag',
+  createdAt: 'createdAt',
+  enlistedTermId: 'enlistedTermId'
 } as const
 
 export type StudentRosterScalarFieldEnum = (typeof StudentRosterScalarFieldEnum)[keyof typeof StudentRosterScalarFieldEnum]
+
+
+export const TermRosterConfirmationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  termId: 'termId',
+  kind: 'kind',
+  rosterFingerprint: 'rosterFingerprint',
+  sameAsPrevious: 'sameAsPrevious',
+  acknowledgedAt: 'acknowledgedAt'
+} as const
+
+export type TermRosterConfirmationScalarFieldEnum = (typeof TermRosterConfirmationScalarFieldEnum)[keyof typeof TermRosterConfirmationScalarFieldEnum]
 
 
 export const SubjectScalarFieldEnum = {
@@ -732,6 +748,7 @@ export type AdmFormScalarFieldEnum = (typeof AdmFormScalarFieldEnum)[keyof typeo
 export const AdvisoryModuleScalarFieldEnum = {
   id: 'id',
   sectionId: 'sectionId',
+  termId: 'termId',
   kind: 'kind',
   moduleName: 'moduleName',
   moduleUrl: 'moduleUrl',

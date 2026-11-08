@@ -52,7 +52,7 @@ export async function assertOwnFolder(folderId: string, ownerId: string) {
   return folder;
 }
 
-export async function loadOcForm01Data(recordId: string, requesterId: string, requesterRole: string): Promise<{
+export async function loadOcForm01Data(recordId: string, requesterId: string, requesterRole: string, opts: { signatureBytes?: boolean } = {}): Promise<{
   data: OcForm01Data;
   filename: string;
   recordId: string;
@@ -166,7 +166,11 @@ export async function loadOcForm01Data(recordId: string, requesterId: string, re
       at: record.signedAt.toISOString(),
       imageUrl: record.signatureImageUrl,
     };
-    signatureImage = await loadSignatureBytes(record.signatureImageUrl);
+    // The detail endpoint drops the bytes anyway; only the Excel export needs
+    // them, so skip the remote storage round-trip when they won't be used.
+    if (opts.signatureBytes !== false) {
+      signatureImage = await loadSignatureBytes(record.signatureImageUrl);
+    }
   }
 
   const data: OcForm01Data = {

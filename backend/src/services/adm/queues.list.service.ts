@@ -258,10 +258,19 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
     ),
   ];
   const profileStudentIds = profileItems.map((p) => p.studentId);
-  const sectionModules = sectionIds.length
+  // Section ADM modules are term-scoped, so the merge must read only the term
+  // each case was filed in — never another term's modules.
+  const profileTermIds = [
+    ...new Set(profileItems.map((p) => p.termId).filter((v): v is string => !!v)),
+  ];
+  const sectionModules = sectionIds.length && profileTermIds.length
     ? await prisma.advisoryModule.findMany({
-        where: { sectionId: { in: sectionIds }, kind: "adm" },
-        select: { id: true, sectionId: true },
+        where: {
+          sectionId: { in: sectionIds },
+          kind: "adm",
+          termId: { in: profileTermIds },
+        },
+        select: { id: true, sectionId: true, termId: true },
       })
     : [];
   const sectionSubmissions =
@@ -275,16 +284,17 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
           select: { moduleId: true, studentId: true },
         })
       : [];
-  const sectionByModule = new Map(sectionModules.map((m) => [m.id, m.sectionId]));
+  const sectionByModule = new Map(sectionModules.map((m) => [m.id, m]));
   const sectionModuleCount = new Map<string, number>();
   for (const m of sectionModules) {
-    sectionModuleCount.set(m.sectionId, (sectionModuleCount.get(m.sectionId) ?? 0) + 1);
+    const key = `${m.sectionId}:${m.termId}`;
+    sectionModuleCount.set(key, (sectionModuleCount.get(key) ?? 0) + 1);
   }
   const sectionSubmittedCount = new Map<string, number>();
   for (const s of sectionSubmissions) {
-    const sectionId = sectionByModule.get(s.moduleId);
-    if (!sectionId || !s.studentId) continue;
-    const key = `${s.studentId}:${sectionId}`;
+    const mod = sectionByModule.get(s.moduleId);
+    if (!mod || !s.studentId) continue;
+    const key = `${s.studentId}:${mod.sectionId}:${mod.termId}`;
     sectionSubmittedCount.set(key, (sectionSubmittedCount.get(key) ?? 0) + 1);
   }
 
@@ -304,10 +314,10 @@ export async function listAllReferrals(ctx: AdmContext, query: AllReferralsQuery
     const sectionId = p.student.section?.id ?? null;
     const caseSubmitted = p.modules.filter((m) => m.submitted).length;
     const sectionSubmitted = sectionId
-      ? (sectionSubmittedCount.get(`${p.studentId}:${sectionId}`) ?? 0)
+      ? (sectionSubmittedCount.get(`${p.studentId}:${sectionId}:${p.termId}`) ?? 0)
       : 0;
     const sectionTotal = sectionId
-      ? (sectionModuleCount.get(sectionId) ?? 0)
+      ? (sectionModuleCount.get(`${sectionId}:${p.termId}`) ?? 0)
       : 0;
     const base = {
       id: p.id,

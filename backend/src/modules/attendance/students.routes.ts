@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireOwnershipOrRole, requireRole } from "../../middleware/auth.js";
+import { cache } from "../../lib/cache.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { resolveDisplayTerm } from "./attendance.repository.js";
 import {
   getAtRiskStudents,
@@ -17,6 +19,7 @@ router.get(
   "/at-risk-students",
   requireAuth,
   requireRole("principal", "adviser", "guidance_counselor", "nurse"),
+  cache({ ttl: CACHE_TTLS.semiStatic, tags: [CACHE_TAGS.attendance] }),
   async (req, res, next) => {
     try {
       const session = (req.query.session === "PM" ? "PM" : "AM") as "AM" | "PM";

@@ -29,6 +29,8 @@ export interface VerificationRecord {
   verifiedAt: string | null;
   validatedAt: string | null;
   currentVersion: number;
+  /** Most recent Bama auto-fill render, kept separate from the original file. */
+  autoFill: { fileUrl: string; version: number; at: string | null } | null;
 }
 
 export interface HasRow {

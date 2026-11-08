@@ -108,8 +108,8 @@ export function SchoolTrend() {
       });
       return res.data;
     },
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
   const { resolvedTheme } = useTheme();

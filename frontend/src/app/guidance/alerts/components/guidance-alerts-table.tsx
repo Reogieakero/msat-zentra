@@ -2,32 +2,30 @@
 import * as React from "react";
 import {
   BellRing,
-  ChevronDown,
   Search,
-  SearchX,
-  ShieldAlert,
 } from "lucide-react";
-import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import type { GuidanceRiskLevel } from "@/services/guidance/guidance.types";
 import type {
   AlertCaseType,
   GuidanceAlertCasesSummary,
 } from "@/services/guidance/alerts.types";
 import { useNowTick } from "@/lib/clock";
-import { rowKey, rowRisk, type GuidanceAlertRow, type TypeFilter } from "./guidance-alerts-helpers";
+import {
+  rowKey,
+  rowRisk,
+  rowSearchText,
+  rowType,
+  type GuidanceAlertRow,
+  type TypeFilter,
+} from "./guidance-alerts-helpers";
 import { CaseKanbanRow } from "./guidance-alerts-row";
 import { GuidanceBookedSessionButton } from "./GuidanceAlertsRowActions";
 import { GuidanceCaseDetailDialog } from "../../components/GuidanceCaseDetailDialog";
-import { Pagination } from "@/components/shared/pagination";
+import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import styles from "./guidance-alerts-table.module.css";
 export type { GuidanceAlertRow };
 
@@ -44,63 +42,143 @@ const RISK_OPTIONS: { value: RiskFilter; label: string }[] = [
   { value: "", label: "All risks" },
   { value: "High", label: "High risk" },
   { value: "Moderate", label: "Moderate risk" },
-  { value: "Low", label: "Low risk" },
 ];
 
+/** Pill tab group — same pattern as the record-keeper academics grade tabs. */
+function FilterTabs<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  tone,
+}: {
+  label: string;
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (next: T) => void;
+  tone: "amber" | "blue";
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1" role="tablist" aria-label={label}>
+      {options.map((option) => {
+        const active = value === option.value;
+        return (
+          <button
+            key={option.label}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(option.value)}
+            className="inline-flex cursor-pointer rounded-md p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <Pill tone={active ? tone : "neutral"}>{option.label}</Pill>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
- * Server-paged board: filters, search and paging are query params resolved by
- * `/api/guidance/alerts/cases`, so this component only renders the page it is
- * handed. Low-risk rows never reach the desk — the backend drops them.
+ * Client-side board: the page loads the whole alerts desk once and hands every
+ * row here, so typing in the search box filters instantly with no request (same
+ * behaviour as the adviser-access desk). Low-risk rows never reach the desk —
+ * the backend drops them.
  */
 export function GuidanceAlertsTable({
   rows,
   riskByStudent,
   summary,
-  total,
-  page,
   query,
   type,
   risk,
   onQueryChange,
   onTypeChange,
   onRiskChange,
-  onPageChange,
 }: {
   rows: GuidanceAlertRow[];
   riskByStudent: Record<string, GuidanceRiskLevel>;
   summary: GuidanceAlertCasesSummary;
-  total: number;
-  page: number;
   query: string;
   type: AlertCaseType;
   risk: RiskFilter;
   onQueryChange: (next: string) => void;
   onTypeChange: (next: AlertCaseType) => void;
   onRiskChange: (next: RiskFilter) => void;
-  onPageChange: (next: number) => void;
 }) {
   const [activeRow, setActiveRow] = React.useState<GuidanceAlertRow | null>(null);
+  const [page, setPage] = React.useState(1);
   const now = useNowTick();
   const activeRisk = risk ?? "";
-  const typeLabel = TYPE_OPTIONS.find((o) => o.value === type)?.label ?? "All types";
-  const riskLabel = RISK_OPTIONS.find((o) => o.value === activeRisk)?.label ?? "All risks";
   const hasRows = summary.total > 0;
-  const hasFilters = type !== "" || activeRisk !== "" || query.trim() !== "";
+  const searching = query.trim().length > 0;
+
+  const filteredRows = React.useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (type && rowType(row) !== type) return false;
+      if (activeRisk && rowRisk(row, riskByStudent) !== activeRisk) return false;
+      if (needle && !rowSearchText(row).toLowerCase().includes(needle)) return false;
+      return true;
+    });
+  }, [rows, type, activeRisk, query, riskByStudent]);
+
+  // Any filter change starts the board back at page 1.
+  const changeType = (next: AlertCaseType) => {
+    setPage(1);
+    onTypeChange(next);
+  };
+  const changeRisk = (next: RiskFilter) => {
+    setPage(1);
+    onRiskChange(next);
+  };
+  const changeQuery = (next: string) => {
+    setPage(1);
+    onQueryChange(next);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pageRows = React.useMemo(
+    () => filteredRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [filteredRows, safePage],
+  );
 
   return (
     <>
       <KanbanBoard
         title="Referred cases"
+        className={styles.boardIn}
         icon={
           <span className="text-amber-600 dark:text-amber-400" aria-hidden>
             <BellRing size={14} />
           </span>
         }
-        count={total}
         description={
           hasRows
             ? "Every ADM, counseling, and intervention case on your desk."
             : "No referred cases — nothing needs your attention right now."
+        }
+        headerCenter={
+          hasRows ? (
+            <div className={styles.headerTabs}>
+              <FilterTabs
+                label="Filter cases by type"
+                options={TYPE_OPTIONS}
+                value={type}
+                onChange={(next) => changeType(next as AlertCaseType)}
+                tone="amber"
+              />
+              <span className={styles.tabDivider} aria-hidden />
+              <FilterTabs
+                label="Filter cases by risk"
+                options={RISK_OPTIONS}
+                value={activeRisk}
+                onChange={changeRisk}
+                tone="blue"
+              />
+            </div>
+          ) : null
         }
         actions={
           hasRows ? (
@@ -112,94 +190,38 @@ export function GuidanceAlertsTable({
                   style={{ borderRadius: "16px" }}
                   placeholder="Search by student or keyword…"
                   value={query}
-                  onChange={(e) => onQueryChange(e.target.value)}
+                  onChange={(e) => changeQuery(e.target.value)}
                   aria-label="Search referred cases"
                 />
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Filter cases by type, currently showing: ${typeLabel}`}
-                    className={`${styles.filterBtn} ${type !== "" ? styles.filterActive : ""}`}
-                  >
-                    <span className={styles.filterValue}>{type === "" ? "Type" : typeLabel}</span>
-                    {type !== "" && <span className={styles.filterDot} aria-hidden />}
-                    <ChevronDown aria-hidden />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className={styles.filterMenu}>
-                  {TYPE_OPTIONS.map((item) => (
-                    <DropdownMenuCheckboxItem
-                      key={item.label}
-                      checked={type === item.value}
-                      onCheckedChange={() => onTypeChange(item.value as AlertCaseType)}
-                    >
-                      {item.label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Filter cases by risk, currently showing: ${riskLabel}`}
-                    className={`${styles.filterBtn} ${activeRisk !== "" ? styles.filterActive : ""}`}
-                  >
-                    <ShieldAlert aria-hidden />
-                    <span className={styles.filterValue}>
-                      {activeRisk === "" ? "Risk" : riskLabel.replace(" risk", "")}
-                    </span>
-                    {activeRisk !== "" && <span className={styles.filterDot} aria-hidden />}
-                    <ChevronDown aria-hidden />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className={styles.filterMenu}>
-                  {RISK_OPTIONS.map((item) => (
-                    <DropdownMenuCheckboxItem
-                      key={item.label}
-                      checked={activeRisk === item.value}
-                      onCheckedChange={() => onRiskChange(item.value)}
-                    >
-                      {item.label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           ) : null
         }
         footer={
-          total > 0 ? (
-            <Pagination currentPage={page} totalItems={total} onPageChange={onPageChange} />
+          filteredRows.length > 0 ? (
+            <Pagination
+              currentPage={safePage}
+              totalItems={filteredRows.length}
+              onPageChange={setPage}
+            />
           ) : null
         }
       >
-        {!hasRows ? (
-          <GuidanceEmptyState
-            icon={BellRing}
-            title="No referred cases"
-            hint="No referred cases — nothing needs your attention right now."
-          />
-        ) : rows.length === 0 ? (
-          <GuidanceEmptyState
-            icon={SearchX}
-            title="No cases match your filters"
-            hint={
-              hasFilters
-                ? "Try a different name or keyword, or clear the search and filters."
-                : "Nothing on this page — try an earlier one."
-            }
-          />
+        {filteredRows.length === 0 ? (
+          <div className="flex w-full justify-center py-6">
+            <InsightCallout role="status">
+              {searching
+                ? `No cases match “${query.trim()}”.`
+                : "No cases match your filters."}
+            </InsightCallout>
+          </div>
         ) : (
           <ul className={styles.caseList} aria-label="Cases on the guidance desk">
-            {rows.map((row) => (
+            {pageRows.map((row, index) => (
               <CaseKanbanRow
                 key={rowKey(row)}
                 row={row}
+                index={index}
                 riskLevel={rowRisk(row, riskByStudent)}
                 now={now}
                 onOpen={() => setActiveRow(row)}

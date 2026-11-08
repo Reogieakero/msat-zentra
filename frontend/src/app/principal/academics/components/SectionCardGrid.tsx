@@ -5,6 +5,7 @@ import { Users, Flame, Gauge, BookOpen, ShieldAlert, ShieldCheck } from "lucide-
 import { Pill } from "@/components/ui/pill";
 import type { SectionSummary } from "@/services/principal/academics";
 import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
+import { SectionCardSkeleton } from "./SectionCardSkeleton";
 import styles from "./SectionCardGrid.module.css";
 
 interface SectionCardGridProps {
@@ -36,7 +37,7 @@ export function SectionCardGrid({
       {loading && sections.length === 0 ? (
         <div className={styles.grid} aria-hidden>
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className={styles.skeletonCard} />
+            <SectionCardSkeleton key={i} />
           ))}
         </div>
       ) : sections.length === 0 ? (

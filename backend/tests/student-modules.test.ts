@@ -78,7 +78,7 @@ beforeEach(() => {
 describe("student module list", () => {
   it("404s when the account has no learner profile", async () => {
     mocks.studentFindUnique.mockResolvedValue(null);
-    await expect(listStudentModules({ userId: "x" }, { page: 1, pageSize: 15 })).rejects.toMatchObject({
+    await expect(listStudentModules({ userId: "x", termId: "term-1" }, { page: 1, pageSize: 15 })).rejects.toMatchObject({
       status: 404,
     });
   });
@@ -99,7 +99,7 @@ describe("student module list", () => {
       },
     ]);
 
-    const res = await listStudentModules({ userId: "student-1" }, { page: 1, pageSize: 15 });
+    const res = await listStudentModules({ userId: "student-1", termId: "term-1" }, { page: 1, pageSize: 15 });
 
     expect(res.section).toMatchObject({ id: "sec-1", name: "G7-A" });
     expect(res.data[0]).toMatchObject({ id: "mod-1", submitted: true, status: "submitted" });
@@ -110,7 +110,7 @@ describe("student module list", () => {
     mocks.moduleFindMany.mockResolvedValue([
       { ...ADM_MODULE, dueDate: new Date("2026-01-01T00:00:00Z") },
     ]);
-    const res = await listStudentModules({ userId: "student-1" }, { page: 1, pageSize: 15 });
+    const res = await listStudentModules({ userId: "student-1", termId: "term-1" }, { page: 1, pageSize: 15 });
     expect(res.data[0]?.status).toBe("overdue");
   });
 });
@@ -119,7 +119,7 @@ describe("student submission", () => {
   it("rejects a module outside the learner's section", async () => {
     mocks.moduleFindFirst.mockResolvedValue(null);
     await expect(
-      submitStudentLink({ userId: "student-1" }, "mod-other", {
+      submitStudentLink({ userId: "student-1", termId: "term-1" }, "mod-other", {
         submissionUrl: "https://drive.example/x",
       }),
     ).rejects.toBeInstanceOf(AppError);
@@ -128,7 +128,7 @@ describe("student submission", () => {
   it("rejects post-only general modules", async () => {
     mocks.moduleFindFirst.mockResolvedValue({ ...ADM_MODULE, kind: "general" });
     await expect(
-      submitStudentLink({ userId: "student-1" }, "mod-1", {
+      submitStudentLink({ userId: "student-1", termId: "term-1" }, "mod-1", {
         submissionUrl: "https://drive.example/x",
       }),
     ).rejects.toMatchObject({ status: 409 });
@@ -138,7 +138,7 @@ describe("student submission", () => {
     mocks.moduleFindFirst.mockResolvedValue(ADM_MODULE);
     mocks.submissionFindFirst.mockResolvedValue(null);
 
-    const id = await submitStudentLink({ userId: "student-1" }, "mod-1", {
+    const id = await submitStudentLink({ userId: "student-1", termId: "term-1" }, "mod-1", {
       submissionUrl: "https://drive.example/answer",
     });
 
@@ -165,7 +165,7 @@ describe("student submission", () => {
     mocks.submissionFindFirst.mockResolvedValue(null);
 
     await uploadStudentSubmission(
-      { userId: "student-1" },
+      { userId: "student-1", termId: "term-1" },
       "mod-1",
       { kind: "physical", remarks: null },
       {

@@ -9,12 +9,20 @@ import {
   humanizeCategory,
 } from "@/components/anecdotal/anecdotal-record-kanban-card";
 import { Button } from "@/components/ui/button";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
-import { HelpCircle, SearchX } from "lucide-react";
-import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
+import { rowStatusHelp } from "@/lib/labels/referral-status";
+import { HelpCircle } from "lucide-react";
 import type { GuidanceAnecdotalRecord } from "@/services/guidance/anecdotal.types";
 import {
-  GuidanceAnecdotalFilters,
+  GuidanceAnecdotalSearch,
+  GuidanceAnecdotalTypeTabs,
   type TypeFilter,
 } from "./guidance-anecdotal-filters";
 import { Pagination } from "@/components/shared/pagination";
@@ -108,6 +116,13 @@ function statusLabel(record: GuidanceAnecdotalRecord): string {
   }
 }
 
+function statusHelp(record: GuidanceAnecdotalRecord): string {
+  if (isEndorsedCase(record.referralType, record.referralStatus)) {
+    return "Endorsed to the ADM coordinator — the case is no longer handled on this desk.";
+  }
+  return rowStatusHelp(record.referralType ?? "", record.referralStatus);
+}
+
 export function GuidanceAnecdotalFolders({
   records,
   page,
@@ -134,6 +149,9 @@ export function GuidanceAnecdotalFolders({
     }
   };
 
+  const activeTypeLabel =
+    type === "ADM" ? "ADM consultation" : type === "Counseling" ? "Counseling" : "";
+
   return (
     <>
       <div className={styles.panel}>
@@ -156,23 +174,27 @@ export function GuidanceAnecdotalFolders({
               read its GCForm-01.
             </p>
           </div>
+          <div className={styles.headerCenter}>
+            <GuidanceAnecdotalTypeTabs type={type} onTypeChange={onTypeChange} />
+          </div>
           <div className={styles.headerActions}>
-            <GuidanceAnecdotalFilters
-              query={query}
-              onQueryChange={onQueryChange}
-              type={type}
-              onTypeChange={onTypeChange}
-            />
+            <GuidanceAnecdotalSearch query={query} onQueryChange={onQueryChange} />
           </div>
         </div>
         <div className={styles.content}>
           <div className={styles.scrollArea}>
           {records.length === 0 ? (
-            <GuidanceEmptyState
-              icon={SearchX}
-              title="No referred records here"
-              hint="Try a different name or keyword, or clear the filter to see every referred case."
-            />
+            <div className="flex w-full justify-center py-6">
+              <InsightCallout role="status" className="w-full max-w-xl text-left">
+                {query.trim() !== ""
+                  ? `No referred records match “${query.trim()}”${
+                      activeTypeLabel ? ` in ${activeTypeLabel}` : ""
+                    }.`
+                  : activeTypeLabel
+                    ? `No ${activeTypeLabel} records on this page.`
+                    : "No referred records on this page."}
+              </InsightCallout>
+            </div>
           ) : (
             <div className={styles.studentGrid}>
               {records.map((record) => (
@@ -182,6 +204,7 @@ export function GuidanceAnecdotalFolders({
                   studentName={record.student}
                   plainName
                   mascotSeed={record.lrn}
+                  mascotCharacter={record.mascot ?? undefined}
                   lrn={record.lrn}
                   metaText={record.section}
                   metaTitle={`Section ${record.section}`}
@@ -190,13 +213,21 @@ export function GuidanceAnecdotalFolders({
                   fileName={`GCForm-01_${record.date}`}
                   fileTag={`${humanizeCategory(record.category)} • ${timeAgo(record.date)}`}
                   headerRight={
-                    <Badge
-                      variant={statusVariant(record)}
-                      className="shrink-0 rounded-md"
-                      title={statusLabel(record)}
-                    >
-                      {statusLabel(record)}
-                    </Badge>
+                    <TooltipProvider delayDuration={150}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant={statusVariant(record)}
+                            className="shrink-0 rounded-md"
+                          >
+                            {statusLabel(record)}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {statusHelp(record)}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   }
                   openLabel={`Preview ${record.student}'s record from ${record.date}`}
                   onOpen={() => openRecord(record)}

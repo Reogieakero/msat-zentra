@@ -85,6 +85,9 @@ export async function getLiveHonorRoll(scope?: {
       ...(resolvedYearId ? { schoolYearId: resolvedYearId } : {}),
       ...(scope?.sectionId ? { id: scope.sectionId } : {}),
       ...(scope?.gradeLevel ? { gradeLevel: scope.gradeLevel as GradeLevel } : {}),
+      // Only sections whose adviser opted in to sharing student data may ever
+      // contribute an awardee; filter at the DB so nothing unshared is loaded.
+      adviser: { staffProfile: { shareStudentData: true } },
     },
     select: {
       id: true,

@@ -194,7 +194,7 @@ export function ScheduleTable({
                         <span className="inline-flex items-center gap-1">
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="secondary"
                             size="xs"
                             className="h-6 px-1.5 text-[11px]"
                             onClick={() => onReview?.(section)}
@@ -205,7 +205,7 @@ export function ScheduleTable({
                           </Button>
                           <Button
                             asChild
-                            variant="ghost"
+                            variant="default"
                             size="xs"
                             className="h-6 px-1.5 text-[11px]"
                           >

@@ -859,11 +859,30 @@
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 60%);
 }
 
-/* Rows cascade in on mount — same entrance as the nurse case board. */
-@keyframes case-card-in {
+/* Board entrance + row cascade — same motion as the alerts desk: the board
+   slides in, then each card rises in turn via the inline animationDelay. */
+.boardIn {
+  animation: board-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  /* Clip the entrance motion so translated cards can't spurt past the board
+     edge and flash a page scrollbar while the animation runs. */
+  overflow: clip;
+}
+
+@keyframes board-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -872,11 +891,24 @@
 }
 
 .caseList > .caseRow {
-  animation: case-card-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation: card-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Retry spinner — referenced by the page's error card. */
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .caseList > .caseRow {
+  .boardIn,
+  .caseList > .caseRow,
+  .spin {
     animation: none;
   }
   .caseRow,
@@ -1053,19 +1085,11 @@
   color: #60a5fa;
 }
 
-/* Kanban skeleton rows. */
-.skelCaseRow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.625rem;
-  border-radius: var(--radius-md);
-}
-
-/* Kanban skeleton cards (same 3/2/1 grid shell as the real cards). */
+/* Kanban skeleton cards (same 4/3/2/1 grid + card shell as the real cards). */
 .skelCaseRow {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 0.5rem;
   padding: 0.75rem;
   border: 1px solid var(--border);

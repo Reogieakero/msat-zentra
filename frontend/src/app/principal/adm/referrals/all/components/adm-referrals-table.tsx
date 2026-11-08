@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeftRight, Check, FolderOpen, ShieldCheck } from "lucide-react";
+import { ArrowLeftRight, Check, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -12,8 +12,8 @@ import {
 import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import {
   admStageTone,
   eligibilityLabel,
@@ -71,7 +71,6 @@ const COLUMNS = [
 
 export function AdmReferralsTable({
   rows,
-  totalCount,
   loading,
   isFetching = false,
   error,
@@ -84,7 +83,6 @@ export function AdmReferralsTable({
   onRetry,
 }: {
   rows: AdmReferralRow[];
-  totalCount: number;
   loading: boolean;
   isFetching?: boolean;
   error: string | null;
@@ -136,17 +134,23 @@ export function AdmReferralsTable({
     );
   }
 
-  if (totalCount === 0) {
+  if (visibleRows.length === 0) {
     return (
-      <PrincipalEmptyState
-        icon={ShieldCheck}
-        title="No referrals found"
-        hint={
-          search.trim()
-            ? `No referrals match "${search}".`
-            : "Endorsed cases will appear here once filed."
-        }
-      />
+      <div className={styles.noMatch}>
+        <InsightCallout role="status" className={styles.noMatchCallout}>
+          {search ? (
+            <>
+              <strong>No ADM cases match “{search}”.</strong> Try a different
+              name, LRN, or ID — or clear the search to see every endorsed case.
+            </>
+          ) : (
+            <>
+              <strong>No cases match the selected filter.</strong> Try a
+              different approval lane.
+            </>
+          )}
+        </InsightCallout>
+      </div>
     );
   }
 
@@ -157,17 +161,7 @@ export function AdmReferralsTable({
     >
       <Table className="w-full" aria-label="ADM referral cases">
         <TableBody>
-          {visibleRows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={COLUMNS.length}
-                className="h-24 text-center text-sm text-muted-foreground"
-              >
-                No cases in this lane on this page.
-              </TableCell>
-            </TableRow>
-          ) : (
-            visibleRows.map((row) => {
+          {visibleRows.map((row) => {
               const awaiting = isAwaitingSignature(asCase(row));
               const returned = row.returnedAt !== null;
               const signed = row.approvedBy !== null;
@@ -302,8 +296,7 @@ export function AdmReferralsTable({
                   </TableCell>
                 </TableRow>
               );
-            })
-          )}
+            })}
         </TableBody>
       </Table>
     </div>

@@ -11,11 +11,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Archive, Info, SearchX, Send } from "lucide-react";
-import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
+import { Archive, Info, Send } from "lucide-react";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import type { GuidanceAnecdotalRecord } from "@/services/guidance/anecdotal.types";
 import {
-  GuidanceAnecdotalFilters,
+  GuidanceAnecdotalSearch,
+  GuidanceAnecdotalTypeTabs,
   type TypeFilter,
 } from "@/app/guidance/anecdotal/components/guidance-anecdotal-filters";
 import { Pagination } from "@/components/shared/pagination";
@@ -89,17 +90,26 @@ export function GuidanceSessionDocumentsFolders({
     setGalleryIndex(index);
   };
 
+  const activeTypeLabel =
+    type === "ADM" ? "ADM consultation" : type === "Counseling" ? "Counseling" : "";
+
   return (
     <>
       <section aria-label="Session documents" className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <GuidanceAnecdotalFilters
-            query={query}
-            onQueryChange={onQueryChange}
-            type={type}
-            onTypeChange={onTypeChange}
-          />
-          <TooltipProvider delayDuration={100}>
+        <div className={styles.header}>
+          <div className={styles.headerText}>
+            <h2 className={styles.sectionTitle}>Filed session images</h2>
+            <p className={styles.sectionDesc}>
+              Images counselors filed on sessions — {total} folder{total === 1 ? "" : "s"} in
+              all. Open a folder to view its photos.
+            </p>
+          </div>
+          <div className={styles.headerCenter}>
+            <GuidanceAnecdotalTypeTabs type={type} onTypeChange={onTypeChange} />
+          </div>
+          <div className={styles.headerActions}>
+            <GuidanceAnecdotalSearch query={query} onQueryChange={onQueryChange} />
+            <TooltipProvider delayDuration={100}>
             <div className={styles.helpWrap} ref={helpRef}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -194,14 +204,21 @@ export function GuidanceSessionDocumentsFolders({
               </div>
             </div>
           </TooltipProvider>
+          </div>
         </div>
 
         {records.length === 0 ? (
-          <GuidanceEmptyState
-            icon={SearchX}
-            title="No session documents here"
-            hint="Try a different name or keyword, or clear the filter to see every filed image. GCForm-01 reports live on the Anecdotal Records page."
-          />
+          <div className="flex w-full justify-center py-6">
+            <InsightCallout role="status" className="w-full max-w-xl text-left">
+              {query.trim() !== ""
+                ? `No session documents match “${query.trim()}”${
+                    activeTypeLabel ? ` in ${activeTypeLabel}` : ""
+                  }.`
+                : activeTypeLabel
+                  ? `No ${activeTypeLabel} session documents on this page.`
+                  : "No session documents on this page."}
+            </InsightCallout>
+          </div>
         ) : (
           <>
             <div

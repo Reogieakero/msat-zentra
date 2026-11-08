@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import {
@@ -50,10 +50,19 @@ const AMBER_RAMP = [
 
 type RailKey = "detected" | "risk" | "mix";
 
-function riskBadgeVariant(level: string): "red" | "amber" | "outline" {
+function riskPillTone(level: string): PillTone {
   if (level === "High") return "red";
   if (level === "Moderate") return "amber";
-  return "outline";
+  return "neutral";
+}
+
+/** Shared pill for a risk level, with its built-in hover/focus tooltip. */
+function RiskLevelBadge({ level }: { level: string }) {
+  return (
+    <Pill tone={riskPillTone(level)} label={`${level} risk`}>
+      {level}
+    </Pill>
+  );
 }
 
 function detectionMs(detectedAt: string | null): number | null {
@@ -118,6 +127,7 @@ function GutterIconButton({
 function RailCaseRow({
   name,
   seed,
+  character,
   href,
   meta,
   badge,
@@ -125,6 +135,7 @@ function RailCaseRow({
 }: {
   name: string;
   seed: string;
+  character?: string | null;
   href: string;
   meta: React.ReactNode;
   badge?: React.ReactNode;
@@ -133,7 +144,7 @@ function RailCaseRow({
   return (
     <li>
       <Link className={styles.rowLink} href={href} onClick={onNavigate}>
-        <StudentMascot name={name} seed={seed} size={28} />
+        <StudentMascot name={name} seed={seed} character={character ?? undefined} size={28} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-xs font-semibold">{name}</span>
           <span className="block truncate text-[11px] text-muted-foreground">{meta}</span>
@@ -172,12 +183,11 @@ function LatestDetectedPanel({
             key={s.studentKey}
             name={s.student}
             seed={s.lrn ?? s.student}
+            character={s.mascot}
             href={`/guidance/interventions?highlight=${encodeURIComponent(s.studentKey)}`}
             meta={at === null ? "Detection time unknown" : `Detected ${formatElapsed(now - at)}`}
             badge={
-              <Badge variant={riskBadgeVariant(s.riskLevel)} className="rounded-md">
-                {s.riskLevel}
-              </Badge>
+              <RiskLevelBadge level={s.riskLevel} />
             }
             onNavigate={onNavigate}
           />
@@ -215,6 +225,7 @@ function RiskWatchPanel({
               key={`${s.kind}-${s.id}`}
               name={s.student}
               seed={s.lrn || s.student}
+              character={s.mascot}
               href={
                 s.track === "intervention"
                   ? `/guidance/interventions?highlight=${encodeURIComponent(s.id)}`
@@ -222,9 +233,7 @@ function RiskWatchPanel({
               }
               meta={`${s.lrn} | High risk`}
               badge={
-                <Badge variant="red" className="rounded-md">
-                  High
-                </Badge>
+                <RiskLevelBadge level="High" />
               }
               onNavigate={onNavigate}
             />
@@ -407,7 +416,7 @@ export function GuidanceAlertsSideRail({
       icon: Radar,
       title: "Latest detected",
       count: summary.detected,
-      accent: "text-primary",
+      accent: "text-amber-500",
       description: "Newest engine-flagged students for intervention.",
     },
     {
@@ -415,7 +424,7 @@ export function GuidanceAlertsSideRail({
       icon: Flame,
       title: "Risk watch",
       count: summary.urgentCount,
-      accent: "text-red-500",
+      accent: "text-amber-500",
       description: "High-risk students on the desk, in plain words.",
     },
     {
@@ -463,7 +472,7 @@ export function GuidanceAlertsSideRail({
                   <TooltipContent side="left" sideOffset={10}>
                     <span className="font-medium">{a.title}</span>
                     <span className="opacity-60">
-                      {a.count > 0 ? `${a.count} on the desk` : "All clear"}
+                      {a.count > 0 ? `${a.count} pending` : "All caught up"}
                     </span>
                   </TooltipContent>
                 </Tooltip>

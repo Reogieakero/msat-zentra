@@ -4,6 +4,7 @@ import { validate } from "../../middleware/validate.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
 import { etag } from "../../lib/etag.js";
 import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
+import { resolveActiveTermId } from "../../services/risk.js";
 import { admModuleUpdateSchema } from "./adm.schemas.js";
 import {
   getCoordinatorMonitoredCase,
@@ -50,7 +51,13 @@ router.get(
   etag(),
   async (req, res, next) => {
     try {
-      res.json(await getMonitoredCase(req.user!.id, String(req.params.caseId)));
+      res.json(
+        await getMonitoredCase(
+          req.user!.id,
+          String(req.params.caseId),
+          await resolveActiveTermId(req),
+        ),
+      );
     } catch (e) {
       next(e);
     }
@@ -69,6 +76,7 @@ router.patch(
         String(req.params.caseId),
         String(req.params.moduleId),
         req.body as AdmModuleInput,
+        await resolveActiveTermId(req),
       );
       await invalidateTags([...MONITORING_TAGS, CACHE_TAGS.overview]);
       res.json(updated);

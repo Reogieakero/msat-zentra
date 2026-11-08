@@ -3,21 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  Award,
-  UserCheck,
-  ShieldQuestion,
-  FileBarChart,
-  FileText,
-  BookOpen,
-  Settings,
-  Upload,
-  type LucideIcon,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import styles from "./record-keeper-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { NAV_ICONS } from "./nav/sidebar-icons";
 import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
@@ -37,23 +27,23 @@ export const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { title: "Overview", href: "/record-keeper/overview", icon: LayoutDashboard },
+      { title: "Overview", href: "/record-keeper/overview", icon: NAV_ICONS.overview },
     ],
   },
   {
     label: "Records",
     items: [
-      { title: "Final Grades", href: "/record-keeper/final-grades", icon: Award },
-      { title: "Account Approvals", href: "/record-keeper/accounts", icon: UserCheck },
+      { title: "Final Grades", href: "/record-keeper/final-grades", icon: NAV_ICONS.finalGrades },
+      { title: "Account Approvals", href: "/record-keeper/accounts", icon: NAV_ICONS.accountApprovals },
       {
         title: "Adviser Access Requests",
         href: "/record-keeper/adviser-access",
-        icon: ShieldQuestion,
+        icon: NAV_ICONS.adviserAccessRequests,
       },
-      { title: "Report Cards", href: "/record-keeper/report-cards", icon: FileBarChart },
-      { title: "SF10 Records", href: "/record-keeper/sf10", icon: FileText },
-      { title: "Upload SF10", href: "/record-keeper/sf10/upload", icon: Upload },
-      { title: "Subjects", href: "/record-keeper/academics", icon: BookOpen },
+      { title: "Report Cards", href: "/record-keeper/report-cards", icon: NAV_ICONS.reportCards },
+      { title: "SF10 Records", href: "/record-keeper/sf10", icon: NAV_ICONS.sf10Records },
+      { title: "Upload SF10", href: "/record-keeper/sf10/upload", icon: NAV_ICONS.uploadSf10 },
+      { title: "Subjects", href: "/record-keeper/academics", icon: NAV_ICONS.subjects },
     ],
   },
   {
@@ -62,7 +52,7 @@ export const NAV: NavGroup[] = [
       {
         title: "General Settings",
         href: "/record-keeper/settings",
-        icon: Settings,
+        icon: NAV_ICONS.settings,
       },
     ],
   },

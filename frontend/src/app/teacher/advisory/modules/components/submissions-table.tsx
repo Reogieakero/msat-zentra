@@ -13,6 +13,7 @@ import { Pill, type PillTone } from "@/components/ui/pill";
 import { Pagination } from "@/components/shared/pagination";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { toSlug } from "@/lib/slug";
+import motion from "./modules-motion.module.css";
 import type {
   AdvisoryModuleStatus,
   AdvisorySubmissionKind,
@@ -93,14 +94,15 @@ function AnswerLink({ row }: { row: AdvisorySubmissionRow }) {
   return <span className="text-[11px] text-muted-foreground">No answer yet</span>;
 }
 
-function SubmissionCard({ row }: { row: AdvisorySubmissionRow }) {
+function SubmissionCard({ row, index }: { row: AdvisorySubmissionRow; index: number }) {
   const status = STATUS[row.status];
   const StatusIcon = status.icon;
   const submittedOn = row.submittedAt ? dateLabel(row.submittedAt) : "Not yet";
 
   return (
     <article
-      className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 transition-colors [font-family:var(--font-inter)] hover:border-primary/60 hover:shadow dark:bg-muted/20"
+      style={{ "--card-index": Math.min(index, 9) } as React.CSSProperties}
+      className={`${motion.card} flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 transition-colors [font-family:var(--font-inter)] hover:border-primary/60 hover:shadow dark:bg-muted/20`}
       aria-label={`${row.name}, ${status.label}`}
     >
       <div className="-mx-2.5 flex min-w-0 items-center justify-between gap-1.5 border-b border-border px-3.5 pb-2">
@@ -191,7 +193,7 @@ export function SubmissionsTable({
 }) {
   return (
     <section
-      className="flex min-w-0 flex-col gap-3"
+      className={`${motion.reveal} flex min-w-0 flex-col gap-3`}
       aria-label="Student submissions"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -222,9 +224,9 @@ export function SubmissionsTable({
           role="list"
           aria-label="Learner submissions"
         >
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <div key={row.key} role="listitem" className="min-w-0">
-              <SubmissionCard row={row} />
+              <SubmissionCard row={row} index={index} />
             </div>
           ))}
         </div>

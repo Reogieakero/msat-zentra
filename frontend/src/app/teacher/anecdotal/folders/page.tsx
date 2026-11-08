@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,6 @@ export default function AnecdotalFoldersPage() {
   const recordsQuery = useQuery<MyAnecdotalRecord[]>({
     queryKey: ["anecdotal-mine", termKey],
     queryFn: fetchMyRecords,
-    placeholderData: keepPreviousData,
   });
 
   const students = useMemo(

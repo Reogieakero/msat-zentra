@@ -53,7 +53,7 @@ export function RiskLevelDistribution() {
       const res = await apiClient.get<RiskBoardData>("/api/risk/board");
       return res.data;
     },
-    staleTime: 15_000,
+    staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
 

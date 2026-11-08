@@ -6,6 +6,7 @@ import { Info } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import {
   Tooltip,
   TooltipContent,
@@ -91,17 +92,9 @@ export function FolderLegendCard({ variant = "category" }: { variant?: "category
       <ul className="flex min-w-0 flex-row flex-wrap content-center items-center justify-center gap-1.5" aria-label="Legend categories">
         {entries.map((e) => (
           <li key={e.label} className="flex">
-            <span
-              className="inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold leading-tight"
-              style={{
-                color: e.color,
-                borderColor: `color-mix(in srgb, ${e.color} 40%, transparent)`,
-                backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
-              }}
-              title={`${e.label} — ${e.hint}`}
-            >
+            <Pill tone={e.tone} label={e.hint}>
               {e.label}
-            </span>
+            </Pill>
           </li>
         ))}
       </ul>
@@ -111,22 +104,22 @@ export function FolderLegendCard({ variant = "category" }: { variant?: "category
 
 type LegendVariant = "category" | "docs";
 
-type LegendEntry = { key: string; label: string; hint: string; color: string };
+export type LegendEntry = { key: string; label: string; hint: string; tone: PillTone };
 
-function getLegendEntries(variant: LegendVariant): LegendEntry[] {
+export function getLegendEntries(variant: LegendVariant): LegendEntry[] {
   if (variant === "docs") {
     return [
-      { key: "counseling", label: "Counseling", hint: "Referral cases", color: "#f59e0b" },
-      { key: "intervention", label: "Intervention", hint: "Follow-up docs", color: "var(--primary)" },
-      { key: "adm", label: "ADM", hint: "By category", color: "var(--muted-foreground)" },
+      { key: "counseling", label: "Counseling", hint: "Referral cases", tone: "amber" },
+      { key: "intervention", label: "Intervention", hint: "Follow-up docs", tone: "teal" },
+      { key: "adm", label: "ADM", hint: "By category", tone: "neutral" },
     ];
   }
   return [
-    { key: "behavioral", label: "Behavioral", hint: "Conduct and classroom behavior", color: CATEGORY_COLORS.behavioral },
-    { key: "bullying", label: "Bullying", hint: "Peer conflict and bullying", color: CATEGORY_COLORS.bullying },
-    { key: "academic", label: "Academic", hint: "Learning and performance", color: CATEGORY_COLORS.academic },
-    { key: "attendance", label: "Attendance", hint: "Absences and tardiness", color: CATEGORY_COLORS.attendance },
-    { key: "health", label: "Health", hint: "Wellness and clinic notes", color: CATEGORY_COLORS.health },
+    { key: "behavioral", label: "Behavioral", hint: "Conduct and classroom behavior", tone: "amber" },
+    { key: "bullying", label: "Bullying", hint: "Peer conflict and bullying", tone: "red" },
+    { key: "academic", label: "Academic", hint: "Learning and performance", tone: "blue" },
+    { key: "attendance", label: "Attendance", hint: "Absences and tardiness", tone: "green" },
+    { key: "health", label: "Health", hint: "Wellness and clinic notes", tone: "violet" },
   ];
 }
 
@@ -331,17 +324,9 @@ export function AnecdotalSidebar({ variant = "category" }: { variant?: LegendVar
                 <ul className="flex min-w-0 flex-row flex-wrap content-center items-center justify-center gap-1.5" aria-label="Legend categories">
                   {entries.map((e) => (
                     <li key={e.label} className="flex">
-                      <span
-                        className="inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold leading-tight"
-                        style={{
-                          color: e.color,
-                          borderColor: `color-mix(in srgb, ${e.color} 40%, transparent)`,
-                          backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
-                        }}
-                        title={`${e.label} — ${e.hint}`}
-                      >
+                      <Pill tone={e.tone} label={e.hint}>
                         {e.label}
-                      </span>
+                      </Pill>
                     </li>
                   ))}
                 </ul>

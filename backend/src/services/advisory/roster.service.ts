@@ -73,6 +73,7 @@ export async function enlistRoster(
       gradeLevel: section.gradeLevel,
       sectionId: section.id,
       schoolYearId: yearId,
+      enlistedTermId: ctx.termId ?? null,
     },
     include: { section: { select: { name: true } } },
   });

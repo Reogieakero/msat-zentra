@@ -8,6 +8,7 @@ import type { InterventionContext } from "./intervention.types.js";
 
 export interface QueueQuery {
   level: string;
+  grade: string | null;
   factor: "Academic" | "Attendance" | "Behavioral" | null;
   mineOnly: boolean;
   outcome: string;
@@ -21,8 +22,9 @@ export interface QueueQuery {
 
 export async function listQueue(ctx: InterventionContext, query: QueueQuery, termScope?: TermScopeInput) {
   const me = ctx.userId;
-  const { levelFilter, factorFilter, mineOnly, outcomeFilter, q, page, pageSize } = {
+  const { levelFilter, gradeFilter, factorFilter, mineOnly, outcomeFilter, q, page, pageSize } = {
     levelFilter: query.level,
+    gradeFilter: query.grade,
     factorFilter: query.factor,
     mineOnly: query.mineOnly,
     outcomeFilter: query.outcome,
@@ -50,6 +52,7 @@ export async function listQueue(ctx: InterventionContext, query: QueueQuery, ter
     const recovered =
       s.riskLevel === "Low" && s.intervention?.outcomeStatus === "ongoing";
     if (levelFilter !== "All" && s.riskLevel !== levelFilter && !recovered) return false;
+    if (gradeFilter && s.gradeLevel !== gradeFilter) return false;
     if (factorKey && !s.factors[factorKey as keyof typeof s.factors]) return false;
     if (mineOnly && s.intervention?.assignedTo !== me) return false;
 
@@ -133,6 +136,8 @@ export async function listQueue(ctx: InterventionContext, query: QueueQuery, ter
     grade: GRADE_LABELS[s.gradeLevel] ?? "",
     riskLevel: s.riskLevel,
     riskCount: s.riskCount,
+    // The learner's own profile mascot — the same one the adviser's roster shows.
+    mascot: s.mascot ?? null,
 
     detectedAt: s.snapshotDate ?? null,
     factors: s.factors,

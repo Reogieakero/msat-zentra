@@ -19,6 +19,7 @@ import { useTerm } from "@/lib/term/TermContext";
 import { Button } from "@/components/ui/button";
 import { InsightCallout } from "@/components/ui/insight-callout";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Pill } from "@/components/ui/pill";
 import {
   Select,
   SelectContent,
@@ -60,7 +61,7 @@ interface SectionSubjectMatrix {
 
 interface AttendanceRow {
   student: AttendanceMatrixStudent;
-  avg: number;
+  avg: number | null;
 }
 
 export default function AdvisoryAttendancePage() {
@@ -159,12 +160,14 @@ export default function AdvisoryAttendancePage() {
               >
                 {formatSurnameFirst(row.original.student.name)}
               </span>
-              <span
-                className="mt-1 inline-flex max-w-full shrink-0 items-center truncate rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground"
+              <Pill
+                tone="neutral"
+                label="LRN"
+                className="mt-1 max-w-full truncate"
                 title={row.original.student.lrn}
               >
                 {row.original.student.lrn}
-              </span>
+              </Pill>
             </div>
           </div>
         ),
@@ -180,7 +183,9 @@ export default function AdvisoryAttendancePage() {
           <span
             className={`text-[13px] font-semibold tabular-nums ${attendanceRateClass(row.original.avg)}`}
           >
-            {`${Math.round(row.original.avg * 100)}%`}
+            {row.original.avg === null
+              ? "—"
+              : `${Math.round(row.original.avg * 100)}%`}
           </span>
         ),
       },
@@ -373,7 +378,10 @@ export default function AdvisoryAttendancePage() {
                         table.getRowModel().rows.map((row) => {
                           const isSelected =
                             row.original.student.studentId === selectedId;
-                          const pct = Math.round(row.original.avg * 100);
+                          const pct =
+                            row.original.avg === null
+                              ? null
+                              : Math.round(row.original.avg * 100);
                           return (
                             <TableRow
                               key={row.id}
@@ -386,7 +394,7 @@ export default function AdvisoryAttendancePage() {
                               }}
                               tabIndex={0}
                               aria-selected={isSelected}
-                              aria-label={`${row.original.student.name}, ${pct} percent present — open subject breakdown`}
+                              aria-label={`${row.original.student.name}, ${pct === null ? "no attendance marks" : `${pct} percent present`} — open subject breakdown`}
                               className={`${listStyles.row} ${isSelected ? listStyles.selected : ""}`}
                             >
                               {row.getVisibleCells().map((cell) => (

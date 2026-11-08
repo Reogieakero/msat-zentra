@@ -36,15 +36,13 @@
 
 .searchWrap {
   position: relative;
-  width: 16rem;
-  max-width: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .searchIcon {
   position: absolute;
   left: 0.625rem;
-  top: 50%;
-  transform: translateY(-50%);
   width: 1rem;
   height: 1rem;
   color: var(--muted-foreground);
@@ -52,6 +50,8 @@
 }
 
 .search {
+  width: 200px;
+  height: 2rem;
   padding-left: 2rem;
 }
 
@@ -124,6 +124,31 @@
 
 .tableWrap::-webkit-scrollbar {
   display: none;
+}
+
+/* The shared Table primitive is its own scroll container — hide its bar too
+   (same pattern as the coordinator/principal boards). Panning still works. */
+.tableWrap :global([data-slot="table-container"]) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tableWrap :global([data-slot="table-container"])::-webkit-scrollbar {
+  display: none;
+}
+
+/* No search/filter hits — amber insight callout, same as the other desks. */
+.noMatch {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding: 1.5rem 0.25rem;
+}
+
+.noMatchCallout {
+  width: 100%;
+  max-width: 36rem;
+  text-align: left;
 }
 
 /* Roomier rows — more breathing space between students. */

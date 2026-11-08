@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
-import { buildDayAxis, isWeekendKey, schoolDaysToDate } from "../attendance.js";
+import { buildDayAxis, isWeekendKey, schoolDaysToDate, termHasStarted } from "../attendance.js";
 import { assertAdvisee } from "./students.auth.js";
 import { sharingMap, canBypassSharing } from "../teacher/dataShare.service.js";
 import type { AdvisoryContext } from "./advisory.types.js";
@@ -63,8 +63,38 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
       },
       orderBy: [{ date: "desc" }, { session: "asc" }],
     }),
-    prisma.term.findUnique({ where: { id: termId }, select: { startDate: true } }),
+    prisma.term.findUnique({
+      where: { id: termId },
+      select: { startDate: true, endDate: true },
+    }),
   ]);
+
+  // A term that has not started yet is outside its scope period: report no
+  // sessions rather than a misleading "0 of 0 · 100%" derived from an empty axis.
+  if (!termHasStarted(term?.startDate)) {
+    return {
+      student: {
+        studentId: student.userId,
+        name: student.fullName,
+        lrn: student.lrn,
+        section: student.section?.name ?? "",
+      },
+      summary: {
+        present: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+        total: 0,
+        schoolDays: 0,
+        rate: 0,
+        isRisk: false,
+      },
+      subjectSummary: null,
+      restricted: false,
+      termStart: term?.startDate ?? null,
+      days: [],
+    };
+  }
 
   // Sharing: hide marks owned by private teachers (unless requester bypasses).
   const ownerIds = [
@@ -81,7 +111,7 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
   });
   const restricted = records.length !== allRecords.length;
 
-  const schoolDays = schoolDaysToDate(term?.startDate ?? null);
+  const schoolDays = schoolDaysToDate(term?.startDate ?? null, term?.endDate ?? null);
   const possible = schoolDays * 2;
   const weekdayRecords = records.filter(
     (r) => !isWeekendKey(r.date.toISOString().slice(0, 10))
@@ -149,7 +179,7 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
       byDate.set(key, sessions);
     }
   }
-  const days = buildDayAxis(term?.startDate ?? null)
+  const days = buildDayAxis(term?.startDate ?? null, term?.endDate ?? null)
     .filter((key) => !isWeekendKey(key))
     .reverse()
     .map((key) => {

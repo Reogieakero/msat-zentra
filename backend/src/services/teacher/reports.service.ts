@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { sectionHeadcounts } from "../enrollment.js";
-import { ATTENDANCE_RISK_CUTOFF } from "../attendance.js";
+import { ATTENDANCE_RISK_CUTOFF, termHasStarted } from "../attendance.js";
 import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../risk.js";
 import { COMPONENT_TYPE_LABEL, GRADE_LABELS } from "../../modules/teacher/teacher.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
@@ -677,7 +677,7 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
     referralCounts.set(r.status, (referralCounts.get(r.status) ?? 0) + 1);
   }
 
-  return {
+  const payload: TeacherReportsPayload = {
     term: term
       ? {
           id: term.id,
@@ -736,4 +736,47 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
     },
     generatedAt: new Date().toISOString(),
   };
+
+  // A term that has not started yet is outside its scope period. Keep the
+  // structural context (term, teacher, classes, headcount) but report no
+  // grades, assessments, attendance, risk or activity — staged/seeded rows for
+  // the future term must not surface as if the term were in session.
+  if (!termHasStarted(term?.startDate)) {
+    return {
+      term: payload.term,
+      teacher: payload.teacher,
+      summary: {
+        ...EMPTY.summary,
+        classes: payload.summary.classes,
+        learners: payload.summary.learners,
+      },
+      classes: payload.classes.map((c) => ({
+        ...c,
+        assessments: 0,
+        gradedAssessments: 0,
+        completionRate: null,
+        average: null,
+        transmutedAverage: null,
+        graded: 0,
+        passing: 0,
+        failing: 0,
+        passRate: null,
+        attendancePresent: 0,
+        attendanceAbsent: 0,
+        attendanceLate: 0,
+        attendanceExcused: 0,
+        attendanceTotal: 0,
+        attendanceRate: null,
+        belowAttendance: 0,
+        lockStatus: null,
+      })),
+      distribution: payload.distribution.map((d) => ({ ...d, count: 0, percent: 0 })),
+      atRisk: [],
+      pending: [],
+      activity: { anecdotal: 0, referrals: { total: 0, byStatus: [] } },
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  return payload;
 }

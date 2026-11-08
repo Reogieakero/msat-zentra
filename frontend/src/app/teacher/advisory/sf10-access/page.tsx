@@ -6,8 +6,7 @@ import { ShieldQuestion } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
 import { TeacherEmptyCard } from "../../components/TeacherEmptyCard";
 import { toast } from "@/components/ui/sonner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useAdvisoryRoster } from "@/services/teacher/advisory.service";
+import { useAdvisorySections } from "@/services/teacher/advisory.service";
 import {
   fetchMyVerification,
   useMyAccessRequests,
@@ -16,6 +15,7 @@ import {
 } from "@/services/teacher/sf10Access.service";
 import { Sf10RepoFolders } from "./components/Sf10RepoFolders";
 import { RejectedRequestsCard, Sf10MissingCard, Sf10Sidebar } from "./components/Sf10SideRail";
+import { Sf10PageSkeleton } from "./components/Sf10PageSkeleton";
 import styles from "./components/sf10-repo.module.css";
 
 function isSpreadsheetUrl(url: string): boolean {
@@ -31,8 +31,13 @@ function isSpreadsheetUrl(url: string): boolean {
 }
 
 export default function TeacherSf10AccessPage() {
-  const rosterQuery = useAdvisoryRoster();
-  const requestsQuery = useMyAccessRequests(!!rosterQuery.data);
+  // The section list is a single cheap lookup; the old gate used the full
+  // advisory roster (finals + attendance + anecdote per student), which was
+  // the slowest call on the page and only served as "do I have a section?".
+  const sectionsQuery = useAdvisorySections();
+  // Requests don't depend on the section list — start them immediately so the
+  // two calls run in parallel instead of chaining.
+  const requestsQuery = useMyAccessRequests(true);
   const requests = React.useMemo(() => requestsQuery.data ?? [], [requestsQuery.data]);
 
   const activeRequest = React.useMemo(() => {
@@ -72,10 +77,9 @@ export default function TeacherSf10AccessPage() {
     }
     return [...byLrn.values()];
   }, [unionVerifications]);
-  const foldersPending =
-    verification.isPending || unionVerifications.some((q) => q.isPending);
-  const foldersError =
-    verification.isError || unionVerifications.some((q) => q.isError);
+  const verificationPending = !!activeRequest && verification.isPending;
+  const foldersPending = verificationPending;
+  const foldersError = !!activeRequest && verification.isError;
 
   const [query, setQuery] = React.useState("");
 
@@ -134,38 +138,13 @@ export default function TeacherSf10AccessPage() {
     [missingRows, matchesQuery],
   );
 
-  if (rosterQuery.isPending || requestsQuery.isPending) {
-    return (
-      <section className={styles.page} aria-busy="true" aria-label="Loading SF10 access">
-        <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
-          <div className={`${styles.main} flex min-w-0 flex-col`}>
-            <div className={styles.skelPanel} aria-hidden>
-              <Skeleton className={styles.skelPanelTitle} />
-              <Skeleton className={styles.skelPanelDesc} />
-              <div className={styles.skelActions}>
-                <Skeleton className={styles.skelSearch} />
-              </div>
-              <div className={styles.skelFolderGrid}>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex min-w-0 flex-col gap-2">
-                    <Skeleton className={styles.skelFolder} />
-                    <Skeleton className={styles.skelFolderLabel} />
-                    <Skeleton className={styles.skelFolderSub} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="hidden min-w-0 flex-col items-end gap-2 lg:flex" aria-hidden>
-            <Skeleton className="h-9 w-9 rounded-xl" />
-            <Skeleton className="h-9 w-9 rounded-xl" />
-          </div>
-        </div>
-      </section>
-    );
+  if (sectionsQuery.isPending || requestsQuery.isPending) {
+    return <Sf10PageSkeleton />;
   }
 
-  if (rosterQuery.isError) {
+  const hasAdvisorySection =
+    (sectionsQuery.data?.advisorySections.length ?? 0) > 0;
+  if (sectionsQuery.isError || (!hasAdvisorySection && requests.length === 0)) {
     return (
       <section className={styles.page} aria-label="SF10 access">
         <TeacherEmptyCard
@@ -198,12 +177,12 @@ export default function TeacherSf10AccessPage() {
         <Sf10Sidebar
           requests={deniedRequests}
           rows={filteredMissing}
-          pending={verification.isPending}
+          pending={verificationPending}
         />
       </div>
       <div className="flex min-w-0 flex-col gap-4 lg:hidden">
         <RejectedRequestsCard requests={deniedRequests} />
-        <Sf10MissingCard rows={filteredMissing} pending={verification.isPending} />
+        <Sf10MissingCard rows={filteredMissing} pending={verificationPending} />
       </div>
     </section>
   );

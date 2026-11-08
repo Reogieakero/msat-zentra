@@ -33,12 +33,13 @@ export function AcceptDialog({
         <div className="flex items-center justify-end gap-1.5 px-1 pb-1">
           <Button
             variant="outline"
+            className="h-6"
             onClick={() => closeDialog("accept")}
             disabled={isActionPending}
           >
             Not yet
           </Button>
-          <Button aria-busy={isActionPending || undefined}
+          <Button className="h-6" aria-busy={isActionPending || undefined}
             disabled={isActionPending}
             onClick={() => {
               const when =

@@ -12,7 +12,9 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandShortcut,
 } from "@/components/ui/command";
+import { Pill } from "@/components/ui/pill";
 import { NAV } from "@/components/record-keeper-sidebar";
 import styles from "../record-keeper.module.css";
 
@@ -97,9 +99,14 @@ export function RecordKeeperGlobalSearch() {
                   >
                     <item.icon aria-hidden />
                     <span>{item.title}</span>
-                    <span className="ml-auto truncate pl-2 text-xs text-muted-foreground">
-                      {group.label}
-                    </span>
+                    {/* CommandShortcut keeps the group chip on one right-aligned
+                        column (its data-slot also hides CommandItem's check
+                        icon, whose own ml-auto used to split the free space). */}
+                    <CommandShortcut className="ml-auto pl-2 tracking-normal">
+                      <Pill tone="neutral" className="text-[10px] font-medium">
+                        {group.label}
+                      </Pill>
+                    </CommandShortcut>
                   </CommandItem>
                 ))}
               </CommandGroup>

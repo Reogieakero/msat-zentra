@@ -7,7 +7,7 @@ import { etag } from "../../lib/etag.js";
 import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { paginationQuerySchema } from "../../lib/pagination.js";
 import {
-  exportAuditCsv,
+  exportAuditWorkbook,
   getSourceProjection,
   listAudit,
 } from "../../services/audit/audit.service.js";
@@ -70,18 +70,25 @@ router.get(
     try {
       const { actionType, sourceTable, userId, actorRole, from, to, q } =
         req.query as Record<string, string | undefined>;
-      const csv = await exportAuditCsv({
-        actionType,
-        sourceTable,
-        userId,
-        actorRole,
-        from,
-        to,
-        q,
-      });
-      res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", 'attachment; filename="audit-log.csv"');
-      res.send(csv);
+      const { buffer, filename } = await exportAuditWorkbook(
+        {
+          actionType,
+          sourceTable,
+          userId,
+          actorRole,
+          from,
+          to,
+          q,
+        },
+        { userId: req.user!.id },
+      );
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Length", String(buffer.length));
+      res.end(buffer);
     } catch (e) {
       next(e);
     }

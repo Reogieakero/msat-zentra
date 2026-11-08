@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import type { GradeLevel } from "../generated/prisma/client.js";
+import { Prisma, type GradeLevel } from "../generated/prisma/client.js";
 
 async function registeredLrns(lrns: string[]): Promise<Set<string>> {
   if (lrns.length === 0) return new Set();
@@ -24,18 +24,26 @@ export async function rosterCountsBySection(
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
   if (sectionIds.length === 0) return counts;
-  const yearId = schoolYearId === undefined ? await activeYearId() : schoolYearId;
-  const rows = await prisma.studentRoster.findMany({
-    where: {
-      sectionId: { in: sectionIds },
-      ...(yearId ? { schoolYearId: yearId } : {}),
-    },
-    select: { lrn: true, sectionId: true },
-  });
-  const registered = await registeredLrns(rows.map((r) => r.lrn));
-  for (const r of rows) {
-    if (!registered.has(r.lrn)) counts.set(r.sectionId, (counts.get(r.sectionId) ?? 0) + 1);
-  }
+  // One round-trip instead of activeYear → roster → registered-LRN lookups.
+  // Every serial query against the remote pooler costs ~0.5s and this helper
+  // sits on the principal/adviser heatmap and risk paths.
+  const yearClause =
+    schoolYearId === undefined
+      ? Prisma.sql`(r."schoolYearId" = (SELECT "id" FROM "SchoolYear" WHERE "isActive" = TRUE LIMIT 1) OR NOT EXISTS (SELECT 1 FROM "SchoolYear" WHERE "isActive" = TRUE))`
+      : schoolYearId
+        ? Prisma.sql`r."schoolYearId" = ${schoolYearId}`
+        : Prisma.sql`TRUE`;
+  const rows = await prisma.$queryRaw<{ sectionId: string; count: bigint }[]>(
+    Prisma.sql`
+      SELECT r."sectionId" AS "sectionId", COUNT(*) AS count
+      FROM "StudentRoster" r
+      WHERE r."sectionId" IN (${Prisma.join(sectionIds)})
+        AND ${yearClause}
+        AND NOT EXISTS (SELECT 1 FROM "StudentProfile" p WHERE p."lrn" = r."lrn")
+      GROUP BY r."sectionId"
+    `,
+  );
+  for (const row of rows) counts.set(row.sectionId, Number(row.count));
   return counts;
 }
 

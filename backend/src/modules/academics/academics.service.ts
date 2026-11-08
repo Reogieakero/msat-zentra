@@ -83,33 +83,52 @@ export async function getAcademicsSummary(
     id: string;
     termNumber: number;
     startDate: Date | null;
+    endDate: Date | null;
     schoolYear: { name: string };
   } | null = null;
   if (scope?.termId) {
     activeTerm = await prisma.term.findUnique({
       where: { id: scope.termId },
-      select: { id: true, termNumber: true, startDate: true, schoolYear: { select: { name: true } } },
+      select: {
+        id: true,
+        termNumber: true,
+        startDate: true,
+        endDate: true,
+        schoolYear: { select: { name: true } },
+      },
     });
   }
   if (!activeTerm && scope?.schoolYearId) {
     activeTerm = await prisma.term.findFirst({
       where: { schoolYearId: scope.schoolYearId },
       orderBy: { termNumber: "asc" },
-      select: { id: true, termNumber: true, startDate: true, schoolYear: { select: { name: true } } },
+      select: {
+        id: true,
+        termNumber: true,
+        startDate: true,
+        endDate: true,
+        schoolYear: { select: { name: true } },
+      },
     });
   }
   if (!activeTerm) {
     activeTerm = await prisma.term.findFirst({
       where: { schoolYear: { isActive: true } },
       orderBy: { termNumber: "asc" },
-      select: { id: true, termNumber: true, startDate: true, schoolYear: { select: { name: true } } },
+      select: {
+        id: true,
+        termNumber: true,
+        startDate: true,
+        endDate: true,
+        schoolYear: { select: { name: true } },
+      },
     });
   }
   const termId = activeTerm?.id;
   const termLabel = activeTerm ? `Term ${activeTerm.termNumber}` : "No active term";
   const schoolYear = activeTerm?.schoolYear?.name ?? "No active school year";
 
-  const schoolDays = schoolDaysToDate(activeTerm?.startDate);
+  const schoolDays = schoolDaysToDate(activeTerm?.startDate, activeTerm?.endDate);
 
   const lockedOnly = mode === "final";
 

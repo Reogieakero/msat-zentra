@@ -53,6 +53,25 @@ export async function getRiskStudents(
   return getRiskStudentsLive(page, effPageSize, section, scope, q, extra);
 }
 
+// Internal-only: the principal desk's instant-search tables load the whole
+// at-risk roster once (one live computation) and filter/paginate in memory,
+// so typing never round-trips. Mirrors the DB take limit below.
+const RISK_ROSTER_MAX = 5000;
+
+export async function getAllRiskStudents(
+  scope?: TermScopeInput,
+): Promise<RiskStudentRow[]> {
+  const { students } = await getRiskStudentsLive(
+    1,
+    RISK_ROSTER_MAX,
+    undefined,
+    scope,
+    undefined,
+    undefined,
+  );
+  return students;
+}
+
 async function getRiskStudentsLive(
   page: number,
   pageSize: number,
@@ -174,10 +193,12 @@ async function getRiskStudentsLive(
       ...rosterEntries.map((r) => r.sectionId),
     ]),
   ) as string[];
-  const headcounts = await sectionHeadcounts(sectionIds);
-  const sectionTotals = termId
-    ? await sectionAttendanceTotals(sectionIds, termId)
-    : new Map<string, number>();
+  const [headcounts, sectionTotals] = await Promise.all([
+    sectionHeadcounts(sectionIds),
+    termId
+      ? sectionAttendanceTotals(sectionIds, termId)
+      : Promise.resolve(new Map<string, number>()),
+  ]);
 
   type Candidate = {
     studentId: string;

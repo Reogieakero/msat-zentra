@@ -23,6 +23,67 @@
   flex-shrink: 0;
 }
 
+/* Search field — same anatomy as the records desk search. */
+.search {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  width: 15px;
+  height: 15px;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 220px;
+  max-width: 40vw;
+  padding-left: 2rem;
+}
+
+/* No search/filter hits — amber insight callout, same as the records desk. */
+.noMatch {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding: 1.5rem 0.25rem;
+}
+
+.noMatchCallout {
+  width: 100%;
+  max-width: 36rem;
+  text-align: left;
+}
+
+/* Queue table — a board, not a scroll region: narrow viewports can still pan
+   horizontally, but no scrollbar chrome is drawn (same pattern as the other
+   principal tables, including while the skeleton is loading). */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tableWrap::-webkit-scrollbar {
+  display: none;
+}
+
+/* The shared Table primitive is itself a scroll container — hide its bar too. */
+.tableWrap :global([data-slot="table-container"]) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tableWrap :global([data-slot="table-container"])::-webkit-scrollbar {
+  display: none;
+}
+
 /* Header filters — plan-action + risk-level pill tabs, centered in the
    kanban title row on the same 24px line as the data-source pill, split by a
    single vertical divider. */

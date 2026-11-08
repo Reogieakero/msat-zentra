@@ -2,9 +2,10 @@ import * as React from "react";
 import {
   ChevronDown,
   Search,
-  Download,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
   DropdownMenu,
@@ -149,14 +150,15 @@ export function AuditToolbar({
 
   return (
     <div className={styles.toolbar}>
-      <div className={styles.searchWrap}>
+      <div className={styles.search}>
         <Search className={styles.searchIcon} aria-hidden />
-        <input
+        <Input
           type="search"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search user, reason, or id…"
-          className={styles.search}
+          className={`${styles.searchInput} rounded-[16px]`}
+          style={{ height: "2rem" }}
           aria-label="Search audit entries"
         />
       </div>
@@ -191,8 +193,8 @@ export function AuditToolbar({
       />
 
       <Button size="sm" variant="outline" onClick={onExport} disabled={exporting} aria-busy={exporting}>
-        {exporting ? <Spinner className="size-4" aria-hidden /> : <Download aria-hidden />}
-        {exporting ? "Exporting…" : "Export CSV"}
+        {exporting ? <Spinner className="size-4" aria-hidden /> : <FileSpreadsheet aria-hidden />}
+        {exporting ? "Exporting…" : "Export Excel"}
       </Button>
     </div>
   );

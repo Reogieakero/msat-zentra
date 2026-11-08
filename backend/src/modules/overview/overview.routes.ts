@@ -3,7 +3,6 @@ import { prisma } from "../../lib/prisma.js";
 import {
   sectionEnrollmentCounts,
   sectionHeadcounts,
-  totalRosterHeadcount,
 } from "../../services/enrollment.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
@@ -51,14 +50,24 @@ router.get(
         })
       ).map((s) => s.id);
 
-      const [profiles, rosterExtra, activeSections, teachers, anecdotals, students, rosterCohort, admPipeline, admReferrals, accountApprovals, sectionPopulations] =
+      const [teacherAssignments, anecdotals, students, rosterCohort, admPipeline, admReferrals, accountApprovals, sectionPopulations] =
         await Promise.all([
-          prisma.studentProfile.count(),
-
-          totalRosterHeadcount(),
-          prisma.section.count({ where: { adviserId: { not: null } } }),
-          prisma.staffProfile.count(),
-          prisma.anecdotalRecord.count(termId ? { where: { termId } } : undefined),
+          // Teaching staff working in the adviser-shared sections the principal
+          // can see, not the whole school roster.
+          prisma.teacherSubjectAssignment.findMany({
+            where: {
+              sectionId: { in: connectedSectionIds },
+              ...(termId ? { termId } : {}),
+            },
+            select: { teacherId: true },
+            distinct: ["teacherId"],
+          }),
+          prisma.anecdotalRecord.count({
+            where: {
+              sectionId: { in: connectedSectionIds },
+              ...(termId ? { termId } : {}),
+            },
+          }),
           prisma.studentProfile.findMany({
             where: {
               sectionId: { in: connectedSectionIds },
@@ -101,7 +110,13 @@ router.get(
             },
           }),
           prisma.admLearnerProfile.count({
-            where: { stage: { in: ["meeting_parents", "home_visitation", "certification", "principal_approval"] } },
+            where: {
+              stage: { in: ["meeting_parents", "home_visitation", "certification", "principal_approval"] },
+              student: {
+                sectionId: { in: connectedSectionIds },
+                ...(schoolYearId ? { section: { schoolYearId } } : {}),
+              },
+            },
           }),
 
           prisma.referral.count({
@@ -109,32 +124,63 @@ router.get(
               referredToRole: "adm_coordinator",
               status: { in: ["pending", "in_progress"] },
               admProfiles: { none: {} },
+              // Learner must sit in an adviser-shared section (dual identity).
+              OR: [
+                {
+                  student: {
+                    sectionId: { in: connectedSectionIds },
+                    ...(schoolYearId ? { section: { schoolYearId } } : {}),
+                  },
+                },
+                {
+                  roster: {
+                    sectionId: { in: connectedSectionIds },
+                    ...(schoolYearId ? { schoolYearId } : {}),
+                  },
+                },
+              ],
             },
           }),
+          // Pending sign-ups are account-level, not advicee data — left global.
           prisma.user.count({ where: { status: "pending" } }),
           prisma.section.findMany({
             where: {
               id: { in: connectedSectionIds },
               ...(schoolYearId ? { schoolYearId } : {}),
             },
-            select: { id: true, name: true, gradeLevel: true, _count: { select: { students: true } } },
+            select: { id: true, name: true, gradeLevel: true, adviserId: true, _count: { select: { students: true } } },
             orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
           }),
         ]);
       const admPending = admPipeline + admReferrals;
 
-      const enrollment = profiles + rosterExtra;
+      // Every headline metric is scoped to the adviser-shared sections: the
+      // sections themselves, their teaching staff, and their learners.
+      const activeSections = sectionPopulations.length;
+      const teacherIds = new Set(teacherAssignments.map((a) => a.teacherId));
+      for (const s of sectionPopulations) {
+        if (s.adviserId) teacherIds.add(s.adviserId);
+      }
+      const teachers = teacherIds.size;
 
       const headcounts = await sectionHeadcounts(sectionPopulations.map((s) => s.id));
       // Section populations must match the section's own student list, which
       // de-dupes LRNs per section rather than across the whole school year.
       const enrollmentCounts = await sectionEnrollmentCounts(sectionPopulations.map((s) => s.id));
+      const enrollment = [...enrollmentCounts.values()].reduce((sum, n) => sum + n, 0);
       const sectionTotals = termId
         ? await sectionAttendanceTotals(
             sectionPopulations.map((s) => s.id),
             termId,
           )
         : new Map<string, number>();
+
+      // The section's grade is the adviser's record of the learner; a
+      // StudentProfile.gradeLevel can lag behind (e.g. re-enrolled learners),
+      // which used to scatter shared Grade 7 learners across other grade bars.
+      const sectionGradeById = new Map(
+        sectionPopulations.map((s) => [s.id, s.gradeLevel]),
+      );
 
       const registeredLrns = new Set(students.map((s) => s.lrn));
       const riskCohort: {
@@ -151,7 +197,8 @@ router.get(
         anecdotalCount: number;
       }[] = [
         ...students.map((s) => ({
-          gradeLevel: s.gradeLevel,
+          gradeLevel:
+            sectionGradeById.get(s.section?.id ?? "") ?? s.gradeLevel,
           sectionId: s.section?.id ?? "",
           enrolledFallback: s.section?._count.students ?? 0,
           finalGrades: s.finalGrades,
@@ -161,7 +208,7 @@ router.get(
         ...rosterCohort
           .filter((r) => !registeredLrns.has(r.lrn))
           .map((r) => ({
-            gradeLevel: r.gradeLevel,
+            gradeLevel: sectionGradeById.get(r.sectionId) ?? r.gradeLevel,
             sectionId: r.sectionId,
             enrolledFallback: 0,
             finalGrades: r.finalGrades,
@@ -228,17 +275,15 @@ router.get(
         count: enrollmentCounts.get(s.id) ?? s._count.students,
       }));
 
-      const attendanceSections = schoolYearId
-        ? await prisma.section.findMany({
-            where: { schoolYearId },
-            select: {
-              attendanceRecords: {
-                where: termId ? { termId } : undefined,
-                select: { status: true },
-              },
-            },
-          })
-        : [];
+      const attendanceSections = await prisma.section.findMany({
+        where: { id: { in: connectedSectionIds } },
+        select: {
+          attendanceRecords: {
+            where: termId ? { termId } : undefined,
+            select: { status: true },
+          },
+        },
+      });
       const attendanceWatch = attendanceSections.filter((sec) => {
         const total = sec.attendanceRecords.length;
         const present = sec.attendanceRecords.filter((a) => a.status === "present").length;

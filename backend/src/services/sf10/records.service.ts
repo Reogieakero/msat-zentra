@@ -48,6 +48,41 @@ import {
 import { canUploadGradeLevel, deskForRole, deskForUpload, provisionGradeForUpload } from "../../lib/roles.js";
 import { mascotFor } from "../mascot.js";
 import type { Sf10Context } from "./sf10.types.js";
+import {
+  renderAutoFillFile,
+  type OriginalSf10File,
+} from "./generated-file.service.js";
+
+const SF10_PDF_MIME = "application/pdf";
+const SF10_XLSX_MIME =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+/**
+ * Fetch the registrar/record-keeper upload so auto-fill can derive a new file
+ * in the same format. Returns null when the record has no file (or storage is
+ * unreachable) — callers then fall back to the standard workbook.
+ */
+async function downloadOriginalSf10File(
+  url: string | null | undefined,
+): Promise<OriginalSf10File | null> {
+  if (!url) return null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const path = url.split(/[?#]/)[0] ?? url;
+    const match = path.match(/\.([a-z0-9]+)$/i);
+    const ext = match ? match[1].toLowerCase() : "";
+    const headerMime = res.headers.get("content-type")?.split(";")[0]?.trim() ?? "";
+    const mimeType =
+      headerMime ||
+      (ext === "pdf" ? SF10_PDF_MIME : ext === "xlsx" ? SF10_XLSX_MIME : "");
+    return { buffer, ext, mimeType };
+  } catch (e) {
+    logger.warn({ err: e }, "[sf10-autofill] could not fetch the original file");
+    return null;
+  }
+}
 
 // Interactive-tx budget: hosted DB latency spikes past Prisma's 5s default.
 const SF10_TX_OPTS = { timeout: 30_000, maxWait: 15_000 };
@@ -262,6 +297,8 @@ export interface OcrPayload {
   needsReview: boolean;
   /** Photo OCR state: "processing" fills subjects in later via local OCR. */
   ocrStatus?: "ready" | "processing";
+  /** File rendered from this payload (auto-fill), kept with the version. */
+  generatedFileUrl?: string;
 }
 
 async function storeOcrPayload(
@@ -269,17 +306,27 @@ async function storeOcrPayload(
   userId: string,
   payload: OcrPayload,
   reason: string,
-) {
-  await prisma.$transaction(async (tx) => {
+): Promise<number> {
+  return prisma.$transaction(async (tx) => {
     const record = await tx.sf10Record.findUnique({
       where: { id: recordId },
       select: { id: true, ocrExtractedData: true, currentVersion: true },
     });
-    if (!record) return;
-    const nextVersion = record.currentVersion + 1;
+    if (!record) return 0;
+    // `currentVersion` can lag behind the version table on records uploaded by
+    // the older upload path, so take the higher of the two as the base.
+    const latest = await tx.sf10RecordVersion.findFirst({
+      where: { sf10RecordId: recordId },
+      orderBy: { versionNumber: "desc" },
+      select: { versionNumber: true },
+    });
+    const nextVersion = Math.max(record.currentVersion, latest?.versionNumber ?? 0) + 1;
     await tx.sf10Record.update({
       where: { id: recordId },
-      data: { ocrExtractedData: payload as unknown as Prisma.InputJsonValue, currentVersion: nextVersion },
+      data: {
+        ocrExtractedData: payload as unknown as Prisma.InputJsonValue,
+        currentVersion: nextVersion,
+      },
     });
     await tx.sf10RecordVersion.create({
       data: {
@@ -299,6 +346,7 @@ async function storeOcrPayload(
         reason,
       },
     });
+    return nextVersion;
   }, SF10_TX_OPTS);
 }
 
@@ -703,14 +751,22 @@ async function storeSf10UploadTx(
     },
   });
   const existing = await tx.sf10RecordVersion.count({ where: { sf10RecordId: row.id } });
+  const nextVersion = existing + 1;
   await tx.sf10RecordVersion.create({
     data: {
       sf10RecordId: row.id,
-      versionNumber: existing + 1,
+      versionNumber: nextVersion,
       dataSnapshot: (row.ocrExtractedData as object) ?? {},
       changedBy: input.userId,
       changeReason: input.changeReason,
     },
+  });
+  // Keep the record's pointer in sync so the next storeOcrPayload (auto-fill,
+  // manual correction) appends a genuinely new version instead of reusing this
+  // number and leaving `currentVersion` stale.
+  await tx.sf10Record.update({
+    where: { id: row.id },
+    data: { currentVersion: nextVersion },
   });
   await tx.auditLog.create({
     data: {
@@ -1158,7 +1214,130 @@ export async function updateOcrSubjects(
   return { id: record.id, subjects: payload.subjects };
 }
 
-export async function getSubjectMap(ctx: Sf10Context, recordId: string) {  const record = await prisma.sf10Record.findUnique({
+export interface AutoFillWriteResult {
+  recordId: string;
+  version: number;
+  status: string;
+  replaced: number;
+  added: number;
+  wasVerified: boolean;
+}
+
+/**
+ * Merge grading-portal rows into an SF10 record for one grade level.
+ *
+ * Only the rows tagged with `gradeLevel` are replaced; prior years and untagged
+ * add-on rows are kept. Every write still appends a version + audit through
+ * `storeOcrPayload`, so the permanent record keeps its history. A verified
+ * (`available`) record drops back to unverified so the records desk re-checks.
+ */
+export async function applyAutoFilledSubjects(
+  ctx: Sf10Context,
+  recordId: string,
+  gradeLevel: string,
+  rows: OcrSubjectPayload[],
+): Promise<AutoFillWriteResult> {
+  const record = await assertRecordAccess(recordId, ctx);
+  if (ctx.role === "adviser") await assertAdviserSf10Access(ctx.userId, recordId);
+  if (record.status === "released") {
+    throw new AppError(
+      409,
+      "SF10_RELEASED",
+      "This SF10 record was already released and cannot be auto-filled.",
+    );
+  }
+
+  const prior = record.ocrExtractedData as unknown as OcrPayload | null;
+  const priorSubjects = prior && Array.isArray(prior.subjects) ? prior.subjects : [];
+  const autoNorms = new Set(rows.map((r) => r.norm));
+  const kept: OcrSubjectPayload[] = [];
+  const priorNormsAtGrade = new Set<string>();
+  let replaced = 0;
+
+  for (const s of priorSubjects) {
+    const sameGrade = (s.gradeLevel ?? null) === gradeLevel;
+    if (sameGrade) priorNormsAtGrade.add(s.norm);
+    if (sameGrade && autoNorms.has(s.norm)) {
+      replaced += 1;
+      continue;
+    }
+    kept.push(s);
+  }
+  const added = rows.filter((r) => !priorNormsAtGrade.has(r.norm)).length;
+
+  const learner = await prisma.studentProfile.findUnique({
+    where: { userId: record.studentId },
+    select: { lrn: true, user: { select: { fullName: true } } },
+  });
+
+  // Auto-fill leaves a real updated file in the original's format: a patched
+  // copy of the registrar/record-keeper workbook, or a PDF when the upload was
+  // a PDF. Untouched grade blocks and every non-rating cell stay as uploaded.
+  const generatedAt = new Date();
+  const mergedSubjects = [...kept, ...rows];
+  let generatedFileUrl: string | undefined;
+  if (learner) {
+    try {
+      const original = await downloadOriginalSf10File(record.uploadedFileUrl);
+      const rendered = await renderAutoFillFile({
+        learnerName: learner.user.fullName,
+        lrn: learner.lrn,
+        gradeLevel,
+        subjects: mergedSubjects,
+        generatedAt,
+        original,
+        filled: rows.map((r) => ({
+          norm: r.norm,
+          rawName: r.rawName,
+          gradeLevel: r.gradeLevel ?? gradeLevel,
+          quarters: r.quarters ?? null,
+          rating: r.rating ?? r.grade ?? null,
+          remarks: r.remarks ?? null,
+        })),
+      });
+      generatedFileUrl = await uploadFile(
+        rendered.buffer,
+        sf10ObjectPath(record.studentId, rendered.ext),
+        rendered.mimeType,
+        getSf10Bucket(),
+      );
+    } catch (e) {
+      logger.warn(
+        { err: e, recordId },
+        "[sf10-autofill] could not render the updated file — keeping the previous file",
+      );
+    }
+  }
+
+  const payload: OcrPayload = {
+    subjects: mergedSubjects,
+    learner: prior?.learner ?? null,
+    confidence: 1,
+    engine: "grading-auto-fill-v1",
+    ocrStatus: "ready",
+    ocrAt: generatedAt.toISOString(),
+    needsReview: false,
+    ...(generatedFileUrl ? { generatedFileUrl } : {}),
+  };
+
+  const wasVerified = record.status === "available";
+  const version = await storeOcrPayload(
+    recordId,
+    ctx.userId,
+    payload,
+    "SF10 auto-filled from adviser-approved finals",
+  );
+  if (wasVerified) {
+    await prisma.sf10Record.update({
+      where: { id: recordId },
+      data: { verifiedBy: null, verifiedAt: null },
+    });
+  }
+  return { recordId, version, status: record.status, replaced, added, wasVerified };
+}
+
+export async function getSubjectMap(ctx: Sf10Context, recordId: string) {
+  const record = await prisma.sf10Record.findUnique({
     where: { id: recordId },
     select: {
       id: true,

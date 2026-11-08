@@ -5,6 +5,19 @@
   max-width: 72rem;
   margin: 0 auto;
   gap: 1.25rem;
+  /* Full remaining height so an empty board can center its message. */
+  align-self: stretch;
+}
+
+/* No-match / filtered-empty message: fills the board area and centers on
+   both axes (guidance + nurse case desks share this shape). */
+.emptyCenter {
+  display: flex;
+  flex: 1 1 0;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 0;
 }
 
 /* Screen-reader heading so assistive tech can navigate the page. */
@@ -788,6 +801,8 @@
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
+  /* Fill the page so an empty board centers its message vertically. */
+  flex: 1 1 auto;
   width: 100%;
   max-width: 90rem;
   margin: 0 auto;

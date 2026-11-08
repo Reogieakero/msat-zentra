@@ -3,46 +3,36 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  BellRing,
-  Inbox,
-  MessagesSquare,
-  FilePenLine,
-  Files,
-  ClipboardList,
-  Send,
-  Settings,
-  type LucideIcon,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import styles from "./guidance-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { NAV_ICONS } from "./nav/sidebar-icons";
 import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
-type NavItem = {
+export type NavItem = {
   title: string;
   href: string;
   icon: LucideIcon;
   badge?: string;
 };
 
-type NavGroup = {
+export type NavGroup = {
   label: string;
   items: NavItem[];
 };
 
-const NAV: NavGroup[] = [
+export const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { title: "Overview", href: "/guidance/overview", icon: LayoutDashboard },
-      { title: "Alerts", href: "/guidance/alerts", icon: BellRing },
+      { title: "Overview", href: "/guidance/overview", icon: NAV_ICONS.overview },
+      { title: "Alerts", href: "/guidance/alerts", icon: NAV_ICONS.alerts },
       {
         title: "Interventions",
         href: "/guidance/interventions",
-        icon: ClipboardList,
+        icon: NAV_ICONS.interventions,
       },
     ],
   },
@@ -52,12 +42,12 @@ const NAV: NavGroup[] = [
       {
         title: "ADM Cases",
         href: "/guidance/referrals/adm",
-        icon: Inbox,
+        icon: NAV_ICONS.admCases,
       },
       {
         title: "Counseling Cases",
         href: "/guidance/referrals/counseling",
-        icon: MessagesSquare,
+        icon: NAV_ICONS.counselingCases,
       },
     ],
   },
@@ -67,19 +57,24 @@ const NAV: NavGroup[] = [
       {
         title: "Anecdotal Records",
         href: "/guidance/anecdotal",
-        icon: FilePenLine,
+        icon: NAV_ICONS.anecdotal,
       },
       {
         title: "Session Documents",
         href: "/guidance/session-documents",
-        icon: Files,
+        icon: NAV_ICONS.sessionDocuments,
       },
     ],
   },
   {
     label: "Insights",
     items: [
-      { title: "Referrals Report", href: "/guidance/adm", icon: Send },
+      {
+        title: "Intervention Insights",
+        href: "/guidance/interventions/insights",
+        icon: NAV_ICONS.interventionInsights,
+      },
+      { title: "Referrals Report", href: "/guidance/adm", icon: NAV_ICONS.referrals },
     ],
   },
   {
@@ -88,7 +83,7 @@ const NAV: NavGroup[] = [
       {
         title: "General Settings",
         href: "/guidance/settings",
-        icon: Settings,
+        icon: NAV_ICONS.settings,
       },
     ],
   },
@@ -96,13 +91,20 @@ const NAV: NavGroup[] = [
 
 const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
+/* Parent desks whose nested pages have their own nav entry (intervention
+   insights lives under /guidance/interventions) must highlight exactly. */
+const EXACT_MATCH = new Set(["/guidance/overview", "/guidance/interventions"]);
+
+function isNavActive(pathname: string, href: string) {
+  return EXACT_MATCH.has(href)
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
+
 function useIsActive() {
   const pathname = usePathname();
   return React.useCallback(
-    (href: string) =>
-      href === "/guidance/overview"
-        ? pathname === href
-        : pathname === href || pathname.startsWith(`${href}/`),
+    (href: string) => isNavActive(pathname, href),
     [pathname],
   );
 }
@@ -138,10 +140,7 @@ function GuidanceRail({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
   const router = useRouter();
   const isActive = React.useCallback(
-    (href: string) =>
-      href === "/guidance/overview"
-        ? pathname === href
-        : pathname === href || pathname.startsWith(`${href}/`),
+    (href: string) => isNavActive(pathname, href),
     [pathname],
   );
   const tabs = groups.flatMap((group) => group.items);

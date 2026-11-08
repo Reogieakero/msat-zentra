@@ -30,6 +30,11 @@ router.get(
         query.factor === "Academic" || query.factor === "Attendance" || query.factor === "Behavioral"
           ? (query.factor as "Academic" | "Attendance" | "Behavioral")
           : null;
+      const gradeFilter =
+        typeof query.grade === "string" &&
+        /^G(7|8|9|10|11|12)$/.test(query.grade)
+          ? query.grade
+          : null;
       const mineOnly = query.mine === "true";
       const outcomeFilter =
         query.outcome === "ongoing" || query.outcome === "resolved" || query.outcome === "unresolved" || query.outcome === "all"
@@ -46,6 +51,7 @@ router.get(
           { userId: req.user!.id, role: req.user!.role, termId: req.termScope?.termId ?? null },
           {
             level: levelFilter,
+            grade: gradeFilter,
             factor: factorFilter,
             mineOnly,
             outcome: outcomeFilter,

@@ -96,20 +96,40 @@ interface EngineBreakdownProps {
 function EngineSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading risk breakdown" className="space-y-3">
+      {/* Same risk trail strip as the loaded engine: eyebrow + level pill per
+          step, separated by the chevron. */}
       <div className="flex items-center rounded-xl border border-slate-200 px-4 py-3 dark:border-white/10">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="flex flex-1 flex-col items-start gap-1.5">
-            <Skeleton style={{ width: "3.5rem", height: "0.7rem" }} />
-            <Skeleton style={{ width: "4.5rem", height: "1.25rem" }} />
-          </div>
+          <Fragment key={i}>
+            {i > 0 && (
+              <ChevronRight
+                className="size-[18px] shrink-0 text-slate-300 dark:text-slate-600"
+                aria-hidden
+              />
+            )}
+            <div className={cn("flex min-w-0 flex-1 flex-col items-start gap-1.5", i > 0 && "pl-4")}>
+              <Skeleton style={{ width: "3.5rem", height: "0.7rem" }} />
+              <Skeleton style={{ width: "4rem", height: "1.25rem" }} className="rounded-md" />
+            </div>
+          </Fragment>
         ))}
       </div>
+      {/* Same three factor cards: title + level pill, big value, detail line. */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="rounded-xl border border-slate-200 p-3.5 dark:border-white/10">
-            <Skeleton style={{ width: "60%", height: "0.875rem" }} />
-            <Skeleton style={{ width: "100%", height: "0.75rem" }} />
-            <Skeleton style={{ width: "80%", height: "0.75rem" }} />
+          <div
+            key={i}
+            className="flex min-w-0 flex-col gap-2.5 rounded-xl border border-slate-200 p-3.5 dark:border-white/10"
+          >
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <Skeleton style={{ width: "50%", height: "0.875rem" }} />
+              <Skeleton
+                style={{ width: "3.25rem", height: "1.25rem" }}
+                className="shrink-0 rounded-md"
+              />
+            </div>
+            <Skeleton style={{ width: "3.5rem", height: "2.125rem" }} className="rounded-md" />
+            <Skeleton style={{ width: "85%", height: "0.8rem" }} />
           </div>
         ))}
       </div>

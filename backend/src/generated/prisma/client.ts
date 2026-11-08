@@ -87,6 +87,11 @@ export type Section = Prisma.SectionModel
  */
 export type StudentRoster = Prisma.StudentRosterModel
 /**
+ * Model TermRosterConfirmation
+ * 
+ */
+export type TermRosterConfirmation = Prisma.TermRosterConfirmationModel
+/**
  * Model Subject
  * 
  */

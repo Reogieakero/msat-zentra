@@ -4,7 +4,8 @@ import Link from "next/link";
 import { FolderOpen, Info, Plus } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { Button } from "@/components/ui/button";
-import { CATEGORY_COLORS } from "./AnecdotalSideRail";
+import { Pill } from "@/components/ui/pill";
+import { getLegendEntries } from "./AnecdotalSideRail";
 import styles from "./anecdotal-empty-kanban.module.css";
 
 function BamaMascot({ size = 14 }: { size?: number }) {
@@ -52,13 +53,7 @@ const ACTIONS: EmptyKanbanAction[] = [
   },
 ];
 
-const LEGEND: { key: string; label: string; hint: string; color: string }[] = [
-  { key: "behavioral", label: "Behavioral", hint: "Conduct and classroom behavior", color: CATEGORY_COLORS.behavioral },
-  { key: "bullying", label: "Bullying", hint: "Peer conflict and bullying", color: CATEGORY_COLORS.bullying },
-  { key: "academic", label: "Academic", hint: "Learning and performance", color: CATEGORY_COLORS.academic },
-  { key: "attendance", label: "Attendance", hint: "Absences and tardiness", color: CATEGORY_COLORS.attendance },
-  { key: "health", label: "Health", hint: "Wellness and clinic notes", color: CATEGORY_COLORS.health },
-];
+const LEGEND = getLegendEntries("category");
 
 function ColumnHead({
   icon,
@@ -155,7 +150,7 @@ export function AnecdotalEmptyKanban() {
                     </Link>
                   </Button>
                 ) : i === 1 ? (
-                  <Button asChild variant="outline" className="h-6 w-6 px-0" aria-label="New record">
+                  <Button asChild className="h-6 w-6 px-0" aria-label="New record">
                     <Link
                       href="/teacher/chat?standalone=1&new=anecdotal"
                       target="_blank"
@@ -189,17 +184,9 @@ export function AnecdotalEmptyKanban() {
           <ul className="flex min-w-0 flex-1 flex-row flex-wrap content-center items-center justify-center gap-1.5" aria-label="Legend categories">
             {LEGEND.map((e) => (
               <li key={e.key} className="flex">
-                <span
-                  className="inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold leading-tight"
-                  style={{
-                    color: e.color,
-                    borderColor: `color-mix(in srgb, ${e.color} 40%, transparent)`,
-                    backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
-                  }}
-                  title={`${e.label} — ${e.hint}`}
-                >
+                <Pill tone={e.tone} label={e.hint}>
                   {e.label}
-                </span>
+                </Pill>
               </li>
             ))}
           </ul>

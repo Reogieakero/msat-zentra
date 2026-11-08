@@ -41,45 +41,6 @@
   color: var(--destructive);
 }
 
-/* ---- Board header actions + search (same as `/record-keeper/accounts`) ---- */
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.searchWrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.searchIcon {
-  position: absolute;
-  left: 0.625rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1rem;
-  height: 1rem;
-  color: var(--muted-foreground);
-  pointer-events: none;
-}
-
-/* Board-header search — 16px radius like the final-grades board search. */
-.search {
-  width: 240px;
-  height: 2rem;
-  padding-left: 2rem;
-  border-radius: 1rem;
-}
-
-@media (max-width: 640px) {
-  .search {
-    width: 100%;
-  }
-}
-
 /* No-records state: fills the viewport below the topbar so the card sits
    at the center-center of the page, with a reduced width instead of
    stretching full width. */

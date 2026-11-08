@@ -57,6 +57,7 @@ export type AlertCaseRisk = "" | GuidanceRiskLevel;
 export interface GuidanceAlertUrgentItem {
   student: string;
   lrn: string;
+  mascot?: string | null;
   kind: "referral" | "intervention";
   id: string;
   track: "adm" | "counseling" | "intervention";
@@ -66,6 +67,7 @@ export interface GuidanceAlertDetectedItem {
   studentKey: string;
   student: string;
   lrn: string;
+  mascot?: string | null;
   riskLevel: string;
   detectedAt: string | null;
 }

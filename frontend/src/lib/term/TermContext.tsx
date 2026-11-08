@@ -147,6 +147,9 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
 
   const setActiveTerm = React.useCallback(
     (term: ActiveTerm) => {
+      const unchanged =
+        activeTerm?.termId === term.termId &&
+        activeTerm?.schoolYearId === term.schoolYearId;
       setActiveTermState((prev) => {
         if (prev?.termId !== term.termId || prev?.schoolYearId !== term.schoolYearId) {
           void queryClient.invalidateQueries({
@@ -158,8 +161,14 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
       });
       const sub = decodeTokenIdentity(getAccessToken())?.sub ?? null;
       writeStoredTerm(sub, term);
+      // Term changes touch every page's dataset, cache key and local state.
+      // Reload once so the workspace rebuilds entirely against the new scope
+      // (query invalidation alone leaves page-local state on the old term).
+      if (!unchanged && typeof window !== "undefined") {
+        window.location.reload();
+      }
     },
-    [queryClient],
+    [queryClient, activeTerm],
   );
 
   const clearActiveTerm = React.useCallback(() => {

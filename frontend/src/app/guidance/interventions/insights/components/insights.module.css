@@ -1,0 +1,371 @@
+/* Intervention insights — chart shell + section × outcome heatmap. Layout
+   (page, KPI grid) comes from the shared guidance pages module. */
+
+.chartBody {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  min-width: 0;
+}
+
+.chartBody text {
+  fill: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.trendChart {
+  width: 100%;
+  position: relative;
+  z-index: 10;
+}
+
+.trendChart text {
+  fill: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+/* Tooltip — popover surface tokens keep it readable in both themes. */
+.tooltip {
+  min-width: 9.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  padding: 0.5rem 0.625rem;
+  box-shadow:
+    0 16px 40px -20px rgb(0 0 0 / 0.45),
+    0 4px 12px -6px rgb(0 0 0 / 0.3);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  position: relative;
+  z-index: 50;
+}
+
+.tooltipLabel {
+  margin: 0 0 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.tooltipList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+
+.tooltipDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.tooltipName {
+  color: var(--popover-foreground);
+}
+
+.tooltipValue {
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--guidance-number, var(--primary));
+}
+
+/* Success-by-grade donut — centered total, no breakdown list. */
+.donutWrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.donutCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+
+.donutValue {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--guidance-number, var(--primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.donutLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Legend rows under the charts. */
+.legend {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.875rem;
+  font-size: 0.75rem;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.swatch {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legendLabel {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+/* Section × outcome heatmap. */
+.heatScroll {
+  overflow-x: auto;
+}
+
+.heatTable {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: 0.75rem;
+  min-width: 34rem;
+}
+
+.heatRowHead {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  font-weight: 600;
+  color: var(--foreground);
+  background-color: var(--card);
+  padding: 0.375rem 0.875rem 0.375rem 0.25rem;
+  white-space: nowrap;
+  max-width: 15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  /* Soft edge so the frozen section column reads as pinned while the
+     outcome columns scroll horizontally underneath. */
+  box-shadow: 6px 0 8px -8px rgb(0 0 0 / 0.28);
+}
+
+/* Section lockup — monogram, name, grade. Replaces the bare two-line stack
+   so the sticky column reads like the rest of the desk boards. */
+.heatSectionCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.heatSectionAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 84%);
+  color: color-mix(in oklch, oklch(0.769 0.188 70.08), black 28%);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+:global(.dark) .heatSectionAvatar {
+  color: color-mix(in oklch, oklch(0.769 0.188 70.08), white 18%);
+}
+
+.heatSectionText {
+  display: inline-flex;
+  flex-direction: column;
+  min-width: 0;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+.heatSectionName {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.heatSectionGrade {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.heatTable tbody tr {
+  transition: background-color 120ms ease-out;
+}
+
+.heatTable tbody tr:hover {
+  background-color: color-mix(in oklch, var(--primary), transparent 96%);
+}
+
+.heatTable tbody tr:hover .heatRowHead {
+  background-color: color-mix(in oklch, var(--card), var(--primary) 4%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heatTable tbody tr {
+    transition: none;
+  }
+}
+
+.heatTable thead .heatRowHead {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  /* Align the column label with the section names, past the monogram. */
+  padding-left: 2.25rem;
+}
+
+.heatColHead {
+  text-align: center;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  padding: 0.375rem;
+  vertical-align: bottom;
+  min-width: 5.5rem;
+}
+
+.heatCell {
+  padding: 0.25rem;
+  text-align: center;
+}
+
+.heatBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 40px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.heatRate {
+  color: var(--guidance-number, var(--primary));
+  font-weight: 700;
+}
+
+.heatFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.heatLegend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.heatLegendLabel {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.heatLegendSwatches {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.heatLegendSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+}
+
+.heatNote {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+/* Board entrance — same motion as the guidance overview boards. */
+.boardIn {
+  animation: board-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  overflow: clip;
+}
+
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardIn {
+    animation: none;
+  }
+}
+
+.spin {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  animation: insights-spin 1s linear infinite;
+}
+
+@keyframes insights-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

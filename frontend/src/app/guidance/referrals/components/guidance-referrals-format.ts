@@ -8,7 +8,7 @@ import type {
 import { formatDate as sharedFormatDate, timeAgo as sharedTimeAgo, formatTime as sharedFormatTime, formatDateTime as sharedFormatDateTime, formatActionTime as sharedFormatActionTime, toDateInputValue as sharedToDateInputValue, toTimeInputValue as sharedToTimeInputValue, combineDateTime as sharedCombineDateTime, formatCountdown as sharedFormatCountdown } from "@/lib/labels/datetime";
 import { formatStatus as sharedFormatStatus, initials as sharedInitials } from "@/lib/labels/text";
 import { anecdotalCategoryColor as sharedAnecdotalCategoryColor, ANECDOTAL_CATEGORY_COLORS as sharedAnecdotalColors } from "@/lib/labels/anecdotal";
-import { isEndorsed as sharedIsEndorsed, isWithdrawn as sharedIsWithdrawn, hasScheduledSession as sharedHasScheduledSession, activeSessionOf as sharedActiveSessionOf, latestSessionOf as sharedLatestSessionOf, statusLabel as sharedStatusLabel, statusHelp as sharedStatusHelp, rowStatusLabel as sharedRowStatusLabel, rowStatusHelp as sharedRowStatusHelp, statusVariant as sharedStatusVariant, watermarkLabel as sharedWatermarkLabel, watermarkColor as sharedWatermarkColor } from "@/lib/labels/referral-status";
+import { isEndorsed as sharedIsEndorsed, isWithdrawn as sharedIsWithdrawn, hasScheduledSession as sharedHasScheduledSession, activeSessionOf as sharedActiveSessionOf, latestSessionOf as sharedLatestSessionOf, statusLabel as sharedStatusLabel, statusHelp as sharedStatusHelp, rowStatusLabel as sharedRowStatusLabel, rowStatusHelp as sharedRowStatusHelp, statusVariant as sharedStatusVariant, watermarkLabel as sharedWatermarkLabel, watermarkColor as sharedWatermarkColor, isCaseDone as sharedIsCaseDone, hasOpenBooking as sharedHasOpenBooking } from "@/lib/labels/referral-status";
 import { latestActionOf as sharedLatestActionOf } from "@/lib/labels/referral-activity";
 import { roleLabel as sharedRoleLabel } from "@/lib/labels/roles";
 import { sessionTypeLabel as sharedSessionTypeLabel, SESSION_KIND_OPTIONS as sharedSessionKindOptions } from "@/lib/labels/sessions";
@@ -140,6 +140,8 @@ export function latestSessionOf(sessions: CounselingSessionItem[]): CounselingSe
 }
 export const hasScheduledSession = sharedHasScheduledSession;
 export const isWithdrawn = sharedIsWithdrawn;
+export const isCaseDone = sharedIsCaseDone;
+export const hasOpenBooking = sharedHasOpenBooking;
 export function watermarkLabel(row: GuidanceReferralItem): string {
   return sharedWatermarkLabel(row);
 }
@@ -151,8 +153,8 @@ export function matchesGuidanceFilters(
   if (params.status !== "" && row.status !== params.status) return false;
   if (params.type === "adm" && row.type !== "ADM") return false;
   if (params.type === "counseling" && row.type !== "Counseling") return false;
-  if (params.booked && row.sessions.length === 0) return false;
-  if (params.completed && !row.sessions.some((s) => s.status === "completed")) return false;
+  if (params.booked && !sharedHasOpenBooking(row)) return false;
+  if (params.completed && !sharedIsCaseDone(row)) return false;
   if (params.open && (row.status === "resolved" || row.status === "dismissed")) return false;
   if (params.withdrawn && !sharedIsWithdrawn(row)) return false;
   if (!params.withdrawn && params.status === "dismissed" && sharedIsWithdrawn(row)) return false;
@@ -180,8 +182,8 @@ export function buildGuidanceSummary(
       resolved: scoped.filter((r) => r.status === "resolved").length,
       dismissed: scoped.filter((r) => r.status === "dismissed").length,
       cancelled: scoped.filter((r) => sharedIsWithdrawn(r)).length,
-      booked: scoped.filter((r) => r.sessions.length > 0).length,
-      done: scoped.filter((r) => r.sessions.some((s) => s.status === "completed")).length,
+      booked: scoped.filter((r) => sharedHasOpenBooking(r)).length,
+      done: scoped.filter((r) => sharedIsCaseDone(r)).length,
       open: open.length,
     };
   };

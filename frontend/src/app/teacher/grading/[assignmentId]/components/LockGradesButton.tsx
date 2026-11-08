@@ -22,6 +22,8 @@ type Props = {
   variant?: "default" | "outline";
   size?: "sm" | "xs" | "default";
   className?: string;
+  /** Extra refresh after a successful bulk lock (e.g. the lock-grades board). */
+  onLocked?: (locked: number) => void;
 };
 
 function cleanAssignmentId(raw: string): string {
@@ -32,7 +34,7 @@ function cleanAssignmentId(raw: string): string {
   }
 }
 
-export function LockGradesButton({ assignmentId, subjectLabel, termLabel, unlockCount, variant = "default", size = "sm", className }: Props) {
+export function LockGradesButton({ assignmentId, subjectLabel, termLabel, unlockCount, variant = "default", size = "sm", className, onLocked }: Props) {
   const cleanId = React.useMemo(() => cleanAssignmentId(assignmentId), [assignmentId]);
   const queryClient = useQueryClient();
   const refreshAcademic = useRefreshAcademic();
@@ -43,6 +45,7 @@ export function LockGradesButton({ assignmentId, subjectLabel, termLabel, unlock
 
   const refreshAll = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["teacher-grading-class"] });
+    queryClient.invalidateQueries({ queryKey: ["teacher-lock-grades"] });
     queryClient.invalidateQueries({ queryKey: ["registrar-final-grades"] });
     queryClient.invalidateQueries({ queryKey: ["record-keeper-final-grades"] });
     queryClient.invalidateQueries({ queryKey: ["teacher-notifications"] });
@@ -79,6 +82,7 @@ export function LockGradesButton({ assignmentId, subjectLabel, termLabel, unlock
       markSelfNotified(cleanId);
       setOpen(false);
       refreshAll();
+      onLocked?.(res.locked);
       lockDock.finishLock(true, { locked: res.locked, total: unlockCount });
       const shortSubject = subjectLabel.split(" (")[0] ?? subjectLabel;
       const unit = res.locked === 1 ? "grade" : "grades";

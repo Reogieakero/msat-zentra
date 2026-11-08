@@ -1,0 +1,39 @@
+/* Board header actions + search — shared by both registry desks' adviser
+   access tables (same field chrome as the accounts / final-grades boards). */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+/* Board-header search — 16px radius like the final-grades board search. */
+.search {
+  width: 240px;
+  height: 2rem;
+  padding-left: 2rem;
+  border-radius: 1rem;
+}
+
+@media (max-width: 640px) {
+  .search {
+    width: 100%;
+  }
+}

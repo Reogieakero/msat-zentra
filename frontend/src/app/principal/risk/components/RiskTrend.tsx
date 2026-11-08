@@ -63,6 +63,8 @@ export function RiskTrend() {
       const res = await apiClient.get<RiskTrendData>("/api/risk/trend");
       return res.data;
     },
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const trend = data?.trend ?? [];

@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
+import { termHasStarted } from "../attendance.js";
 import { assertAdvisee } from "./students.auth.js";
 import { resolveGradeOwnerIds, sharingMap, canBypassSharing } from "../teacher/dataShare.service.js";
 import type { AdvisoryContext } from "./advisory.types.js";
@@ -11,6 +12,23 @@ export async function getStudentAnecdotal(ctx: AdvisoryContext, studentId: strin
     throw new AppError(404, "NO_ACTIVE_TERM", "No active term");
   }
   const student = await assertAdvisee(teacherId, studentId);
+
+  const term = await prisma.term.findUnique({
+    where: { id: termId },
+    select: { startDate: true },
+  });
+  // A not-yet-started term has no in-scope anecdotal records yet.
+  if (!termHasStarted(term?.startDate)) {
+    return {
+      student: {
+        studentId: student.userId,
+        name: student.user.fullName,
+        lrn: student.lrn,
+        section: student.section?.name ?? "",
+      },
+      records: [],
+    };
+  }
 
   const records = await prisma.anecdotalRecord.findMany({
     where: { studentId, termId },
@@ -98,6 +116,26 @@ export async function getStudentAcademic(ctx: AdvisoryContext, rawId: string) {
           studentId: profile.userId,
         };
       })();
+
+  const term = await prisma.term.findUnique({
+    where: { id: termId },
+    select: { startDate: true },
+  });
+  // A not-yet-started term is outside its scope period: seeded/staged finals
+  // must not read as live academics.
+  if (!termHasStarted(term?.startDate)) {
+    return {
+      student: {
+        studentId: student.userId,
+        name: student.fullName,
+        lrn: student.lrn,
+        section: student.section?.name ?? "",
+      },
+      grades: [],
+      hiddenCount: 0,
+      summary: { subjects: 0, graded: 0, passed: 0, failed: 0, average: null },
+    };
+  }
 
   const gradeWhere = isRoster
     ? { rosterId: student.rosterId as string, termId }
@@ -264,6 +302,39 @@ export async function getStudentDetail(ctx: AdvisoryContext, studentId: string) 
   });
   if (!student || student.section?.adviserId !== teacherId) {
     throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
+  }
+
+  const term = await prisma.term.findUnique({
+    where: { id: termId },
+    select: { startDate: true },
+  });
+  // A term that has not started yet reports no records; only the learner's
+  // identity/section stays visible.
+  if (!termHasStarted(term?.startDate)) {
+    return {
+      studentId: student.userId,
+      name: student.user.fullName,
+      lrn: student.lrn,
+      birthdate: student.birthdate,
+      gender: student.gender,
+      section: student.section.name,
+      gradeLevel: student.section.gradeLevel,
+      grades: [],
+      hiddenGradesCount: 0,
+      attendance: {
+        rate: 0,
+        present: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+        total: 0,
+        restricted: false,
+      },
+      anecdotal: { count: 0, tiers: [], categories: [] },
+      referrals: [],
+      admCases: [],
+      gradeFlags: [],
+    };
   }
 
   // Sharing filter for grades: hide subjects whose owners are all private.

@@ -84,7 +84,7 @@ export function NurseAdmReferralFormSheet({
       referralId={row.id}
       backLabel="Close"
       staffSectionTitle="School nurse section"
-      signerLabel="School Nurse"
+      signerLabel="Guidance Counselor"
       showClinicSession
       counselorName=""
       casePending={false}

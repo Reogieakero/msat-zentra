@@ -34,6 +34,7 @@ const WORKSPACE_LABELS: Record<string, string> = {
   "/teacher/anecdotal": "Advisory",
   "/teacher/classes": "Workspace",
   "/teacher/grading": "Workspace",
+  "/teacher/lock-grades": "Workspace",
   "/teacher/attendance": "Workspace",
   "/teacher/schedule": "Workspace",
   "/teacher/settings": "Settings",

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Users } from "lucide-react";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
 import { StudentCard } from "./StudentCard";
 import type { SectionSummary } from "@/services/principal/academics";
@@ -47,7 +48,12 @@ export function SectionStudentsTable({ section, query }: SectionStudentsTablePro
           ))}
         </div>
       ) : (
-        <p className={styles.empty}>No students match your search.</p>
+        <div className={styles.noMatch}>
+          <InsightCallout role="status" className={styles.noMatchCallout}>
+            <strong>No students match your search.</strong> Try a different name
+            or LRN — or clear the filter to see everyone.
+          </InsightCallout>
+        </div>
       )}
     </section>
   );

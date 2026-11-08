@@ -21,6 +21,10 @@ import {
 } from "@/services/guidance/gcform03.types";
 import { GcForm03PreviewDialog } from "@/app/guidance/adm/components/GcForm03PreviewDialog";
 import { AdmReferralFormFields } from "./adm-referral-form-fields";
+import {
+  defaultGcFormSigner,
+  useGcFormSigners,
+} from "./use-gcform03-signers";
 import pageStyles from "@/app/guidance/pages.module.css";
 import styles from "@/app/guidance/adm/components/guidance-adm.module.css";
 import formStyles from "@/app/guidance/adm/components/referral-form-dialog.module.css";
@@ -87,18 +91,52 @@ export function AdmReferralFormSheet({
     enabled: !!activeCase?.anecdotalId,
   });
   const report = reportQuery.data ?? null;
-  const reportLoading = reportQuery.isPending;
-  const reportError = reportQuery.isError;
 
   const [step, setStep] = React.useState<1 | 2>(1);
   const [form, setForm] = React.useState<GcForm03Data | null>(null);
   const [sessionDate, setSessionDate] = React.useState("");
   const [sessionTime, setSessionTime] = React.useState("");
   const [sessionError, setSessionError] = React.useState<string | null>(null);
+  // Keep the sheet instant: build from the row's own anecdotal excerpt first,
+  // then fold in the full OCForm-01 report once it lands — unless the user has
+  // already typed into the form (or a saved draft exists).
+  const touchedRef = React.useRef(false);
+  const reportAppliedRef = React.useRef(false);
+
+  // The GCForm-03 staff section is signed by the guidance counselor, so the
+  // printed name defaults to the first guidance counselor on record. A blank
+  // counselorName from the desk (nurse sheet) is filled here rather than via
+  // `patch` — patch marks the form as touched and would block the report merge.
+  // Names that no longer match a guidance counselor (e.g. a saved draft from
+  // before the field was guidance-only) are replaced too.
+  const signersQuery = useGcFormSigners();
+  const signerNames = React.useMemo(
+    () => (signersQuery.data ?? []).map((s) => s.fullName),
+    [signersQuery.data]
+  );
+  const defaultSigner = React.useMemo(
+    () => defaultGcFormSigner(signersQuery.data),
+    [signersQuery.data]
+  );
+  const defaultSignerName = defaultSigner?.fullName ?? "";
 
   React.useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
-    if (!open || !activeCase || !report || form) return;
+    if (!form || !defaultSignerName) return;
+    if (form.counselorName && signerNames.includes(form.counselorName)) return;
+    setForm((f) =>
+      f && (!f.counselorName || !signerNames.includes(f.counselorName))
+        ? { ...f, counselorName: defaultSignerName }
+        : f
+    );
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [form, defaultSignerName, signerNames]);
+
+  React.useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (!mounted || !open || !activeCase) return;
+    if (form && (touchedRef.current || reportAppliedRef.current || !report)) return;
+    if (report) reportAppliedRef.current = true;
     const draft = initialDraft;
     if (draft.scheduledAt) {
       setSessionDate(draft.scheduledAt.slice(0, 10));
@@ -108,18 +146,25 @@ export function AdmReferralFormSheet({
       activeCase.adapter,
       report,
       draft.recommendation,
-      counselorName
+      counselorName || defaultSignerName
     );
-    setForm(sanitizeGcForm03Draft(loadGcForm03Draft(referralId), base));
+    const stored = loadGcForm03Draft(referralId);
+    if (stored) touchedRef.current = true;
+    setForm(sanitizeGcForm03Draft(stored, base));
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCase, report, form, referralId]);
+  }, [mounted, open, activeCase, report, form, referralId]);
 
-  const patch = (p: Partial<GcForm03Data>) =>
+  const patch = (p: Partial<GcForm03Data>) => {
+    touchedRef.current = true;
     setForm((f) => (f ? { ...f, ...p } : f));
+  };
 
   React.useEffect(() => {
     if (!mounted || !form) return;
+    // Don't persist the row-derived placeholder — only save once the full
+    // report has been folded in or the user has actually typed.
+    if (!reportAppliedRef.current && !touchedRef.current) return;
     const t = window.setTimeout(() => saveGcForm03Draft(referralId, form), 250);
     return () => window.clearTimeout(t);
   }, [form, referralId, mounted]);
@@ -173,15 +218,17 @@ export function AdmReferralFormSheet({
   function handleReset() {
     if (!activeCase || !report) return;
     clearGcForm03Draft(referralId);
+    touchedRef.current = false;
+    reportAppliedRef.current = true;
     setSessionDate("");
     setSessionTime("");
     setSessionError(null);
-    setForm(buildGcForm03Data(activeCase.adapter, report, "", counselorName));
+    setForm(buildGcForm03Data(activeCase.adapter, report, "", counselorName || defaultSignerName));
   }
 
   if (!open) return null;
 
-  if (!mounted || casePending || reportLoading) {
+  if (!mounted || casePending) {
     return (
       <FormSheet onClose={onClose}>
       <section className={pageStyles.page} aria-busy="true">
@@ -207,7 +254,7 @@ export function AdmReferralFormSheet({
     );
   }
 
-  if (caseError || !activeCase || reportError || (!report && !reportLoading)) {
+  if (caseError || !activeCase) {
     return (
       <FormSheet onClose={onClose}>
       <section className={pageStyles.page}>
@@ -231,6 +278,21 @@ export function AdmReferralFormSheet({
     );
   }
 
+  // Render the preview in place of the sheet (not nested inside it): the
+  // sheet is a Radix Dialog whose scroll lock would block wheel scrolling in
+  // a separately portaled modal. Swapping keeps the preview scrollable.
+  if (form && step === 2) {
+    return (
+      <GcForm03PreviewDialog
+        open
+        data={form}
+        confirming={confirmMutation.isPending}
+        onClose={() => setStep(1)}
+        onConfirm={() => confirmMutation.mutate()}
+      />
+    );
+  }
+
   return (
     <FormSheet onClose={onClose}>
     <section className={pageStyles.page}>
@@ -239,9 +301,7 @@ export function AdmReferralFormSheet({
           <p className={pageStyles.eyebrow}>ADM · Referral form</p>
           <h1 className={pageStyles.title}>GCForm-03 — {activeCase.adapter.student}</h1>
           <p className={pageStyles.lede}>
-            {step === 1
-              ? "Answer the form's questions — names, dates, and the anecdotal detail are already filled in."
-              : "Filled referral sheet preview — print it, download the .xlsx, or confirm to save and endorse the case to the ADM coordinator."}
+            Answer the form&rsquo;s questions — names, dates, and the anecdotal detail are already filled in.
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={onClose}>
@@ -271,7 +331,7 @@ export function AdmReferralFormSheet({
         </div>
       ) : null}
 
-      {form && step === 1 ? (
+      {form ? (
         <AdmReferralFormFields
           form={form}
           patch={patch}
@@ -286,16 +346,6 @@ export function AdmReferralFormSheet({
           signerLabel={signerLabel}
           onPreview={() => setStep(2)}
           onReset={handleReset}
-        />
-      ) : null}
-
-      {form ? (
-        <GcForm03PreviewDialog
-          open={step === 2}
-          data={form}
-          confirming={confirmMutation.isPending}
-          onClose={() => setStep(1)}
-          onConfirm={() => confirmMutation.mutate()}
         />
       ) : null}
     </section>

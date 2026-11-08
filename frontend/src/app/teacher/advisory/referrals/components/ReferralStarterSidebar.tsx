@@ -6,6 +6,8 @@ import { FileText, Info, Send } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
+import { REFERRAL_STATUS_LEGEND } from "@/lib/labels/referral-status";
 import {
   Tooltip,
   TooltipContent,
@@ -14,15 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import menuStyles from "@/app/teacher/classes/components/timetable-menu.module.css";
 
-const STATUS_ENTRIES: { key: string; label: string; color: string }[] = [
-  { key: "pending", label: "Pending", color: "#f59e0b" },
-  { key: "in_progress", label: "In progress", color: "#3b82f6" },
-  { key: "info_requested", label: "Info requested", color: "#3b82f6" },
-  { key: "follow_up", label: "Follow up", color: "#f59e0b" },
-  { key: "resolved", label: "Resolved", color: "#22c55e" },
-  { key: "dismissed", label: "Cancelled", color: "#ef4444" },
-  { key: "rejected", label: "Rejected", color: "#ef4444" },
-];
+const STATUS_ENTRIES = REFERRAL_STATUS_LEGEND;
 
 // Icon-only right rail — same gutter pattern as the attendance/anecdotal
 // sidebars: a 9x9 icon button per starter card with a hover tooltip; the
@@ -349,17 +343,9 @@ export function ReferralStarterSidebar({ onNewReferral }: { onNewReferral?: () =
                 >
                   {STATUS_ENTRIES.map((e) => (
                     <li key={e.key} className="flex">
-                      <span
-                        className="inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold leading-tight"
-                        style={{
-                          color: e.color,
-                          borderColor: `color-mix(in srgb, ${e.color} 40%, transparent)`,
-                          backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
-                        }}
-                        title={e.label}
-                      >
+                      <Pill tone={e.tone} label={e.hint}>
                         {e.label}
-                      </span>
+                      </Pill>
                     </li>
                   ))}
                 </ul>

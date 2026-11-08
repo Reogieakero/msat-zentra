@@ -346,7 +346,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                               className={
                                 locked
                                   ? "h-6 rounded-md bg-muted px-2.5 text-xs text-muted-foreground"
-                                  : "h-6 rounded-md bg-[#2563eb] px-2.5 text-xs font-semibold text-white hover:bg-[#1d4ed8]"
+                                  : "h-6 rounded-md px-2.5 text-xs"
                               }
                             >
                               Mark done

@@ -80,7 +80,7 @@
    centered in the row: identity left, sections center, risk metrics right. */
 .rowLink {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 0.375rem;
@@ -115,6 +115,7 @@
 
 .sectionGroup {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
@@ -130,11 +131,31 @@
   outline-offset: -2px;
 }
 
-/* Rows cascade in on mount — same entrance as the registry kanban boards. */
+/* Board entrance + row cascade — same motion as the record-keeper academics
+   table (and the coordinator's enrolled monitoring board): the board slides
+   in, then each row rises in turn via the inline animationDelay. */
+.boardIn {
+  animation: board-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  /* Clip the entrance motion so translated rows can't spurt past the board
+     edge and flash a page scrollbar while the animation runs. */
+  overflow: clip;
+}
+
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes case-row-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -143,18 +164,11 @@
 }
 
 .caseList > .caseRow {
-  animation: case-row-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-}
-
-.caseList > .caseRow:nth-child(2) {
-  animation-delay: 0.06s;
-}
-
-.caseList > .caseRow:nth-child(3) {
-  animation-delay: 0.12s;
+  animation: case-row-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .boardIn,
   .caseList > .caseRow {
     animation: none;
   }
@@ -480,24 +494,22 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Uniform "What it means" footer: bottom-left of every chart board. */
-.interpretation {
-  margin: 0;
-  margin-top: auto;
-  padding-top: 0.625rem;
-  padding-left: 0.625rem;
-  border-left: 2px solid
-    color-mix(in oklch, var(--guidance-number) 55%, transparent);
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: var(--muted-foreground);
-  position: relative;
-  z-index: 5;
-}
-
+/* "What it means" label inside the shared InsightCallout footer. */
 .interpretationLabel {
   font-weight: 600;
   color: var(--foreground);
+}
+
+/* The callout's own `margin: 0` beats Tailwind's `mt-auto`, so the bottom pin
+   lives on this wrapper instead. */
+.footerSlot {
+  display: flex;
+  margin-top: auto;
+}
+
+/* The callout hugs its copy: the bottom pin lives on the wrapper. */
+.interpretation {
+  flex: 1;
 }
 
 .legendTotal {

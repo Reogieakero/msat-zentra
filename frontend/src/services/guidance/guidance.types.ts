@@ -52,6 +52,9 @@ export interface GuidanceReferralItem {
 
   studentId: string | null;
 
+  /** Persisted sprite mascot; null falls back to the `${name}:${lrn}` pick. */
+  mascot?: string | null;
+
   type: string;
   category: string;
   referredBy: string;

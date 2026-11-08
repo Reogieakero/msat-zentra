@@ -97,6 +97,11 @@ export const teacherOverviewQuerySchema = z.object({
   advisoryLimit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
 });
 
+/** Lock Grades board: classes (write) or advisees (read-only) view. */
+export const teacherLockGradesQuerySchema = z.object({
+  view: z.enum(["classes", "advisees"]).optional().default("classes"),
+});
+
 /** Day window for the overview trend charts (7–30 school days). */
 export const teacherOverviewInsightsQuerySchema = z.object({
   days: z.coerce.number().int().min(7).max(30).optional().default(14),

@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import type {
   GuidanceAdmInsightsData,
@@ -25,22 +26,15 @@ const FINDING_META: Record<string, { icon: LucideIcon; accent: string }> = {
   endorsed: { icon: Send, accent: "text-blue-500" },
 };
 
-const STAT_PILL =
-  "inline-flex max-w-full items-center truncate rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400";
+const STAT_PILL_MAX = "max-w-full";
+const STUDENT_PILL = "max-w-[10rem] truncate";
+const SECTION_PILL = "max-w-[7rem] truncate";
 
-const TYPE_PILL =
-  "inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide";
-const TYPE_TONE: Record<string, string> = {
-  ADM: "border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-400",
-  Counseling:
-    "border-violet-500/40 bg-violet-500/15 text-violet-700 dark:text-violet-400",
-};
-
-const STUDENT_PILL =
-  "inline-flex min-w-0 max-w-[10rem] items-center truncate rounded-md border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400";
-
-const SECTION_PILL =
-  "inline-flex max-w-[7rem] items-center truncate rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground";
+function typeTone(kind: string | null | undefined): "blue" | "violet" | "neutral" {
+  if (kind === "ADM") return "blue";
+  if (kind === "Counseling") return "violet";
+  return "neutral";
+}
 
 function BoardIcon({ icon: Icon }: { icon: LucideIcon }) {
   return (
@@ -66,7 +60,11 @@ export function GuidanceAdmStats({ data }: { data: GuidanceAdmInsightsData }) {
                 <Icon size={14} />
               </span>
             }
-            description={<span className={STAT_PILL}>{f.hint}</span>}
+            description={
+              <Pill tone="amber" label={f.label} className={STAT_PILL_MAX}>
+                {f.hint}
+              </Pill>
+            }
             className="flex-1"
           >
             <p className={styles.findingValue}>{f.value}</p>
@@ -133,25 +131,34 @@ function Bottlenecks({ data }: { data: GuidanceAdmInsightsData }) {
                 <span className={styles.bottleneckMain}>
                   <span className={styles.bottleneckName}>
                     {b.kind ? (
-                      <span
-                        className={`${TYPE_PILL} ${
-                          TYPE_TONE[b.kind] ??
-                          "border-border bg-secondary text-secondary-foreground"
-                        }`}
+                      <Pill
+                        tone={typeTone(b.kind)}
+                        label="Referral type"
+                        className="shrink-0 uppercase tracking-wide"
                       >
                         {b.kind}
-                      </span>
+                      </Pill>
                     ) : null}
                     <span className="shrink-0" aria-hidden>
                       <StudentMascot name={b.student} seed={b.student} size={28} />
                     </span>
-                    <span className={STUDENT_PILL} title={b.student}>
+                    <Pill
+                      tone="amber"
+                      label="Student"
+                      className={STUDENT_PILL}
+                      title={b.student}
+                    >
                       {b.student}
-                    </span>
+                    </Pill>
                     {b.section ? (
-                      <span className={SECTION_PILL} title={b.section}>
+                      <Pill
+                        tone="neutral"
+                        label="Section"
+                        className={SECTION_PILL}
+                        title={b.section}
+                      >
                         {b.section}
-                      </span>
+                      </Pill>
                     ) : null}
                   </span>
                   {b.reason ? (

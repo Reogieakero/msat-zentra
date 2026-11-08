@@ -10,15 +10,16 @@ import {
   InputGroupInput,
   InputGroupAddon,
 } from "@/components/ui/input-group";
-import { KanbanBoard } from "@/components/ui/kanban-board";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import type { HonorRollCandidate } from "@/services/principal/honorRoll.types";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { HonorRollCardSkeletons } from "./HonorRollSkeleton";
 import styles from "./CandidateTable.module.css";
 
 interface Props {
@@ -194,26 +195,73 @@ export function CandidateTable({
     );
   };
 
+  const title =
+    activeGrade === "all"
+      ? "All grades — Academic Excellence"
+      : `Grade ${activeGrade} — Academic Excellence`;
+
   return (
-    <KanbanBoard
-      title={
-        activeGrade === "all"
-          ? "All grades — Academic Excellence"
-          : `Grade ${activeGrade} — Academic Excellence`
-      }
-      style={{ borderRadius: "1rem" }}
-      icon={
-        <span className="text-amber-600 dark:text-amber-400" aria-hidden="true">
-          <Trophy size={14} />
-        </span>
-      }
-      description={
-        candidates.length === 0
-          ? "No adviser-shared awardees this term."
-          : `${candidates.length} awardee${candidates.length === 1 ? "" : "s"} — live general average ≥ 90, no subject below 80. Counts only sections where the adviser shares student data.`
-      }
-      actions={
-        <>
+    <section className={styles.panel} aria-label="Honor roll candidates">
+      <header className={styles.panelHead}>
+        <div className={styles.panelTitleBlock}>
+          <h2 className={styles.panelTitle}>
+            <span className={styles.panelIcon} aria-hidden="true">
+              <Trophy size={14} />
+            </span>
+            {title}
+          </h2>
+          <p className={styles.panelDesc}>
+            {candidates.length === 0
+              ? "No adviser-shared awardees this term."
+              : `${candidates.length} awardee${candidates.length === 1 ? "" : "s"} — live general average ≥ 90, no subject below 80. Counts only sections where the adviser shares student data.`}
+          </p>
+        </div>
+        <div className={styles.panelTools}>
+          <div
+            className={styles.tabs}
+            role="tablist"
+            aria-label="Filter by grade level"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeGrade === "all"}
+              aria-label="All grades"
+              title="All grades"
+              className={styles.filterTab}
+              onClick={() => handleGradeSelect("all")}
+            >
+              <Pill
+                tone={activeGrade === "all" ? "blue" : "neutral"}
+                className={TAB_PILL_CLASS}
+              >
+                All grades
+              </Pill>
+            </button>
+            {grades.map((g) => {
+              const key = String(g);
+              const active = key === activeGrade;
+              return (
+                <button
+                  key={g}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  aria-label={`Grade ${g}`}
+                  title={`Grade ${g}`}
+                  className={styles.filterTab}
+                  onClick={() => handleGradeSelect(key)}
+                >
+                  <Pill
+                    tone={active ? "blue" : "neutral"}
+                    className={TAB_PILL_CLASS}
+                  >
+                    Grade {g}
+                  </Pill>
+                </button>
+              );
+            })}
+          </div>
           <InputGroup className="max-w-40 shrink-0" style={{ borderRadius: "1rem" }}>
             <InputGroupInput
               placeholder="Filter students..."
@@ -233,71 +281,10 @@ export function CandidateTable({
           >
             <Download className="size-3.5" /> Export
           </Button>
-        </>
-      }
-      headerCenter={
-        <div
-          className={styles.tabs}
-          role="tablist"
-          aria-label="Filter by grade level"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeGrade === "all"}
-            aria-label="All grades"
-            title="All grades"
-            className={styles.filterTab}
-            onClick={() => handleGradeSelect("all")}
-          >
-            <Pill
-              tone={activeGrade === "all" ? "blue" : "neutral"}
-              className={TAB_PILL_CLASS}
-            >
-              All grades
-            </Pill>
-          </button>
-          {grades.map((g) => {
-            const key = String(g);
-            const active = key === activeGrade;
-            return (
-              <button
-                key={g}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                aria-label={`Grade ${g}`}
-                title={`Grade ${g}`}
-                className={styles.filterTab}
-                onClick={() => handleGradeSelect(key)}
-              >
-                <Pill
-                  tone={active ? "blue" : "neutral"}
-                  className={TAB_PILL_CLASS}
-                >
-                  Grade {g}
-                </Pill>
-              </button>
-            );
-          })}
         </div>
-      }
-      footer={
-        filtered.length > 0 ? (
-          <Pagination
-            currentPage={safePage}
-            totalItems={filtered.length}
-            onPageChange={setPage}
-          />
-        ) : null
-      }
-    >
+      </header>
       {loading ? (
-        <div className={styles.grid} aria-label="Loading honor roll" aria-busy="true">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className={styles.skeletonCard} />
-          ))}
-        </div>
+        <HonorRollCardSkeletons />
       ) : candidates.length === 0 ? (
         <PrincipalEmptyState
           icon={Trophy}
@@ -305,7 +292,13 @@ export function CandidateTable({
           hint="Students from adviser-shared sections with a live general average of 90+ and no subject below 80 will appear here as scores are recorded."
         />
       ) : filtered.length === 0 ? (
-        <p className={styles.empty}>No students match your search.</p>
+        <div className={styles.noMatch}>
+          <InsightCallout role="status" className={styles.noMatchCallout}>
+            <strong>No students match “{query.trim()}”.</strong> Try a different
+            name, LRN, or section — or clear the search to see every
+            adviser-shared awardee.
+          </InsightCallout>
+        </div>
       ) : (
         <div className={styles.grid} aria-label="Honor roll candidates">
           {pageRows.map((candidate, index) => (
@@ -317,7 +310,16 @@ export function CandidateTable({
           ))}
         </div>
       )}
-    </KanbanBoard>
+      {filtered.length > 0 ? (
+        <div className={styles.panelFooter}>
+          <Pagination
+            currentPage={safePage}
+            totalItems={filtered.length}
+            onPageChange={setPage}
+          />
+        </div>
+      ) : null}
+    </section>
   );
 }
 

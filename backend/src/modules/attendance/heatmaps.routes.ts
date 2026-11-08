@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { scopedTermRow } from "../../lib/termScope.js";
+import { cache } from "../../lib/cache.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { resolveDisplayTerm } from "./attendance.repository.js";
 import {
   getHeatmap,
@@ -42,6 +44,7 @@ router.get(
           statusFilter,
           termId: activeTerm?.id,
           startDate: activeTerm?.startDate ?? undefined,
+          endDate: activeTerm?.endDate ?? undefined,
         }),
       );
     } catch (e) {
@@ -61,7 +64,7 @@ router.get(
           ? (req.query.session as HeatSession)
           : undefined;
       const activeTerm = await scopedTermRow(req);
-      res.json(await getSummary({ session, termId: activeTerm?.id }));
+      res.json(await getSummary({ session, termId: activeTerm?.id, startDate: activeTerm?.startDate, endDate: activeTerm?.endDate }));
     } catch (e) {
       next(e);
     }
@@ -97,6 +100,7 @@ router.get(
   "/section-stats",
   requireAuth,
   requireRole("principal", "adviser", "guidance_counselor", "nurse"),
+  cache({ ttl: CACHE_TTLS.semiStatic, tags: [CACHE_TAGS.attendance] }),
   async (req, res, next) => {
     try {
       const session: HeatSession = req.query.session === "PM" ? "PM" : "AM";
@@ -138,6 +142,7 @@ router.get(
           termId: activeTerm?.id,
           schoolYearId: ctxTerm(req).schoolYearId,
           startDate: activeTerm?.startDate ?? undefined,
+          endDate: activeTerm?.endDate ?? undefined,
         }),
       );
     } catch (e) {
@@ -167,6 +172,7 @@ router.get(
   "/section-subject-heatmap",
   requireAuth,
   requireRole("principal", "adviser", "guidance_counselor", "nurse"),
+  cache({ ttl: CACHE_TTLS.semiStatic, tags: [CACHE_TAGS.attendance] }),
   async (req, res, next) => {
     try {
       const subjectFilter =

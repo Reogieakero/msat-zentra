@@ -23,12 +23,12 @@ export interface AttendanceMatrixStudent {
 export function attendanceOverall(
   rates: Record<string, number | null>,
   subjectCount: number,
-): number {
-  if (subjectCount === 0) return 0;
+): number | null {
+  if (subjectCount === 0) return null;
   const values = Object.values(rates).filter(
     (r): r is number => typeof r === "number" && Number.isFinite(r),
   );
-  if (values.length === 0) return 0;
+  if (values.length === 0) return null;
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
@@ -86,11 +86,9 @@ export function AdvisoryAttendanceBoard({
   }
 
   const overall = attendanceOverall(student.rates, subjects.length);
-  const overallPct = Math.round(overall * 100);
-  const hasMarks = subjects.some(
-    (s) => typeof student.rates[s.id] === "number",
-  );
-  const atRisk = hasMarks && overall < 0.75;
+  const overallPct = overall === null ? null : Math.round(overall * 100);
+  const hasMarks = overall !== null;
+  const atRisk = overall !== null && overall < 0.75;
 
   return (
     <div
@@ -105,7 +103,7 @@ export function AdvisoryAttendanceBoard({
           <h2 className={boardStyles.boardTitle}>Student attendance</h2>
           <span className="mt-1 flex max-w-full flex-wrap items-center gap-1">
             <Pill tone="amber" label="Overall present rate">
-              {hasMarks ? `${overallPct}% overall` : "No marks yet"}
+              {overallPct !== null ? `${overallPct}% overall` : "No marks yet"}
             </Pill>
             <Pill tone="amber" label="Subjects measured">
               {`${subjects.length} subject${subjects.length === 1 ? "" : "s"}`}
@@ -124,7 +122,7 @@ export function AdvisoryAttendanceBoard({
         <header className={boardStyles.laneHead}>
           <span
             className={boardStyles.laneDot}
-            style={{ background: hasMarks ? attendanceDot(overall) : "#f59e0b" }}
+            style={{ background: overall !== null ? attendanceDot(overall) : "#f59e0b" }}
             aria-hidden
           />
           <h3 className={boardStyles.laneTitle}>Present rate per subject</h3>

@@ -4,7 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Megaphone, ShieldQuestion, Users } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import { AdviserAccessTable, AdviserAccessTableSkeleton } from "./components/AdviserAccessTable";
+import { AdviserAccessTable, AdviserAccessTableSkeleton } from "@/components/shared/adviser-access/adviser-access-table";
 import { apiClient } from "@/lib/api/client";
 import type { AdviserAccessRequest } from "./components/types";
 import { getStudentListStats, mergeConfirmedMarks } from "@/components/shared/adviser-access/adviser-access-types";
@@ -103,7 +103,7 @@ export default function AdviserAccessPage() {
         <div className={styles.layout}>
           <div className={styles.stack}>
             <AdviserAccessSummarySkeleton className={styles.summaryGrid} />
-            <AdviserAccessTableSkeleton />
+            <AdviserAccessTableSkeleton desk="record-keeper" />
           </div>
           <Sf10RequestsRail />
         </div>
@@ -173,7 +173,7 @@ export default function AdviserAccessPage() {
             ))}
           </section>
 
-          <AdviserAccessTable requests={pendingRequests} />
+          <AdviserAccessTable desk="record-keeper" requests={pendingRequests} />
         </div>
         <Sf10RequestsRail />
       </div>

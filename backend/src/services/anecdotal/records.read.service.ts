@@ -200,6 +200,7 @@ export async function getRecordDetail(ctx: AnecdotalContext, recordId: string) {
     recordId,
     ctx.userId,
     ctx.role,
+    { signatureBytes: false },
   );
   const { signatureImage: _omitted, ...sheet } = data;
   void _omitted;

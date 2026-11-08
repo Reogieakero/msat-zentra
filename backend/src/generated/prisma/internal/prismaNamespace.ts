@@ -406,6 +406,7 @@ export const ModelName = {
   Term: 'Term',
   Section: 'Section',
   StudentRoster: 'StudentRoster',
+  TermRosterConfirmation: 'TermRosterConfirmation',
   Subject: 'Subject',
   TeacherSubjectAssignment: 'TeacherSubjectAssignment',
   ScheduleConfig: 'ScheduleConfig',
@@ -461,7 +462,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "scheduleConfig" | "sectionTimetableEntry" | "teacherName" | "teacherTermGrant" | "adviserArchivedStudent" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "attendanceRecordLegacy" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admMeetingInvitee" | "admMeetingAttachment" | "admModule" | "admDevice" | "admForm" | "advisoryModule" | "advisoryModuleSubmission" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
+    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "termRosterConfirmation" | "subject" | "teacherSubjectAssignment" | "scheduleConfig" | "sectionTimetableEntry" | "teacherName" | "teacherTermGrant" | "adviserArchivedStudent" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "attendanceRecordLegacy" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admMeetingInvitee" | "admMeetingAttachment" | "admModule" | "admDevice" | "admForm" | "advisoryModule" | "advisoryModuleSubmission" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1128,6 +1129,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.StudentRosterCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.StudentRosterCountAggregateOutputType> | number
+        }
+      }
+    }
+    TermRosterConfirmation: {
+      payload: Prisma.$TermRosterConfirmationPayload<ExtArgs>
+      fields: Prisma.TermRosterConfirmationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TermRosterConfirmationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TermRosterConfirmationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload>
+        }
+        findFirst: {
+          args: Prisma.TermRosterConfirmationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TermRosterConfirmationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload>
+        }
+        findMany: {
+          args: Prisma.TermRosterConfirmationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload>[]
+        }
+        create: {
+          args: Prisma.TermRosterConfirmationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload>
+        }
+        createMany: {
+          args: Prisma.TermRosterConfirmationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TermRosterConfirmationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload>[]
+        }
+        delete: {
+          args: Prisma.TermRosterConfirmationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload>
+        }
+        update: {
+          args: Prisma.TermRosterConfirmationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload>
+        }
+        deleteMany: {
+          args: Prisma.TermRosterConfirmationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TermRosterConfirmationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TermRosterConfirmationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload>[]
+        }
+        upsert: {
+          args: Prisma.TermRosterConfirmationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TermRosterConfirmationPayload>
+        }
+        aggregate: {
+          args: Prisma.TermRosterConfirmationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTermRosterConfirmation>
+        }
+        groupBy: {
+          args: Prisma.TermRosterConfirmationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TermRosterConfirmationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TermRosterConfirmationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TermRosterConfirmationCountAggregateOutputType> | number
         }
       }
     }
@@ -4258,10 +4333,25 @@ export const StudentRosterScalarFieldEnum = {
   riskLevel: 'riskLevel',
   academicFlag: 'academicFlag',
   attendanceFlag: 'attendanceFlag',
-  behavioralFlag: 'behavioralFlag'
+  behavioralFlag: 'behavioralFlag',
+  createdAt: 'createdAt',
+  enlistedTermId: 'enlistedTermId'
 } as const
 
 export type StudentRosterScalarFieldEnum = (typeof StudentRosterScalarFieldEnum)[keyof typeof StudentRosterScalarFieldEnum]
+
+
+export const TermRosterConfirmationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  termId: 'termId',
+  kind: 'kind',
+  rosterFingerprint: 'rosterFingerprint',
+  sameAsPrevious: 'sameAsPrevious',
+  acknowledgedAt: 'acknowledgedAt'
+} as const
+
+export type TermRosterConfirmationScalarFieldEnum = (typeof TermRosterConfirmationScalarFieldEnum)[keyof typeof TermRosterConfirmationScalarFieldEnum]
 
 
 export const SubjectScalarFieldEnum = {
@@ -4744,6 +4834,7 @@ export type AdmFormScalarFieldEnum = (typeof AdmFormScalarFieldEnum)[keyof typeo
 export const AdvisoryModuleScalarFieldEnum = {
   id: 'id',
   sectionId: 'sectionId',
+  termId: 'termId',
   kind: 'kind',
   moduleName: 'moduleName',
   moduleUrl: 'moduleUrl',
@@ -5653,6 +5744,7 @@ export type GlobalOmitConfig = {
   term?: Prisma.TermOmit
   section?: Prisma.SectionOmit
   studentRoster?: Prisma.StudentRosterOmit
+  termRosterConfirmation?: Prisma.TermRosterConfirmationOmit
   subject?: Prisma.SubjectOmit
   teacherSubjectAssignment?: Prisma.TeacherSubjectAssignmentOmit
   scheduleConfig?: Prisma.ScheduleConfigOmit

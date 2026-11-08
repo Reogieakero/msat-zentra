@@ -5,6 +5,7 @@ import { combineDateTime } from "../../referrals/components/guidance-referrals-t
 import type {
   AtRiskStudentItem,
   CounselingSessionType,
+  GradeFilter,
   GuidanceInterventionsSummary,
   RiskLevelFilter,
 } from "@/services/guidance/interventions.types";
@@ -28,6 +29,8 @@ export function GuidanceInterventionsTable({
   onQueryChange,
   level,
   onLevelChange,
+  grade,
+  onGradeChange,
   onRetry,
   isRetrying,
   isNavigating,
@@ -105,6 +108,8 @@ export function GuidanceInterventionsTable({
         onQueryChange={onQueryChange}
         level={level}
         onLevelChange={onLevelChange}
+        grade={grade}
+        onGradeChange={onGradeChange}
         onRetry={onRetry}
         isRetrying={isRetrying}
         isNavigating={isNavigating}
@@ -286,6 +291,8 @@ interface GuidanceInterventionsTableProps {
   onQueryChange: (value: string) => void;
   level: RiskLevelFilter;
   onLevelChange: (value: RiskLevelFilter) => void;
+  grade: GradeFilter;
+  onGradeChange: (value: GradeFilter) => void;
   onRetry: () => void;
   isRetrying: boolean;
   isNavigating: boolean;

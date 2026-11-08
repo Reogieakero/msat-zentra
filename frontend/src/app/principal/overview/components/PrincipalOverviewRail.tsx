@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowRight,
   Award,
   CalendarX,
   FileSignature,
@@ -297,7 +296,6 @@ export function PrincipalOverviewRail() {
                             onClick={() => setOpenKey(null)}
                           >
                             {a.cta}
-                            <ArrowRight size={14} aria-hidden />
                           </Link>
                         </Button>
                       </div>

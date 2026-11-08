@@ -27,19 +27,26 @@ export interface AtRiskQuery {
 export async function getAtRiskStudents(query: AtRiskQuery) {
   const { session, schoolYearId, displayTerm, sharedOnly } = query;
   const termId = displayTerm.id;
-  const schoolDays = countSchoolDays(buildDayAxis(displayTerm.startDate));
+  const schoolDays = countSchoolDays(buildDayAxis(displayTerm.startDate, displayTerm.endDate));
 
-  const [sections, profiles, rosterEntries] = await Promise.all([
-    prisma.section.findMany({
-      where: {
-        ...schoolYearClause(schoolYearId),
-        ...(sharedOnly
-          ? { adviser: { staffProfile: { shareStudentData: true } } }
-          : {}),
-      },
-      select: { id: true, name: true, gradeLevel: true },
-    }),
+  const sections = await prisma.section.findMany({
+    where: {
+      ...schoolYearClause(schoolYearId),
+      ...(sharedOnly
+        ? { adviser: { staffProfile: { shareStudentData: true } } }
+        : {}),
+    },
+    select: { id: true, name: true, gradeLevel: true },
+  });
+  const meta = new Map(sections.map((s) => [s.id, s]));
+  const sectionIds = sections.map((s) => s.id);
+
+  // Loads are scoped to the in-scope sections (this used to read every
+  // StudentProfile/StudentRoster in the school) and run in parallel with the
+  // term's records instead of ahead of them.
+  const [profiles, rosterEntries, subjectTakes] = await Promise.all([
     prisma.studentProfile.findMany({
+      where: { sectionId: { in: sectionIds } },
       select: {
         userId: true,
         lrn: true,
@@ -48,23 +55,21 @@ export async function getAtRiskStudents(query: AtRiskQuery) {
       },
     }),
     prisma.studentRoster.findMany({
+      where: { sectionId: { in: sectionIds } },
       select: { id: true, lrn: true, fullName: true, sectionId: true },
     }),
+    prisma.attendanceRecord.findMany({
+      where: { termId, sectionId: { in: sectionIds }, NOT: { subjectId: null } },
+      select: {
+        sectionId: true,
+        studentId: true,
+        rosterId: true,
+        subjectId: true,
+        date: true,
+        status: true,
+      },
+    }),
   ]);
-  const meta = new Map(sections.map((s) => [s.id, s]));
-  const sectionIds = sections.map((s) => s.id);
-
-  const subjectTakes = await prisma.attendanceRecord.findMany({
-    where: { termId, sectionId: { in: sectionIds }, NOT: { subjectId: null } },
-    select: {
-      sectionId: true,
-      studentId: true,
-      rosterId: true,
-      subjectId: true,
-      date: true,
-      status: true,
-    },
-  });
 
   if (subjectTakes.length === 0) {
 
@@ -161,7 +166,7 @@ export async function getAtRiskStudents(query: AtRiskQuery) {
     buildOfferedMap(entries)
   );
 
-  const outcomeKeys = buildDayAxis(displayTerm.startDate).filter(
+  const outcomeKeys = buildDayAxis(displayTerm.startDate, displayTerm.endDate).filter(
     (k) => !isWeekendKey(k)
   );
   const days = outcomeKeys.length;

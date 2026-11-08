@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   CalendarClock,
   FileText,
@@ -59,6 +60,7 @@ export function NurseStartHandlingDialog({
   const [sessionTime, setSessionTime] = React.useState("");
   const [dialogError, setDialogError] = React.useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
 
   const acceptMutation = useNurseMutation({
     mutationFn: (input: { intakeNotes?: string; scheduledAt?: string }) =>
@@ -166,6 +168,10 @@ export function NurseStartHandlingDialog({
   const locked = acting;
   const nestedOverlayOpen = previewOpen;
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+  React.useEffect(() => {
     if (!open || locked || nestedOverlayOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -178,9 +184,9 @@ export function NurseStartHandlingDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, locked, nestedOverlayOpen, onClose, acceptMutation]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <>
       {/* `whitespace-normal` — the row cell that mounts this overlay sets
           `white-space: nowrap` (nurse-overview.module.css `.cellActions`),
@@ -386,6 +392,7 @@ export function NurseStartHandlingDialog({
           onClose={() => setPreviewOpen(false)}
         />
       ) : null}
-    </>
+    </>,
+    document.body,
   );
 }

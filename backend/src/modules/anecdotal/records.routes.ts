@@ -162,7 +162,7 @@ router.get(
   requireRole(...FILER_ROLES),
   async (req, res, next) => {
     try {
-      res.json(await listMine(req.user!.id));
+      res.json(await listMine(req.user!.id, req.termScope?.termId ?? null));
     } catch (e) {
       next(e);
     }

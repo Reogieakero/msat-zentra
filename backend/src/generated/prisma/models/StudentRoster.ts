@@ -47,6 +47,8 @@ export type StudentRosterMinAggregateOutputType = {
   academicFlag: boolean | null
   attendanceFlag: boolean | null
   behavioralFlag: boolean | null
+  createdAt: Date | null
+  enlistedTermId: string | null
 }
 
 export type StudentRosterMaxAggregateOutputType = {
@@ -62,6 +64,8 @@ export type StudentRosterMaxAggregateOutputType = {
   academicFlag: boolean | null
   attendanceFlag: boolean | null
   behavioralFlag: boolean | null
+  createdAt: Date | null
+  enlistedTermId: string | null
 }
 
 export type StudentRosterCountAggregateOutputType = {
@@ -77,6 +81,8 @@ export type StudentRosterCountAggregateOutputType = {
   academicFlag: number
   attendanceFlag: number
   behavioralFlag: number
+  createdAt: number
+  enlistedTermId: number
   _all: number
 }
 
@@ -102,6 +108,8 @@ export type StudentRosterMinAggregateInputType = {
   academicFlag?: true
   attendanceFlag?: true
   behavioralFlag?: true
+  createdAt?: true
+  enlistedTermId?: true
 }
 
 export type StudentRosterMaxAggregateInputType = {
@@ -117,6 +125,8 @@ export type StudentRosterMaxAggregateInputType = {
   academicFlag?: true
   attendanceFlag?: true
   behavioralFlag?: true
+  createdAt?: true
+  enlistedTermId?: true
 }
 
 export type StudentRosterCountAggregateInputType = {
@@ -132,6 +142,8 @@ export type StudentRosterCountAggregateInputType = {
   academicFlag?: true
   attendanceFlag?: true
   behavioralFlag?: true
+  createdAt?: true
+  enlistedTermId?: true
   _all?: true
 }
 
@@ -234,6 +246,8 @@ export type StudentRosterGroupByOutputType = {
   academicFlag: boolean
   attendanceFlag: boolean
   behavioralFlag: boolean
+  createdAt: Date
+  enlistedTermId: string | null
   _count: StudentRosterCountAggregateOutputType | null
   _avg: StudentRosterAvgAggregateOutputType | null
   _sum: StudentRosterSumAggregateOutputType | null
@@ -272,7 +286,10 @@ export type StudentRosterWhereInput = {
   academicFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
   attendanceFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
   behavioralFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"StudentRoster"> | Date | string
+  enlistedTermId?: Prisma.StringNullableFilter<"StudentRoster"> | string | null
   section?: Prisma.XOR<Prisma.SectionScalarRelationFilter, Prisma.SectionWhereInput>
+  enlistedTerm?: Prisma.XOR<Prisma.TermNullableScalarRelationFilter, Prisma.TermWhereInput> | null
   schoolYear?: Prisma.XOR<Prisma.SchoolYearScalarRelationFilter, Prisma.SchoolYearWhereInput>
   attendanceRecords?: Prisma.AttendanceRecordListRelationFilter
   anecdotalRecords?: Prisma.AnecdotalRecordListRelationFilter
@@ -297,7 +314,10 @@ export type StudentRosterOrderByWithRelationInput = {
   academicFlag?: Prisma.SortOrder
   attendanceFlag?: Prisma.SortOrder
   behavioralFlag?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  enlistedTermId?: Prisma.SortOrderInput | Prisma.SortOrder
   section?: Prisma.SectionOrderByWithRelationInput
+  enlistedTerm?: Prisma.TermOrderByWithRelationInput
   schoolYear?: Prisma.SchoolYearOrderByWithRelationInput
   attendanceRecords?: Prisma.AttendanceRecordOrderByRelationAggregateInput
   anecdotalRecords?: Prisma.AnecdotalRecordOrderByRelationAggregateInput
@@ -326,7 +346,10 @@ export type StudentRosterWhereUniqueInput = Prisma.AtLeast<{
   academicFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
   attendanceFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
   behavioralFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"StudentRoster"> | Date | string
+  enlistedTermId?: Prisma.StringNullableFilter<"StudentRoster"> | string | null
   section?: Prisma.XOR<Prisma.SectionScalarRelationFilter, Prisma.SectionWhereInput>
+  enlistedTerm?: Prisma.XOR<Prisma.TermNullableScalarRelationFilter, Prisma.TermWhereInput> | null
   schoolYear?: Prisma.XOR<Prisma.SchoolYearScalarRelationFilter, Prisma.SchoolYearWhereInput>
   attendanceRecords?: Prisma.AttendanceRecordListRelationFilter
   anecdotalRecords?: Prisma.AnecdotalRecordListRelationFilter
@@ -351,6 +374,8 @@ export type StudentRosterOrderByWithAggregationInput = {
   academicFlag?: Prisma.SortOrder
   attendanceFlag?: Prisma.SortOrder
   behavioralFlag?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  enlistedTermId?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.StudentRosterCountOrderByAggregateInput
   _avg?: Prisma.StudentRosterAvgOrderByAggregateInput
   _max?: Prisma.StudentRosterMaxOrderByAggregateInput
@@ -374,6 +399,8 @@ export type StudentRosterScalarWhereWithAggregatesInput = {
   academicFlag?: Prisma.BoolWithAggregatesFilter<"StudentRoster"> | boolean
   attendanceFlag?: Prisma.BoolWithAggregatesFilter<"StudentRoster"> | boolean
   behavioralFlag?: Prisma.BoolWithAggregatesFilter<"StudentRoster"> | boolean
+  createdAt?: Prisma.DateTimeWithAggregatesFilter<"StudentRoster"> | Date | string
+  enlistedTermId?: Prisma.StringNullableWithAggregatesFilter<"StudentRoster"> | string | null
 }
 
 export type StudentRosterCreateInput = {
@@ -387,7 +414,9 @@ export type StudentRosterCreateInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -412,6 +441,8 @@ export type StudentRosterUncheckedCreateInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -433,7 +464,9 @@ export type StudentRosterUpdateInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -458,6 +491,8 @@ export type StudentRosterUncheckedUpdateInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -481,6 +516,8 @@ export type StudentRosterCreateManyInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
 }
 
 export type StudentRosterUpdateManyMutationInput = {
@@ -494,6 +531,7 @@ export type StudentRosterUpdateManyMutationInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type StudentRosterUncheckedUpdateManyInput = {
@@ -509,6 +547,8 @@ export type StudentRosterUncheckedUpdateManyInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type StudentRosterListRelationFilter = {
@@ -539,6 +579,8 @@ export type StudentRosterCountOrderByAggregateInput = {
   academicFlag?: Prisma.SortOrder
   attendanceFlag?: Prisma.SortOrder
   behavioralFlag?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  enlistedTermId?: Prisma.SortOrder
 }
 
 export type StudentRosterAvgOrderByAggregateInput = {
@@ -558,6 +600,8 @@ export type StudentRosterMaxOrderByAggregateInput = {
   academicFlag?: Prisma.SortOrder
   attendanceFlag?: Prisma.SortOrder
   behavioralFlag?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  enlistedTermId?: Prisma.SortOrder
 }
 
 export type StudentRosterMinOrderByAggregateInput = {
@@ -573,6 +617,8 @@ export type StudentRosterMinOrderByAggregateInput = {
   academicFlag?: Prisma.SortOrder
   attendanceFlag?: Prisma.SortOrder
   behavioralFlag?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  enlistedTermId?: Prisma.SortOrder
 }
 
 export type StudentRosterSumOrderByAggregateInput = {
@@ -623,6 +669,48 @@ export type StudentRosterUncheckedUpdateManyWithoutSchoolYearNestedInput = {
   connect?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
   update?: Prisma.StudentRosterUpdateWithWhereUniqueWithoutSchoolYearInput | Prisma.StudentRosterUpdateWithWhereUniqueWithoutSchoolYearInput[]
   updateMany?: Prisma.StudentRosterUpdateManyWithWhereWithoutSchoolYearInput | Prisma.StudentRosterUpdateManyWithWhereWithoutSchoolYearInput[]
+  deleteMany?: Prisma.StudentRosterScalarWhereInput | Prisma.StudentRosterScalarWhereInput[]
+}
+
+export type StudentRosterCreateNestedManyWithoutEnlistedTermInput = {
+  create?: Prisma.XOR<Prisma.StudentRosterCreateWithoutEnlistedTermInput, Prisma.StudentRosterUncheckedCreateWithoutEnlistedTermInput> | Prisma.StudentRosterCreateWithoutEnlistedTermInput[] | Prisma.StudentRosterUncheckedCreateWithoutEnlistedTermInput[]
+  connectOrCreate?: Prisma.StudentRosterCreateOrConnectWithoutEnlistedTermInput | Prisma.StudentRosterCreateOrConnectWithoutEnlistedTermInput[]
+  createMany?: Prisma.StudentRosterCreateManyEnlistedTermInputEnvelope
+  connect?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
+}
+
+export type StudentRosterUncheckedCreateNestedManyWithoutEnlistedTermInput = {
+  create?: Prisma.XOR<Prisma.StudentRosterCreateWithoutEnlistedTermInput, Prisma.StudentRosterUncheckedCreateWithoutEnlistedTermInput> | Prisma.StudentRosterCreateWithoutEnlistedTermInput[] | Prisma.StudentRosterUncheckedCreateWithoutEnlistedTermInput[]
+  connectOrCreate?: Prisma.StudentRosterCreateOrConnectWithoutEnlistedTermInput | Prisma.StudentRosterCreateOrConnectWithoutEnlistedTermInput[]
+  createMany?: Prisma.StudentRosterCreateManyEnlistedTermInputEnvelope
+  connect?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
+}
+
+export type StudentRosterUpdateManyWithoutEnlistedTermNestedInput = {
+  create?: Prisma.XOR<Prisma.StudentRosterCreateWithoutEnlistedTermInput, Prisma.StudentRosterUncheckedCreateWithoutEnlistedTermInput> | Prisma.StudentRosterCreateWithoutEnlistedTermInput[] | Prisma.StudentRosterUncheckedCreateWithoutEnlistedTermInput[]
+  connectOrCreate?: Prisma.StudentRosterCreateOrConnectWithoutEnlistedTermInput | Prisma.StudentRosterCreateOrConnectWithoutEnlistedTermInput[]
+  upsert?: Prisma.StudentRosterUpsertWithWhereUniqueWithoutEnlistedTermInput | Prisma.StudentRosterUpsertWithWhereUniqueWithoutEnlistedTermInput[]
+  createMany?: Prisma.StudentRosterCreateManyEnlistedTermInputEnvelope
+  set?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
+  disconnect?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
+  delete?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
+  connect?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
+  update?: Prisma.StudentRosterUpdateWithWhereUniqueWithoutEnlistedTermInput | Prisma.StudentRosterUpdateWithWhereUniqueWithoutEnlistedTermInput[]
+  updateMany?: Prisma.StudentRosterUpdateManyWithWhereWithoutEnlistedTermInput | Prisma.StudentRosterUpdateManyWithWhereWithoutEnlistedTermInput[]
+  deleteMany?: Prisma.StudentRosterScalarWhereInput | Prisma.StudentRosterScalarWhereInput[]
+}
+
+export type StudentRosterUncheckedUpdateManyWithoutEnlistedTermNestedInput = {
+  create?: Prisma.XOR<Prisma.StudentRosterCreateWithoutEnlistedTermInput, Prisma.StudentRosterUncheckedCreateWithoutEnlistedTermInput> | Prisma.StudentRosterCreateWithoutEnlistedTermInput[] | Prisma.StudentRosterUncheckedCreateWithoutEnlistedTermInput[]
+  connectOrCreate?: Prisma.StudentRosterCreateOrConnectWithoutEnlistedTermInput | Prisma.StudentRosterCreateOrConnectWithoutEnlistedTermInput[]
+  upsert?: Prisma.StudentRosterUpsertWithWhereUniqueWithoutEnlistedTermInput | Prisma.StudentRosterUpsertWithWhereUniqueWithoutEnlistedTermInput[]
+  createMany?: Prisma.StudentRosterCreateManyEnlistedTermInputEnvelope
+  set?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
+  disconnect?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
+  delete?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
+  connect?: Prisma.StudentRosterWhereUniqueInput | Prisma.StudentRosterWhereUniqueInput[]
+  update?: Prisma.StudentRosterUpdateWithWhereUniqueWithoutEnlistedTermInput | Prisma.StudentRosterUpdateWithWhereUniqueWithoutEnlistedTermInput[]
+  updateMany?: Prisma.StudentRosterUpdateManyWithWhereWithoutEnlistedTermInput | Prisma.StudentRosterUpdateManyWithWhereWithoutEnlistedTermInput[]
   deleteMany?: Prisma.StudentRosterScalarWhereInput | Prisma.StudentRosterScalarWhereInput[]
 }
 
@@ -807,7 +895,9 @@ export type StudentRosterCreateWithoutSchoolYearInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutRosterInput
@@ -830,6 +920,8 @@ export type StudentRosterUncheckedCreateWithoutSchoolYearInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -882,6 +974,82 @@ export type StudentRosterScalarWhereInput = {
   academicFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
   attendanceFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
   behavioralFlag?: Prisma.BoolFilter<"StudentRoster"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"StudentRoster"> | Date | string
+  enlistedTermId?: Prisma.StringNullableFilter<"StudentRoster"> | string | null
+}
+
+export type StudentRosterCreateWithoutEnlistedTermInput = {
+  id?: string
+  lrn: string
+  fullName: string
+  gradeLevel: $Enums.GradeLevel
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  createdAt?: Date | string
+  section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
+  referrals?: Prisma.ReferralCreateNestedManyWithoutRosterInput
+  studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutRosterInput
+  finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutRosterInput
+  riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutRosterInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRosterInput
+}
+
+export type StudentRosterUncheckedCreateWithoutEnlistedTermInput = {
+  id?: string
+  lrn: string
+  fullName: string
+  gradeLevel: $Enums.GradeLevel
+  sectionId: string
+  schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  createdAt?: Date | string
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
+  referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
+  studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
+  finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutRosterInput
+  riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutRosterInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRosterInput
+}
+
+export type StudentRosterCreateOrConnectWithoutEnlistedTermInput = {
+  where: Prisma.StudentRosterWhereUniqueInput
+  create: Prisma.XOR<Prisma.StudentRosterCreateWithoutEnlistedTermInput, Prisma.StudentRosterUncheckedCreateWithoutEnlistedTermInput>
+}
+
+export type StudentRosterCreateManyEnlistedTermInputEnvelope = {
+  data: Prisma.StudentRosterCreateManyEnlistedTermInput | Prisma.StudentRosterCreateManyEnlistedTermInput[]
+  skipDuplicates?: boolean
+}
+
+export type StudentRosterUpsertWithWhereUniqueWithoutEnlistedTermInput = {
+  where: Prisma.StudentRosterWhereUniqueInput
+  update: Prisma.XOR<Prisma.StudentRosterUpdateWithoutEnlistedTermInput, Prisma.StudentRosterUncheckedUpdateWithoutEnlistedTermInput>
+  create: Prisma.XOR<Prisma.StudentRosterCreateWithoutEnlistedTermInput, Prisma.StudentRosterUncheckedCreateWithoutEnlistedTermInput>
+}
+
+export type StudentRosterUpdateWithWhereUniqueWithoutEnlistedTermInput = {
+  where: Prisma.StudentRosterWhereUniqueInput
+  data: Prisma.XOR<Prisma.StudentRosterUpdateWithoutEnlistedTermInput, Prisma.StudentRosterUncheckedUpdateWithoutEnlistedTermInput>
+}
+
+export type StudentRosterUpdateManyWithWhereWithoutEnlistedTermInput = {
+  where: Prisma.StudentRosterScalarWhereInput
+  data: Prisma.XOR<Prisma.StudentRosterUpdateManyMutationInput, Prisma.StudentRosterUncheckedUpdateManyWithoutEnlistedTermInput>
 }
 
 export type StudentRosterCreateWithoutSectionInput = {
@@ -895,6 +1063,8 @@ export type StudentRosterCreateWithoutSectionInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -918,6 +1088,8 @@ export type StudentRosterUncheckedCreateWithoutSectionInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -965,7 +1137,9 @@ export type StudentRosterCreateWithoutStudentGradesInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -989,6 +1163,8 @@ export type StudentRosterUncheckedCreateWithoutStudentGradesInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -1025,7 +1201,9 @@ export type StudentRosterUpdateWithoutStudentGradesInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -1049,6 +1227,8 @@ export type StudentRosterUncheckedUpdateWithoutStudentGradesInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -1069,7 +1249,9 @@ export type StudentRosterCreateWithoutFinalGradesInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -1093,6 +1275,8 @@ export type StudentRosterUncheckedCreateWithoutFinalGradesInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -1129,7 +1313,9 @@ export type StudentRosterUpdateWithoutFinalGradesInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -1153,6 +1339,8 @@ export type StudentRosterUncheckedUpdateWithoutFinalGradesInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -1173,7 +1361,9 @@ export type StudentRosterCreateWithoutAttendanceRecordsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutRosterInput
@@ -1197,6 +1387,8 @@ export type StudentRosterUncheckedCreateWithoutAttendanceRecordsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
@@ -1233,7 +1425,9 @@ export type StudentRosterUpdateWithoutAttendanceRecordsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutRosterNestedInput
@@ -1257,6 +1451,8 @@ export type StudentRosterUncheckedUpdateWithoutAttendanceRecordsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
@@ -1277,7 +1473,9 @@ export type StudentRosterCreateWithoutAnecdotalRecordsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutRosterInput
@@ -1301,6 +1499,8 @@ export type StudentRosterUncheckedCreateWithoutAnecdotalRecordsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
@@ -1337,7 +1537,9 @@ export type StudentRosterUpdateWithoutAnecdotalRecordsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutRosterNestedInput
@@ -1361,6 +1563,8 @@ export type StudentRosterUncheckedUpdateWithoutAnecdotalRecordsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
@@ -1381,7 +1585,9 @@ export type StudentRosterCreateWithoutReferralsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -1405,6 +1611,8 @@ export type StudentRosterUncheckedCreateWithoutReferralsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutRosterInput
@@ -1441,7 +1649,9 @@ export type StudentRosterUpdateWithoutReferralsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -1465,6 +1675,8 @@ export type StudentRosterUncheckedUpdateWithoutReferralsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
@@ -1485,7 +1697,9 @@ export type StudentRosterCreateWithoutInterventionsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -1509,6 +1723,8 @@ export type StudentRosterUncheckedCreateWithoutInterventionsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -1545,7 +1761,9 @@ export type StudentRosterUpdateWithoutInterventionsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -1569,6 +1787,8 @@ export type StudentRosterUncheckedUpdateWithoutInterventionsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -1589,7 +1809,9 @@ export type StudentRosterCreateWithoutAdvisoryModuleSubmissionsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -1613,6 +1835,8 @@ export type StudentRosterUncheckedCreateWithoutAdvisoryModuleSubmissionsInput = 
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -1649,7 +1873,9 @@ export type StudentRosterUpdateWithoutAdvisoryModuleSubmissionsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -1673,6 +1899,8 @@ export type StudentRosterUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput = 
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -1693,7 +1921,9 @@ export type StudentRosterCreateWithoutRiskSnapshotsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
   section: Prisma.SectionCreateNestedOneWithoutRosterEntriesInput
+  enlistedTerm?: Prisma.TermCreateNestedOneWithoutRosterEnlistmentsInput
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutRosterEntriesInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutRosterInput
@@ -1717,6 +1947,8 @@ export type StudentRosterUncheckedCreateWithoutRiskSnapshotsInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutRosterInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutRosterInput
@@ -1753,7 +1985,9 @@ export type StudentRosterUpdateWithoutRiskSnapshotsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -1777,6 +2011,8 @@ export type StudentRosterUncheckedUpdateWithoutRiskSnapshotsInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -1798,6 +2034,8 @@ export type StudentRosterCreateManySchoolYearInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
 }
 
 export type StudentRosterUpdateWithoutSchoolYearInput = {
@@ -1811,7 +2049,9 @@ export type StudentRosterUpdateWithoutSchoolYearInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutRosterNestedInput
@@ -1834,6 +2074,8 @@ export type StudentRosterUncheckedUpdateWithoutSchoolYearInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -1856,6 +2098,88 @@ export type StudentRosterUncheckedUpdateManyWithoutSchoolYearInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type StudentRosterCreateManyEnlistedTermInput = {
+  id?: string
+  lrn: string
+  fullName: string
+  gradeLevel: $Enums.GradeLevel
+  sectionId: string
+  schoolYearId: string
+  mascot?: string | null
+  riskCount?: number
+  riskLevel?: $Enums.RiskLevel
+  academicFlag?: boolean
+  attendanceFlag?: boolean
+  behavioralFlag?: boolean
+  createdAt?: Date | string
+}
+
+export type StudentRosterUpdateWithoutEnlistedTermInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  lrn?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  section?: Prisma.SectionUpdateOneRequiredWithoutRosterEntriesNestedInput
+  schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
+  referrals?: Prisma.ReferralUpdateManyWithoutRosterNestedInput
+  studentGrades?: Prisma.StudentGradeUpdateManyWithoutRosterNestedInput
+  finalGrades?: Prisma.FinalGradeUpdateManyWithoutRosterNestedInput
+  riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutRosterNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRosterNestedInput
+}
+
+export type StudentRosterUncheckedUpdateWithoutEnlistedTermInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  lrn?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
+  referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
+  studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutRosterNestedInput
+  finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutRosterNestedInput
+  riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutRosterNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRosterNestedInput
+}
+
+export type StudentRosterUncheckedUpdateManyWithoutEnlistedTermInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  lrn?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type StudentRosterCreateManySectionInput = {
@@ -1870,6 +2194,8 @@ export type StudentRosterCreateManySectionInput = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: Date | string
+  enlistedTermId?: string | null
 }
 
 export type StudentRosterUpdateWithoutSectionInput = {
@@ -1883,6 +2209,8 @@ export type StudentRosterUpdateWithoutSectionInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTerm?: Prisma.TermUpdateOneWithoutRosterEnlistmentsNestedInput
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutRosterEntriesNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutRosterNestedInput
@@ -1906,6 +2234,8 @@ export type StudentRosterUncheckedUpdateWithoutSectionInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutRosterNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutRosterNestedInput
@@ -1928,6 +2258,8 @@ export type StudentRosterUncheckedUpdateManyWithoutSectionInput = {
   academicFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   attendanceFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   behavioralFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enlistedTermId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -2037,7 +2369,10 @@ export type StudentRosterSelect<ExtArgs extends runtime.Types.Extensions.Interna
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: boolean
+  enlistedTermId?: boolean
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  enlistedTerm?: boolean | Prisma.StudentRoster$enlistedTermArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
   attendanceRecords?: boolean | Prisma.StudentRoster$attendanceRecordsArgs<ExtArgs>
   anecdotalRecords?: boolean | Prisma.StudentRoster$anecdotalRecordsArgs<ExtArgs>
@@ -2063,7 +2398,10 @@ export type StudentRosterSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: boolean
+  enlistedTermId?: boolean
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  enlistedTerm?: boolean | Prisma.StudentRoster$enlistedTermArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studentRoster"]>
 
@@ -2080,7 +2418,10 @@ export type StudentRosterSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: boolean
+  enlistedTermId?: boolean
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  enlistedTerm?: boolean | Prisma.StudentRoster$enlistedTermArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studentRoster"]>
 
@@ -2097,11 +2438,14 @@ export type StudentRosterSelectScalar = {
   academicFlag?: boolean
   attendanceFlag?: boolean
   behavioralFlag?: boolean
+  createdAt?: boolean
+  enlistedTermId?: boolean
 }
 
-export type StudentRosterOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "lrn" | "fullName" | "gradeLevel" | "sectionId" | "schoolYearId" | "mascot" | "riskCount" | "riskLevel" | "academicFlag" | "attendanceFlag" | "behavioralFlag", ExtArgs["result"]["studentRoster"]>
+export type StudentRosterOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "lrn" | "fullName" | "gradeLevel" | "sectionId" | "schoolYearId" | "mascot" | "riskCount" | "riskLevel" | "academicFlag" | "attendanceFlag" | "behavioralFlag" | "createdAt" | "enlistedTermId", ExtArgs["result"]["studentRoster"]>
 export type StudentRosterInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  enlistedTerm?: boolean | Prisma.StudentRoster$enlistedTermArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
   attendanceRecords?: boolean | Prisma.StudentRoster$attendanceRecordsArgs<ExtArgs>
   anecdotalRecords?: boolean | Prisma.StudentRoster$anecdotalRecordsArgs<ExtArgs>
@@ -2115,10 +2459,12 @@ export type StudentRosterInclude<ExtArgs extends runtime.Types.Extensions.Intern
 }
 export type StudentRosterIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  enlistedTerm?: boolean | Prisma.StudentRoster$enlistedTermArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
 }
 export type StudentRosterIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
+  enlistedTerm?: boolean | Prisma.StudentRoster$enlistedTermArgs<ExtArgs>
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
 }
 
@@ -2126,6 +2472,7 @@ export type $StudentRosterPayload<ExtArgs extends runtime.Types.Extensions.Inter
   name: "StudentRoster"
   objects: {
     section: Prisma.$SectionPayload<ExtArgs>
+    enlistedTerm: Prisma.$TermPayload<ExtArgs> | null
     schoolYear: Prisma.$SchoolYearPayload<ExtArgs>
     attendanceRecords: Prisma.$AttendanceRecordPayload<ExtArgs>[]
     anecdotalRecords: Prisma.$AnecdotalRecordPayload<ExtArgs>[]
@@ -2149,6 +2496,8 @@ export type $StudentRosterPayload<ExtArgs extends runtime.Types.Extensions.Inter
     academicFlag: boolean
     attendanceFlag: boolean
     behavioralFlag: boolean
+    createdAt: Date
+    enlistedTermId: string | null
   }, ExtArgs["result"]["studentRoster"]>
   composites: {}
 }
@@ -2544,6 +2893,7 @@ readonly fields: StudentRosterFieldRefs;
 export interface Prisma__StudentRosterClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   section<T extends Prisma.SectionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SectionDefaultArgs<ExtArgs>>): Prisma.Prisma__SectionClient<runtime.Types.Result.GetResult<Prisma.$SectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  enlistedTerm<T extends Prisma.StudentRoster$enlistedTermArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$enlistedTermArgs<ExtArgs>>): Prisma.Prisma__TermClient<runtime.Types.Result.GetResult<Prisma.$TermPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   schoolYear<T extends Prisma.SchoolYearDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SchoolYearDefaultArgs<ExtArgs>>): Prisma.Prisma__SchoolYearClient<runtime.Types.Result.GetResult<Prisma.$SchoolYearPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   attendanceRecords<T extends Prisma.StudentRoster$attendanceRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$attendanceRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AttendanceRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   anecdotalRecords<T extends Prisma.StudentRoster$anecdotalRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentRoster$anecdotalRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AnecdotalRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2594,6 +2944,8 @@ export interface StudentRosterFieldRefs {
   readonly academicFlag: Prisma.FieldRef<"StudentRoster", 'Boolean'>
   readonly attendanceFlag: Prisma.FieldRef<"StudentRoster", 'Boolean'>
   readonly behavioralFlag: Prisma.FieldRef<"StudentRoster", 'Boolean'>
+  readonly createdAt: Prisma.FieldRef<"StudentRoster", 'DateTime'>
+  readonly enlistedTermId: Prisma.FieldRef<"StudentRoster", 'String'>
 }
     
 
@@ -2992,6 +3344,25 @@ export type StudentRosterDeleteManyArgs<ExtArgs extends runtime.Types.Extensions
    * Limit how many StudentRosters to delete.
    */
   limit?: number
+}
+
+/**
+ * StudentRoster.enlistedTerm
+ */
+export type StudentRoster$enlistedTermArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Term
+   */
+  select?: Prisma.TermSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Term
+   */
+  omit?: Prisma.TermOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TermInclude<ExtArgs> | null
+  where?: Prisma.TermWhereInput
 }
 
 /**

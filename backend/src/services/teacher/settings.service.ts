@@ -378,9 +378,15 @@ export async function setDataSharing(ctx: TeacherContext, share: boolean) {
     if (ctx.termId) void recomputeAdvisedRisk(teacherId, ctx.termId);
   }
   // The principal's overview/risk boards are adviser-share gated — drop the
-  // cached overview so the toggle is reflected on the next load. The academics
+  // cached overview and risk boards so the toggle is reflected on the next
+  // load (the overview rail reads /api/risk/board separately). The academics
   // summary (section cards + roster) is gated the same way.
-  await invalidateTags([CACHE_TAGS.overview, CACHE_TAGS.academics]);
+  await invalidateTags([
+    CACHE_TAGS.overview,
+    CACHE_TAGS.risk,
+    CACHE_TAGS.academics,
+    CACHE_TAGS.attendance,
+  ]);
   return readDataSharing(teacherId, ctx.termId);
 }
 

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { FolderOpen } from "lucide-react";
 import { AdmCasesTable } from "./components/AdmCasesTable";
 import { AdmEmptyKanban } from "./components/AdmEmptyKanban";
@@ -51,7 +51,6 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
         signal,
       }),
 
-    placeholderData: keepPreviousData,
     retry: false,
     // Cache pages so back/forward pagination is instant and deduped.
     staleTime: 5 * 60 * 1000,

@@ -200,12 +200,14 @@ function StatusRiskPill({
  */
 export function CaseKanbanRow({
   row,
+  index = 0,
   riskLevel,
   now,
   onOpen,
   onBook,
 }: {
   row: GuidanceAlertRow;
+  index?: number;
   riskLevel: GuidanceRiskLevel | undefined;
   now: number;
   onOpen: () => void;
@@ -220,6 +222,7 @@ export function CaseKanbanRow({
   };
   const interactiveProps = {
     className: `${styles.caseRow} ${styles.caseRowInteractive}`,
+    style: { animationDelay: `${450 + Math.min(index, 11) * 140}ms` },
     onClick: onOpen,
     onKeyDown: handleKeyDown,
     tabIndex: 0,
@@ -249,7 +252,7 @@ export function CaseKanbanRow({
       <li {...interactiveProps} aria-label={`Open case details for ${item.student}`}>
         <div className={styles.caseStudent}>
           <RowTypeLabel type="Intervention" />
-          <StudentMascot name={item.student} seed={item.lrn} size={32} />
+          <StudentMascot name={item.student} seed={item.lrn} character={item.mascot ?? undefined} size={32} />
           <div className={styles.caseIdentity}>
             <p className={styles.studentName}>{item.student}</p>
             <p className={styles.cellSub}>
@@ -370,7 +373,7 @@ export function CaseKanbanRow({
     <li {...interactiveProps} aria-label={`Open case details for ${r.student}`}>
       <div className={styles.caseStudent}>
         <RowTypeLabel type={r.type === "ADM" ? "ADM" : "Counseling"} />
-        <StudentMascot name={r.student} seed={r.lrn} size={32} />
+        <StudentMascot name={r.student} seed={r.lrn} character={r.mascot ?? undefined} size={32} />
         <div className={styles.caseIdentity}>
           <p className={styles.studentName}>{r.student}</p>
           <p className={styles.cellSub}>

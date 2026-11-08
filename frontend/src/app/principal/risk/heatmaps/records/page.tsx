@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import { fetchRecords } from "@/services/principal/records.service";
 import { RecordsHeatblocks } from "./components/RecordsHeatblocks";
+import { RecordsCharts } from "./components/RecordsCharts";
 import { RecordsRail } from "./components/RecordsRail";
 import { PrincipalEmptyCard } from "../../../components/PrincipalEmptyCard";
 import { useTerm } from "@/lib/term/TermContext";
@@ -34,7 +35,10 @@ export default function PrincipalRecordsPage() {
         />
       ) : (
       <div className={styles.topRow}>
-        <RecordsHeatblocks />
+        <div className={styles.mainColumn}>
+          <RecordsCharts />
+          <RecordsHeatblocks />
+        </div>
 
         <RecordsRail />
       </div>

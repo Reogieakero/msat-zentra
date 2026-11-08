@@ -30,19 +30,20 @@ interface AverageRow {
   name: string;
   lrn: string;
   mascot: string | null;
-  average: number;
-  risk: "Low" | "Moderate" | "High";
+  average: number | null;
+  risk: "Low" | "Moderate" | "High" | "None";
 }
 
-function overallAverage(rates: Record<string, number | null>): number {
+function overallAverage(rates: Record<string, number | null>): number | null {
   const rated = Object.values(rates).filter((r): r is number => r !== null);
-  if (rated.length === 0) return 0;
+  if (rated.length === 0) return null;
   return rated.reduce((sum, r) => sum + r, 0) / rated.length;
 }
 
 const ATTENDANCE_AT_RISK_CUTOFF = 0.8;
 
-function riskOf(average: number): "Low" | "Moderate" | "High" {
+function riskOf(average: number | null): "Low" | "Moderate" | "High" | "None" {
+  if (average === null) return "None";
   if (average >= 0.9) return "Low";
   if (average >= ATTENDANCE_AT_RISK_CUTOFF) return "Moderate";
   return "High";
@@ -52,6 +53,7 @@ const RISK_TONE: Record<AverageRow["risk"], RowTone> = {
   High: "red",
   Moderate: "amber",
   Low: "green",
+  None: "muted",
 };
 
 const AVERAGE_ICON: LucideIcon = CalendarClock;
@@ -59,15 +61,18 @@ const AVERAGE_ICON: LucideIcon = CalendarClock;
 function toRowListItem(s: AverageRow): RowListItem {
   return {
     key: s.studentId,
-    status: { label: s.risk, tone: RISK_TONE[s.risk] },
+    status: { label: s.risk === "None" ? "No data" : s.risk, tone: RISK_TONE[s.risk] },
     title: s.name,
     idLabel: s.lrn,
     meta: [
       {
-        label: `${Math.round(s.average * 100)}%`,
+        label: s.average === null ? "—" : `${Math.round(s.average * 100)}%`,
         tone: RISK_TONE[s.risk],
         icon: AVERAGE_ICON,
-        title: "Average present across all subjects this term",
+        title:
+          s.average === null
+            ? "No attendance marks yet this term"
+            : "Average present across all subjects this term",
       },
     ],
     avatarMascot: { name: s.name, seed: s.lrn, character: s.mascot },

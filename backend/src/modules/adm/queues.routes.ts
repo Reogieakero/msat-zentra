@@ -7,6 +7,7 @@ import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { admApprovalsQuerySchema, admReferralsQuerySchema } from "./adm.schemas.js";
 import { scopedTermRow } from "../../lib/termScope.js";
 import { resolvePageSize } from "./adm.repository.js";
+import { INTERNAL_AGGREGATE_ROW_CAP } from "../../lib/pagination.js";
 import {
   getHistory,
   listAllReferrals,
@@ -26,8 +27,12 @@ router.get(
   async (req, res, next) => {
     try {
       const q = req.query as Record<string, unknown>;
-      const page = Math.max(1, Number(q.page) || 1);
-      const limit = resolvePageSize(req);
+      // The principal endorsed-cases desk filters/pages in memory, so it opens
+      // the queue once with `?all=1`. Every other caller keeps the strict
+      // 15-record page ceiling.
+      const wantsFullCohort = q.all === "1";
+      const page = wantsFullCohort ? 1 : Math.max(1, Number(q.page) || 1);
+      const limit = wantsFullCohort ? INTERNAL_AGGREGATE_ROW_CAP : resolvePageSize(req);
       const search =
         typeof q.q === "string" && q.q.trim() ? q.q.trim().toLowerCase() : "";
       const stageParam = typeof q.stage === "string" && q.stage.trim() ? q.stage.trim() : "";

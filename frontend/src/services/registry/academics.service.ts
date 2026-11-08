@@ -17,12 +17,23 @@ export interface RegistrySubjectsResponse {
   subjects: RegistrySubject[];
 }
 
-export async function fetchRecordKeeperSubjects(
+/**
+ * Banded subject catalog for either registry desk. The record keeper reads
+ * G7–10, the registrar G11–12; the backend bands both by the caller's role.
+ */
+export async function fetchRegistrySubjects(
+  desk: "record-keeper" | "registrar",
   signal?: AbortSignal,
 ): Promise<RegistrySubject[]> {
   const { data } = await apiClient.get<RegistrySubjectsResponse>(
-    "/api/record-keeper/academics/subjects",
+    `/api/${desk}/academics/subjects`,
     { signal },
   );
   return data.subjects;
+}
+
+export async function fetchRecordKeeperSubjects(
+  signal?: AbortSignal,
+): Promise<RegistrySubject[]> {
+  return fetchRegistrySubjects("record-keeper", signal);
 }

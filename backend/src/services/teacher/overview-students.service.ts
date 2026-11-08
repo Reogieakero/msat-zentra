@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
+import { termHasStarted } from "../attendance.date.utils.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import { advisoryRoster, GRADE_LABELS } from "../../modules/teacher/teacher.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
@@ -273,8 +274,15 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
       : Promise.resolve([] as { studentId: string | null; rosterId: string | null }[]),
   ]);
 
+  // A not-yet-started term has no in-scope records: hide staged/seeded finals,
+  // attendance meetups and anecdotes until the term's start date.
+  const started = termHasStarted(term?.startDate);
+  const scopedProfileFinals = started ? profileFinals : [];
+  const scopedRosterFinals = started ? rosterFinals : [];
+  const scopedAnecdoteRows = started ? anecdoteRows : [];
+
   const anecdoteCountByKey = new Map<string, number>();
-  for (const a of anecdoteRows) {
+  for (const a of scopedAnecdoteRows) {
     const key = a.studentId ?? (a.rosterId ? `roster:${a.rosterId}` : null);
     if (!key) continue;
     anecdoteCountByKey.set(key, (anecdoteCountByKey.get(key) ?? 0) + 1);
@@ -284,7 +292,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
     string,
     { computedAverage: number | null; transmutedGrade: number | null }
   >();
-  for (const f of profileFinals) {
+  for (const f of scopedProfileFinals) {
     if (f.studentId) {
       finalByKey.set(f.studentId, {
         computedAverage: f.computedAverage,
@@ -292,7 +300,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
       });
     }
   }
-  for (const f of rosterFinals) {
+  for (const f of scopedRosterFinals) {
     if (f.rosterId) {
       finalByKey.set(`roster:${f.rosterId}`, {
         computedAverage: f.computedAverage,

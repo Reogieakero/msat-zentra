@@ -165,6 +165,11 @@ export function AdvisoryInsightBoard({
   const attendancePct = subjectSummary
     ? Math.round(subjectSummary.rate * 100)
     : Math.round(liveAttendanceRate * 100);
+  // A not-yet-started term (or a term with no sessions on the axis) has no
+  // attendance to report — never render a fabricated 0%/100%.
+  const hasAttendanceData = subjectSummary
+    ? subjectSummary.total > 0
+    : (attendanceQuery.data?.summary.total ?? 0) > 0;
   const attRisk = subjectSummary
     ? subjectSummary.isRisk
     : (attendanceQuery.data?.summary.isRisk ?? false);
@@ -285,10 +290,14 @@ export function AdvisoryInsightBoard({
                   </span>
                   <h4 className={styles.colTitle}>Attendance</h4>
                   <Pill
-                    tone={attRisk ? "red" : "neutral"}
+                    tone={attRisk && hasAttendanceData ? "red" : "neutral"}
                     label="Attendance status"
                   >
-                    {attRisk ? "At risk" : "On track"}
+                    {!hasAttendanceData
+                      ? "No sessions"
+                      : attRisk
+                        ? "At risk"
+                        : "On track"}
                   </Pill>
                   {attendanceQuery.isFetching ? (
                     <Pill tone="neutral" label="Live update" aria-live="polite">
@@ -310,15 +319,23 @@ export function AdvisoryInsightBoard({
                     </p>
                     <div className={styles.kBottom}>
                       <p className={styles.kTitle}>
-                        {subjectSummary
-                          ? `${subjectSummary.present} of ${subjectSummary.total} subject marks · ${subjectSummary.bySubject.length} subjects`
-                          : attendanceQuery.data
-                            ? `${attendanceQuery.data.summary.present} of ${attendanceQuery.data.summary.total} sessions`
-                            : "Snapshot from roster"}
+                        {!hasAttendanceData
+                          ? "No sessions in this term"
+                          : subjectSummary
+                            ? `${subjectSummary.present} of ${subjectSummary.total} subject marks · ${subjectSummary.bySubject.length} subjects`
+                            : attendanceQuery.data
+                              ? `${attendanceQuery.data.summary.present} of ${attendanceQuery.data.summary.total} sessions`
+                              : "Snapshot from roster"}
                       </p>
                       <p className={styles.kBig}>
-                        {attendancePct}
-                        <span className={styles.kUnit}>%</span>
+                        {hasAttendanceData ? (
+                          <>
+                            {attendancePct}
+                            <span className={styles.kUnit}>%</span>
+                          </>
+                        ) : (
+                          "—"
+                        )}
                       </p>
                     </div>
                   </li>

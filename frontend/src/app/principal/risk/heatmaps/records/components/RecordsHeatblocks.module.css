@@ -81,6 +81,20 @@
   height: 1.5rem;
 }
 
+/* No search hits — amber insight callout, same as the other principal desks. */
+.noMatch {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding: 1.5rem 0.25rem;
+}
+
+.noMatchCallout {
+  width: 100%;
+  max-width: 36rem;
+  text-align: left;
+}
+
 .skelCard {
   display: flex;
   flex-direction: column;

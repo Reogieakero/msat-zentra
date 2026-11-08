@@ -5,9 +5,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   Search,
   Eye,
-  X,
   GraduationCap,
-  SearchX,
   FileSignature,
   FolderCheck,
 } from "lucide-react";
@@ -16,12 +14,13 @@ import { formatGrade, formatSection } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { KanbanBoard, KanbanBoardHeader } from "@/components/ui/kanban-board";
 import { RowList, type RowListItem } from "@/components/ui/row-list";
 import { RowListSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import styles from "./final-grades.module.css";
-import { RegistrarEmptyCard, RegistrarEmptyState } from "../components/RegistrarEmptyCard";
+import { RegistrarEmptyState } from "../components/RegistrarEmptyCard";
 import { PipelineRail } from "@/components/registry/final-grades/PipelineRail";
 import {
   FinalGradeSetDialog,
@@ -42,8 +41,6 @@ interface GradesResponse {
   pageSize: number;
 }
 
-
-
 export default function FinalGradeApprovalsPage() {
   return (
     <React.Suspense>
@@ -58,12 +55,13 @@ function FinalGradeApprovalsPageInner() {
   // Row whose kanban board dialog is open (eye action). Null = closed.
   const [selected, setSelected] = React.useState<GradeSetStudent | null>(null);
   // Read the URL page directly so the query key changes on navigation.
-  // (Previously `pager.page` was clamped to 1 because the pager was
-  // constructed with a hardcoded total of 0, so the query never refetched.)
   const rawPage = React.useMemo(() => {
     const raw = Number(searchParams.get("page") ?? "1");
     return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : 1;
   }, [searchParams]);
+  // Debounced server search, with the loaded page also filtered instantly as
+  // the user types (same feel as the nurse alerts board) so results respond on
+  // every keystroke before the server round-trip swaps in the full match set.
   const query = useDebouncedValue(queryInput.trim(), 300);
   const debouncedQuery = query;
 
@@ -94,10 +92,10 @@ function FinalGradeApprovalsPageInner() {
     total: data?.complete ?? 0,
   };
 
-  // KPI strip — kanban columns mirroring the record-keeper final-grades
-  // stats board (KanbanBoardHeader + number-first stat card with mascot
-  // chip). Mascots are deliberately distinct from the overview board's
-  // cast (owl / scout / knight / postbot).
+  // KPI strip — kanban columns mirroring the registrar overview stats board
+  // (KanbanBoardHeader + number-first stat card with mascot chip). Mascots
+  // are deliberately distinct from the overview board's cast (owl / scout /
+  // knight / postbot).
   const kpiColumns = [
     {
       key: "ready",
@@ -131,13 +129,25 @@ function FinalGradeApprovalsPageInner() {
   const pageRows = React.useMemo(() => data?.students ?? [], [data]);
   const filteredTotal = data?.total ?? pageRows.length;
 
+  // Instant local filter of the loaded page while the debounced server query
+  // catches up — matches the nurse alerts board's typing feel.
+  const visibleRows = React.useMemo(() => {
+    const q = queryInput.trim().toLowerCase();
+    if (!q) return pageRows;
+    return pageRows.filter((s) =>
+      `${s.name} ${s.lrn} ${s.section} ${s.subjects.map((sub) => sub.code).join(" ")}`
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [pageRows, queryInput]);
+
   // Kanban rows — term chip + status pill on the left, mascot + name
   // (their stored sprite, same as the adviser lists), LRN pill, then
   // subject code(s) / grade level / section / average pills and the
   // per-row view action.
   const rowItems = React.useMemo<RowListItem[]>(
     () =>
-      pageRows.map((s) => ({
+      visibleRows.map((s) => ({
         key: s.id,
         leadPill: { label: s.term, tone: "amber" },
         status: { label: "Complete", tone: "green" },
@@ -172,7 +182,7 @@ function FinalGradeApprovalsPageInner() {
           </Button>
         ),
       })),
-    [pageRows]
+    [visibleRows]
   );
 
   // Pager gets the live total so it can clamp out-of-range pages and drive
@@ -193,7 +203,7 @@ function FinalGradeApprovalsPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedQuery]);
   const hasRecords = (data?.complete ?? 0) > 0;
-  const searching = debouncedQuery.length > 0;
+  const searching = queryInput.trim().length > 0;
   // True empty (no records at all, not a search with no matches):
   // hide the KPI board and table card entirely and render a single centered
   // card instead.
@@ -202,13 +212,20 @@ function FinalGradeApprovalsPageInner() {
   if (isTrueEmpty) {
     return (
       <section className={`${styles.page} ${styles.pageEmpty}`}>
-        <RegistrarEmptyCard
-          icon={GraduationCap}
-          title="No complete grade sets yet"
-          hint="Students appear once every subject is locked or adviser-approved."
-          label="Final grade approvals"
-          centered
-        />
+        <div className={styles.emptyBoard}>
+          <KanbanBoard
+            title="Final Grade Approvals"
+            icon={<FileSignature size={14} className="text-primary" aria-hidden />}
+            description="One row per student with a complete term — every subject locked or adviser-approved."
+            ariaLabel="Final grade approvals"
+          >
+            <RegistrarEmptyState
+              icon={GraduationCap}
+              title="No complete grade sets yet"
+              hint="Students appear once every subject is locked or adviser-approved."
+            />
+          </KanbanBoard>
+        </div>
       </section>
     );
   }
@@ -283,20 +300,6 @@ function FinalGradeApprovalsPageInner() {
                   aria-label="Search final grades"
                 />
               </div>
-
-              {queryInput && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={styles.clearBtn}
-                  onClick={() => {
-                    setQuery("");
-                  }}
-                >
-                  <X aria-hidden />
-                  Clear
-                </Button>
-              )}
             </div>
           }
           footer={
@@ -324,12 +327,13 @@ function FinalGradeApprovalsPageInner() {
               title="No complete grade sets yet"
               hint="Students appear once every subject is locked or adviser-approved."
             />
-          ) : searching && pageRows.length === 0 ? (
-            <RegistrarEmptyState
-              icon={SearchX}
-              title="No matching grade sets"
-              hint={`No complete grade sets match "${query}".`}
-            />
+          ) : searching && visibleRows.length === 0 ? (
+            <div className="flex w-full justify-center py-6">
+              <InsightCallout role="status" className="w-full max-w-xl text-left">
+                <strong>No complete grade sets match &ldquo;{queryInput.trim()}&rdquo;.</strong>{" "}
+                Try a different name, LRN, or subject code.
+              </InsightCallout>
+            </div>
           ) : (
             <RowList
               bleed
@@ -363,4 +367,3 @@ function FinalGradeApprovalsPageInner() {
     </section>
   );
 }
-

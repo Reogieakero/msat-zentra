@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { rosterCountsByGrade } from "../enrollment.js";
-import { phTodayKey } from "../attendance.js";
+import { buildDayAxis, phTodayKey } from "../attendance.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 import { GRADE_LABEL, GRADE_ORDER } from "../../modules/attendance/attendance.repository.js";
 
@@ -11,10 +11,11 @@ export interface HeatmapQuery {
   statusFilter: "present" | "late" | "absent" | "excused";
   termId?: string;
   startDate?: Date | null;
+  endDate?: Date | null;
 }
 
 export async function getHeatmap(query: HeatmapQuery) {
-  const { session, statusFilter, termId, startDate } = query;
+  const { session, statusFilter, termId, startDate, endDate } = query;
   const where = { session, ...(termId ? { termId } : {}) };
 
   const records = await prisma.attendanceRecord.findMany({
@@ -39,15 +40,8 @@ export async function getHeatmap(query: HeatmapQuery) {
   for (const e of enrollCounts) enrolledByGrade[e.gradeLevel] = e._count._all;
   for (const [gl, n] of rosterByGrade) enrolledByGrade[gl] = (enrolledByGrade[gl] ?? 0) + n;
 
-  const start = startDate
-    ? new Date(startDate.toISOString().slice(0, 10) + "T00:00:00Z")
-    : null;
-  const today = new Date(phTodayKey() + "T00:00:00Z");
-  const axisStart = start ?? records[0]?.date ?? today;
-  const dayKeys: string[] = [];
-  for (let d = new Date(axisStart); d <= today; d.setUTCDate(d.getUTCDate() + 1)) {
-    dayKeys.push(d.toISOString().slice(0, 10));
-  }
+  const axisStart = startDate ?? records[0]?.date ?? null;
+  const dayKeys = buildDayAxis(axisStart, endDate ?? null);
 
   const gradeDayStatus: Record<string, Map<string, { present: number; late: number; excused: number }>> = {};
   for (const r of records) {
@@ -94,18 +88,36 @@ export async function getHeatmap(query: HeatmapQuery) {
 export interface SummaryQuery {
   session?: HeatSession;
   termId?: string;
+  startDate?: Date | null;
+  endDate?: Date | null;
 }
 
 export async function getSummary(query: SummaryQuery) {
-  const { session, termId } = query;
+  const { session, termId, startDate, endDate } = query;
 
   const today = new Date(phTodayKey() + "T00:00:00Z");
+  const end = endDate
+    ? new Date(endDate.toISOString().slice(0, 10) + "T00:00:00Z")
+    : null;
+  const start = startDate
+    ? new Date(startDate.toISOString().slice(0, 10) + "T00:00:00Z")
+    : null;
+  // Anchor on the term end for a past term, never on today.
+  const anchor = end && end < today ? end : today;
   const dayKeys: string[] = [];
-  for (let d = new Date(today); dayKeys.length < 5; d.setUTCDate(d.getUTCDate() - 1)) {
+  for (
+    let d = new Date(anchor);
+    dayKeys.length < 5 && (!start || d >= start);
+    d.setUTCDate(d.getUTCDate() - 1)
+  ) {
     const wd = d.getUTCDay();
     if (wd !== 0 && wd !== 6) dayKeys.push(d.toISOString().slice(0, 10));
   }
   dayKeys.reverse();
+
+  if (dayKeys.length === 0) {
+    return { session: session ?? "ALL", trend: [], grades: [] };
+  }
 
   const where = {
     ...(termId ? { termId } : {}),

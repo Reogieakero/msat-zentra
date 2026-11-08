@@ -21,6 +21,7 @@ import type {
   ModuleStatusCounts,
 } from "@/services/teacher/advisoryModules.service";
 import { Pagination } from "@/components/shared/pagination";
+import motion from "./modules-motion.module.css";
 
 const dateLabel = (iso: string | null) => {
   if (!iso) return "—";
@@ -80,7 +81,7 @@ export function ModulesPanel({
   onOpen: (module: AdvisoryModuleRow) => void;
 }) {
   return (
-    <section className="flex min-w-0 flex-col gap-3" aria-label="Modules">
+    <section className={`${motion.reveal} flex min-w-0 flex-col gap-3`} aria-label="Modules">
       <div className="grid items-center gap-2 sm:[grid-template-columns:1fr_auto_1fr]">
         <div className="flex items-center gap-2 sm:justify-self-start">
           <h2 className="m-0 text-sm font-bold tracking-[-0.01em] text-foreground">Modules</h2>
@@ -142,7 +143,7 @@ export function ModulesPanel({
         </p>
       ) : (
         <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
-          {rows.map((m) => {
+          {rows.map((m, index) => {
             const status = STATUS[m.status];
             const StatusIcon = status.icon;
             const selected = selectedId === m.id;
@@ -150,7 +151,8 @@ export function ModulesPanel({
               <article
                 key={m.id}
                 onClick={() => onSelect(m)}
-                className={`flex min-w-0 cursor-pointer flex-col gap-2 rounded-xl border p-2.5 transition-colors [font-family:var(--font-inter)] ${
+                style={{ "--card-index": Math.min(index, 9) } as React.CSSProperties}
+                className={`${motion.card} flex min-w-0 cursor-pointer flex-col gap-2 rounded-xl border p-2.5 transition-colors [font-family:var(--font-inter)] ${
                   selected
                     ? "border-amber-500/60 bg-amber-500/10 dark:bg-amber-500/15"
                     : "border-border bg-muted/60 hover:border-primary/60 hover:shadow dark:bg-muted/20"

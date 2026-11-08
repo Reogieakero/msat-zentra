@@ -267,6 +267,7 @@ export type UserWhereInput = {
   teacherName?: Prisma.XOR<Prisma.TeacherNameNullableScalarRelationFilter, Prisma.TeacherNameWhereInput> | null
   termGrants?: Prisma.TeacherTermGrantListRelationFilter
   archivedAdvisees?: Prisma.AdviserArchivedStudentListRelationFilter
+  termRosterConfirmations?: Prisma.TermRosterConfirmationListRelationFilter
   gradeFlagsRaised?: Prisma.GradeFlagListRelationFilter
   gradeFlagsOwned?: Prisma.GradeFlagListRelationFilter
   gradeFlagsResolved?: Prisma.GradeFlagListRelationFilter
@@ -321,6 +322,7 @@ export type UserOrderByWithRelationInput = {
   teacherName?: Prisma.TeacherNameOrderByWithRelationInput
   termGrants?: Prisma.TeacherTermGrantOrderByRelationAggregateInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentOrderByRelationAggregateInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationOrderByRelationAggregateInput
   gradeFlagsRaised?: Prisma.GradeFlagOrderByRelationAggregateInput
   gradeFlagsOwned?: Prisma.GradeFlagOrderByRelationAggregateInput
   gradeFlagsResolved?: Prisma.GradeFlagOrderByRelationAggregateInput
@@ -378,6 +380,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   teacherName?: Prisma.XOR<Prisma.TeacherNameNullableScalarRelationFilter, Prisma.TeacherNameWhereInput> | null
   termGrants?: Prisma.TeacherTermGrantListRelationFilter
   archivedAdvisees?: Prisma.AdviserArchivedStudentListRelationFilter
+  termRosterConfirmations?: Prisma.TermRosterConfirmationListRelationFilter
   gradeFlagsRaised?: Prisma.GradeFlagListRelationFilter
   gradeFlagsOwned?: Prisma.GradeFlagListRelationFilter
   gradeFlagsResolved?: Prisma.GradeFlagListRelationFilter
@@ -466,6 +469,7 @@ export type UserCreateInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -520,6 +524,7 @@ export type UserUncheckedCreateInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -574,6 +579,7 @@ export type UserUpdateInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -628,6 +634,7 @@ export type UserUncheckedUpdateInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -807,6 +814,20 @@ export type UserUpdateOneWithoutSectionsAdvisedNestedInput = {
   delete?: Prisma.UserWhereInput | boolean
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSectionsAdvisedInput, Prisma.UserUpdateWithoutSectionsAdvisedInput>, Prisma.UserUncheckedUpdateWithoutSectionsAdvisedInput>
+}
+
+export type UserCreateNestedOneWithoutTermRosterConfirmationsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutTermRosterConfirmationsInput, Prisma.UserUncheckedCreateWithoutTermRosterConfirmationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutTermRosterConfirmationsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutTermRosterConfirmationsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutTermRosterConfirmationsInput, Prisma.UserUncheckedCreateWithoutTermRosterConfirmationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutTermRosterConfirmationsInput
+  upsert?: Prisma.UserUpsertWithoutTermRosterConfirmationsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutTermRosterConfirmationsInput, Prisma.UserUpdateWithoutTermRosterConfirmationsInput>, Prisma.UserUncheckedUpdateWithoutTermRosterConfirmationsInput>
 }
 
 export type UserCreateNestedOneWithoutTeacherAssignmentsInput = {
@@ -1381,6 +1402,7 @@ export type UserCreateWithoutStudentProfileInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -1434,6 +1456,7 @@ export type UserUncheckedCreateWithoutStudentProfileInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -1503,6 +1526,7 @@ export type UserUpdateWithoutStudentProfileInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -1556,6 +1580,7 @@ export type UserUncheckedUpdateWithoutStudentProfileInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -1609,6 +1634,7 @@ export type UserCreateWithoutParentProfileInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -1662,6 +1688,7 @@ export type UserUncheckedCreateWithoutParentProfileInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -1731,6 +1758,7 @@ export type UserUpdateWithoutParentProfileInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -1784,6 +1812,7 @@ export type UserUncheckedUpdateWithoutParentProfileInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -1837,6 +1866,7 @@ export type UserCreateWithoutStaffProfileInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -1890,6 +1920,7 @@ export type UserUncheckedCreateWithoutStaffProfileInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -1959,6 +1990,7 @@ export type UserUpdateWithoutStaffProfileInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -2012,6 +2044,7 @@ export type UserUncheckedUpdateWithoutStaffProfileInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -2065,6 +2098,7 @@ export type UserCreateWithoutSectionsAdvisedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -2118,6 +2152,7 @@ export type UserUncheckedCreateWithoutSectionsAdvisedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -2187,6 +2222,7 @@ export type UserUpdateWithoutSectionsAdvisedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -2232,6 +2268,239 @@ export type UserUncheckedUpdateWithoutSectionsAdvisedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserCreateWithoutTermRosterConfirmationsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutRecorderInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeCreateNestedManyWithoutUserInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutUploaderInput
+  admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
+  sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserUncheckedCreateWithoutTermRosterConfirmationsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutRecorderInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUncheckedCreateNestedManyWithoutUserInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutUploaderInput
+  admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
+  sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserCreateOrConnectWithoutTermRosterConfirmationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutTermRosterConfirmationsInput, Prisma.UserUncheckedCreateWithoutTermRosterConfirmationsInput>
+}
+
+export type UserUpsertWithoutTermRosterConfirmationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutTermRosterConfirmationsInput, Prisma.UserUncheckedUpdateWithoutTermRosterConfirmationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutTermRosterConfirmationsInput, Prisma.UserUncheckedCreateWithoutTermRosterConfirmationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutTermRosterConfirmationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutTermRosterConfirmationsInput, Prisma.UserUncheckedUpdateWithoutTermRosterConfirmationsInput>
+}
+
+export type UserUpdateWithoutTermRosterConfirmationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutRecorderNestedInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUpdateManyWithoutUserNestedInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutUploaderNestedInput
+  admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
+  sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutTermRosterConfirmationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutRecorderNestedInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUncheckedUpdateManyWithoutUserNestedInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
+  sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
@@ -2293,6 +2562,7 @@ export type UserCreateWithoutTeacherAssignmentsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -2346,6 +2616,7 @@ export type UserUncheckedCreateWithoutTeacherAssignmentsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -2415,6 +2686,7 @@ export type UserUpdateWithoutTeacherAssignmentsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -2468,6 +2740,7 @@ export type UserUncheckedUpdateWithoutTeacherAssignmentsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -2521,6 +2794,7 @@ export type UserCreateWithoutSubmittedTimetablesInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -2574,6 +2848,7 @@ export type UserUncheckedCreateWithoutSubmittedTimetablesInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -2632,6 +2907,7 @@ export type UserCreateWithoutReviewedTimetablesInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -2685,6 +2961,7 @@ export type UserUncheckedCreateWithoutReviewedTimetablesInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -2754,6 +3031,7 @@ export type UserUpdateWithoutSubmittedTimetablesInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -2807,6 +3085,7 @@ export type UserUncheckedUpdateWithoutSubmittedTimetablesInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -2871,6 +3150,7 @@ export type UserUpdateWithoutReviewedTimetablesInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -2924,6 +3204,7 @@ export type UserUncheckedUpdateWithoutReviewedTimetablesInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -2977,6 +3258,7 @@ export type UserCreateWithoutTeacherNameInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -3030,6 +3312,7 @@ export type UserUncheckedCreateWithoutTeacherNameInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -3099,6 +3382,7 @@ export type UserUpdateWithoutTeacherNameInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -3152,6 +3436,7 @@ export type UserUncheckedUpdateWithoutTeacherNameInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -3205,6 +3490,7 @@ export type UserCreateWithoutTermGrantsInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -3258,6 +3544,7 @@ export type UserUncheckedCreateWithoutTermGrantsInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -3327,6 +3614,7 @@ export type UserUpdateWithoutTermGrantsInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -3380,6 +3668,7 @@ export type UserUncheckedUpdateWithoutTermGrantsInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -3433,6 +3722,7 @@ export type UserCreateWithoutArchivedAdviseesInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -3486,6 +3776,7 @@ export type UserUncheckedCreateWithoutArchivedAdviseesInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -3555,6 +3846,7 @@ export type UserUpdateWithoutArchivedAdviseesInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -3608,6 +3900,7 @@ export type UserUncheckedUpdateWithoutArchivedAdviseesInput = {
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -3662,6 +3955,7 @@ export type UserCreateWithoutGradeFlagsRaisedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
 }
@@ -3715,6 +4009,7 @@ export type UserUncheckedCreateWithoutGradeFlagsRaisedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
 }
@@ -3773,6 +4068,7 @@ export type UserCreateWithoutGradeFlagsOwnedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
 }
@@ -3826,6 +4122,7 @@ export type UserUncheckedCreateWithoutGradeFlagsOwnedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
 }
@@ -3884,6 +4181,7 @@ export type UserCreateWithoutGradeFlagsResolvedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
 }
@@ -3937,6 +4235,7 @@ export type UserUncheckedCreateWithoutGradeFlagsResolvedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
 }
@@ -4006,6 +4305,7 @@ export type UserUpdateWithoutGradeFlagsRaisedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
 }
@@ -4059,6 +4359,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsRaisedInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
 }
@@ -4123,6 +4424,7 @@ export type UserUpdateWithoutGradeFlagsOwnedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
 }
@@ -4176,6 +4478,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsOwnedInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
 }
@@ -4240,6 +4543,7 @@ export type UserUpdateWithoutGradeFlagsResolvedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
 }
@@ -4293,6 +4597,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsResolvedInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
 }
@@ -4345,6 +4650,7 @@ export type UserCreateWithoutAnecdotalRecordsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -4398,6 +4704,7 @@ export type UserUncheckedCreateWithoutAnecdotalRecordsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -4467,6 +4774,7 @@ export type UserUpdateWithoutAnecdotalRecordsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -4520,6 +4828,7 @@ export type UserUncheckedUpdateWithoutAnecdotalRecordsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -4573,6 +4882,7 @@ export type UserCreateWithoutAnecdotalFoldersInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -4626,6 +4936,7 @@ export type UserUncheckedCreateWithoutAnecdotalFoldersInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -4695,6 +5006,7 @@ export type UserUpdateWithoutAnecdotalFoldersInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -4748,6 +5060,7 @@ export type UserUncheckedUpdateWithoutAnecdotalFoldersInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -4801,6 +5114,7 @@ export type UserCreateWithoutAnecdotalFollowupsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -4854,6 +5168,7 @@ export type UserUncheckedCreateWithoutAnecdotalFollowupsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -4923,6 +5238,7 @@ export type UserUpdateWithoutAnecdotalFollowupsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -4976,6 +5292,7 @@ export type UserUncheckedUpdateWithoutAnecdotalFollowupsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -5029,6 +5346,7 @@ export type UserCreateWithoutReferralsMadeInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -5082,6 +5400,7 @@ export type UserUncheckedCreateWithoutReferralsMadeInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -5151,6 +5470,7 @@ export type UserUpdateWithoutReferralsMadeInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -5204,6 +5524,7 @@ export type UserUncheckedUpdateWithoutReferralsMadeInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -5257,6 +5578,7 @@ export type UserCreateWithoutSessionsCreatedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -5310,6 +5632,7 @@ export type UserUncheckedCreateWithoutSessionsCreatedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -5379,6 +5702,7 @@ export type UserUpdateWithoutSessionsCreatedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -5432,6 +5756,7 @@ export type UserUncheckedUpdateWithoutSessionsCreatedInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -5485,6 +5810,7 @@ export type UserCreateWithoutSessionAttachmentsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -5538,6 +5864,7 @@ export type UserUncheckedCreateWithoutSessionAttachmentsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -5607,6 +5934,7 @@ export type UserUpdateWithoutSessionAttachmentsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -5660,6 +5988,7 @@ export type UserUncheckedUpdateWithoutSessionAttachmentsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -5713,6 +6042,7 @@ export type UserCreateWithoutAssignedInterventionsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -5766,6 +6096,7 @@ export type UserUncheckedCreateWithoutAssignedInterventionsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -5835,6 +6166,7 @@ export type UserUpdateWithoutAssignedInterventionsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -5888,6 +6220,7 @@ export type UserUncheckedUpdateWithoutAssignedInterventionsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -5941,6 +6274,7 @@ export type UserCreateWithoutHealthRecordsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -5994,6 +6328,7 @@ export type UserUncheckedCreateWithoutHealthRecordsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -6063,6 +6398,7 @@ export type UserUpdateWithoutHealthRecordsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -6116,6 +6452,7 @@ export type UserUncheckedUpdateWithoutHealthRecordsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -6169,6 +6506,7 @@ export type UserCreateWithoutHomeVisitationsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -6222,6 +6560,7 @@ export type UserUncheckedCreateWithoutHomeVisitationsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -6291,6 +6630,7 @@ export type UserUpdateWithoutHomeVisitationsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -6344,6 +6684,7 @@ export type UserUncheckedUpdateWithoutHomeVisitationsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -6397,6 +6738,7 @@ export type UserCreateWithoutAdmProfilesPreparedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -6450,6 +6792,7 @@ export type UserUncheckedCreateWithoutAdmProfilesPreparedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -6508,6 +6851,7 @@ export type UserCreateWithoutAdmProfilesApprovedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -6561,6 +6905,7 @@ export type UserUncheckedCreateWithoutAdmProfilesApprovedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -6630,6 +6975,7 @@ export type UserUpdateWithoutAdmProfilesPreparedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -6683,6 +7029,7 @@ export type UserUncheckedUpdateWithoutAdmProfilesPreparedInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -6747,6 +7094,7 @@ export type UserUpdateWithoutAdmProfilesApprovedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -6800,6 +7148,7 @@ export type UserUncheckedUpdateWithoutAdmProfilesApprovedInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -6853,6 +7202,7 @@ export type UserCreateWithoutAdmMeetingsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -6906,6 +7256,7 @@ export type UserUncheckedCreateWithoutAdmMeetingsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -6975,6 +7326,7 @@ export type UserUpdateWithoutAdmMeetingsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -7028,6 +7380,7 @@ export type UserUncheckedUpdateWithoutAdmMeetingsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -7081,6 +7434,7 @@ export type UserCreateWithoutAdmMeetingInvitesInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -7134,6 +7488,7 @@ export type UserUncheckedCreateWithoutAdmMeetingInvitesInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -7203,6 +7558,7 @@ export type UserUpdateWithoutAdmMeetingInvitesInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -7256,6 +7612,7 @@ export type UserUncheckedUpdateWithoutAdmMeetingInvitesInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -7309,6 +7666,7 @@ export type UserCreateWithoutAdmMeetingAttachmentsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -7362,6 +7720,7 @@ export type UserUncheckedCreateWithoutAdmMeetingAttachmentsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -7431,6 +7790,7 @@ export type UserUpdateWithoutAdmMeetingAttachmentsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -7484,6 +7844,7 @@ export type UserUncheckedUpdateWithoutAdmMeetingAttachmentsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -7537,6 +7898,7 @@ export type UserCreateWithoutAdmModulesInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -7590,6 +7952,7 @@ export type UserUncheckedCreateWithoutAdmModulesInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -7659,6 +8022,7 @@ export type UserUpdateWithoutAdmModulesInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -7712,6 +8076,7 @@ export type UserUncheckedUpdateWithoutAdmModulesInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -7765,6 +8130,7 @@ export type UserCreateWithoutAdmDevicesIssuedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -7818,6 +8184,7 @@ export type UserUncheckedCreateWithoutAdmDevicesIssuedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -7887,6 +8254,7 @@ export type UserUpdateWithoutAdmDevicesIssuedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -7940,6 +8308,7 @@ export type UserUncheckedUpdateWithoutAdmDevicesIssuedInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -7993,6 +8362,7 @@ export type UserCreateWithoutAdmFormsUploadedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -8046,6 +8416,7 @@ export type UserUncheckedCreateWithoutAdmFormsUploadedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -8115,6 +8486,7 @@ export type UserUpdateWithoutAdmFormsUploadedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -8168,6 +8540,7 @@ export type UserUncheckedUpdateWithoutAdmFormsUploadedInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -8221,6 +8594,7 @@ export type UserCreateWithoutAdvisoryModulesInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -8274,6 +8648,7 @@ export type UserUncheckedCreateWithoutAdvisoryModulesInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -8343,6 +8718,7 @@ export type UserUpdateWithoutAdvisoryModulesInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -8396,6 +8772,7 @@ export type UserUncheckedUpdateWithoutAdvisoryModulesInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -8449,6 +8826,7 @@ export type UserCreateWithoutAdvisoryModuleSubmissionsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -8502,6 +8880,7 @@ export type UserUncheckedCreateWithoutAdvisoryModuleSubmissionsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -8571,6 +8950,7 @@ export type UserUpdateWithoutAdvisoryModuleSubmissionsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -8624,6 +9004,7 @@ export type UserUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -8677,6 +9058,7 @@ export type UserCreateWithoutSf10RecordsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -8730,6 +9112,7 @@ export type UserUncheckedCreateWithoutSf10RecordsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -8788,6 +9171,7 @@ export type UserCreateWithoutSf10ValidatedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -8841,6 +9225,7 @@ export type UserUncheckedCreateWithoutSf10ValidatedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -8910,6 +9295,7 @@ export type UserUpdateWithoutSf10RecordsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -8963,6 +9349,7 @@ export type UserUncheckedUpdateWithoutSf10RecordsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -9027,6 +9414,7 @@ export type UserUpdateWithoutSf10ValidatedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -9080,6 +9468,7 @@ export type UserUncheckedUpdateWithoutSf10ValidatedInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -9133,6 +9522,7 @@ export type UserCreateWithoutSf10VersionsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -9186,6 +9576,7 @@ export type UserUncheckedCreateWithoutSf10VersionsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -9255,6 +9646,7 @@ export type UserUpdateWithoutSf10VersionsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -9308,6 +9700,7 @@ export type UserUncheckedUpdateWithoutSf10VersionsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -9361,6 +9754,7 @@ export type UserCreateWithoutAuditLogsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -9414,6 +9808,7 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -9483,6 +9878,7 @@ export type UserUpdateWithoutAuditLogsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -9536,6 +9932,7 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -9589,6 +9986,7 @@ export type UserCreateWithoutSf10AccessRequestsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -9642,6 +10040,7 @@ export type UserUncheckedCreateWithoutSf10AccessRequestsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -9700,6 +10099,7 @@ export type UserCreateWithoutSf10AccessDecidedInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -9753,6 +10153,7 @@ export type UserUncheckedCreateWithoutSf10AccessDecidedInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -9822,6 +10223,7 @@ export type UserUpdateWithoutSf10AccessRequestsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -9875,6 +10277,7 @@ export type UserUncheckedUpdateWithoutSf10AccessRequestsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -9939,6 +10342,7 @@ export type UserUpdateWithoutSf10AccessDecidedInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -9992,6 +10396,7 @@ export type UserUncheckedUpdateWithoutSf10AccessDecidedInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -10045,6 +10450,7 @@ export type UserCreateWithoutNotificationsInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -10098,6 +10504,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -10167,6 +10574,7 @@ export type UserUpdateWithoutNotificationsInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -10220,6 +10628,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -10273,6 +10682,7 @@ export type UserCreateWithoutRefreshTokensInput = {
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -10326,6 +10736,7 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
   termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -10395,6 +10806,7 @@ export type UserUpdateWithoutRefreshTokensInput = {
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -10448,6 +10860,7 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
   termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -10492,6 +10905,7 @@ export type UserCountOutputType = {
   reviewedTimetables: number
   termGrants: number
   archivedAdvisees: number
+  termRosterConfirmations: number
   gradeFlagsRaised: number
   gradeFlagsOwned: number
   gradeFlagsResolved: number
@@ -10531,6 +10945,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   reviewedTimetables?: boolean | UserCountOutputTypeCountReviewedTimetablesArgs
   termGrants?: boolean | UserCountOutputTypeCountTermGrantsArgs
   archivedAdvisees?: boolean | UserCountOutputTypeCountArchivedAdviseesArgs
+  termRosterConfirmations?: boolean | UserCountOutputTypeCountTermRosterConfirmationsArgs
   gradeFlagsRaised?: boolean | UserCountOutputTypeCountGradeFlagsRaisedArgs
   gradeFlagsOwned?: boolean | UserCountOutputTypeCountGradeFlagsOwnedArgs
   gradeFlagsResolved?: boolean | UserCountOutputTypeCountGradeFlagsResolvedArgs
@@ -10780,6 +11195,13 @@ export type UserCountOutputTypeCountArchivedAdviseesArgs<ExtArgs extends runtime
 /**
  * UserCountOutputType without action
  */
+export type UserCountOutputTypeCountTermRosterConfirmationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TermRosterConfirmationWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
 export type UserCountOutputTypeCountGradeFlagsRaisedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.GradeFlagWhereInput
 }
@@ -10848,6 +11270,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   teacherName?: boolean | Prisma.User$teacherNameArgs<ExtArgs>
   termGrants?: boolean | Prisma.User$termGrantsArgs<ExtArgs>
   archivedAdvisees?: boolean | Prisma.User$archivedAdviseesArgs<ExtArgs>
+  termRosterConfirmations?: boolean | Prisma.User$termRosterConfirmationsArgs<ExtArgs>
   gradeFlagsRaised?: boolean | Prisma.User$gradeFlagsRaisedArgs<ExtArgs>
   gradeFlagsOwned?: boolean | Prisma.User$gradeFlagsOwnedArgs<ExtArgs>
   gradeFlagsResolved?: boolean | Prisma.User$gradeFlagsResolvedArgs<ExtArgs>
@@ -10935,6 +11358,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   teacherName?: boolean | Prisma.User$teacherNameArgs<ExtArgs>
   termGrants?: boolean | Prisma.User$termGrantsArgs<ExtArgs>
   archivedAdvisees?: boolean | Prisma.User$archivedAdviseesArgs<ExtArgs>
+  termRosterConfirmations?: boolean | Prisma.User$termRosterConfirmationsArgs<ExtArgs>
   gradeFlagsRaised?: boolean | Prisma.User$gradeFlagsRaisedArgs<ExtArgs>
   gradeFlagsOwned?: boolean | Prisma.User$gradeFlagsOwnedArgs<ExtArgs>
   gradeFlagsResolved?: boolean | Prisma.User$gradeFlagsResolvedArgs<ExtArgs>
@@ -10983,6 +11407,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     teacherName: Prisma.$TeacherNamePayload<ExtArgs> | null
     termGrants: Prisma.$TeacherTermGrantPayload<ExtArgs>[]
     archivedAdvisees: Prisma.$AdviserArchivedStudentPayload<ExtArgs>[]
+    termRosterConfirmations: Prisma.$TermRosterConfirmationPayload<ExtArgs>[]
     gradeFlagsRaised: Prisma.$GradeFlagPayload<ExtArgs>[]
     gradeFlagsOwned: Prisma.$GradeFlagPayload<ExtArgs>[]
     gradeFlagsResolved: Prisma.$GradeFlagPayload<ExtArgs>[]
@@ -11430,6 +11855,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   teacherName<T extends Prisma.User$teacherNameArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$teacherNameArgs<ExtArgs>>): Prisma.Prisma__TeacherNameClient<runtime.Types.Result.GetResult<Prisma.$TeacherNamePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   termGrants<T extends Prisma.User$termGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$termGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeacherTermGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   archivedAdvisees<T extends Prisma.User$archivedAdviseesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$archivedAdviseesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdviserArchivedStudentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  termRosterConfirmations<T extends Prisma.User$termRosterConfirmationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$termRosterConfirmationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TermRosterConfirmationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   gradeFlagsRaised<T extends Prisma.User$gradeFlagsRaisedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$gradeFlagsRaisedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GradeFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   gradeFlagsOwned<T extends Prisma.User$gradeFlagsOwnedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$gradeFlagsOwnedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GradeFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   gradeFlagsResolved<T extends Prisma.User$gradeFlagsResolvedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$gradeFlagsResolvedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GradeFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -12731,6 +13157,30 @@ export type User$archivedAdviseesArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.AdviserArchivedStudentScalarFieldEnum | Prisma.AdviserArchivedStudentScalarFieldEnum[]
+}
+
+/**
+ * User.termRosterConfirmations
+ */
+export type User$termRosterConfirmationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TermRosterConfirmation
+   */
+  select?: Prisma.TermRosterConfirmationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the TermRosterConfirmation
+   */
+  omit?: Prisma.TermRosterConfirmationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TermRosterConfirmationInclude<ExtArgs> | null
+  where?: Prisma.TermRosterConfirmationWhereInput
+  orderBy?: Prisma.TermRosterConfirmationOrderByWithRelationInput | Prisma.TermRosterConfirmationOrderByWithRelationInput[]
+  cursor?: Prisma.TermRosterConfirmationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TermRosterConfirmationScalarFieldEnum | Prisma.TermRosterConfirmationScalarFieldEnum[]
 }
 
 /**

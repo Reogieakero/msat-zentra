@@ -3,6 +3,7 @@ import * as React from "react";
 import { BookOpen, Users } from "lucide-react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth/useSession";
+import { useTerm } from "@/lib/term/TermContext";
 import {
   fetchStudentList,
   studentListKey,
@@ -38,11 +39,13 @@ export function useStudentRail() {
       : null;
   const queryClient = useQueryClient();
   const session = useSession();
+  const { activeTerm } = useTerm();
   const teacherId = session?.sub ?? null;
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const prefetchedKey = React.useRef("");
   React.useEffect(() => {
     if (!roster.data || !teacherId || rail.length === 0) return;
-    const key = rail.map((r) => `${r.kind}:${r.id}`).join(",");
+    const key = `${termKey}|${rail.map((r) => `${r.kind}:${r.id}`).join(",")}`;
     if (prefetchedKey.current === key) return;
     prefetchedKey.current = key;
     const run = () => {
@@ -50,7 +53,7 @@ export function useStudentRail() {
         if (activePick && r.kind === activePick.kind && r.id === activePick.id) continue;
         const pick = { kind: r.kind, id: r.id } as ClassPick;
         void queryClient.prefetchQuery({
-          queryKey: studentListKey(teacherId, pick),
+          queryKey: studentListKey(teacherId, pick, termKey),
           queryFn: () => fetchStudentList(pick),
           staleTime: 30_000,
         });
@@ -66,7 +69,7 @@ export function useStudentRail() {
     }
     const t = window.setTimeout(run, 600);
     return () => window.clearTimeout(t);
-  }, [rail, roster.data, teacherId, queryClient, activePick]);
+  }, [rail, roster.data, teacherId, termKey, queryClient, activePick]);
   const [sectionQuery, setSectionQuery] = React.useState("");
   const railGroups = React.useMemo(() => {
     const q = sectionQuery.trim().toLowerCase();
@@ -109,7 +112,7 @@ export function useStudentRail() {
   // student-list length instead of the backend headcount.
   const liveQueries = useQueries({
     queries: rail.map((pick) => ({
-      queryKey: studentListKey(teacherId, pick),
+      queryKey: studentListKey(teacherId, pick, termKey),
       queryFn: (): Promise<StudentListResponse> => fetchStudentList(pick),
       enabled: false,
       staleTime: 30_000,

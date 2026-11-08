@@ -44,7 +44,12 @@ export default function GuidanceOverviewPage() {
             >
               <ul className={styles.caseList}>
                 {[0, 1, 2, 3, 4].map((i) => (
-                  <li key={i} className={styles.caseRow} aria-hidden="true">
+                  <li
+                    key={i}
+                    className={styles.caseRow}
+                    style={{ animationDelay: `${450 + Math.min(i, 11) * 140}ms` }}
+                    aria-hidden="true"
+                  >
                     <div className={styles.rowLink}>
                       <div className={styles.caseInfo}>
                         <Skeleton className="size-8 shrink-0 rounded-md" />

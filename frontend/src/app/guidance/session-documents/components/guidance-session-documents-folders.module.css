@@ -56,11 +56,15 @@
 }
 
 .header {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  /* Breathing room so the search field's 3px focus ring is not clipped by
+     the panel's overflow:hidden edge. */
+  padding: 0.25rem 0.25rem 0;
 }
 
 .headerText {
@@ -73,6 +77,26 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   margin-left: auto;
+}
+
+/* Type tabs ride the centre of the title row, like the interventions board. */
+.headerCenter {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  min-height: 1.5rem;
+}
+
+@media (max-width: 1100px) {
+  .headerCenter {
+    position: static;
+    transform: none;
+    order: 3;
+    width: 100%;
+  }
 }
 
 .sectionTitle {
@@ -202,24 +226,30 @@
   color: var(--muted-foreground);
 }
 
-/* Folder-card grid — four per row on wide desks, stepping down with the
-   feed width (same rhythm as the nurse health-record board). */
+/* Folder-card grid — five per row on wide desks, stepping down with the
+   feed width (same rhythm as the anecdotal folders board). */
 .studentGrid {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.875rem;
   align-items: stretch;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1600px) {
+  .studentGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1400px) {
   .studentGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1100px) {
   .studentGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

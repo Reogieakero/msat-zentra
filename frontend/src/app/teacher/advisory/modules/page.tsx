@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { useDock } from "@/components/dock/dock-store";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Pill } from "@/components/ui/pill";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -16,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
+import { AdvisoryModulesSkeleton } from "./components/modules-skeleton";
 import { ModulesPanel } from "./components/modules-panel";
 import { ModuleDetailsOverlay } from "./components/module-details-overlay";
 import { ModuleFormDialog } from "./components/module-form-dialog";
@@ -161,13 +161,7 @@ export default function TeacherAdvisoryModulesPage() {
   };
 
   if (modulesQuery.isPending && !modulesQuery.data) {
-    return (
-      <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading modules">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-64 w-full rounded-lg" />
-        <Skeleton className="h-64 w-full rounded-lg" />
-      </div>
-    );
+    return <AdvisoryModulesSkeleton />;
   }
 
   if (modulesQuery.isError && !modulesQuery.data) {

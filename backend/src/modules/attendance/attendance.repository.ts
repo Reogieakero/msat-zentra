@@ -32,6 +32,7 @@ export interface DisplayTerm {
   id: string;
   termNumber: number;
   startDate: Date | null;
+  endDate: Date | null;
 }
 
 export async function resolveDisplayTerm(req?: Request): Promise<DisplayTerm | null> {
@@ -41,6 +42,7 @@ export async function resolveDisplayTerm(req?: Request): Promise<DisplayTerm | n
       id: s.termId,
       termNumber: s.termNumber,
       startDate: s.startDate ? new Date(s.startDate) : null,
+      endDate: s.endDate ? new Date(s.endDate) : null,
     };
   }
   const terms = await prisma.term.findMany({
@@ -56,7 +58,12 @@ export async function resolveDisplayTerm(req?: Request): Promise<DisplayTerm | n
     return (!s || s <= today) && (!e || today <= e);
   });
   const hit = current ?? terms[0]!;
-  return { id: hit.id, termNumber: hit.termNumber, startDate: hit.startDate };
+  return {
+    id: hit.id,
+    termNumber: hit.termNumber,
+    startDate: hit.startDate,
+    endDate: hit.endDate,
+  };
 }
 
 export function schoolYearClause(schoolYearId: string | null):

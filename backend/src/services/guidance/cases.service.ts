@@ -108,7 +108,7 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
 
   const effPageSize = Math.min(
     Math.max(1, Math.floor(pageSize) || 15),
-    Math.max(15, Math.floor(query.internalPageCap ?? 15)),
+    Math.max(16, Math.floor(query.internalPageCap ?? 16)),
   );
   const orderBy = [
     { anecdotalRecord: { observationDatetime: "desc" as const } },
@@ -215,8 +215,9 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
           lrn: true,
           gradeLevel: true,
           userId: true,
+          mascot: true,
           user: { select: { fullName: true } },
-          section: { select: { name: true } },
+          section: { select: { name: true, gradeLevel: true } },
         },
       },
       roster: {
@@ -225,7 +226,8 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
           lrn: true,
           fullName: true,
           gradeLevel: true,
-          section: { select: { name: true } },
+          mascot: true,
+          section: { select: { name: true, gradeLevel: true } },
         },
       },
     },
@@ -236,9 +238,18 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     student: r.student?.user.fullName ?? r.roster?.fullName ?? "Unknown student",
     lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
     section: r.student?.section?.name ?? r.roster?.section?.name ?? "—",
-    grade: GRADE_LABELS[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
+    grade:
+      GRADE_LABELS[
+        r.student?.section?.gradeLevel ??
+          r.student?.gradeLevel ??
+          r.roster?.section?.gradeLevel ??
+          r.roster?.gradeLevel ??
+          ""
+      ] ?? "",
 
     studentId: r.student?.userId ?? r.roster?.id ?? null,
+    // The learner's own profile mascot — the same one the adviser's roster shows.
+    mascot: r.student?.mascot ?? r.roster?.mascot ?? null,
 
     type:
       r.escalatedTo === "adm_coordinator" || r.referredToRole === "adm_coordinator"

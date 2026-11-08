@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
+import { Button } from "@/components/ui/button";
 import { Pill, type PillTone } from "@/components/ui/pill";
 import type {
   AtRiskStudentItem,
@@ -28,12 +29,11 @@ export { interventionLatestAction } from "./intervention-row-helpers";
 
 const ACTION_PRIMARY =
   "inline-flex h-6 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50";
-const ACTION_BOOK =
-  "inline-flex h-6 items-center gap-1.5 rounded-md bg-blue-600 px-2.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:pointer-events-none disabled:opacity-50";
 const ACTION_SECONDARY =
   "inline-flex h-6 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50";
 interface InterventionTableRowProps {
   row: AtRiskStudentItem;
+  index?: number;
   highlighted?: boolean;
   locked: boolean;
   isActionPending: boolean;
@@ -55,6 +55,7 @@ interface InterventionTableRowProps {
 }
 export function InterventionTableRow({
   row,
+  index = 0,
   highlighted = false,
   locked,
   isActionPending,
@@ -156,6 +157,7 @@ export function InterventionTableRow({
       <li
         id={`intervention-row-${row.studentKey}`}
         data-highlighted={highlighted || undefined}
+        style={{ animationDelay: `${450 + Math.min(index, 11) * 140}ms` }}
         className={`${styles.caseRow}${highlighted ? ` ${styles.caseRowHighlight}` : ""}${
           expanded ? ` ${styles.caseRowActive}` : ""
         }`}
@@ -165,7 +167,7 @@ export function InterventionTableRow({
         aria-label={`${row.student}'s intervention case`}
       >
         <div className={styles.caseCardHead}>
-          <StudentMascot name={row.student} seed={row.lrn} size={36} />
+          <StudentMascot name={row.student} seed={row.lrn} character={row.mascot ?? undefined} size={36} />
           <div className={styles.caseCardId}>
             <p className={styles.caseCardName}>{row.student}</p>
             <div className={styles.caseCardMeta}>
@@ -333,9 +335,11 @@ export function InterventionTableRow({
           actions={
             <>
               {!followUp && (
-                <button
+                <Button
                   type="button"
-                  className={ACTION_BOOK}
+                  variant="default"
+                  size="sm"
+                  className="h-6 px-2.5 text-xs"
                   disabled={locked || isActionPending}
                   title="Start the follow-up and book the first session"
                   onClick={() => {
@@ -344,12 +348,14 @@ export function InterventionTableRow({
                   }}
                 >
                   {isBusy("start") ? "Saving…" : "Book session"}
-                </button>
+                </Button>
               )}
               {isUnbooked && (
-                <button
+                <Button
                   type="button"
-                  className={ACTION_BOOK}
+                  variant="default"
+                  size="sm"
+                  className="h-6 px-2.5 text-xs"
                   disabled={locked || isActionPending}
                   onClick={() => {
                     onToggleDetails();
@@ -357,13 +363,15 @@ export function InterventionTableRow({
                   }}
                 >
                   Book session
-                </button>
+                </Button>
               )}
               {followUp?.approvalStatus === "pending" && (
                 <>
-                  <button
+                  <Button
                     type="button"
-                    className={ACTION_SECONDARY}
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2.5 text-xs"
                     disabled={locked || isActionPending}
                     onClick={() => {
                       onToggleDetails();
@@ -371,10 +379,12 @@ export function InterventionTableRow({
                     }}
                   >
                     Change…
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className={ACTION_SECONDARY}
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2.5 text-xs"
                     disabled={locked || isActionPending}
                     onClick={() => {
                       onToggleDetails();
@@ -382,10 +392,12 @@ export function InterventionTableRow({
                     }}
                   >
                     {isBusy("review") ? "Saving…" : "Reject"}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className={ACTION_PRIMARY}
+                    variant="default"
+                    size="sm"
+                    className="h-6 px-2.5 text-xs"
                     disabled={locked || isActionPending}
                     onClick={() => {
                       onToggleDetails();
@@ -393,13 +405,15 @@ export function InterventionTableRow({
                     }}
                   >
                     {isBusy("review") ? "Saving…" : "Approve"}
-                  </button>
+                  </Button>
                 </>
               )}
               {followUp && !closed && status.label !== "No action yet" && (
-                <button
+                <Button
                   type="button"
-                  className={ACTION_SECONDARY}
+                  variant="default"
+                  size="sm"
+                  className="h-6 px-2.5 text-xs"
                   disabled={locked || isActionPending || hasUpcoming}
                   title={hasUpcoming ? upcomingHint : undefined}
                   onClick={() => {
@@ -408,35 +422,23 @@ export function InterventionTableRow({
                   }}
                 >
                   Record outcome…
-                </button>
+                </Button>
               )}
               {followUp && closed && (
-                <>
-                  <button
-                    type="button"
-                    className={ACTION_SECONDARY}
-                    disabled={locked || isActionPending}
-                    title="Update the closing notes on this finished follow-up"
-                    onClick={() => {
-                      onToggleDetails();
-                      onOutcome();
-                    }}
-                  >
-                    Add note
-                  </button>
-                  <button
-                    type="button"
-                    className={ACTION_PRIMARY}
-                    disabled={locked || isActionPending}
-                    title="This student is still at risk — open a new follow-up"
-                    onClick={() => {
-                      onToggleDetails();
-                      onStart();
-                    }}
-                  >
-                    {isBusy("start") ? "Saving…" : "Start new follow-up"}
-                  </button>
-                </>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2.5 text-xs"
+                  disabled={locked || isActionPending}
+                  title="Update the closing notes on this finished follow-up"
+                  onClick={() => {
+                    onToggleDetails();
+                    onOutcome();
+                  }}
+                >
+                  Add note
+                </Button>
               )}
             </>
           }

@@ -55,7 +55,7 @@ export async function deleteFolder(ctx: AnecdotalContext, folderId: string) {
   await prisma.anecdotalFolder.delete({ where: { id: folderId } });
 }
 
-export async function listMine(ownerId: string) {
+export async function listMine(ownerId: string, termId: string | null = null) {
   // The anecdotal desk is advisory-scoped: only records this teacher filed
   // about their own advisees surface here. A teacher with no advisory section
   // (subject teacher) keeps seeing every record they filed.
@@ -64,7 +64,12 @@ export async function listMine(ownerId: string) {
     select: { id: true },
   });
   const sectionIds = advised.map((s) => s.id);
-  const where: { observerId: string; OR?: object[] } = { observerId: ownerId };
+  // The desk follows the teacher's selected term: records filed in another
+  // term must never leak into the current filing list.
+  const where: { observerId: string; termId?: string; OR?: object[] } = {
+    observerId: ownerId,
+  };
+  if (termId) where.termId = termId;
   if (sectionIds.length > 0) {
     // Advisees are resolved through the student/roster section (or the
     // record's own section), so a learner moved into the advisory section

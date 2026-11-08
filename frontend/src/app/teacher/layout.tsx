@@ -12,6 +12,8 @@ import { CalendarClock, ClipboardCheck, UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { TermScopeBanner } from "@/components/term/TermScopeBanner";
+import { RosterCarryOverOverlay } from "@/components/term/RosterCarryOverOverlay";
 import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { BreadcrumbExtraProvider } from "@/components/nav/BreadcrumbExtra";
 import { AdviserClaimGate } from "./components/AdviserClaimGate";
@@ -183,9 +185,11 @@ function TeacherChrome({
             : `${styles.shell} ${styles.shellWithRail} ${sidebarCollapsed ? styles.shellWithRailCollapsed : ""}`
         }
       >
+        {standalone ? null : <TermScopeBanner />}
         <main className={styles.main}>{children}</main>
       </div>
     </div>
+      <RosterCarryOverOverlay />
     </BreadcrumbExtraProvider>
   );
 }

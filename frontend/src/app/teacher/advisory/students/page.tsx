@@ -18,6 +18,7 @@ import { BookOpen, Loader2, SearchIcon, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InsightCallout } from "@/components/ui/insight-callout";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Pill } from "@/components/ui/pill";
 import {
   Select,
   SelectContent,
@@ -135,12 +136,14 @@ export default function TeacherAdvisoryStudentsPage() {
               >
                 {formatSurnameFirst(row.original.name)}
               </span>
-              <span
-                className="mt-1 inline-flex max-w-full shrink-0 items-center truncate rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground"
+              <Pill
+                tone="neutral"
+                label="LRN"
+                className="mt-1 max-w-full truncate"
                 title={row.original.lrn}
               >
                 {row.original.lrn}
-              </span>
+              </Pill>
             </div>
           </div>
         ),
