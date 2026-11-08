@@ -28,18 +28,23 @@ const fromIso = (iso: string | null) => {
 
 export function ModuleFormDialog({
   module,
+  initialKind,
   pending,
   onClose,
   onSubmit,
 }: {
   /** null = release a new module; otherwise edit this one. */
   module: AdvisoryModuleRow | null;
+  /** Preselected type for a new module (the empty-state quick actions). */
+  initialKind?: AdvisoryModuleKind;
   pending: boolean;
   onClose: () => void;
   onSubmit: (payload: AdvisoryModulePayload) => void;
 }) {
   const [moduleName, setModuleName] = React.useState(module?.moduleName ?? "");
-  const [kind, setKind] = React.useState<AdvisoryModuleKind>(module?.kind ?? "general");
+  const [kind, setKind] = React.useState<AdvisoryModuleKind>(
+    module?.kind ?? initialKind ?? "general",
+  );
   const [dueDate, setDueDate] = React.useState<Date | undefined>(fromIso(module?.dueDate ?? null));
   const [dueOpen, setDueOpen] = React.useState(false);
   const [moduleUrl, setModuleUrl] = React.useState(module?.moduleUrl ?? "");
