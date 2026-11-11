@@ -18,6 +18,7 @@ import type {
 import { useNurseInvalidate } from "../overview/components/use-nurse-mutation";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import styles from "./components/nurse-alerts.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
@@ -64,6 +65,7 @@ function NurseAlertsPageInner() {
 
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<NurseAlertsPage>({
+      ...liveQueryOptions,
       queryKey: ["nurse-alerts", page, debounced, track, termKey],
       queryFn: ({ signal }) =>
         fetchNurseAlerts({
@@ -127,6 +129,7 @@ function NurseAlertsPageInner() {
     isError: riskError,
     refetch: refetchRisk,
   } = useQuery<Record<string, NurseRiskLevel>>({
+    ...liveQueryOptions,
     queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     staleTime: 300_000,

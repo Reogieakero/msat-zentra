@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Loader2, Plus, Trash2, UserPlus, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Trash2, UserPlus, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KanbanBoard } from "@/components/ui/kanban-board";
@@ -36,31 +36,37 @@ export function TeacherAddKanban({ onClose, onProgress }: Props) {
           ) : undefined
         }
         description="Type each name once, then pick from the list. Just names — no accounts involved."
-        className="h-full"
+        className="h-full rounded-xl border-border bg-card shadow-xl"
+        actions={
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={createMany.isPending}
+            aria-label="Close add teachers"
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+        }
         footer={
           <div className="flex justify-end gap-1.5 px-1 pb-1">
             <Button
-              size="sm"
-              onClick={onClose}
-              disabled={createMany.isPending}
-              className="h-6 border-transparent bg-red-600 px-3 text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
               onClick={handleCreate}
               disabled={createMany.isPending || filled.length === 0}
               aria-busy={createMany.isPending || undefined}
-              className="h-6 border-input bg-white text-black hover:bg-neutral-100 hover:text-black dark:border-transparent dark:bg-white dark:text-black dark:hover:bg-neutral-200 dark:hover:text-black"
+              className="h-6 gap-1 px-2 text-[11px]"
             >
               {createMany.isPending ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  <Loader2 size={12} className="animate-spin" aria-hidden />
                   <span aria-live="polite">Creating…</span>
                 </>
               ) : (
-                `Create ${filled.length > 0 ? `${filled.length} ` : ""}teacher${filled.length === 1 ? "" : "s"}`
+                <>
+                  <UserPlus size={12} aria-hidden />
+                  Create {filled.length > 0 ? `${filled.length} ` : ""}teacher
+                  {filled.length === 1 ? "" : "s"}
+                </>
               )}
             </Button>
           </div>
@@ -74,12 +80,11 @@ export function TeacherAddKanban({ onClose, onProgress }: Props) {
                 {rows.length > 1 ? (
                   <Button
                     variant="ghost"
-                    size="sm"
                     onClick={() => setRows((prev) => prev.filter((_, j) => j !== i))}
                     aria-label={`Remove teacher row ${i + 1}`}
-                    className="h-6 px-2 text-xs"
+                    className="h-6 gap-1 px-2 text-[11px]"
                   >
-                    <Trash2 size={14} aria-hidden />
+                    <Trash2 size={12} aria-hidden />
                   </Button>
                 ) : null}
               </div>
@@ -96,12 +101,11 @@ export function TeacherAddKanban({ onClose, onProgress }: Props) {
         {rows.length < MAX_ROWS ? (
           <div className="px-1">
             <Button
-              variant="outline"
-              size="sm"
+              variant="secondary"
               onClick={() => setRows((prev) => [...prev, { fullName: "" }])}
-              className="h-6 self-start border-input bg-white text-black hover:bg-neutral-100 hover:text-black dark:border-transparent dark:bg-white dark:text-black dark:hover:bg-neutral-200 dark:hover:text-black"
+              className="h-6 gap-1 px-2 text-[11px]"
             >
-              <Plus size={14} aria-hidden />
+              <Plus size={12} aria-hidden />
               Add another
             </Button>
           </div>

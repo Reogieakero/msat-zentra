@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
-import { BookOpen, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import type { ClassPick } from "@/services/teacher/studentList.types";
 import { useStudentRail } from "./components/use-student-rail";
 import { StudentTable } from "./components/student-table";
@@ -82,21 +83,11 @@ export default function TeacherStudentListPage() {
     return (
       <section className={styles.page} aria-label="Student List">
         <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
-          <div className="w-full max-w-md rounded-xl border border-border p-2.5">
-            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-                aria-hidden="true"
-              >
-                <BookOpen size={24} className="text-muted-foreground" />
-              </span>
-              <p className="font-medium">No students to list yet</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                Your advised sections and handled subject × section cards will
-                appear here once sections are assigned to you this term.
-              </p>
-            </div>
-          </div>
+          <InsightCallout role="status" className="w-fit max-w-xl text-center">
+            <strong>No students to list yet.</strong> Your advised sections and
+            linked subject × section cards will appear here once a section is
+            assigned to you and your teacher code is linked on Classes.
+          </InsightCallout>
         </div>
       </section>
     );

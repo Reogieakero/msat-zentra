@@ -1,4 +1,10 @@
 import { prisma } from "../../lib/prisma.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 
 export interface RecordsHeatmapQuery {
   termId?: string;
@@ -8,7 +14,14 @@ export interface RecordsHeatmapQuery {
 
 export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
   const { termId, schoolYearId, schoolYearName } = query;
-  const where = termId ? { termId } : {};
+  // Soft-deleted records stay in the table for the teacher's restore view but
+  // never surface on the principal heatmap.
+  const where = { deletedAt: null, ...(termId ? { termId } : {}) };
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const visibleRecordsWhere = {
+    ...where,
+    ...excludeArchivedLearnerRows(archivedLearners),
+  };
 
   const [sections, rosterEntries, records, followups, referrals] = await Promise.all([
     prisma.section.findMany({
@@ -24,6 +37,7 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
           select: { staffProfile: { select: { shareStudentData: true } } },
         },
         students: {
+          where: excludeArchivedProfiles(archivedLearners),
           select: {
             userId: true,
             lrn: true,
@@ -35,11 +49,14 @@ export async function getRecordsHeatmap(query: RecordsHeatmapQuery) {
     }),
 
     prisma.studentRoster.findMany({
-      where: schoolYearId ? { schoolYearId } : {},
+      where: {
+        ...(schoolYearId ? { schoolYearId } : {}),
+        ...excludeArchivedRosters(archivedLearners),
+      },
       select: { id: true, lrn: true, fullName: true, sectionId: true, mascot: true },
     }),
     prisma.anecdotalRecord.findMany({
-      where,
+      where: visibleRecordsWhere,
       select: {
         id: true,
         studentId: true,

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import {
   ANEC_CATEGORY_LABELS,
   ANEC_TIER_LABELS,
@@ -176,7 +177,7 @@ export function useAnecdotalChatFlow({
     setTextInput("");
     closeFormPreview();
   }
-  const optionsQuery = useQuery({
+  const optionsQuery = useLiveQuery({
     queryKey: ["grade-flags", "options", termKey],
     queryFn: fetchAnecdotalOptions,
   });

@@ -44,10 +44,44 @@ async function getRealtimeToken(): Promise<string | null> {
   }
 }
 
-export function createClient() {
+/**
+ * Auth-capable client (OAuth start + callback session reads).
+ *
+ * Must NOT carry the `accessToken` option: supabase-js replaces `supabase.auth`
+ * with a throwing Proxy whenever a custom token supplier is configured, which
+ * would break `signInWithOAuth` and `getSession`. Realtime uses its own dedicated
+ * client below.
+ */
+export function createAuthClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    REALTIME_AUTH_ENABLED ? { accessToken: getRealtimeToken } : {},
+    // Never let this client become @supabase/ssr's browser singleton: if it
+    // did, the realtime client below would silently reuse it (without the
+    // token supplier) and every channel would authenticate as `anon` — RLS
+    // would then drop every row and the desks would only move on their poll.
+    { isSingleton: false },
   );
+}
+
+function createRealtimeClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      // `createBrowserClient` caches a singleton by default, and whichever
+      // client was created first wins. Opt out so this one always carries
+      // the `accessToken` supplier and channels are actually authenticated.
+      isSingleton: false,
+      ...(REALTIME_AUTH_ENABLED ? { accessToken: getRealtimeToken } : {}),
+    },
+  );
+}
+
+let realtimeClient: ReturnType<typeof createRealtimeClient> | null = null;
+
+/** Realtime client: authenticated with the backend-issued Supabase token when enabled. */
+export function createClient() {
+  if (!realtimeClient) realtimeClient = createRealtimeClient();
+  return realtimeClient;
 }

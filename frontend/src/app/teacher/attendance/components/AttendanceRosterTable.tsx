@@ -78,6 +78,59 @@ function ratePillTone(rate: number): string {
   return "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400";
 }
 
+/**
+ * Board-shaped loading state for the roster. It reuses the real board shell
+ * and the real `row-list` grid (status pill, `|`, mascot + name + LRN pill,
+ * rate pill + four status boxes) so the header, footer, gutters and row height
+ * are identical before and after the data lands.
+ */
+export function AttendanceRosterSkeleton({ rows = 8 }: { rows?: number }) {
+  return (
+    <KanbanBoard
+      title="Class attendance"
+      icon={
+        <span className="text-amber-500" aria-hidden>
+          <Users size={14} />
+        </span>
+      }
+      actions={<Skeleton className="h-8 w-40 rounded-[16px] sm:w-48" />}
+      description={<Skeleton className="h-3 w-72 max-w-full" />}
+      footer={
+        <div className="flex items-center justify-between gap-2 px-1 pb-1">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-6 w-20 rounded-md" />
+        </div>
+      }
+      ariaLabel="Loading roster"
+    >
+      <ul
+        className={`${rowStyles.list} ${rowStyles.listBleed}`}
+        style={{ "--row-list-gutter": "0.625rem" } as React.CSSProperties}
+        aria-busy="true"
+        aria-label="Loading roster"
+      >
+        {Array.from({ length: rows }).map((_, i) => (
+          <li key={i} className={rowStyles.row} aria-hidden>
+            <Skeleton className="h-5 w-14 rounded-md" />
+            <span className={rowStyles.sep}>|</span>
+            <span className={rowStyles.titleCell}>
+              <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+              <Skeleton className="h-4 w-40 max-w-[40%]" />
+              <Skeleton className="h-5 w-28 rounded-md" />
+            </span>
+            <span className={rowStyles.metaCell}>
+              <Skeleton className="h-5 w-10 rounded-md" />
+              {[0, 1, 2, 3].map((box) => (
+                <Skeleton key={box} className="h-7 w-7 rounded-md" />
+              ))}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </KanbanBoard>
+  );
+}
+
 interface AttendanceRosterTableProps {
   date: string;
   subjectId: string | undefined;
@@ -319,34 +372,11 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
         ? "Mark today's sheet for this subject and section."
         : `Viewing the ${date} sheet for this subject and section.`;
   const rows = table.getRowModel().rows;
+  const nameFilter = (table.getColumn("name")?.getFilterValue() as string) ?? "";
   if (loading) {
     return (
       <section aria-label="Class attendance" className="flex min-w-0 flex-col gap-3">
-        <KanbanBoard
-          title="Class attendance"
-          icon={boardIcon}
-          description="Loading sheet…"
-          ariaLabel="Loading roster"
-        >
-          <div aria-busy="true" aria-label="Loading roster">
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div key={i} className={rowStyles.row} aria-hidden>
-                <Skeleton className="h-5 w-full rounded-md" />
-                <span className={rowStyles.sep}>|</span>
-                <span className={rowStyles.titleCell}>
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-5 w-16 rounded-md" />
-                </span>
-                <span className={rowStyles.metaCell}>
-                  <Skeleton className="h-5 w-16 rounded-md" />
-                  <Skeleton className="h-5 w-12 rounded-md" />
-                  <Skeleton className="h-7 w-32 rounded-md" />
-                  <Skeleton className="h-6 w-6 rounded-full" />
-                </span>
-              </div>
-            ))}
-          </div>
-        </KanbanBoard>
+        <AttendanceRosterSkeleton />
       </section>
     );
   }
@@ -398,11 +428,12 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
           </div>
         ) : (
           <ul
-            className={`${rowStyles.list} ${rowStyles.listBleed}`}
+            key={nameFilter}
+            className={`${rowStyles.list} ${rowStyles.rowsIn} ${rowStyles.listBleed}`}
             style={{ "--row-list-gutter": "0.625rem" } as React.CSSProperties}
             aria-label="Class attendance roster"
           >
-            {rows.map((row) => {
+            {rows.map((row, index) => {
               const r = row.original;
               const pill = r.status ? MARK_PILL[r.status] : null;
               const pillLabel = pill ? pill.label : "Unmarked";
@@ -411,6 +442,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
                 <li
                   key={r.id}
                   className={rowStyles.row}
+                  style={{ animationDelay: `${450 + Math.min(index, 11) * 140}ms` }}
                   aria-label={`${r.name}, ${pillLabel}, ${r.admExempt ? "attendance exempt" : `attendance ${pct}`}`}
                 >
                   {!blocksMode || pill ? (

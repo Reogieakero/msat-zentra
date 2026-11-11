@@ -10,24 +10,7 @@ import { ScheduleReadonlyGrid } from "./components/schedule-readonly-grid";
 import { SectionCard } from "./components/section-card";
 import { SectionRail } from "./components/section-rail";
 import { ReviewDialog } from "./components/review-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-function LoadingShell() {
-  return (
-    <section className="flex w-full flex-col gap-5" aria-busy="true" aria-label="Loading schedule">
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
-        <div className="flex min-w-0 flex-col gap-5">
-          <Skeleton className="h-7 w-24" aria-hidden="true" />
-          <Skeleton className="h-72 w-full" aria-hidden="true" />
-        </div>
-        <div className="flex flex-col items-end gap-2" aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-9 w-9 rounded-xl" />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+import { SectionScheduleSkeleton } from "./components/section-schedule-skeleton";
 export default function PrincipalSectionSchedulePage() {
   const params = useParams<{ sectionId: string }>();
   const sectionRef = params.sectionId;
@@ -52,7 +35,7 @@ export default function PrincipalSectionSchedulePage() {
     statusMeta,
   } = usePrincipalScheduleSection(sectionRef);
   if (sectionsQuery.isPending || configQuery.isPending) {
-    return <LoadingShell />;
+    return <SectionScheduleSkeleton />;
   }
   if (sectionsQuery.isError || !sectionsQuery.data) {
     return (
@@ -79,37 +62,31 @@ export default function PrincipalSectionSchedulePage() {
   }
   return (
     <section className="flex w-full flex-col gap-5">
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
-        <div className="flex min-w-0 flex-col gap-5">
-          <div>
-            <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2">
-              <Link href="/principal/academics/schedule">
-                <ArrowLeft size={16} aria-hidden />
-                Sections
-              </Link>
-            </Button>
-          </div>
-          <SectionCard submission={submission} statusTitle={statusMeta.title} />
-          <ScheduleReadonlyGrid config={config} rows={rows} entryByKey={entryByKey} />
-        </div>
-        <div className="min-w-0">
-          <div className="flex w-full flex-col gap-4">
-            <SectionRail
-              submission={submission}
-              submittedCount={submittedCount}
-              statusMeta={statusMeta}
-              note={note}
-              onOpenReview={() => {
-                setFormError(null);
-                setReviewOpen(true);
-              }}
-              onReview={handleReview}
-              rejecting={rejecting}
-              approving={approving}
-              reviewPending={review.isPending}
-            />
-          </div>
-        </div>
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <Button asChild variant="ghost" size="sm" className="-ml-2 h-6 px-2 text-xs">
+          <Link href="/principal/academics/schedule">
+            <ArrowLeft size={14} aria-hidden />
+            Back to sections
+          </Link>
+        </Button>
+        <SectionRail
+          submission={submission}
+          submittedCount={submittedCount}
+          statusMeta={statusMeta}
+          note={note}
+          onOpenReview={() => {
+            setFormError(null);
+            setReviewOpen(true);
+          }}
+          onReview={handleReview}
+          rejecting={rejecting}
+          approving={approving}
+          reviewPending={review.isPending}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-5">
+        <SectionCard submission={submission} statusTitle={statusMeta.title} />
+        <ScheduleReadonlyGrid config={config} rows={rows} entryByKey={entryByKey} />
       </div>
       <ReviewDialog
         open={reviewOpen}

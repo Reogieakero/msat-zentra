@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 
 export interface AutofillCandidate {
@@ -96,7 +96,7 @@ export async function runAutofill(payload: {
 }
 
 export function useAutofillCandidates(sectionId: string | null, enabled = true) {
-  return useQuery<AutofillCandidate[]>({
+  return useLiveQuery<AutofillCandidate[]>({
     queryKey: ["teacher-sf10-autofill", "candidates", sectionId ?? ""],
     queryFn: () => fetchAutofillCandidates(sectionId as string),
     enabled: enabled && !!sectionId,
@@ -110,7 +110,7 @@ export function useAutofillPreview(
   enabled = true,
 ) {
   const key = studentLrns.slice().sort().join(",");
-  return useQuery<AutofillPreview>({
+  return useLiveQuery<AutofillPreview>({
     queryKey: ["teacher-sf10-autofill", "preview", sectionId ?? "", key],
     queryFn: () => fetchAutofillPreview(sectionId as string, studentLrns),
     enabled: enabled && !!sectionId && studentLrns.length > 0,

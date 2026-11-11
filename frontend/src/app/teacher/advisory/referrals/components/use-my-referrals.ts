@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -88,7 +89,7 @@ export function useMyReferrals(highlightId: string | null) {
   // No pagination params: the backend returns the full list when no
   // page/pageSize/q/highlight params are sent, and the kanban filters
   // client-side so every referral stays visible on one screen.
-  const referralsQuery = useQuery<MyReferralsPage>({
+  const referralsQuery = useLiveQuery<MyReferralsPage>({
     queryKey: ["myReferrals", termKey],
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.get<

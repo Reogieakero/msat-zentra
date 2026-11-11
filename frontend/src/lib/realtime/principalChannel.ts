@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
+import { markRealtimeUpdate } from "@/lib/api/fresh";
 import { toast } from "@/components/ui/sonner";
 
 const KEY_FOR_SOURCE: Record<string, string[][]> = {
@@ -15,7 +16,12 @@ const KEY_FOR_SOURCE: Record<string, string[][]> = {
   device_issued: [["adm-dashboard"]],
   grade_lock: [["academic-insights", "live"], ["academic-insights", "honor-roll-live"], ["academics"]],
   grade_unlock: [["academic-insights", "live"], ["academic-insights", "honor-roll-live"], ["academics"]],
-  intervention_approval: [["interventions-list"]],
+  intervention_approved: [["interventions-list"], ["principal-notifications"]],
+  intervention_detected: [["interventions-list"]],
+  intervention_assigned: [["interventions-list"]],
+  intervention_session: [["interventions-list"]],
+  intervention_outcome: [["interventions-list"]],
+  intervention_alert: [["interventions-list"]],
   attendance: [["attendance-section-averages"], ["attendance-needs-attention"]],
 };
 const ALWAYS_KEYS: string[][] = [["principal-notifications"]];
@@ -83,6 +89,17 @@ export function usePrincipalRealtime(enabled = true) {
       void invalidate(row);
     }
 
+    // Guidance creating a plan, booking a session, or closing a case changes
+    // the principal's intervention cohort. The page's live poll is the safety
+    // net; these subscriptions make the board update instantly.
+    let lastDeskInvalidated = 0;
+    function touchInterventionDesk() {
+      const now = Date.now();
+      if (now - lastDeskInvalidated < 2_000) return;
+      lastDeskInvalidated = now;
+      void queryClient.invalidateQueries({ queryKey: ["interventions-list"] });
+    }
+
     try {
       const supabase = createClient();
       const ch = supabase
@@ -99,6 +116,16 @@ export function usePrincipalRealtime(enabled = true) {
             notify((payload as unknown as { new?: PrincipalNotification }).new as PrincipalNotification);
           },
         )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "Intervention" },
+          () => touchInterventionDesk(),
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "CounselingSession" },
+          () => touchInterventionDesk(),
+        )
         .subscribe((status) => {
           realtimeOk.current = status === "SUBSCRIBED";
           if (!cancelled && status !== "SUBSCRIBED") {
@@ -111,7 +138,10 @@ export function usePrincipalRealtime(enabled = true) {
 
     let seeded = false;
     async function poll() {
-      if (cancelled || document.hidden) return;
+      // Runs while hidden too: a fanout notification must still land (and toast
+      // on return) when the desk is in another tab or another site. This is the
+      // fallback for a socket that is down or blocked by RLS.
+      if (cancelled) return;
       try {
         const { data } = await apiClient.get<PrincipalNotification[]>(
           "/api/notifications/",
@@ -141,6 +171,7 @@ export function usePrincipalRealtime(enabled = true) {
     document.addEventListener("visibilitychange", onFocus);
 
     function invalidate(row?: PrincipalNotification) {
+      markRealtimeUpdate();
       const now = Date.now();
       if (now - lastInvalidated.current < 2000) return;
       lastInvalidated.current = now;

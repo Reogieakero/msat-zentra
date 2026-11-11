@@ -15,6 +15,7 @@ import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { useGuidanceRealtime } from "@/lib/realtime/guidanceChannel";
 import { GuidanceNotificationsBell } from "./components/GuidanceNotificationsBell";
+import { GuidanceRiskAlertMonitor } from "./components/GuidanceRiskAlertMonitor";
 import { GuidanceGlobalSearch } from "./components/GuidanceGlobalSearch";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
 import {
@@ -71,6 +72,8 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
         <div className={styles.search}>
           <GuidanceGlobalSearch />
         </div>
+
+        <GuidanceRiskAlertMonitor />
 
         <GuidanceNotificationsBell />
 

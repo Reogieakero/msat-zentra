@@ -2,7 +2,8 @@
 import * as React from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { BookOpen, CalendarClock, ClipboardList, SearchIcon, Users } from "lucide-react";
-import { InsightCallout } from "@/components/ui/insight-callout";import { Pill, type PillTone } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import type { StudentListRow } from "@/services/teacher/studentList.types";
@@ -174,11 +175,14 @@ export function StudentTable({
           Could not load students for this class.
         </p>
       ) : rows.length === 0 ? (
-        <p className="flex min-h-24 items-center justify-center px-1 py-8 text-center text-xs text-muted-foreground">
-          {emptySectionName
-            ? `No students in ${emptySectionName} yet.`
-            : "No students in this section yet."}
-        </p>
+        <div className="flex w-full justify-center px-1 py-6">
+          <InsightCallout role="status" className="w-full max-w-xl text-left">
+            <strong>No students in this section yet.</strong>{" "}
+            {emptySectionName
+              ? `${emptySectionName} has no enrolled learners this term.`
+              : "Enrolled learners will appear here once the roster is finalized."}
+          </InsightCallout>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="flex w-full justify-center px-1 py-6">
           <InsightCallout role="status" className="w-full max-w-xl text-left">

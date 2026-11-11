@@ -2,9 +2,21 @@ import { apiClient } from "@/lib/api/client";
 import type {
   GuidanceAlertCasesData,
   GuidanceAlertCasesParams,
+  GuidanceAlertCounts,
   GuidanceAlertsData,
   GuidanceAlertsParams,
 } from "./alerts.types";
+
+/** Live High/Moderate counters — cheap enough for the shell to poll. */
+export async function fetchGuidanceAlertCounts(
+  opts: { signal?: AbortSignal } = {}
+): Promise<GuidanceAlertCounts> {
+  const { data } = await apiClient.get<GuidanceAlertCounts>(
+    "/api/guidance/alerts/count",
+    { signal: opts.signal }
+  );
+  return data;
+}
 
 export async function fetchGuidanceAlerts(
   params: GuidanceAlertsParams = {}

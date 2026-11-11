@@ -3,12 +3,19 @@ import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { notifyAcademicsSelf } from "../../lib/notify.js";
 import { rosterCountsByGrade, rosterCountsBySection } from "../enrollment.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 import { gradeToNumber, parseCategory, toCategoryLabel, toGradeLevel } from "../../modules/registry/registry.repository.js";
 import type { DeskIdentity, RegistryContext } from "./registry.types.js";
 
 export async function listSubjects(ctx: RegistryContext) {
   const band = ctx.band;
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const subjects = await prisma.subject.findMany({
     where: { gradeLevel: { in: band } },
     orderBy: [{ gradeLevel: "asc" }, { code: "asc" }],
@@ -19,12 +26,22 @@ export async function listSubjects(ctx: RegistryContext) {
     subjects.map(async (s) => {
 
       const [profiles, passed, failed] = await Promise.all([
-        prisma.studentProfile.count({ where: { gradeLevel: s.gradeLevel } }),
-        prisma.finalGrade.count({
-          where: { subjectId: s.id, remarks: "Passed" },
+        prisma.studentProfile.count({
+          where: { gradeLevel: s.gradeLevel, ...excludeArchivedProfiles(archivedLearners) },
         }),
         prisma.finalGrade.count({
-          where: { subjectId: s.id, remarks: "Failed" },
+          where: {
+            subjectId: s.id,
+            remarks: "Passed",
+            ...excludeArchivedLearnerRows(archivedLearners),
+          },
+        }),
+        prisma.finalGrade.count({
+          where: {
+            subjectId: s.id,
+            remarks: "Failed",
+            ...excludeArchivedLearnerRows(archivedLearners),
+          },
         }),
       ]);
       const enrolled = profiles + (rosterByGrade.get(s.gradeLevel) ?? 0);
@@ -63,12 +80,13 @@ export async function getAcademicsOverview(ctx: RegistryContext) {
     orderBy: [{ gradeLevel: "asc" }, { code: "asc" }],
   });
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const enrollmentsByGrade = await Promise.all(
     band.map(async (gl) => {
       const [rows, yearSections] = await Promise.all([
         prisma.studentProfile.groupBy({
           by: ["sectionId"],
-          where: { gradeLevel: gl },
+          where: { gradeLevel: gl, ...excludeArchivedProfiles(archivedLearners) },
           _count: { _all: true },
         }),
         prisma.section.findMany({
@@ -178,8 +196,11 @@ export async function createSubject(
     reason: `${desk.deskNoun} created subject`,
   });
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosterByGrade] = await Promise.all([
-    prisma.studentProfile.count({ where: { gradeLevel: gl } }),
+    prisma.studentProfile.count({
+      where: { gradeLevel: gl, ...excludeArchivedProfiles(archivedLearners) },
+    }),
     rosterCountsByGrade([gl]),
   ]);
   const enrolled = profiles + (rosterByGrade.get(gl) ?? 0);
@@ -274,9 +295,10 @@ export async function getSubjectStudents(query: SubjectStudentsQuery) {
     where: { isActive: true },
     select: { id: true },
   });
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [students, rosterEntries] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { gradeLevel: subject.gradeLevel },
+      where: { gradeLevel: subject.gradeLevel, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         lrn: true,
@@ -296,6 +318,7 @@ export async function getSubjectStudents(query: SubjectStudentsQuery) {
       where: {
         gradeLevel: subject.gradeLevel,
         ...(activeYear ? { schoolYearId: activeYear.id } : {}),
+        ...excludeArchivedRosters(archivedLearners),
       },
       select: {
         id: true,

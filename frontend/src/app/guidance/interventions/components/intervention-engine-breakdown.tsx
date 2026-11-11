@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { fetchInterventionEngine } from "@/services/guidance/interventions.service";
+import { liveQueryOptions } from "@/lib/api/live";
 import type { EngineBreakdown as EngineBreakdownData } from "@/services/guidance/interventions.types";
 
 export function levelVariant(level: string): "red" | "amber" | "green" {
@@ -37,7 +38,7 @@ const LEVEL = {
     value: "text-red-700 dark:text-red-400",
   },
   medium: {
-    label: "Medium",
+    label: "Moderate",
     pill: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
     dot: "bg-amber-500 dark:bg-amber-400",
     value: "text-amber-700 dark:text-amber-400",
@@ -77,9 +78,9 @@ const eyebrow =
 
 export function useInterventionEngine(studentKey: string, enabled = true) {
   return useQuery({
+    ...liveQueryOptions,
     queryKey: ["guidance-interventions", "engine", studentKey],
     queryFn: ({ signal }) => fetchInterventionEngine(studentKey, { signal }),
-    staleTime: 60_000,
     retry: false,
     enabled,
   });
@@ -301,11 +302,11 @@ export function EngineBreakdown({
       valueLabel:
         data.attendance.rate === null
           ? "No attendance average"
-          : `Attendance ${Math.round((data.attendance.rate ?? 0) * 100)} percent present`,
+          : `Attendance ${Math.round((data.attendance.rate ?? 0) * 100)} percent present (${data.attendance.present} of ${data.attendance.total})`,
       details: [
         data.attendance.rate === null
           ? "No attendance records this term."
-          : "Present.",
+          : `${data.attendance.present} of ${data.attendance.total} attendance slots present this term.`,
       ],
     },
     {

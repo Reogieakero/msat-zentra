@@ -72,6 +72,8 @@ export interface AnecdotalRecordKanbanCardProps {
   /** Accessible label for the open button. */
   openLabel: string;
   onOpen: () => void;
+  /** Bottom-right action row (e.g. Edit / Delete). Rendered outside the card's open button. */
+  actions?: React.ReactNode;
 }
 
 /**
@@ -104,6 +106,7 @@ export function AnecdotalRecordKanbanCard({
   tone,
   openLabel,
   onOpen,
+  actions,
 }: AnecdotalRecordKanbanCardProps) {
   const horizontal = layout === "horizontal";
   const folderLeft = layout === "folder-left";
@@ -135,12 +138,13 @@ export function AnecdotalRecordKanbanCard({
     </span>
   );
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={openLabel}
-      className="flex min-w-0 flex-1 cursor-pointer flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 text-left transition-colors [font-family:var(--font-inter)] hover:border-primary/60 hover:shadow dark:bg-muted/20"
-    >
+    <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 text-left transition-colors [font-family:var(--font-inter)] hover:border-primary/60 hover:shadow dark:bg-muted/20">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={openLabel}
+        className="flex w-full min-w-0 cursor-pointer flex-col gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
       <span className="-mx-2.5 flex min-w-0 items-center justify-between gap-1.5 border-b border-border px-3.5 pb-2">
         <span className="inline-flex min-w-0 items-center gap-1.5 text-[13px] font-semibold">
           <FileText size={14} aria-hidden style={{ color: iconColor }} />
@@ -228,6 +232,12 @@ export function AnecdotalRecordKanbanCard({
           </span>
         )}
       </span>
-    </button>
+      </button>
+      {actions ? (
+        <span className="mt-auto flex w-full items-center justify-end gap-1.5 pt-0.5">
+          {actions}
+        </span>
+      ) : null}
+    </div>
   );
 }

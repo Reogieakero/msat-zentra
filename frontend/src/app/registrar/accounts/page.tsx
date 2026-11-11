@@ -33,6 +33,7 @@ import styles from "./accounts.module.css";
 import cascade from "@/components/shared/desk-cascade.module.css";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { PendingStaffQueue, usePendingStaffTotal } from "@/components/registry/pending-staff-queue";
 import { useSearchParams } from "next/navigation";
 
 
@@ -177,6 +178,7 @@ function AccountApprovalsPageInner() {
     },
   });
 
+  const staffPending = usePendingStaffTotal("registrar");
   const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
 
   const safePage = Math.min(page, totalPages);
@@ -198,8 +200,7 @@ function AccountApprovalsPageInner() {
     );
   }, [pageRows, queryInput]);
 
-  const sideStats = React.useMemo(() => {
-    const rows = breakdownData ?? [];
+  const sideStats = React.useMemo(() => {    const rows = breakdownData ?? [];
     return {
       withAccount: rows.reduce((s, r) => s + r.withAccount, 0),
       pendingSignup: rows.reduce((s, r) => s + r.pending, 0),
@@ -285,7 +286,7 @@ function AccountApprovalsPageInner() {
   // hide the KPI board and queue/breakdown cards entirely and
   // render a single centered card instead.
   const isTrueEmpty =
-    !isPending && !isError && !breakdownPending && !hasRecords && !searching;
+    !isPending && !isError && !breakdownPending && !hasRecords && !searching && staffPending === 0;
 
   if (isTrueEmpty) {
     return (
@@ -423,6 +424,8 @@ function AccountApprovalsPageInner() {
             )}
           </KanbanBoard>
         </div>
+
+        <PendingStaffQueue desk="registrar" />
       </div>
 
       {verifyTarget ? (

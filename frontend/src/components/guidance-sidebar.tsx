@@ -10,12 +10,19 @@ import BranchedMenu from "./nav/BranchedMenu";
 import { NAV_ICONS } from "./nav/sidebar-icons";
 import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
+import {
+  useGuidanceNavDots,
+  type GuidanceNavDots,
+} from "@/services/guidance/navCounts.service";
 
 export type NavItem = {
   title: string;
   href: string;
   icon: LucideIcon;
+  /** Numeric/text pill (unused on the guidance desk — it shows a dot). */
   badge?: string;
+  /** Red "new or updated since you last looked" dot. */
+  dot?: boolean;
 };
 
 export type NavGroup = {
@@ -89,7 +96,31 @@ export const NAV: NavGroup[] = [
   },
 ];
 
-const TABS: NavItem[] = NAV.flatMap((group) => group.items);
+/* Which live queue each nav entry watches. The dot comes from
+   `/api/guidance/nav-counts`; a queue with nothing unseen shows no dot. */
+const QUEUE_FOR_HREF: Record<string, keyof GuidanceNavDots> = {
+  "/guidance/overview": "overview",
+  "/guidance/alerts": "alerts",
+  "/guidance/interventions": "interventions",
+  "/guidance/interventions/insights": "insights",
+  "/guidance/referrals/adm": "adm",
+  "/guidance/referrals/counseling": "counseling",
+  "/guidance/anecdotal": "anecdotal",
+  "/guidance/session-documents": "documents",
+  "/guidance/adm": "report",
+};
+
+function withDots(groups: NavGroup[], dots?: GuidanceNavDots): NavGroup[] {
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.map((item) => ({
+      ...item,
+      dot: Boolean(
+        dots && QUEUE_FOR_HREF[item.href] ? dots[QUEUE_FOR_HREF[item.href]] : false,
+      ),
+    })),
+  }));
+}
 
 /* Parent desks whose nested pages have their own nav entry (intervention
    insights lives under /guidance/interventions) must highlight exactly. */
@@ -126,7 +157,10 @@ function GuidanceNavbar({ tabs }: { tabs: NavItem[] }) {
               >
                 <item.icon className={styles.tabIcon} aria-hidden="true" />
                 <span className={styles.tabLabel}>{item.title}</span>
-                {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
+                {item.dot ? (
+                  <span className={styles.dot} aria-hidden="true" />
+                ) : null}
+                {item.dot ? <span className="sr-only">New activity</span> : null}
               </Link>
             </li>
           );
@@ -154,6 +188,7 @@ function GuidanceRail({ groups }: { groups: NavGroup[] }) {
           value: t.href,
           label: t.title,
           href: t.href,
+          dot: t.dot,
           icon: <t.icon size={16} strokeWidth={1.8} aria-hidden="true" />,
         })),
       }))}
@@ -175,8 +210,11 @@ export function GuidanceSidebar({
 } = {}) {
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
   const isActive = useIsActive();
+  const counts = useGuidanceNavDots();
+  const nav = React.useMemo(() => withDots(NAV, counts), [counts]);
+  const tabs = React.useMemo(() => nav.flatMap((group) => group.items), [nav]);
   const activeHref =
-    TABS.find((t) => isActive(t.href))?.href ?? "/guidance/overview";
+    tabs.find((t) => isActive(t.href))?.href ?? "/guidance/overview";
 
   return (
     <>
@@ -186,14 +224,14 @@ export function GuidanceSidebar({
       >
         {collapsed ? (
           <SidebarIconRail
-            groups={NAV}
+            groups={nav}
             ariaLabel="Guidance sections, icon only"
             activeHref={activeHref}
           />
         ) : (
           <>
             <div ref={railScrollRef} className={styles.railScroll}>
-              <GuidanceRail groups={NAV} />
+              <GuidanceRail groups={nav} />
             </div>
             <div className={styles.railHintWrap}>
               <ScrollDownHint
@@ -207,7 +245,7 @@ export function GuidanceSidebar({
         )}
       </aside>
       <div className={styles.tabsMobile}>
-        <GuidanceNavbar tabs={TABS} />
+        <GuidanceNavbar tabs={tabs} />
       </div>
     </>
   );

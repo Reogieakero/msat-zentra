@@ -75,7 +75,7 @@ export function SharedDock() {
       </div>
       {!minimized ? (
         <div className="flex flex-col gap-2 p-3">
-          <div className="flex justify-center">
+          <div className="w-full min-w-0 text-left">
             <ThoughtLine
               working={working}
               steps={steps}
@@ -85,6 +85,7 @@ export function SharedDock() {
               collapsible
               collapseOnSettle
               showTimer
+              className="w-full"
             />
           </div>
           <ul className="flex max-h-56 min-w-0 flex-col gap-1 overflow-y-auto" aria-label="Tasks">

@@ -8,9 +8,33 @@ import { guidanceAlertsQuerySchema } from "./guidance.schemas.js";
 import { scopedYearId } from "../../lib/termScope.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { resolveGuidancePageSize } from "./guidance.repository.js";
-import { getAlerts } from "../../services/guidance/alerts.service.js";
+import { getAlerts, getAlertCounts } from "../../services/guidance/alerts.service.js";
 
 const router = Router();
+
+router.get(
+  "/alerts/count",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  cache({ tags: [CACHE_TAGS.guidance, "alerts"], ttl: CACHE_TTLS.dashboard }),
+  etag(),
+  async (req, res, next) => {
+    try {
+      const schoolYearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
+      const termId = await resolveActiveTermId(req);
+      res.json(
+        await getAlertCounts({
+          userId: req.user!.id,
+          role: req.user!.role,
+          termId,
+          schoolYearId,
+        }),
+      );
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 router.get(
   "/alerts",

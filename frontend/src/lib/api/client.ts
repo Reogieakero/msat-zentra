@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance } from "axios";
 import { decodeTokenIdentity, canSteerTermRole } from "@/lib/auth/roles";
 import { clearTermStorage, readStoredTerm, type StoredTerm } from "@/lib/term/termStorage";
+import { isRealtimeFresh } from "@/lib/api/fresh";
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -25,6 +26,12 @@ apiClient.interceptors.request.use((config) => {
     if (scope?.termId) {
       (config.headers as Record<string, string>)["x-term-id"] = scope.termId;
     }
+  }
+  // Realtime just told us the data changed: make the follow-up GET skip the
+  // API's Redis cache read so the screen updates in the same tick as the alert
+  // instead of racing the write's (fire-and-forget) tag invalidation.
+  if (isRealtimeFresh()) {
+    (config.headers as Record<string, string>)["x-zentra-fresh"] = "1";
   }
   return config;
 });
@@ -103,11 +110,16 @@ async function refreshAccessToken(): Promise<string | null> {
 
 export async function logout(): Promise<void> {
   const identity = decodeTokenIdentity(getAccessToken());
+  const token = getAccessToken();
   try {
     await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`,
       {},
-      { withCredentials: true },
+      {
+        withCredentials: true,
+        // Lets the API drop this user from the admin presence board instantly.
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      },
     );
   } catch {
 

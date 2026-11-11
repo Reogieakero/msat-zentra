@@ -3,6 +3,7 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import { FileBarChart2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
@@ -32,10 +33,10 @@ export default function GuidanceAdmPage() {
 
   const { data: referrals, isPending, isError, refetch, isFetching } =
     useQuery<GuidanceReferralItem[]>({
+      ...liveQueryOptions,
       queryKey: ["guidance-adm", "report", termKey],
       queryFn: () => fetchAllGuidanceReferrals(),
       placeholderData: keepPreviousData,
-      staleTime: 60_000,
       enabled: termReady,
     });
 
@@ -62,10 +63,10 @@ export default function GuidanceAdmPage() {
     isError: riskError,
     refetch: refetchRisk,
   } = useQuery<Record<string, GuidanceRiskLevel>>({
+    ...liveQueryOptions,
     queryKey: ["guidance-risk-levels", studentIds, termKey],
     queryFn: () => fetchGuidanceRiskLevels(studentIds),
     placeholderData: keepPreviousData,
-    staleTime: 300_000,
     enabled: termReady && studentIds.length > 0,
   });
 

@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../lib/errors.js";
 import { verifyAccess } from "../lib/jwt.js";
+import { touchActivity } from "../services/presence.service.js";
 
 export interface AuthUser {
   id: string;
@@ -25,6 +26,9 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   try {
     const payload = verifyAccess(header.slice(7));
     req.user = { id: payload.sub, role: payload.role, gradeBand: payload.gradeBand ?? null };
+    // Keep the presence globe fresh without blocking the request (throttled to
+    // once a minute per user inside the service).
+    touchActivity(payload.sub);
     next();
   } catch {
     next(new AppError(401, "UNAUTHORIZED", "Invalid or expired token"));

@@ -9,6 +9,7 @@ import { NurseEmptyCard } from "../components/NurseEmptyCard";
 import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
 import type { NurseAlertsPage } from "@/services/nurse/nurse.types";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import { NurseDocumentariesList } from "./components/NurseDocumentariesList";
 import { HealthRecordCardSkeleton } from "./components/HealthRecordCardSkeleton";
 import listStyles from "./components/NurseDocumentariesList.module.css";
@@ -22,11 +23,11 @@ export default function NurseHealthRecordsPage() {
 
   const { data, isPending, isError, refetch, isRefetching } =
     useQuery<NurseAlertsPage>({
+      ...liveQueryOptions,
       queryKey: ["nurse-alerts", "preview", termKey],
       queryFn: ({ signal }) =>
         fetchNurseAlerts({ page: 1, pageSize: PAGE_SIZE, signal }),
       placeholderData: keepPreviousData,
-      staleTime: 60_000,
       enabled: termReady,
     });
 

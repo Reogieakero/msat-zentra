@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import {
   BookPlus,
   CalendarDays,
@@ -24,9 +24,9 @@ import type { ScheduleSectionSummary, ScheduleSubject } from "../page";
 import menuStyles from "../../classes/components/timetable-menu.module.css";
 
 // Flyout panel — same look as the grading workspace gutter: solid surface,
-// shadow + ring, smooth open/close. Anchored left of the gutter icon.
+// shadow + ring, smooth open/close. Anchored below the top-right icon row.
 const MENU_PANEL =
-  "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
+  "absolute top-8 right-0 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
 
 type MenuKey = "template" | "subjects" | "teachers" | "send" | "configure";
 type TeacherName = { id: string; name: string; code: string | null; linked: boolean };
@@ -57,7 +57,7 @@ function GutterIconButton({
       aria-expanded={expanded}
       aria-haspopup="dialog"
       aria-label={expanded ? `Close ${label}` : `Open ${label}`}
-      className={`relative flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
+      className={`relative flex h-6 w-6 items-center justify-center rounded-md border transition-colors ${
         disabled
           ? "cursor-not-allowed border-border bg-card opacity-40"
           : expanded
@@ -118,7 +118,7 @@ export function ScheduleGutter() {
   const panel = (key: MenuKey) =>
     `${MENU_PANEL} ${menuStyles.menu} ${openKey === key ? menuStyles.menuOpen : menuStyles.menuClosed}`;
 
-  const subjectsQuery = useQuery<{ subjects: ScheduleSubject[] }>({
+  const subjectsQuery = useLiveQuery<{ subjects: ScheduleSubject[] }>({
     queryKey: ["teacher-schedule-subjects", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ subjects: ScheduleSubject[] }>(
@@ -127,7 +127,7 @@ export function ScheduleGutter() {
       return data;
     },
   });
-  const teachersQuery = useQuery<{ teachers: TeacherName[] }>({
+  const teachersQuery = useLiveQuery<{ teachers: TeacherName[] }>({
     queryKey: ["teacher-schedule-teachers", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ teachers: TeacherName[] }>(
@@ -136,7 +136,7 @@ export function ScheduleGutter() {
       return data;
     },
   });
-  const sectionsQuery = useQuery<{ sections: ScheduleSectionSummary[] }>({
+  const sectionsQuery = useLiveQuery<{ sections: ScheduleSectionSummary[] }>({
     queryKey: ["teacher-schedule-summary", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: ScheduleSectionSummary[] }>(
@@ -155,7 +155,7 @@ export function ScheduleGutter() {
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div ref={railRef} className="flex flex-row justify-end gap-2 lg:flex-col lg:items-end">
+      <div ref={railRef} className="flex flex-row items-center justify-end gap-1.5">
         <div className="relative">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -165,11 +165,11 @@ export function ScheduleGutter() {
                 onToggle={() => toggle("template")}
               >
                 <span className="text-amber-500" aria-hidden>
-                  <CalendarDays size={16} />
+                  <CalendarDays size={14} />
                 </span>
               </GutterIconButton>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={10}>
+            <TooltipContent side="bottom" sideOffset={6}>
               <GutterTip title="Schedule template" hint="Per-section builder — new tab" />
             </TooltipContent>
           </Tooltip>
@@ -215,11 +215,11 @@ export function ScheduleGutter() {
                 onToggle={() => toggle("subjects")}
               >
                 <span className="text-amber-500" aria-hidden>
-                  <BookPlus size={16} />
+                  <BookPlus size={14} />
                 </span>
               </GutterIconButton>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={10}>
+            <TooltipContent side="bottom" sideOffset={6}>
               <GutterTip
                 title="Add Subject"
                 hint={
@@ -283,11 +283,11 @@ export function ScheduleGutter() {
                 onToggle={() => toggle("teachers")}
               >
                 <span className="text-amber-500" aria-hidden>
-                  <UserPlus size={16} />
+                  <UserPlus size={14} />
                 </span>
               </GutterIconButton>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={10}>
+            <TooltipContent side="bottom" sideOffset={6}>
               <GutterTip
                 title="Add Teachers"
                 hint={
@@ -351,7 +351,7 @@ export function ScheduleGutter() {
                 onToggle={() => toggle("send")}
               >
                 <span className="text-amber-500" aria-hidden>
-                  <Send size={16} />
+                  <Send size={14} />
                 </span>
                 {totalDrafts > 0 ? (
                   <span
@@ -363,7 +363,7 @@ export function ScheduleGutter() {
                 ) : null}
               </GutterIconButton>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={10}>
+            <TooltipContent side="bottom" sideOffset={6}>
               <GutterTip
                 title="Send to principal"
                 hint={totalDrafts > 0 ? `${totalDrafts} draft${totalDrafts === 1 ? "" : "s"} awaiting review` : "No drafts"}
@@ -394,6 +394,7 @@ export function ScheduleGutter() {
                 <div className="flex justify-end gap-1.5 px-1 pb-1">
                   <Button asChild size="sm" className="h-6 px-2 text-xs">
                     <a href="/teacher/schedule/template?view=send" target="_blank" rel="noopener noreferrer">
+                      <Send size={14} aria-hidden />
                       {`Send to principal${totalDrafts > 0 ? ` (${totalDrafts})` : ""}`}
                     </a>
                   </Button>
@@ -418,11 +419,11 @@ export function ScheduleGutter() {
                 onToggle={() => toggle("configure")}
               >
                 <span className="text-amber-500" aria-hidden>
-                  <SlidersHorizontal size={16} />
+                  <SlidersHorizontal size={14} />
                 </span>
               </GutterIconButton>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={10}>
+            <TooltipContent side="bottom" sideOffset={6}>
               <GutterTip title="Configure" hint="Day shape, breaks, periods" />
             </TooltipContent>
           </Tooltip>

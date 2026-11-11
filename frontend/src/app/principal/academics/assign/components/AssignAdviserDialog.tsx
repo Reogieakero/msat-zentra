@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, UserRoundPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Pill } from "@/components/ui/pill";
@@ -156,10 +156,13 @@ export function AssignAdviserDialog({
                   {entries.length > 1 ? `Assigning ${entries.length} advisers…` : "Assigning adviser…"}
                 </span>
               </>
-            ) : entries.length > 1 ? (
-              `Assign ${entries.length} Advisers`
             ) : (
-              "Assign Adviser"
+              <>
+                <UserRoundPlus size={13} aria-hidden />
+                {entries.length > 1
+                  ? `Assign ${entries.length} Advisers`
+                  : "Assign Adviser"}
+              </>
             )}
           </Button>
         </div>

@@ -10,10 +10,12 @@ import {
   fileFolderSchema,
   followupSchema,
   referSchema,
+  updateSchema,
 } from "./anecdotal.schemas.js";
 import {
   addFollowup,
   createRecord,
+  deleteRecord,
   exportRecord,
   fileIntoFolder,
   getRecordDetail,
@@ -21,6 +23,8 @@ import {
   getRecordsSummary,
   getReferable,
   referRecord,
+  restoreRecord,
+  updateRecord,
 } from "../../services/anecdotal/records.service.js";
 import { listMine } from "../../services/anecdotal/folders.service.js";
 
@@ -162,7 +166,34 @@ router.get(
   requireRole(...FILER_ROLES),
   async (req, res, next) => {
     try {
-      res.json(await listMine(req.user!.id, req.termScope?.termId ?? null));
+      res.json(
+        await listMine(req.user!.id, {
+          termId: req.termScope?.termId ?? null,
+          schoolYearId: req.termScope?.schoolYearId ?? null,
+        }),
+      );
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
+  "/deleted",
+  requireAuth,
+  requireRole(...FILER_ROLES),
+  async (req, res, next) => {
+    try {
+      res.json(
+        await listMine(
+          req.user!.id,
+          {
+            termId: req.termScope?.termId ?? null,
+            schoolYearId: req.termScope?.schoolYearId ?? null,
+          },
+          { deleted: true },
+        ),
+      );
     } catch (e) {
       next(e);
     }
@@ -201,6 +232,56 @@ router.patch(
           folderId: (req.body as { folderId: string | null }).folderId,
         }),
       );
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.patch(
+  "/:id",
+  requireAuth,
+  requireRole(...FILER_ROLES),
+  validate("body", updateSchema),
+  async (req, res, next) => {
+    try {
+      const result = await updateRecord(
+        ctxOf(req),
+        String(req.params.id),
+        req.body as Parameters<typeof updateRecord>[2],
+      );
+      await invalidateTags(["risk", "principal", "teacher", "overview", "guidance", "guidance-anecdotal", "guidance-risk", "nurse", "nurse-risk", "alerts", "referrals", "adm"]);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.delete(
+  "/:id",
+  requireAuth,
+  requireRole(...FILER_ROLES),
+  async (req, res, next) => {
+    try {
+      const result = await deleteRecord(ctxOf(req), String(req.params.id));
+      await invalidateTags(["risk", "principal", "teacher", "overview", "guidance", "guidance-anecdotal", "guidance-risk", "nurse", "nurse-risk", "alerts", "referrals", "adm"]);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.post(
+  "/:id/restore",
+  requireAuth,
+  requireRole(...FILER_ROLES),
+  async (req, res, next) => {
+    try {
+      const result = await restoreRecord(ctxOf(req), String(req.params.id));
+      await invalidateTags(["risk", "principal", "teacher", "overview", "guidance", "guidance-anecdotal", "guidance-risk", "nurse", "nurse-risk", "alerts", "referrals", "adm"]);
+      res.json(result);
     } catch (e) {
       next(e);
     }

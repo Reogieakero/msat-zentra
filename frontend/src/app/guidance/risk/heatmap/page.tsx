@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import { Grid3X3, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,10 +21,10 @@ export default function GuidanceHeatmapPage() {
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const { data, isPending, isError, refetch, isFetching } = useQuery({
+    ...liveQueryOptions,
     queryKey: ["guidance-risk-heatmap", termKey],
     queryFn: () => fetchGuidanceRiskHeatmap(),
     placeholderData: keepPreviousData,
-    staleTime: 60_000,
     enabled: termReady,
   });
 

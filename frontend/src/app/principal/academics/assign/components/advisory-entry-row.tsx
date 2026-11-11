@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pill } from "@/components/ui/pill";
 import type { Section, Teacher } from "@/services/principal/assign.types";
 import { matchByName, suggestByName } from "./advisory-name-match";
 import styles from "./form.module.css";
@@ -64,7 +65,15 @@ export function AdvisoryEntryRow({
       <div className={styles.rowHead}>
         <span className={styles.rowTitle}>
           Section {index + 1}
-          {isNewSection ? <span className={styles.newBadge}>New</span> : null}
+          {isNewSection ? (
+            <Pill
+              tone="amber"
+              label="Section doesn't exist yet — it will be created on assign."
+              className={styles.newBadge}
+            >
+              New
+            </Pill>
+          ) : null}
         </span>
         {removable ? (
           <Button

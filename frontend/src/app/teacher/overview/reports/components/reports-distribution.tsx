@@ -94,9 +94,7 @@ export function ReportsDistribution({
       description="DepEd bands across every final grade you recorded this term."
       className="flex-1"
     >
-      {total === 0 ? (
-        <p className={styles.empty}>No finalized grades yet this term.</p>
-      ) : (
+      {total === 0 ? null : (
         <div
           className={styles.barChart}
           role="img"

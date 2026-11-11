@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { KpiStrip } from "./components/KpiStrip";
 import { SubjectTrendChart } from "./components/SubjectTrendChart";
 import { SubjectSectionBreakdown } from "./components/SubjectSectionBreakdown";
@@ -182,6 +183,10 @@ export default function PrincipalAcademicHeatmapsPage() {
     return Array.from(set).sort((a, b) => gradeSortKey(a) - gradeSortKey(b));
   }, [sections]);
 
+  // No sections in scope → one page-level insight callout (same shape as the
+  // schedule board's empty state) instead of "no data" rows inside the boards.
+  const isEmpty = !isPending && sections.length === 0;
+
   // Keep the trend filter on a grade that exists in the current data — but
   // the "All grades" sentinel is a valid choice and must survive the sweep.
   React.useEffect(() => {
@@ -223,37 +228,48 @@ export default function PrincipalAcademicHeatmapsPage() {
   return (
     <div className={shell.shell}>
       <div className={shell.layout}>
-        <section className={shell.page} aria-busy={isPending || undefined}>
-          <KpiStrip
-            below={below}
-            gradedTotal={gradedStudents.length}
-            riskySections={riskySections}
-            sectionCount={sections.length}
-            ungraded={ungraded}
-            ungradedStudents={ungradedStudents}
-            sharedTotal={sharedStudents}
-            isPending={isPending}
-          />
-          <SubjectTrendChart
-            sections={sections}
-            subjects={subjects}
-            grades={grades}
-            gradeFilter={gradeFilter}
-            onGradeFilterChange={setGradeFilter}
-            isPending={isPending}
-            selectedSubject={selectedSubject}
-            onSelectSubject={setSelectedSubject}
-          />
-          {selectedSubject ? (
-            <SubjectSectionBreakdown
-              subject={selectedSubject}
-              gradeFilter={gradeFilter}
-              items={breakdown}
-              onClear={() => setSelectedSubject(null)}
+        {isEmpty ? (
+          <PageEmptyCallout>
+            No graded records for the active term yet. Section averages and
+            subject trends will appear here once grades are finalized.
+          </PageEmptyCallout>
+        ) : (
+          <section className={shell.page} aria-busy={isPending || undefined}>
+            <KpiStrip
+              below={below}
+              gradedTotal={gradedStudents.length}
+              riskySections={riskySections}
+              sectionCount={sections.length}
+              ungraded={ungraded}
+              ungradedStudents={ungradedStudents}
+              sharedTotal={sharedStudents}
+              isPending={isPending}
             />
-          ) : null}
-          <NeedsAttentionList items={attention} isPending={isPending} isNoData={sections.length === 0} />
-        </section>
+            <SubjectTrendChart
+              sections={sections}
+              subjects={subjects}
+              grades={grades}
+              gradeFilter={gradeFilter}
+              onGradeFilterChange={setGradeFilter}
+              isPending={isPending}
+              selectedSubject={selectedSubject}
+              onSelectSubject={setSelectedSubject}
+            />
+            {selectedSubject ? (
+              <SubjectSectionBreakdown
+                subject={selectedSubject}
+                gradeFilter={gradeFilter}
+                items={breakdown}
+                onClear={() => setSelectedSubject(null)}
+              />
+            ) : null}
+            <NeedsAttentionList
+              items={attention}
+              isPending={isPending}
+              isNoData={sections.length === 0}
+            />
+          </section>
+        )}
       </div>
     </div>
   );

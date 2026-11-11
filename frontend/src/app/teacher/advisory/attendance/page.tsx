@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import {
   getCoreRowModel,
   getFilteredRowModel,
@@ -76,7 +76,7 @@ export default function AdvisoryAttendancePage() {
   const [sectionId, setSectionId] = React.useState<string | undefined>(undefined);
   const resolvedSectionId = sectionId ?? sections[0]?.id;
 
-  const matrixQuery = useQuery<SectionSubjectMatrix>({
+  const matrixQuery = useLiveQuery<SectionSubjectMatrix>({
     queryKey: ["attendance-section-matrix", resolvedSectionId, termKey],
     queryFn: async () => {
       const params = new URLSearchParams({ sectionId: resolvedSectionId as string });
@@ -160,14 +160,21 @@ export default function AdvisoryAttendancePage() {
               >
                 {formatSurnameFirst(row.original.student.name)}
               </span>
-              <Pill
-                tone="neutral"
-                label="LRN"
-                className="mt-1 max-w-full truncate"
-                title={row.original.student.lrn}
-              >
-                {row.original.student.lrn}
-              </Pill>
+              <span className="mt-1 flex max-w-full flex-col items-start gap-1">
+                <Pill
+                  tone="neutral"
+                  label="LRN"
+                  className="max-w-full truncate"
+                  title={row.original.student.lrn}
+                >
+                  {row.original.student.lrn}
+                </Pill>
+                {row.original.student.learnerType === "transferee" ? (
+                  <Pill tone="amber" label="Learner type">
+                    Transferee
+                  </Pill>
+                ) : null}
+              </span>
             </div>
           </div>
         ),

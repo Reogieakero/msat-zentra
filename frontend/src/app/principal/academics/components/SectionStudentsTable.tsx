@@ -1,9 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Users } from "lucide-react";
 import { InsightCallout } from "@/components/ui/insight-callout";
-import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
 import { StudentCard } from "./StudentCard";
 import type { SectionSummary } from "@/services/principal/academics";
 import styles from "./SectionStudentsTable.module.css";
@@ -29,13 +27,15 @@ export function SectionStudentsTable({ section, query }: SectionStudentsTablePro
   }, [students, query]);
 
   if (students.length === 0) {
+    // Empty roster reads as a plain insight callout — same shape as the empty
+    // section board, no card shell.
     return (
-      <PrincipalEmptyCard
-        icon={Users}
-        title="No students enrolled"
-        hint={`No students enrolled in ${section.section}. Enrolled students will appear here once added.`}
-        label={`Students of ${section.section}`}
-      />
+      <div className={styles.emptyCallout} aria-label={`Students of ${section.section}`}>
+        <InsightCallout role="status">
+          No students enrolled in <strong>{section.section}</strong>. Enrolled
+          students will appear here once added.
+        </InsightCallout>
+      </div>
     );
   }
 

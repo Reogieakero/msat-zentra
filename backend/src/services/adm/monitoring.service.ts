@@ -73,10 +73,20 @@ async function resolveAdvisedCaseId(
   if (UUID_RE.test(identifier)) return identifier;
   const slug = identifier.trim().toLowerCase();
   if (!slug) throw new AppError(404, "NOT_FOUND", "ADM case not found");
+  // Cases are shared across the terms of a school year, so a slug resolves
+  // inside the selected year (names collide across years, never within one).
+  const schoolYearId = termId
+    ? (
+        await prisma.term.findUnique({
+          where: { id: termId },
+          select: { schoolYearId: true },
+        })
+      )?.schoolYearId ?? null
+    : null;
   const candidates = await prisma.admLearnerProfile.findMany({
     where: {
       student: { section: { adviserId: userId } },
-      ...(termId ? { termId } : {}),
+      ...(schoolYearId ? { term: { schoolYearId } } : {}),
     },
     select: {
       id: true,
@@ -163,10 +173,16 @@ async function loadAdvisedCase(
 ): Promise<LoadedCase> {
   const profile = await loadCaseById(await resolveAdvisedCaseId(userId, identifier, termId));
   if (!profile) throw new AppError(404, "NOT_FOUND", "ADM case not found");
-  // The desk follows the teacher's selected term: a case filed in another
-  // term must not open from this term's board.
+  // The desk shows every case filed in the selected school year: a case from
+  // an earlier term still opens (and is edited) from a later term's board.
   if (termId && profile.termId !== termId) {
-    throw new AppError(404, "NOT_FOUND", "ADM case not found");
+    const [selected, caseTerm] = await Promise.all([
+      prisma.term.findUnique({ where: { id: termId }, select: { schoolYearId: true } }),
+      prisma.term.findUnique({ where: { id: profile.termId }, select: { schoolYearId: true } }),
+    ]);
+    if (!selected || !caseTerm || selected.schoolYearId !== caseTerm.schoolYearId) {
+      throw new AppError(404, "NOT_FOUND", "ADM case not found");
+    }
   }
   const sectionId = profile.student.section?.id ?? null;
   const adviserId = profile.student.section?.adviserId ?? null;

@@ -1,7 +1,8 @@
 import { prisma } from "../../lib/prisma.js";
+import { findTeacherTermGrant } from "../../lib/teacherGrant.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import { ATTENDANCE_RISK_CUTOFF, subjectAverageAttendance } from "../attendance.js";
-import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../risk.js";
+import { attendanceTotalFor, computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../risk.js";
 import {
   ACTION_LABEL,
   COMPONENT_TYPE_LABEL,
@@ -10,6 +11,13 @@ import {
   timeAgo,
 } from "../../modules/teacher/teacher.repository.js";
 import { isMasterTeacherEligible } from "./settings.service.js";
+import { resolveTeacherClassPairs } from "./timetable.read.service.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 export interface OverviewListOpts {
@@ -85,6 +93,7 @@ export async function getOverview(
   opts?: OverviewListOpts,
 ) {
   const teacherId = ctx.userId;
+  const archivedLearners = await archivedAdvisoryLearnerIds();
 
   const scope = scopeParam;
   const isCriticalOnly = scope === "critical";
@@ -151,23 +160,7 @@ export async function getOverview(
   const isMasterTeacher = user?.staffProfile?.isMasterTeacher ?? false;
   const isMasterTeacherSenior = user?.staffProfile?.isMasterTeacherSenior ?? false;
 
-  const linkedSlots = await prisma.sectionTimetableEntry.findMany({
-    where: {
-      termId,
-      status: { in: ["APPROVED", "SUBMITTED"] },
-      teacherName: { userId: teacherId },
-    },
-    select: {
-      subjectId: true,
-      sectionId: true,
-      subject: { select: { name: true, code: true } },
-      section: { select: { name: true, gradeLevel: true } },
-    },
-    orderBy: [{ section: { name: "asc" } }, { subject: { name: "asc" } }],
-  });
-  const linkedPairs = [...new Map(
-    linkedSlots.map((s) => [`${s.subjectId}|${s.sectionId}`, s]),
-  ).values()];
+  const linkedPairs = await resolveTeacherClassPairs(teacherId, termId);
 
   // Grading (gradebook scope) is gated on the class-page link code:
   // every teacher — master included — only sees subjects with
@@ -184,10 +177,7 @@ export async function getOverview(
   // which writes a per-term grant. Linked but not term-entered => no display
   // on /teacher/grading (same rule as classes + attendance).
   if (isGradebookOnly) {
-    const termGrant = await prisma.teacherTermGrant.findUnique({
-      where: { userId_termId: { userId: teacherId, termId } },
-      select: { id: true },
-    });
+    const termGrant = await findTeacherTermGrant(teacherId, termId);
     if (!termGrant) {
       return {
         classes: [],
@@ -197,12 +187,11 @@ export async function getOverview(
     }
   }
 
+  // Handled sections come only from the code-linked timetable pairs, the same
+  // rule as My Classes / Grading / Attendance. Academics-desk assignment rows
+  // alone must never produce a class count or a student list here.
   const handledSectionIds = Array.from(
-    new Set(
-      (linkedPairs.length > 0
-        ? linkedPairs.map((s) => s.sectionId)
-        : assignments.map((a) => a.section.id)),
-    ),
+    new Set(linkedPairs.map((s) => s.sectionId)),
   );
   const sectionIds = Array.from(
     new Set([...assignments.map((a) => a.section.id), ...linkedPairs.map((s) => s.sectionId)]),
@@ -210,11 +199,11 @@ export async function getOverview(
   const [sectionCounts, sectionStudents, openFlags, classRoster] = await Promise.all([
     prisma.studentProfile.groupBy({
       by: ["sectionId"],
-      where: { sectionId: { in: handledSectionIds } },
+      where: { sectionId: { in: handledSectionIds }, ...excludeArchivedProfiles(archivedLearners) },
       _count: { _all: true },
     }),
     prisma.studentProfile.findMany({
-      where: { sectionId: { in: handledSectionIds } },
+      where: { sectionId: { in: handledSectionIds }, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         lrn: true,
@@ -224,11 +213,14 @@ export async function getOverview(
         section: { select: { name: true } },
       },
     }),
-    prisma.anecdotalRecord.count({ where: { observerId: teacherId, termId } }),
+    prisma.anecdotalRecord.count({ where: { observerId: teacherId, termId, deletedAt: null } }),
 
     handledSectionIds.length > 0
       ? prisma.studentRoster.findMany({
-          where: { sectionId: { in: handledSectionIds } },
+          where: {
+            sectionId: { in: handledSectionIds },
+            ...excludeArchivedRosters(archivedLearners),
+          },
           select: {
             id: true,
             lrn: true,
@@ -285,26 +277,18 @@ export async function getOverview(
   }
 
   // Every teacher (master included) is restricted to timetable-linked
-  // subjects on the grading page — registrar assignments alone never appear.
+  // subjects — registrar assignments alone never appear, so an unlinked login
+  // shows zero classes on the overview as well.
   const gradebookLinkedOnly = isGradebookOnly;
 
-  const classes = (gradebookLinkedOnly || linkedPairs.length > 0
-    ? linkedPairs.map((s) => ({
-        id: `${s.subjectId}|${s.sectionId}`,
-        subject: s.subject.name,
-        subjectCode: s.subject.code,
-        gradeLevel: GRADE_LABELS[s.section.gradeLevel] ?? s.section.gradeLevel,
-        section: s.section.name,
-        studentCount: countBySection.get(s.sectionId) ?? 0,
-      }))
-    : assignments.map((a) => ({
-        id: a.id,
-        subject: a.subject.name,
-        subjectCode: a.subject.code,
-        gradeLevel: GRADE_LABELS[a.section.gradeLevel] ?? a.section.gradeLevel,
-        section: a.section.name,
-        studentCount: countBySection.get(a.section.id) ?? 0,
-      })));
+  const classes = linkedPairs.map((s) => ({
+    id: `${s.subjectId}|${s.sectionId}`,
+    subject: s.subject.name,
+    subjectCode: s.subject.code,
+    gradeLevel: GRADE_LABELS[s.section.gradeLevel] ?? s.section.gradeLevel,
+    section: s.section.name,
+    studentCount: countBySection.get(s.sectionId) ?? 0,
+  }));
 
   const studentCount = handledSectionIds.reduce(
     (sum, id) => sum + (countBySection.get(id) ?? 0),
@@ -398,7 +382,12 @@ export async function getOverview(
           })
         : Promise.resolve([] as { studentId: string | null; rosterId: string | null; percentageScore: number; assessment: { gradeComponent: { subjectId: string } } }[]),
       prisma.attendanceRecord.findMany({
-        where: { termId, sectionId: { in: handledSectionIds }, subjectId: { in: handledSubjectIds } },
+        where: {
+          termId,
+          sectionId: { in: handledSectionIds },
+          subjectId: { in: handledSubjectIds },
+          ...excludeArchivedLearnerRows(archivedLearners),
+        },
         select: { studentId: true, rosterId: true, status: true, subjectId: true },
       }),
     ]);
@@ -530,11 +519,16 @@ export async function getOverview(
     }),
     prisma.finalGrade.groupBy({
       by: ["subjectId", "studentId", "rosterId"],
-      where: { termId, subjectId: { in: subjectIds }, computedAverage: { not: null } },
+      where: {
+        termId,
+        subjectId: { in: subjectIds },
+        computedAverage: { not: null },
+        ...excludeArchivedLearnerRows(archivedLearners),
+      },
       _avg: { computedAverage: true },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, sectionId: true },
     }),
   ]);
@@ -710,7 +704,7 @@ export async function getOverview(
   if (!isSecondaryOnly && !isGradebookOnly && advisorySection) {
     const [advisees, rosterEntries] = await Promise.all([
       prisma.studentProfile.findMany({
-        where: { sectionId: advisorySection.id },
+        where: { sectionId: advisorySection.id, ...excludeArchivedProfiles(archivedLearners) },
         include: {
           user: { select: { fullName: true } },
           finalGrades: {
@@ -718,12 +712,12 @@ export async function getOverview(
             select: { computedAverage: true, transmutedGrade: true },
           },
           attendanceRecords: { where: { termId }, select: { status: true } },
-          _count: { select: { anecdotalRecords: { where: { termId } } } },
+          _count: { select: { anecdotalRecords: { where: { termId, deletedAt: null } } } },
         },
       }),
 
       prisma.studentRoster.findMany({
-        where: { sectionId: advisorySection.id },
+        where: { sectionId: advisorySection.id, ...excludeArchivedRosters(archivedLearners) },
         select: { id: true, lrn: true, fullName: true, mascot: true },
       }),
     ]);
@@ -768,7 +762,7 @@ export async function getOverview(
         : Promise.resolve([]),
       rosterIds.length > 0
         ? prisma.anecdotalRecord.findMany({
-            where: { rosterId: { in: rosterIds }, termId },
+            where: { rosterId: { in: rosterIds }, termId, deletedAt: null },
             select: { rosterId: true },
           })
         : Promise.resolve([]),
@@ -814,17 +808,19 @@ export async function getOverview(
       anecdotalCount: number,
       enrolled: number,
     ) => {
+      const rosterId = key.startsWith("roster:") ? key.slice("roster:".length) : null;
       const flags = computeRiskFactors({
         finalGrades,
         rawAverages: rawAveragesFor(key),
         attendance,
-        attendanceTotal: sectionTotals.get(advisorySection.id),
+        // Transferees count only the meetups elapsed after their enlistment day.
+        attendanceTotal: attendanceTotalFor(sectionTotals, advisorySection.id, rosterId),
         anecdotalCount,
         enrolled,
       });
 
       const subjAvg = subjectAvgs.get(key);
-      if (subjAvg) {
+      if (subjAvg && subjAvg.hasSubjectData) {
         flags.attendanceFlag = subjAvg.average < ATTENDANCE_RISK_CUTOFF;
       }
       const activeFlags: ("academic" | "attendance" | "behavioral")[] = [];

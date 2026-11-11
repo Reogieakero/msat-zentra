@@ -8,6 +8,7 @@ import { AuditSkeleton } from "./components/AuditSkeleton";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InsightCallout } from "@/components/ui/insight-callout";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { useSession } from "@/lib/auth/useSession";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { toast } from "@/components/ui/sonner";
@@ -173,6 +174,19 @@ function PrincipalAuditPageInner() {
     pager.setFilters({ q: debouncedQuery || undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedQuery]);
+
+  // No log and no filters → one centered callout on the page, not an empty
+  // message inside the table board. Filtered empties keep the in-board note.
+  if (!showSkeleton && totalCount === 0 && !hasActiveFilters) {
+    return (
+      <section className={styles.page}>
+        <PageEmptyCallout>
+          No audit entries yet. Sensitive actions will appear here once
+          recorded — entries cannot be edited or deleted.
+        </PageEmptyCallout>
+      </section>
+    );
+  }
 
   return (
     <section className={styles.page} aria-busy={showSkeleton || undefined}>

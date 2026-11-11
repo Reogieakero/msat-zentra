@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchHeatmap } from "@/services/principal/riskStudents.service";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { StudentHeatmap } from "./components/StudentHeatmap";
 import { StudentsListTable } from "./components/StudentsListTable";
 import { useTerm } from "@/lib/term/TermContext";
@@ -46,18 +47,27 @@ export default function RiskBoardStudentsPage() {
 
   return (
     <section className={styles.page} aria-busy={heatLoading || undefined}>
-      <StudentHeatmap
-        heat={heat ?? null}
-        loading={heatLoading}
-        selectedSection={selectedSection === "all" ? null : selectedSection}
-        onSelect={handleSelectSection}
-      />
+      {!heatLoading && (heat?.sections?.length ?? 0) === 0 ? (
+        <PageEmptyCallout>
+          No sections with risk data for the active term yet. Sections and
+          their flagged students will appear here once detected.
+        </PageEmptyCallout>
+      ) : (
+        <>
+          <StudentHeatmap
+            heat={heat ?? null}
+            loading={heatLoading}
+            selectedSection={selectedSection === "all" ? null : selectedSection}
+            onSelect={handleSelectSection}
+          />
 
-      <div ref={tableRef} className={styles.tableAnchor}>
-        <StudentsListTable
-          selectedSection={selectedSection}
-        />
-      </div>
+          <div ref={tableRef} className={styles.tableAnchor}>
+            <StudentsListTable
+              selectedSection={selectedSection}
+            />
+          </div>
+        </>
+      )}
     </section>
   );
 }

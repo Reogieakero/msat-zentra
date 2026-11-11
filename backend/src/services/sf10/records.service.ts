@@ -6,6 +6,11 @@ import { AppError } from "../../lib/errors.js";
 import { logger } from "../../lib/pino.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { uploadFile, sf10ObjectPath, getSf10Bucket } from "../../lib/storage.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import { getEnv } from "../../config/env.js";
 import {
   extractPdfText,
@@ -88,7 +93,9 @@ async function downloadOriginalSf10File(
 const SF10_TX_OPTS = { timeout: 30_000, maxWait: 15_000 };
 
 export async function getSummary() {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const records = await prisma.sf10Record.findMany({
+    where: { student: excludeArchivedProfiles(archivedLearners) },
     select: { student: { select: { gradeLevel: true } }, status: true },
   });
 
@@ -107,11 +114,17 @@ export async function getSummary() {
   const [studentsWithoutRecord, rosterLrns, profileLrns] = await Promise.all([
     prisma.studentProfile.groupBy({
       by: ["gradeLevel"],
-      where: { sf10Records: { none: {} } },
+      where: { sf10Records: { none: {} }, ...excludeArchivedProfiles(archivedLearners) },
       _count: { _all: true },
     }),
-    prisma.studentRoster.findMany({ select: { lrn: true, gradeLevel: true } }),
-    prisma.studentProfile.findMany({ select: { lrn: true } }),
+    prisma.studentRoster.findMany({
+      where: excludeArchivedRosters(archivedLearners),
+      select: { lrn: true, gradeLevel: true },
+    }),
+    prisma.studentProfile.findMany({
+      where: excludeArchivedProfiles(archivedLearners),
+      select: { lrn: true },
+    }),
   ]);
   for (const s of studentsWithoutRecord) {
     const g = s.gradeLevel;
@@ -139,14 +152,17 @@ export interface RecordsQuery {
 
 export async function listRecords(query: RecordsQuery) {
   const { desk, page, pageSize, q, status } = query;
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   // Each desk sees only the records it filed — never the other desk's.
   const deskWhere =
     desk != null
       ? ({ desk } as Prisma.Sf10RecordWhereInput)
       : ({} as Prisma.Sf10RecordWhereInput);
+  const studentClause = { student: excludeArchivedProfiles(archivedLearners) };
 
   const where: Prisma.Sf10RecordWhereInput = {
     ...deskWhere,
+    ...studentClause,
     ...(status ? { status } : {}),
     ...(q
       ? {
@@ -163,7 +179,7 @@ export async function listRecords(query: RecordsQuery) {
     prisma.sf10Record.count({ where }),
     prisma.sf10Record.groupBy({
       by: ["status"],
-      where: deskWhere,
+      where: { ...deskWhere, ...studentClause },
       _count: { _all: true },
     }),
     prisma.sf10Record.findMany({

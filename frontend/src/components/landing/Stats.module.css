@@ -39,7 +39,7 @@
 }
 
 .value {
-  font-family: var(--font-geist), var(--font-inter), sans-serif;
+  font-family: var(--font-inter), var(--font-inter), sans-serif;
   font-size: clamp(2rem, 4.5vw, 3rem);
   font-weight: 200;
   line-height: 1;

@@ -292,14 +292,14 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
             userIds.length
               ? prisma.anecdotalRecord.groupBy({
                   by: ["studentId"],
-                  where: { termId, studentId: { in: userIds } },
+                  where: { termId, studentId: { in: userIds }, deletedAt: null },
                   _count: { _all: true },
                 })
               : [],
             rosterIds.length
               ? prisma.anecdotalRecord.groupBy({
                   by: ["rosterId"],
-                  where: { termId, rosterId: { in: rosterIds } },
+                  where: { termId, rosterId: { in: rosterIds }, deletedAt: null },
                   _count: { _all: true },
                 })
               : [],

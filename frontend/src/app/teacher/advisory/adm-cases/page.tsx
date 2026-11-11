@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { FolderOpen } from "lucide-react";
 import { AdmCasesTable } from "./components/AdmCasesTable";
 import { AdmEmptyKanban } from "./components/AdmEmptyKanban";
@@ -40,7 +40,7 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   const landing = !takeover && highlightId !== null;
 
   const serverQuery = pager.search.trim() ? pager.search.trim() : undefined;
-  const casesQuery = useQuery<MyAdmCasesPage>({
+  const casesQuery = useLiveQuery<MyAdmCasesPage>({
     queryKey: ["adm-my-cases", takeover || !landing ? page : 1, termKey, landing ? (highlightId ?? "") : "", serverQuery ?? ""],
     queryFn: ({ signal }) =>
       fetchMyAdmCases({

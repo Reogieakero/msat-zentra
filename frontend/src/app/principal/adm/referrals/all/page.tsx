@@ -12,7 +12,7 @@ import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDial
 import { GcForm03PreviewDialog } from "@/app/guidance/adm/components/GcForm03PreviewDialog";
 import { SignReturnConfirmDialog } from "./SignReturnConfirmDialog";
 import { ShieldCheck } from "lucide-react";
-import { PrincipalEmptyCard } from "../../../components/PrincipalEmptyCard";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Pill } from "@/components/ui/pill";
 import { Pagination } from "@/components/shared/pagination";
@@ -202,13 +202,10 @@ function PrincipalAdmReferralsAllPageInner() {
           aria-busy={loading || undefined}
         >
           {isEmpty ? (
-            <PrincipalEmptyCard
-              icon={ShieldCheck}
-              title="No referrals found"
-              hint="Endorsed cases will appear here once filed."
-              label="Endorsed ADM Cases"
-              centered
-            />
+            <PageEmptyCallout>
+              No referrals found. Endorsed ADM cases will appear here once
+              filed.
+            </PageEmptyCallout>
           ) : (
             <KanbanBoard
               title="Endorsed ADM Cases"

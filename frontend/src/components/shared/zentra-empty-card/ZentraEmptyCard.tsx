@@ -2,6 +2,7 @@
 import type * as React from "react";
 import type { LucideIcon } from "lucide-react";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import styles from "./ZentraEmptyCard.module.css";
 
 export type ZentraEmptyCardProps = {
@@ -49,15 +50,13 @@ export function ZentraEmptyState({
 
 export function ZentraEmptyCard({ icon, title, hint, label, action, centered, tone, layout }: ZentraEmptyCardProps) {
   if (centered) {
+    // Whole-page empty state: one centered amber insight callout, matching the
+    // PageEmptyCallout used directly on the overview / risk desks. In-board
+    // empties (ZentraEmptyState) keep the card treatment.
     return (
-      <div className={layout === "fit" ? styles.emptyFit : styles.emptyWrap}>
-        <section className={`${assign.card} ${styles.emptyCenterCard}`} aria-label={label ?? title}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <ZentraEmptyState icon={icon} title={title} hint={hint} action={action} tone={tone} />
-        </section>
-      </div>
+      <PageEmptyCallout fit={layout === "fit"} action={action}>
+        <strong>{title}.</strong> {hint}
+      </PageEmptyCallout>
     );
   }
   return (

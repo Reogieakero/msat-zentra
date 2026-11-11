@@ -52,6 +52,7 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
+  LoginEvent: 'LoginEvent',
   StudentProfile: 'StudentProfile',
   ParentProfile: 'ParentProfile',
   ParentStudentLink: 'ParentStudentLink',
@@ -130,10 +131,27 @@ export const UserScalarFieldEnum = {
   status: 'status',
   approvedBy: 'approvedBy',
   approvedAt: 'approvedAt',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  lastActiveAt: 'lastActiveAt',
+  lastIp: 'lastIp',
+  lastCity: 'lastCity',
+  lastCountry: 'lastCountry',
+  lastLat: 'lastLat',
+  lastLng: 'lastLng'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const LoginEventScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  ip: 'ip',
+  kind: 'kind',
+  occurredAt: 'occurredAt'
+} as const
+
+export type LoginEventScalarFieldEnum = (typeof LoginEventScalarFieldEnum)[keyof typeof LoginEventScalarFieldEnum]
 
 
 export const StudentProfileScalarFieldEnum = {
@@ -243,6 +261,7 @@ export const StudentRosterScalarFieldEnum = {
   sectionId: 'sectionId',
   schoolYearId: 'schoolYearId',
   mascot: 'mascot',
+  learnerType: 'learnerType',
   riskCount: 'riskCount',
   riskLevel: 'riskLevel',
   academicFlag: 'academicFlag',
@@ -496,7 +515,9 @@ export const AnecdotalRecordScalarFieldEnum = {
   folderId: 'folderId',
   signedBy: 'signedBy',
   signedAt: 'signedAt',
-  signatureImageUrl: 'signatureImageUrl'
+  signatureImageUrl: 'signatureImageUrl',
+  deletedAt: 'deletedAt',
+  deletedBy: 'deletedBy'
 } as const
 
 export type AnecdotalRecordScalarFieldEnum = (typeof AnecdotalRecordScalarFieldEnum)[keyof typeof AnecdotalRecordScalarFieldEnum]

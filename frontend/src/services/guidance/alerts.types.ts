@@ -31,6 +31,13 @@ export interface GuidanceAlertsSummary {
   behavioral: number;
 }
 
+/** Lightweight counters polled by the shell's alert sound / tab-title badge. */
+export interface GuidanceAlertCounts {
+  high: number;
+  moderate: number;
+  total: number;
+}
+
 export interface GuidanceAlertsData {
   termLabel: string;
   summary: GuidanceAlertsSummary;

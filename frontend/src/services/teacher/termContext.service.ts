@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
@@ -77,7 +78,7 @@ export function useTermContext() {
   const { activeTerm, termReady } = useTerm();
   const teacherId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery<TermContextData>({
+  return useLiveQuery<TermContextData>({
     queryKey: termContextKey(teacherId, termKey),
     queryFn: fetchTermContext,
     enabled: !!teacherId && termReady && !!activeTerm?.termId,

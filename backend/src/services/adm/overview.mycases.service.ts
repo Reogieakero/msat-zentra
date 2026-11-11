@@ -26,7 +26,24 @@ export async function getMyCases(ctx: AdmContext, query: MyCasesQuery) {
   const sectionIds = sections.map((s) => s.id);
 
   const scopeTermId = ctx.termId;
-  const termFilter = scopeTermId ? { termId: scopeTermId } : {};
+  // Classes are shared by every term of a school year, so the advisory desk
+  // shows every ADM case filed this school year rather than only the selected
+  // term's. The case keeps its own term for the "shared" label.
+  const scopeYearId =
+    ctx.schoolYearId ??
+    (scopeTermId
+      ? (
+          await prisma.term.findUnique({
+            where: { id: scopeTermId },
+            select: { schoolYearId: true },
+          })
+        )?.schoolYearId ?? null
+      : null);
+  const termFilter: Prisma.AdmLearnerProfileWhereInput = scopeYearId
+    ? { term: { schoolYearId: scopeYearId } }
+    : scopeTermId
+      ? { termId: scopeTermId }
+      : {};
 
   // Every ADM case for the adviser's own advisees, regardless of who opened
   // it (guidance/nurse/coordinator) — the monitoring desk tracks the learner,
@@ -78,6 +95,7 @@ export async function getMyCases(ctx: AdmContext, query: MyCasesQuery) {
           section: { select: { name: true } },
         },
       },
+      term: { select: { termNumber: true } },
       referral: {
         select: {
           id: true,
@@ -160,6 +178,7 @@ export async function getMyCases(ctx: AdmContext, query: MyCasesQuery) {
         consultReviewer: p.referral.consultReviewer ?? null,
         stage: p.stage,
         stageLabel: stageLabel.get(p.stage) ?? p.stage,
+        termNumber: p.term.termNumber,
         eligibilityStatus: p.eligibilityStatus,
         approved: !!p.approvedBy,
         approvedAt: p.approvedAt ? p.approvedAt.toISOString() : null,

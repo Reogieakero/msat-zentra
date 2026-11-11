@@ -4,12 +4,14 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
+import { markRealtimeUpdate } from "@/lib/api/fresh";
 import { toast } from "@/components/ui/sonner";
 import { teacherNotificationTitle } from "@/lib/notifications/label";
 import {
   isSelfNotification,
   keysForScopes,
   scopesForNotification,
+  scopesForRealtimeTable,
   type TeacherInvalidateScope,
 } from "@/lib/realtime/teacherKeys";
 
@@ -83,6 +85,7 @@ export function useTeacherRealtime(enabled = true) {
     let cancelled = false;
 
     function invalidate(scopes: readonly TeacherInvalidateScope[]) {
+      markRealtimeUpdate();
       const now = Date.now();
       const due = scopes.filter((scope) => {
         const last = lastInvalidatedByScope.current.get(scope) ?? 0;
@@ -127,6 +130,10 @@ export function useTeacherRealtime(enabled = true) {
     if (PUSH_ENABLED) {
       try {
         const supabase = createClient();
+        // Direct table subscriptions: some desks mirror rows that other people
+        // write without emitting a teacher notification (a risk snapshot that
+        // adds a "no plan yet" card, a plan updated by its assignee). RLS
+        // (0001_rls.sql) scopes each stream to the adviser's own section.
         const ch = supabase
           .channel(`teacher-desk-${userId}`)
           .on(
@@ -141,6 +148,21 @@ export function useTeacherRealtime(enabled = true) {
               notify((payload as unknown as { new?: TeacherNotification }).new as TeacherNotification);
             },
           )
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "Intervention" },
+            () => invalidate(scopesForRealtimeTable("Intervention")),
+          )
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "CounselingSession" },
+            () => invalidate(scopesForRealtimeTable("CounselingSession")),
+          )
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "RiskSnapshot" },
+            () => invalidate(scopesForRealtimeTable("RiskSnapshot")),
+          )
           .subscribe((status) => {
             if (!cancelled && status !== "SUBSCRIBED") {
               console.warn(`[teacher-realtime] channel status: ${status}`);
@@ -153,7 +175,10 @@ export function useTeacherRealtime(enabled = true) {
 
     let seeded = false;
     async function poll() {
-      if (cancelled || document.hidden) return;
+      // Runs while hidden too: a fanout notification must still land (and toast
+      // on return) when the desk is in another tab or another site. This is the
+      // fallback for a socket that is down or blocked by RLS.
+      if (cancelled) return;
       try {
         const { data } = await apiClient.get<TeacherNotification[]>(
           "/api/notifications/?take=10",

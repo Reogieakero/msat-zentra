@@ -1,7 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
+import { liveQueryOptions } from "@/lib/api/live";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
 
@@ -85,11 +86,12 @@ export function useLockGrades(view: LockGradesView) {
   const { activeTerm, termReady } = useTerm();
   const teacherId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery<LockGradesData>({
+  return useLiveQuery<LockGradesData>({
     queryKey: lockGradesKey(teacherId, termKey, view),
     queryFn: () => fetchLockGrades(view),
     enabled: !!teacherId && termReady,
     staleTime: 30_000,
     placeholderData: (previous) => previous,
+    ...liveQueryOptions,
   });
 }

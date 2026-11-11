@@ -1,6 +1,12 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
+import { findTeacherTermGrant } from "../../lib/teacherGrant.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import {
   DEPED_JHS_WEIGHTS,
   DEPED_SHS_WEIGHTS,
@@ -36,18 +42,16 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
   }
   // Shared-code gate (same as the gradebook list + classes + attendance):
   // code entry lives only on /teacher/classes, which writes the per-term grant.
-  const termGrant = await prisma.teacherTermGrant.findUnique({
-    where: { userId_termId: { userId: teacherId, termId } },
-    select: { id: true },
-  });
+  const termGrant = await findTeacherTermGrant(teacherId, termId);
   if (!termGrant) {
     throw new AppError(403, "TERM_NOT_VERIFIED", "Enter this term on the classes page first");
   }
   const a = await assertAssignment(teacherId, assignmentId, termId);
+  const archivedLearners = await archivedAdvisoryLearnerIds();
 
   const [profiles, rosterEntries, components] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId: a.sectionId },
+      where: { sectionId: a.sectionId, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         lrn: true,
@@ -56,7 +60,7 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId: a.sectionId },
+      where: { sectionId: a.sectionId, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, lrn: true, fullName: true },
       orderBy: { fullName: "asc" },
     }),

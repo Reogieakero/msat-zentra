@@ -2,9 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { KeyRound, Lock } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pill } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { useTerm } from "@/lib/term/TermContext";
 import {
   Select,
   SelectContent,
@@ -14,16 +18,28 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/shared/pagination";
-import { useTerm } from "@/lib/term/TermContext";
 import { useLockGrades, type LockGradesView } from "@/services/teacher/lockGrades.service";
 import { FilterTabs } from "@/app/teacher/advisory/interventions/components/filter-tabs";
-import { TeacherEmptyCard } from "../components/TeacherEmptyCard";
+import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
+import kanbanStyles from "@/app/teacher/schedule/components/subject-kanban.module.css";
 import { LockGradesClassCard } from "./components/class-card";
 import { LockGradesAdviseeCard } from "./components/advisee-card";
 import styles from "./components/lock-grades.module.css";
 
 const ADVISEES_PAGE_SIZE = 15;
 
+/** Centered empty/insight note — same callout shape used across teacher desks. */
+function EmptyCallout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex w-full justify-center py-10">
+      <InsightCallout role="status" className="w-full max-w-md text-left">
+        {children}
+      </InsightCallout>
+    </div>
+  );
+}
+
+/** Gate card — identical shape to /teacher/grading's link-code card. */
 function GateCard({
   title,
   description,
@@ -33,19 +49,52 @@ function GateCard({
   description: string;
   actionLabel: string;
 }) {
+  const { activeTerm } = useTerm();
+  const termLabel = activeTerm
+    ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
+    : "this term";
+  const parts = termLabel
+    .split("·")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
   return (
-    <TeacherEmptyCard
-      centered
-      icon={KeyRound}
-      title={title}
-      hint={description}
-      label="Lock grades"
-      action={
-        <Button asChild size="sm">
-          <Link href="/teacher/classes">{actionLabel}</Link>
-        </Button>
-      }
-    />
+    <div className={emptyStyles.emptyWrap}>
+      <div className={`${kanbanStyles.column} mx-auto w-full max-w-md`}>
+        <KanbanBoard
+          title={title}
+          icon={
+            <span className="text-amber-500" aria-hidden>
+              <KeyRound size={14} />
+            </span>
+          }
+          actions={
+            <span className="flex items-center gap-1.5">
+              {parts.map((part, index) => (
+                <Pill
+                  key={part}
+                  tone="amber"
+                  label={index === 0 ? "School year" : "Active term"}
+                >
+                  {part}
+                </Pill>
+              ))}
+            </span>
+          }
+          description={description}
+        >
+          <div className="flex justify-end px-1 pb-1">
+            <Button
+              asChild
+              size="sm"
+              className="h-6 rounded-lg bg-black px-3 text-xs text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+            >
+              <Link href="/teacher/classes">{actionLabel}</Link>
+            </Button>
+          </div>
+        </KanbanBoard>
+      </div>
+    </div>
   );
 }
 
@@ -75,10 +124,6 @@ const MODE_OPTIONS: { value: LockGradesView; label: string }[] = [
 
 function ClassesMode() {
   const query = useLockGrades("classes");
-  const { activeTerm } = useTerm();
-  const termLabel = activeTerm
-    ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
-    : "this term";
 
   if (query.isPending && !query.data) return <BoardSkeleton />;
 
@@ -89,12 +134,10 @@ function ClassesMode() {
   const data = query.data;
   if (!data.isSubjectTeacher) {
     return (
-      <TeacherEmptyCard
-        centered
-        icon={Lock}
-        title="No classes assigned yet"
-        hint="Lock grades for the subjects you teach. Link your teacher code on the classes page or ask your registrar to assign your subjects and sections first."
-        label="Lock grades"
+      <GateCard
+        title="Link code"
+        description="Your subjects will appear here only after you link your teacher code on the classes page. Without a link code, nothing is displayed here."
+        actionLabel="Go to classes to link code"
       />
     );
   }
@@ -122,17 +165,15 @@ function ClassesMode() {
   return (
     <div className="flex flex-col gap-3">
       {data.classes.length === 0 ? (
-        <TeacherEmptyCard
-          centered
-          icon={Lock}
-          title="No classes assigned yet"
-          hint="Ask your registrar to assign your subjects and sections for this term."
-          label="Lock grades"
+        <GateCard
+          title="Link code"
+          description="Your subjects will appear here only after you link your teacher code on the classes page. Without a link code, nothing is displayed here."
+          actionLabel="Go to classes to link code"
         />
       ) : (
         <div className={`${styles.grid} ${styles.gridEnter}`}>
           {data.classes.map((row) => (
-            <LockGradesClassCard key={row.id} row={row} termLabel={termLabel} />
+            <LockGradesClassCard key={row.id} row={row} />
           ))}
         </div>
       )}
@@ -150,26 +191,21 @@ function AdviseesMode() {
 
   if (query.isError || !query.data) {
     return (
-      <TeacherEmptyCard
-        centered
-        icon={Lock}
-        title="No advisory section assigned"
-        hint="Advisee lock statuses are scoped to your advisory section. Claim your advisory in Settings, then come back."
-        label="Lock grades"
-      />
+      <EmptyCallout>
+        <strong>No advisory section assigned.</strong> Advisee lock statuses are
+        scoped to your advisory section. Claim your advisory in Settings, then
+        come back.
+      </EmptyCallout>
     );
   }
 
   const data = query.data;
   if (!data.isAdviser || data.advisorySections.length === 0) {
     return (
-      <TeacherEmptyCard
-        centered
-        icon={Lock}
-        title="No advisory section assigned"
-        hint="Claim your advisory in Settings to see your advisees' subject lock statuses here."
-        label="Lock grades"
-      />
+      <EmptyCallout>
+        <strong>No advisory section assigned.</strong> Claim your advisory in
+        Settings to see your advisees&apos; subject lock statuses here.
+      </EmptyCallout>
     );
   }
 
@@ -229,17 +265,16 @@ function AdviseesMode() {
       </div>
 
       {filtered.length === 0 ? (
-        <TeacherEmptyCard
-          centered
-          icon={Lock}
-          title={needle || sectionId !== "all" ? "No matching advisees" : "No advisees yet"}
-          hint={
-            needle || sectionId !== "all"
-              ? "No advisees match your filters."
-              : "Learners from your advisory section will appear here once they are enrolled."
-          }
-          label="Lock grades"
-        />
+        <EmptyCallout>
+          <strong>
+            {needle || sectionId !== "all"
+              ? "No matching advisees."
+              : "No advisees yet."}
+          </strong>{" "}
+          {needle || sectionId !== "all"
+            ? "No advisees match your filters."
+            : "Learners from your advisory section will appear here once they are enrolled."}
+        </EmptyCallout>
       ) : (
         <>
           <div className={`${styles.grid} ${styles.gridEnter}`}>
@@ -270,26 +305,36 @@ export default function TeacherLockGradesPage() {
   const effectiveMode: LockGradesView =
     canTeach || !canAdvise ? mode : "advisees";
 
+  // The gate card stands alone — hide the page title/subtitle while it shows.
+  const gateActive =
+    !!data &&
+    effectiveMode === "classes" &&
+    (!data.isSubjectTeacher ||
+      !data.gates.linked ||
+      !data.gates.termGrant ||
+      data.classes.length === 0);
+
   return (
     <section className={styles.page} aria-label="Lock grades">
-      <div className={styles.head}>
-        <div>
-          <h1 className={styles.title}>Lock Grades</h1>
-          <p className={styles.sub}>
-            Lock final grades for your classes, or review your advisees&apos; lock statuses —
-            read-only.
-          </p>
+      {gateActive ? null : (
+        <div className={styles.head}>
+          <div>
+            <h1 className={styles.title}>Lock Grades</h1>
+            <p className={styles.sub}>
+              Review the lock status of your classes and advisees — read-only.
+            </p>
+          </div>
+          {canTeach && canAdvise ? (
+            <FilterTabs
+              label="Lock grades mode"
+              options={MODE_OPTIONS}
+              value={effectiveMode}
+              onChange={setMode}
+              tone="blue"
+            />
+          ) : null}
         </div>
-        {canTeach && canAdvise ? (
-          <FilterTabs
-            label="Lock grades mode"
-            options={MODE_OPTIONS}
-            value={effectiveMode}
-            onChange={setMode}
-            tone="blue"
-          />
-        ) : null}
-      </div>
+      )}
 
       {effectiveMode === "classes" ? <ClassesMode /> : <AdviseesMode />}
     </section>

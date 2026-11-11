@@ -1,10 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, ChevronDown, Gauge } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
+
+import { AlertTriangle, BookPlus, CalendarDays, Check, Gauge, Pencil, Save, Trash2, Undo2, UserPlus } from "lucide-react";
 import { useTerm } from "@/lib/term/TermContext";
 import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
@@ -13,54 +14,118 @@ import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
 import { useTeacherInvalidate } from "../../../components/use-teacher-invalidate";
 import { Button } from "@/components/ui/button";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { Pill } from "@/components/ui/pill";
 import { toast } from "@/components/ui/sonner";
-import { TeacherPageHeader } from "../../../components/TeacherPageHeader";
-import { TemplateCatalogBoards } from "../../components/TemplateCatalogBoards";
+import { TemplateNavRail, type TemplateView } from "../../components/TemplateNavRail";
 import { SubjectCatalogKanban } from "../../components/subject-catalog-kanban";
+import { SubjectAddKanban } from "../../components/subject-add-kanban";
 import { TeacherCatalogKanban } from "../../components/teacher-catalog-kanban";
+import { TeacherAddKanban } from "../../components/teacher-add-kanban";
+import { TemplateFormOverlay } from "../../components/TemplateFormOverlay";
 import { TEACHER_CREATE_STEPS, TeacherCreateDockRows } from "../../components/teacher-add-kanban";
 import type { TeacherCreateProgress } from "../../components/use-add-teachers";
 import { TEACHER_DELETE_STEPS, TeacherDeleteDockRows } from "../../components/teacher-delete-kanban";
 import type { TeacherDeleteProgress } from "../../components/teacher-delete-kanban";
-import { TemplateConfigBoards } from "../../components/TemplateConfigBoards";
 import { DropdownSelect } from "@/app/principal/academics/assign/components/DropdownSelect";
 import dropdownStyles from "@/app/principal/academics/assign/components/dropdown-select.module.css";
-import stepperStyles from "../../components/template-stepper.module.css";
 import {
   CONFIG_SAVE_STEPS,
   ConfigDockRows,
   describeConfig,
+  ScheduleConfigBoard,
   ScheduleConfigKanban,
   type ConfigSaveProgress,
 } from "../../components/schedule-config-kanban";
 import { SUBMIT_STEPS, SendToPrincipalKanban, SubmitDockRows, type SubmitProgress } from "../../components/schedule-submit-kanban";
-import { buildTimetable, workloadOf, type DayConfig } from "../../components/schedule-time";
+import { buildTimetable, type DayConfig } from "../../components/schedule-time";
 import { matchSectionSlug, sectionSlug } from "@/lib/sectionSlug";
 import { useScheduleCatalog } from "../../components/use-schedule-catalog";
 import { cellKey, useScheduleCells } from "../../components/use-schedule-cells";
 import { ScheduleTemplateGrid } from "../../components/ScheduleTemplateGrid";
+import { ScheduleUnlockConfirm } from "../../components/schedule-unlock-kanban";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useScheduleConflicts } from "../../components/use-schedule-conflicts";
 import { useTemplateWorkload } from "../../components/use-template-workload";
 import { useDockProgressTask, type DockSnapshot } from "../../components/use-dock-progress";
 import { ConflictsDock } from "../../components/conflicts-dock";
 import type { SubjectCreateProgress } from "../../components/use-add-subjects";
 import { DELETE_STEPS, DeleteDockRows, type SubjectDeleteProgress } from "../../components/subject-delete-kanban";
-import kanbanStyles from "../../components/subject-kanban.module.css";
 import type { ScheduleSection } from "../../page";
 
-const STEPS = [
-  { label: "Teachers & subjects", target: 0 },
-  { label: "Day configuration", target: 1 },
-  { label: "Send to principal", target: 3 },
-] as const;
+/** One stacked builder block: small caps title sitting at the right end above the divider. */
+function TemplateBlockHeading({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <h2 className="self-end text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        {title}
+      </h2>
+      <div className="h-px w-full bg-border" aria-hidden />
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
+  );
+}
 
 function sectionLabel(name: string, gradeLevel: string) {
   return (
     <span className={dropdownStyles.optionLabel}>
       <span className={dropdownStyles.optionName}>{name}</span>
-      <span className={dropdownStyles.gradePill}>Grade {gradeLevel.replace("G", "")}</span>
+      <Pill tone="amber" label="Grade level">
+        Grade {gradeLevel.replace("G", "")}
+      </Pill>
     </span>
+  );
+}
+
+/**
+ * Skeleton mirrors the current template page: the left rail (back link + find
+ * box + action links) next to either the centered section picker/grid or the
+ * centered "add the catalog first" callout. No plain text loader.
+ */
+function ScheduleTemplateSkeleton({ grid }: { grid: boolean }) {
+  return (
+    <section
+      className="flex w-full flex-col gap-5 lg:flex-row lg:items-start lg:gap-6"
+      aria-busy="true"
+      aria-label="Loading template"
+    >
+      <div className="hidden w-52 shrink-0 lg:-mt-4 lg:-mb-4 lg:-ml-4 lg:block lg:min-h-[calc(100dvh-3rem)] lg:w-56 lg:border-r lg:border-solid lg:border-border lg:bg-linear-to-b lg:from-muted/40 lg:via-muted/10 lg:to-transparent lg:pt-4 lg:pr-4 lg:pl-4">
+        <div className="sticky top-16 flex flex-col gap-2">
+          <Skeleton className="h-5 w-28 rounded-md" />
+          <Skeleton className="h-8 w-full rounded-md" />
+          <div className="flex flex-col gap-0.5 pt-1">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-7 w-full rounded-md" />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        {grid ? (
+          <>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Skeleton className="h-3 w-14" />
+              <Skeleton className="h-8 w-48 rounded-md" />
+            </div>
+            <div className="overflow-x-auto rounded-lg border">
+              <div className="grid min-w-[52rem] grid-cols-[10rem_repeat(5,minmax(0,1fr))]">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={`h-${i}`} className="m-2 h-5" />
+                ))}
+                {Array.from({ length: 36 }).map((_, i) => (
+                  <Skeleton key={`c-${i}`} className="m-2 h-10" />
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex min-h-[calc(100dvh-10rem)] w-full items-center justify-center">
+            <Skeleton className="h-12 w-full max-w-xl rounded-md" />
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -111,173 +176,107 @@ function TemplateInner() {
   const initialSectionId = searchParams.get("sectionId") ?? "";
   const viewParam = searchParams.get("view") ?? "";
   const [sectionId, setSectionId] = useState(initialSectionId);
-  const [configExpanded, setConfigExpanded] = useState(viewParam === "config");
   const [configProgress, setConfigProgress] = useState<ConfigSaveProgress | null>(null);
   const [submitProgress, setSubmitProgress] = useState<SubmitProgress | null>(null);
-  const [tabsTapped, setTabsTapped] = useState(viewParam !== "");
-  const [boardsOpen, setBoardsOpen] = useState(false);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
-  const [subjectsExpanded, setSubjectsExpanded] = useState(
-    viewParam === "add-subject" || viewParam === "subjects",
+  const [confirmUnlock, setConfirmUnlock] = useState(false);
+  // One panel at a time: the sidebar picks which action's inputs are shown.
+  const [view, setView] = useState<TemplateView>(() =>
+    viewParam === "config"
+      ? "config"
+      : viewParam === "send"
+        ? "send"
+        : viewParam === "add-teacher" || viewParam === "teachers"
+          ? "teachers"
+          : viewParam === "add-subject" || viewParam === "subjects"
+            ? "subjects"
+            : viewParam === "grid" || viewParam === "timetable"
+              ? "grid"
+              : "grid",
   );
   const [kanbanAddOpen, setKanbanAddOpen] = useState(viewParam === "add-subject");
-  const [addOnly, setAddOnly] = useState(viewParam === "add-subject");
-  const [teachersExpanded, setTeachersExpanded] = useState(
-    viewParam === "add-teacher" || viewParam === "teachers",
-  );
   const [teacherKanbanAddOpen, setTeacherKanbanAddOpen] = useState(viewParam === "add-teacher");
-  const [teacherAddOnly, setTeacherAddOnly] = useState(viewParam === "add-teacher");
-  const [step, setStep] = useState(
-    viewParam === "send" ? 3 : viewParam === "config" ? 1 : initialSectionId || slugSegment ? 2 : 0,
-  );
+  // The Configure tab shows the applied settings; editing opens the stepper overlay.
+  const [configEditorOpen, setConfigEditorOpen] = useState(false);
   // Deep-link sync (?sectionId=… / ?view=…): runs once per param change, not per render.
   /* eslint-disable react-hooks/set-state-in-effect -- deep-link landing sync */
   useEffect(() => {
     if (initialSectionId) {
       setSectionId(initialSectionId);
-      if (!viewParam) setStep(2);
     }
-  }, [initialSectionId, viewParam]);
+  }, [initialSectionId]);
   useEffect(() => {
     if (!viewParam) return;
-    setTabsTapped(true);
-    if (viewParam === "add-subject") {
-      setTeachersExpanded(false);
-      setTeacherKanbanAddOpen(false);
-      setTeacherAddOnly(false);
-      setConfigExpanded(false);
-      setSubjectsExpanded(true);
-      setAddOnly(true);
-      setKanbanAddOpen(true);
-      setStep(0);
-    } else if (viewParam === "subjects") {
-      setTeachersExpanded(false);
-      setTeacherKanbanAddOpen(false);
-      setTeacherAddOnly(false);
-      setConfigExpanded(false);
-      setSubjectsExpanded(true);
-      setKanbanAddOpen(false);
-      setAddOnly(false);
-      setStep(0);
-    } else if (viewParam === "add-teacher") {
-      setSubjectsExpanded(false);
-      setKanbanAddOpen(false);
-      setAddOnly(false);
-      setConfigExpanded(false);
-      setTeachersExpanded(true);
-      setTeacherAddOnly(true);
-      setTeacherKanbanAddOpen(true);
-      setStep(0);
-    } else if (viewParam === "teachers") {
-      setSubjectsExpanded(false);
-      setKanbanAddOpen(false);
-      setAddOnly(false);
-      setConfigExpanded(false);
-      setTeachersExpanded(true);
-      setTeacherKanbanAddOpen(false);
-      setTeacherAddOnly(false);
-      setStep(0);
-    } else if (viewParam === "config") {
-      setSubjectsExpanded(false);
-      setKanbanAddOpen(false);
-      setAddOnly(false);
-      setTeachersExpanded(false);
-      setTeacherKanbanAddOpen(false);
-      setTeacherAddOnly(false);
-      setConfigExpanded(true);
-      setStep(1);
-    } else if (viewParam === "send") {
-      setSubjectsExpanded(false);
-      setKanbanAddOpen(false);
-      setAddOnly(false);
-      setTeachersExpanded(false);
-      setTeacherKanbanAddOpen(false);
-      setTeacherAddOnly(false);
-      setConfigExpanded(false);
-      setStep(3);
-    }
+    setView(
+      viewParam === "config"
+        ? "config"
+        : viewParam === "send"
+          ? "send"
+          : viewParam === "add-teacher" || viewParam === "teachers"
+            ? "teachers"
+            : viewParam === "add-subject" || viewParam === "subjects"
+              ? "subjects"
+              : viewParam === "grid" || viewParam === "timetable"
+                ? "grid"
+                : "grid",
+    );
+    setKanbanAddOpen(viewParam === "add-subject");
+    setTeacherKanbanAddOpen(viewParam === "add-teacher");
   }, [viewParam]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Keep the active panel in the URL so reloading the page lands on the same
+  // tab (Timetable / Subjects / Teachers / Configure / Send) instead of resetting.
+  useEffect(() => {
+    if (viewParam === view) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", view);
+    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
+  }, [view, viewParam, searchParams, router]);
+
   const [createProgress, setCreateProgress] = useState<SubjectCreateProgress | null>(null);
   const [deleteProgress, setDeleteProgress] = useState<SubjectDeleteProgress | null>(null);
   const [teacherCreateProgress, setTeacherCreateProgress] = useState<TeacherCreateProgress | null>(null);
   const [teacherDeleteProgress, setTeacherDeleteProgress] = useState<TeacherDeleteProgress | null>(null);
 
-  const handleSubjectsExpandedChange = (expanded: boolean) => {
-    setSubjectsExpanded(expanded);
-    // See-all path shows the grade grid only; the add form stays shut unless picked.
+  /** Sidebar click: show that action's panel; any open add form closes first. */
+  const openView = (next: TemplateView) => {
+    setView(next);
     setKanbanAddOpen(false);
-    setAddOnly(false);
-    if (expanded) {
-      setTeachersExpanded(false);
-      setTeacherKanbanAddOpen(false);
-      setTeacherAddOnly(false);
-      setConfigExpanded(false);
-    }
-  };
-
-  const handleTeachersExpandedChange = (expanded: boolean) => {
-    setTeachersExpanded(expanded);
-    // See-all path shows the teacher list only; the add form stays shut unless picked.
     setTeacherKanbanAddOpen(false);
-    setTeacherAddOnly(false);
-    if (expanded) {
-      setSubjectsExpanded(false);
-      setKanbanAddOpen(false);
-      setAddOnly(false);
-      setConfigExpanded(false);
-    }
+    // Configure only opens the stepper when there is no saved shape yet; with a
+    // record the tab shows the applied settings board (Edit reopens the stepper).
+    setConfigEditorOpen(next === "config" && !catalog.activeConfig);
   };
 
-  const handleAddSubject = () => {
-    // Add-subject path shows just the form card — no grade grid unless See all was picked.
-    setSubjectsExpanded(true);
-    setAddOnly(true);
+  /** Top-right actions: jump straight into the matching add form. */
+  const openAddSubject = () => {
+    setView("subjects");
+    setTeacherKanbanAddOpen(false);
     setKanbanAddOpen(true);
   };
 
-  const handleAddTeacher = () => {
-    // Add-teacher path shows just the form card — no teacher list unless See all was picked.
-    setTeachersExpanded(true);
-    setTeacherAddOnly(true);
+  const openAddTeacher = () => {
+    setView("teachers");
+    setKanbanAddOpen(false);
     setTeacherKanbanAddOpen(true);
   };
 
-  const handleKanbanAddOpenChange = (open: boolean) => {
-    setKanbanAddOpen(open);
-    // In add-only mode, closing the form returns to the catalog cards.
-    if (!open && addOnly) {
-      setSubjectsExpanded(false);
-      setAddOnly(false);
-    }
-  };
+  const handleKanbanAddOpenChange = (open: boolean) => setKanbanAddOpen(open);
 
-  const handleTeacherKanbanAddOpenChange = (open: boolean) => {
-    setTeacherKanbanAddOpen(open);
-    // In add-only mode, closing the form returns to the catalog cards.
-    if (!open && teacherAddOnly) {
-      setTeachersExpanded(false);
-      setTeacherAddOnly(false);
-    }
-  };
+  const handleTeacherKanbanAddOpenChange = (open: boolean) => setTeacherKanbanAddOpen(open);
 
   const collapseSubjectsView = () => {
-    setSubjectsExpanded(false);
+    setView("grid");
     setKanbanAddOpen(false);
-    setAddOnly(false);
   };
 
   const collapseTeachersView = () => {
-    setTeachersExpanded(false);
+    setView("grid");
     setTeacherKanbanAddOpen(false);
-    setTeacherAddOnly(false);
   };
 
-  const collapseCatalogViews = () => {
-    collapseSubjectsView();
-    collapseTeachersView();
-    setConfigExpanded(false);
-  };
+  const collapseConfigView = () => setConfigEditorOpen(false);
 
   const session = useSession();
   const overview = useTeacherOverview();
@@ -289,23 +288,27 @@ function TemplateInner() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const invalidateTeacher = useTeacherInvalidate();
+  const queryClient = useQueryClient();
 
   const catalog = useScheduleCatalog(termKey);
   const { workload, setWorkload } = useTemplateWorkload(termKey);
-  // Catalog-only visits (See all / Add / Configure from the schedule gutter)
-  // don't need the grid — skip the heavy workspace-wide fetches until the
-  // grid or send views actually open.
-  const catalogOpen = subjectsExpanded || teachersExpanded || configExpanded;
-  const needsGrid = step === 2 || step === 3;
+  // The grid block is always on the page, so conflicts only need to load once a
+  // section is picked (the grid is the only consumer).
+  const needsGrid = Boolean(sectionId);
   const conflicts = useScheduleConflicts(termKey, workload, { enabled: needsGrid });
 
-  const sectionsQuery = useQuery<{ sections: ScheduleSection[] }>({
+  const sectionsQuery = useLiveQuery<{ sections: ScheduleSection[] }>({
     queryKey: ["teacher-schedule-section", "template", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: ScheduleSection[] }>("/api/teacher/schedule");
       return data;
     },
-    enabled: isMasterTeacher && !catalogOpen,
+    enabled: isMasterTeacher,
+    // Realtime invalidation (principal approve/send-back, other master
+    // teachers' edits) refreshes this instantly when Supabase push is on.
+    // The interval is the safety net so the open grid still syncs when push
+    // is unavailable — same shape as the rest of the desk, no manual refresh.
+    refetchInterval: 20_000,
   });
 
   const sections = useMemo(() => sectionsQuery.data?.sections ?? [], [sectionsQuery.data]);
@@ -319,7 +322,6 @@ function TemplateInner() {
     const hit = matchSectionSlug(slugSegment, sections);
     if (hit) {
       setSectionId(hit.id);
-      if (!viewParam) setStep(2);
     }
     setSlugResolved(true);
   }, [slugSegment, sections, slugResolved, viewParam]);
@@ -331,8 +333,7 @@ function TemplateInner() {
     const picked = sections.find((s) => s.id === id);
     if (!picked) return;
     const slug = sectionSlug(picked.name, picked.gradeLevel, sections);
-    const qs = viewParam ? `?view=${encodeURIComponent(viewParam)}` : "";
-    router.replace(`/teacher/schedule/template/${encodeURIComponent(slug)}${qs}`, { scroll: false });
+    router.replace(`/teacher/schedule/template/${encodeURIComponent(slug)}?view=${encodeURIComponent(view)}`, { scroll: false });
   };
 
   const cellsHook = useScheduleCells(
@@ -461,13 +462,17 @@ function TemplateInner() {
 
   const configMutation = useMutation({
     mutationFn: async (next: DayConfig) => {
-      const { workload: nextWorkload, ...dayShape } = next;
-      if (nextWorkload) setWorkload(nextWorkload);
-      const { data } = await apiClient.patch<{ config: DayConfig }>("/api/teacher/schedule/config", dayShape);
+      const { startTime, periodMins, lunch, morningRecess, afternoonRecess } = next;
+      const { data } = await apiClient.patch<{ config: DayConfig }>("/api/teacher/schedule/config", {
+        startTime,
+        periodMins,
+        lunch,
+        morningRecess,
+        afternoonRecess,
+      });
       return data.config;
     },
     onSuccess: () => {
-      setConfigExpanded(false);
       invalidateTeacher.schedule();
       setConfigProgress((prev) =>
         prev ? { ...prev, active: false, done: true, status: "saved" } : prev,
@@ -484,27 +489,41 @@ function TemplateInner() {
   });
 
   const handleConfigApply = (next: DayConfig) => {
-    // Low latency: the dock opens this tick with the applied snapshot while
-    // the PATCH confirms in the background.
+    // Low latency: reshape the cached config and close the overlay this tick,
+    // then confirm the PATCH in the background. A failed save restores the
+    // previous shape so the grid never keeps values the server rejected.
     const { items, summary } = describeConfig(next);
+    const previousConfig = queryClient.getQueryData<{ config: DayConfig }>([
+      "teacher-schedule-config",
+      termKey,
+    ]);
+    const previousWorkload = workload;
+    if (next.workload) setWorkload(next.workload);
+    queryClient.setQueryData(["teacher-schedule-config", termKey], { config: next });
+    // Stay on the Configure tab: close the stepper and let the board show the
+    // applied items while the PATCH confirms in the background.
+    setConfigEditorOpen(false);
     setConfigProgress({ active: true, done: false, status: "saving", items, summary });
-    configMutation.mutate(next);
+    configMutation.mutate(next, {
+      onError: () => {
+        if (previousConfig) {
+          queryClient.setQueryData(["teacher-schedule-config", termKey], previousConfig);
+        }
+        setWorkload(previousWorkload);
+      },
+    });
   };
 
-  // Catalog forms (See all / Add / Configure) render as soon as the small
-  // catalog queries land — they never wait for the full sections payload or
-  // the workspace-wide conflict scan. The grid and send views keep the old
-  // gate and fetch those on demand.
+  // Everything renders in one panel at a time, so the skeleton only mirrors the
+  // grid when we land on the default view (catalog/configure views get the
+  // picker-shaped skeleton).
   const masterKnown =
     overview.data?.isMasterTeacher !== undefined ||
     overview.data?.isMasterTeacherSenior !== undefined ||
     cachedMaster;
+  const skeletonGrid = view === "grid";
   if (!masterKnown) {
-    return (
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-5" aria-busy="true" aria-label="Loading template">
-        <p className="text-sm text-muted-foreground">Loading schedule template…</p>
-      </section>
-    );
+    return <ScheduleTemplateSkeleton grid={skeletonGrid} />;
   }
 
   if (!isMasterTeacher) {
@@ -516,12 +535,8 @@ function TemplateInner() {
     );
   }
 
-  if (sectionsQuery.isLoading && !catalogOpen) {
-    return (
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-5" aria-busy="true" aria-label="Loading template">
-        <p className="text-sm text-muted-foreground">Loading schedule template…</p>
-      </section>
-    );
+  if (sectionsQuery.isLoading) {
+    return <ScheduleTemplateSkeleton grid={skeletonGrid} />;
   }
 
   const gradeSubjects = section
@@ -529,7 +544,9 @@ function TemplateInner() {
     : catalog.subjects;
   const activeConfig = catalog.activeConfig;
   const rows = activeConfig ? buildTimetable({ ...activeConfig, workload }) : [];
-  const caps = workloadOf(activeConfig);
+  // No catalog → the section picker has nothing to render, so the panel shows
+  // the "add the catalog first" note instead.
+  const catalogMissing = catalog.subjects.length === 0 || catalog.teachers.length === 0;
 
   const handleTemplateChange = (day: number, period: number, subjectId: string, teacherNameId: string) => {
     if (!section) return;
@@ -552,317 +569,347 @@ function TemplateInner() {
   };
 
   return (
-    <section className="flex w-full flex-col gap-5">
-      <Button asChild variant="ghost" size="sm" className="h-6 px-2 text-xs self-start -ml-2">
-        <Link href="/teacher/schedule">
-          <ArrowLeft size={16} aria-hidden />
-          Back to schedule
-        </Link>
-      </Button>
-      <TeacherPageHeader
-        title="Schedule template"
-        description="Generic per-section builder. Add teachers and subjects, configure the day, then fill each cell. One subject takes one teacher per section; double-books save with a warning."
-        actions={
-          <div className="flex w-full min-w-0 flex-col items-stretch gap-2 lg:w-auto lg:min-w-[36rem] lg:max-w-[44rem]">
-            <div className="flex flex-wrap items-center gap-1.5 self-end">
-              <span className={stepperStyles.hintLabel} aria-hidden>
-                Tap a tab to switch view
-              </span>
-              <ol className="flex flex-wrap items-center gap-1.5" aria-label="Template tabs">
-                {STEPS.map((s, i) => (
-                  <li key={s.label} className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStep(s.target);
-                        setTabsTapped(true);
-                        collapseCatalogViews();
-                      }}
-                      aria-current={step === s.target ? "step" : undefined}
-                      title={`Go to ${s.label}`}
-                      className={`${stepperStyles.pill} ${step === s.target ? stepperStyles.pillCurrent : ""} ${tabsTapped ? "" : stepperStyles.hint}`}
-                    >
-                      {step > s.target ? <Check size={12} aria-hidden /> : <span aria-hidden>{i + 1}</span>}
-                      {s.label}
-                    </button>
-                    {s.target < STEPS.length - 1 ? <ArrowRight size={12} aria-hidden className="text-muted-foreground" /> : null}
-                  </li>
-                ))}
-              </ol>
-              {step === 2 ? (
-                <button
-                  type="button"
-                  onClick={() => setBoardsOpen((v) => !v)}
-                  aria-expanded={boardsOpen}
-                  title={boardsOpen ? "Hide catalog cards" : "Show catalog cards"}
-                  className={`${stepperStyles.pill} ${boardsOpen ? stepperStyles.pillCurrent : ""}`}
-                >
-                  Catalog
-                  <ChevronDown
-                    size={12}
-                    aria-hidden
-                    className={`transition-transform duration-150 ease-out ${boardsOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-              ) : null}
-            </div>
-            <div
-              className={`${stepperStyles.boardsCollapse} ${step === 2 && !boardsOpen ? stepperStyles.boardsCollapsed : ""} ${subjectsExpanded || teachersExpanded || configExpanded || step === 3 ? stepperStyles.boardsCollapsed : ""}`}
-              aria-hidden={(step === 2 && !boardsOpen) || subjectsExpanded || teachersExpanded || configExpanded || step === 3}
+    <section className="flex w-full flex-col gap-5 lg:flex-row lg:gap-6">
+      <TemplateNavRail view={view} onSelect={openView} />
+      <div className="flex min-w-0 flex-1 flex-col gap-6">
+        {view === "grid" ? (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              className="h-6 gap-1 px-2 text-[11px]"
+              onClick={openAddSubject}
             >
-              <div className={stepperStyles.boardsInner}>
-                {step === 1 ? (
-                  <TemplateConfigBoards
-                    config={activeConfig}
-                    maxDaily={caps.maxDailyPeriods}
-                    maxWeekly={caps.maxWeeklyPeriods}
-                    onConfigure={() => setConfigExpanded(true)}
-                  />
-                ) : step === 3 || subjectsExpanded || teachersExpanded || configExpanded ? null : (
-                  <TemplateCatalogBoards
-                    subjects={catalog.subjects}
-                    teachers={catalog.teachers}
-                    subjectsPending={catalog.subjectsQuery.isPending}
-                    teachersPending={catalog.teachersQuery.isPending}
-                    subjectsError={catalog.subjectsQuery.isError}
-                    teachersError={catalog.teachersQuery.isError}
-                    subjectsExpanded={false}
-                    onSubjectsExpandedChange={handleSubjectsExpandedChange}
-                    onAddSubject={handleAddSubject}
-                    teachersExpanded={false}
-                    onTeachersExpandedChange={handleTeachersExpandedChange}
-                    onAddTeacher={handleAddTeacher}
-                  />
-                )}
-              </div>
-            </div>
+              <BookPlus size={12} aria-hidden />
+              Add subject
+            </Button>
+            <Button className="h-6 gap-1 px-2 text-[11px]" onClick={openAddTeacher}>
+              <UserPlus size={12} aria-hidden />
+              Add teacher
+            </Button>
           </div>
-        }
-      />
-      {subjectsExpanded && step !== 1 ? (
-        <div className="flex w-full flex-col gap-4" aria-label="All subjects expanded view">
-          <SubjectCatalogKanban
-            subjects={catalog.subjects}
-            pending={catalog.subjectsQuery.isPending}
-            loadError={catalog.subjectsQuery.isError}
-            onBack={collapseSubjectsView}
-            addOpen={kanbanAddOpen}
-            onAddOpenChange={handleKanbanAddOpenChange}
-            showGrid={!addOnly}
-            onCreateProgress={setCreateProgress}
-            onDeleteProgress={setDeleteProgress}
-          />
-        </div>
-      ) : null}
-      {teachersExpanded && step !== 1 ? (
-        <div className="flex w-full flex-col gap-4" aria-label="All teachers expanded view">
-          <TeacherCatalogKanban
-            teachers={catalog.teachers}
-            pending={catalog.teachersQuery.isPending}
-            loadError={catalog.teachersQuery.isError}
-            onBack={collapseTeachersView}
-            addOpen={teacherKanbanAddOpen}
-            onAddOpenChange={handleTeacherKanbanAddOpenChange}
-            showList={!teacherAddOnly}
-            onCreateProgress={setTeacherCreateProgress}
-            onDeleteProgress={setTeacherDeleteProgress}
-          />
-        </div>
-      ) : null}
-      {step === 0 ? (
-        <div
-          className={`${kanbanStyles.sectionCollapse} ${subjectsExpanded || teachersExpanded || configExpanded ? kanbanStyles.sectionCollapsed : ""}`}
-          aria-hidden={subjectsExpanded || teachersExpanded || configExpanded}
-        >
-          <div className={`${kanbanStyles.sectionInner} mt-16 flex flex-col items-center gap-4`}>
-          <div className="flex flex-col gap-1">
-            <span className="text-left text-xs text-muted-foreground" id="template-section-label">
-              Section for this template
-            </span>
-            <div className="flex items-center gap-2">
-              <DropdownSelect
-                value={sectionId}
-                onValueChange={handleSectionChange}
-                options={sections.map((s) => ({
-                  value: s.id,
-                  label: sectionLabel(s.name, s.gradeLevel),
-                }))}
-                placeholder="Pick a section…"
-                ariaLabel="Section for this template"
-                triggerClassName={dropdownStyles.dropdown32}
-              />
-              <Button size="sm" onClick={() => setStep(2)} disabled={catalog.subjects.length === 0 || catalog.teachers.length === 0 || !sectionId} className="h-6 px-2 text-xs">
-                Continue
-              </Button>
-            </div>
-          </div>
-          {catalog.subjects.length === 0 || catalog.teachers.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Add at least one subject (with Core/Elective type) and one teacher to continue.</p>
-          ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {step === 1 ? (
-        <div
-          className={`${kanbanStyles.sectionCollapse} ${subjectsExpanded || teachersExpanded || configExpanded ? kanbanStyles.sectionCollapsed : ""}`}
-          aria-hidden={subjectsExpanded || teachersExpanded || configExpanded}
-        >
-          <div className={`${kanbanStyles.sectionInner} mt-16 flex flex-col items-center gap-4`}>
-          <div className="flex flex-col gap-1">
-            <span className="text-left text-xs text-muted-foreground">
-              Section for this template
-            </span>
-            <div className="flex items-center gap-2">
-              <DropdownSelect
-                value={sectionId}
-                onValueChange={handleSectionChange}
-                options={sections.map((s) => ({
-                  value: s.id,
-                  label: sectionLabel(s.name, s.gradeLevel),
-                }))}
-                placeholder="Pick a section…"
-                ariaLabel="Section for this template"
-                triggerClassName={dropdownStyles.dropdown32}
-              />
-              <Button size="sm" onClick={() => setStep(2)} disabled={!sectionId} className="h-6 px-2 text-xs">
-                Continue
-              </Button>
-            </div>
-          </div>
-          </div>
-        </div>
-      ) : null}
-
-      {configExpanded && activeConfig ? (
-        <div className="flex w-full flex-col gap-4" aria-label="Configure school day expanded view">
-          <ScheduleConfigKanban
-            config={{ ...activeConfig, workload }}
-            onClose={() => setConfigExpanded(false)}
-            onApply={handleConfigApply}
-            saving={configMutation.isPending}
-          />
-        </div>
-      ) : null}
-
-      {step === 3 ? (
-        <div className="flex w-full flex-col gap-4" aria-label="Send to principal view">
-          <SendToPrincipalKanban onSubmitProgress={setSubmitProgress} />
-        </div>
-      ) : null}
-
-      {step === 2 ? (
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Section</span>
-              <span className="inline-flex w-48 max-w-full">
-                <DropdownSelect
-                  value={sectionId}
-                  onValueChange={handleSectionChange}
-                  options={sections.map((s) => ({
-                    value: s.id,
-                    label: sectionLabel(s.name, s.gradeLevel),
-                  }))}
-                  placeholder="Pick a section…"
-                  ariaLabel="Section"
-                  triggerClassName={dropdownStyles.dropdown32}
-                />
-              </span>
-              {section && cellsHook.saveProgress?.active ? (
-                <Button size="sm" disabled aria-busy className="h-6 px-2 text-xs">
-                  Saving…
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={() => void cellsHook.saveAll()}
-                  disabled={!section || cellsHook.pendingSlots.length === 0}
-                  title={
-                    cellsHook.pendingSlots.length === 0
-                      ? "No unsaved changes — pick a subject and teacher to stage slots"
-                      : `Save ${cellsHook.pendingSlots.length} staged slot${cellsHook.pendingSlots.length === 1 ? "" : "s"}`
-                  }
-                  className="h-6 px-2 text-xs"
-                >
-                  Save{cellsHook.pendingSlots.length > 0 ? ` (${cellsHook.pendingSlots.length})` : ""}
-                </Button>
-              )}
-              {section && cellsHook.pendingSlots.length > 0 && !cellsHook.saveProgress?.active ? (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => {
-                    if (!confirmClearAll) {
-                      setConfirmClearAll(true);
-                      setTimeout(() => setConfirmClearAll(false), 4000);
-                      return;
-                    }
-                    setConfirmClearAll(false);
-                    cellsHook.discardStaged();
-                  }}
-                  title="Discard staged picks and revert to last-saved state"
-                  className="h-6 px-2 text-xs"
-                >
-                  {confirmClearAll ? "Confirm?" : "Clear all"}
-                </Button>
-              ) : null}
-            </span>
-            {conflicts.data ? (
-              <span className="flex items-center gap-1.5" role="status">
-                <Pill tone="amber" label="Double-book warnings">
-                  <AlertTriangle size={12} aria-hidden className="text-amber-500" />
-                  {conflicts.data.conflicts.length} double-book warning{conflicts.data.conflicts.length === 1 ? "" : "s"}
-                </Pill>
-                <Pill tone="amber" label="Workload warnings">
-                  <Gauge size={12} aria-hidden className="text-amber-500" />
-                  {conflicts.data.workload.overDaily.length + conflicts.data.workload.overWeekly.length} overload warning
-                  {conflicts.data.workload.overDaily.length + conflicts.data.workload.overWeekly.length === 1 ? "" : "s"}
-                </Pill>
-              </span>
-            ) : null}
-          </div>
-
-          {conflicts.data && conflicts.data.conflicts.length > 0 ? (
-            <ConflictsDock
-              key={conflicts.data.conflicts.map((c) => `${c.teacherNameId}:${c.day}:${c.period}`).join("|")}
-              conflicts={conflicts.data.conflicts}
+        ) : null}
+        {view === "subjects" ? (
+          <section id="subjects" aria-label="Subjects" className="flex scroll-mt-6 flex-col gap-4">
+            <SubjectCatalogKanban
+              subjects={catalog.subjects}
+              pending={catalog.subjectsQuery.isPending}
+              loadError={catalog.subjectsQuery.isError}
+              onBack={collapseSubjectsView}
+              addOpen={false}
+              onAddOpenChange={handleKanbanAddOpenChange}
+              onCreateProgress={setCreateProgress}
+              onDeleteProgress={setDeleteProgress}
             />
-          ) : null}
-
-          {!section ? (
-            <p className="text-sm text-muted-foreground">Pick a section to load its generic template grid.</p>
-          ) : !activeConfig ? (
-            <p className="text-sm text-muted-foreground">Loading day configuration…</p>
-          ) : (
-            <ScheduleTemplateGrid
-              rows={rows}
-              cells={cellsHook.cells}
-              subjects={gradeSubjects.map((s) => ({ id: s.id, name: s.name, code: s.code, category: s.category }))}
+            <TemplateFormOverlay
+              open={kanbanAddOpen}
+              onClose={() => setKanbanAddOpen(false)}
+              label="Add subjects"
+            >
+              <SubjectAddKanban
+                onClose={() => setKanbanAddOpen(false)}
+                onProgress={setCreateProgress}
+              />
+            </TemplateFormOverlay>
+          </section>
+        ) : view === "teachers" ? (
+          <section id="teachers" aria-label="Teachers" className="flex scroll-mt-6 flex-col gap-4">
+            <TeacherCatalogKanban
               teachers={catalog.teachers}
-              subjectTeacherMap={cellsHook.dialogSubjectTeacherMap}
-              conflictedCells={conflicts.conflictedCells}
-              stagedKeys={stagedKeys}
-              isLocked={cellsHook.isLocked}
-              saving={cellsHook.saveProgress?.active ?? false}
-              onChange={handleTemplateChange}
-              onClear={handleTemplateClear}
+              pending={catalog.teachersQuery.isPending}
+              loadError={catalog.teachersQuery.isError}
+              onBack={collapseTeachersView}
+              addOpen={false}
+              onAddOpenChange={handleTeacherKanbanAddOpenChange}
+              onCreateProgress={setTeacherCreateProgress}
+              onDeleteProgress={setTeacherDeleteProgress}
             />
-          )}
-          {cellsHook.splitSubjects.length > 0 ? (
-            <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
-              <p className="font-medium">Blocked: subject split across teachers in {section?.name}.</p>
-              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
-                {cellsHook.splitSubjects.map((s) => (
-                  <li key={s.subjectId}>
-                    {s.subjectName} — {s.teacherNames.join(", ")}. Clear its slots to unify it.
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+            <TemplateFormOverlay
+              open={teacherKanbanAddOpen}
+              onClose={() => setTeacherKanbanAddOpen(false)}
+              label="Add teachers"
+            >
+              <TeacherAddKanban
+                onClose={() => setTeacherKanbanAddOpen(false)}
+                onProgress={setTeacherCreateProgress}
+              />
+            </TemplateFormOverlay>
+          </section>
+        ) : view === "config" ? (
+          <section
+            id="day-configuration"
+            aria-label="Day configuration"
+            className="flex min-h-[calc(100dvh-12rem)] scroll-mt-6 flex-col justify-center gap-4"
+          >
+            {activeConfig ? (
+              <ScheduleConfigBoard
+                config={{ ...activeConfig, workload }}
+                onEdit={() => setConfigEditorOpen(true)}
+                saving={configMutation.isPending}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">Loading day configuration…</p>
+            )}
+          </section>
+        ) : view === "send" ? (
+          <section id="send-to-principal" aria-label="Send to principal" className="flex scroll-mt-6 flex-col gap-4">
+            <TemplateBlockHeading
+              title="Send to principal"
+              hint="Review the drafts and submit them for approval."
+            />
+            <SendToPrincipalKanban onSubmitProgress={setSubmitProgress} />
+          </section>
+        ) : (
+          <>
+            {/* Default view — section picker on top of the cell filler. */}
+            <section
+              id="teachers-subjects"
+              aria-label="Teachers and subjects"
+              className={`flex scroll-mt-6 flex-col gap-4 ${
+                section || catalogMissing ? "" : "min-h-[calc(100dvh-12rem)] justify-center"
+              }`}
+            >
+              {catalogMissing ? (
+                <div className="flex min-h-80 items-center justify-center">
+                  <InsightCallout role="status" className="w-fit max-w-xl text-center">
+                    Add at least one <strong>subject</strong> (with Core/Elective type) and one{" "}
+                    <strong>teacher</strong> first — then pick a section to fill its timetable cells.
+                  </InsightCallout>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Section</span>
+                        <span className="inline-flex w-48 max-w-full">
+                          <DropdownSelect
+                            value={sectionId}
+                            onValueChange={handleSectionChange}
+                            options={sections.map((s) => ({
+                              value: s.id,
+                              label: sectionLabel(s.name, s.gradeLevel),
+                            }))}
+                            placeholder="Pick a section…"
+                            ariaLabel="Section for this template"
+                            triggerClassName={dropdownStyles.dropdown32}
+                          />
+                        </span>
+                      </span>
+                    </div>
+                    {conflicts.data ? (
+                      <span className="flex flex-wrap items-center justify-center gap-1.5" role="status">
+                        <Pill tone="amber" label="Double-book warnings">
+                          <AlertTriangle size={12} aria-hidden className="text-amber-500" />
+                          {conflicts.data.conflicts.length} double-book warning
+                          {conflicts.data.conflicts.length === 1 ? "" : "s"}
+                        </Pill>
+                        <Pill tone="amber" label="Workload warnings">
+                          <Gauge size={12} aria-hidden className="text-amber-500" />
+                          {conflicts.data.workload.overDaily.length + conflicts.data.workload.overWeekly.length}{" "}
+                          overload warning
+                          {conflicts.data.workload.overDaily.length + conflicts.data.workload.overWeekly.length === 1
+                            ? ""
+                            : "s"}
+                        </Pill>
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {conflicts.data && conflicts.data.conflicts.length > 0 ? (
+                    <ConflictsDock
+                      key={conflicts.data.conflicts.map((c) => `${c.teacherNameId}:${c.day}:${c.period}`).join("|")}
+                      conflicts={conflicts.data.conflicts}
+                    />
+                  ) : null}
+
+                  {!section ? (
+                    <p className="text-center text-sm text-muted-foreground">
+                      Pick a section to load its generic template grid.
+                    </p>
+                  ) : !activeConfig ? (
+                    <p className="text-sm text-muted-foreground">Loading day configuration…</p>
+                  ) : (
+                    <>
+                      {cellsHook.pendingSlots.length > 0 || cellsHook.saveProgress?.active ? (
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <span className="text-xs text-muted-foreground" aria-live="polite">
+                            {cellsHook.saveProgress?.active
+                              ? "Saving staged slots…"
+                              : `${cellsHook.pendingSlots.length} unsaved slot${cellsHook.pendingSlots.length === 1 ? "" : "s"}`}
+                          </span>
+                          {cellsHook.saveProgress?.active ? (
+                            <Button size="sm" disabled aria-busy className="h-6 gap-1 px-2 text-[11px]">
+                              <Save size={12} aria-hidden />
+                              Saving…
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => void cellsHook.saveAll()}
+                              className="h-6 gap-1 px-2 text-[11px]"
+                            >
+                              <Save size={12} aria-hidden />
+                              Save{cellsHook.pendingSlots.length > 0 ? ` (${cellsHook.pendingSlots.length})` : ""}
+                            </Button>
+                          )}
+                          {!cellsHook.saveProgress?.active ? (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                if (!confirmClearAll) {
+                                  setConfirmClearAll(true);
+                                  setTimeout(() => setConfirmClearAll(false), 4000);
+                                  return;
+                                }
+                                setConfirmClearAll(false);
+                                cellsHook.discardStaged();
+                              }}
+                              title="Discard staged picks and revert to last-saved state"
+                              className="h-6 gap-1 px-2 text-[11px]"
+                            >
+                              <Trash2 size={12} aria-hidden />
+                              {confirmClearAll ? "Confirm?" : "Clear all"}
+                            </Button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      <KanbanBoard
+                        title={
+                          section ? `Timetable — ${section.name}` : "Timetable"
+                        }
+                        icon={
+                          <span className="text-amber-500" aria-hidden>
+                            <CalendarDays size={14} />
+                          </span>
+                        }
+                        count={`${cellsHook.filledCount} slot${cellsHook.filledCount === 1 ? "" : "s"}`}
+                        actions={
+                          cellsHook.isLocked ? (
+                            <span className="flex items-center gap-1.5">
+                              <Pill tone="green" label="Schedule status">
+                                <Check size={12} aria-hidden className="text-green-500" />
+                                Approved
+                              </Pill>
+                              <Button
+                                variant="outline"
+                                className="h-6 gap-1 px-2 text-[11px]"
+                                onClick={() => setConfirmUnlock(true)}
+                                disabled={cellsHook.unlock.isPending}
+                                aria-busy={cellsHook.unlock.isPending || undefined}
+                              >
+                                <Pencil size={12} aria-hidden />
+                                Edit
+                              </Button>
+                            </span>
+                          ) : cellsHook.editMode && cellsHook.serverLocked ? (
+                            <span className="flex items-center gap-1.5">
+                              <Pill tone="amber" label="Schedule status">
+                                <Pencil size={12} aria-hidden />
+                                Editing — still approved
+                              </Pill>
+                              <Button
+                                variant="outline"
+                                className="h-6 gap-1 px-2 text-[11px]"
+                                onClick={cellsHook.cancelEdit}
+                              >
+                                <Undo2 size={12} aria-hidden />
+                                Cancel edit
+                              </Button>
+                            </span>
+                          ) : null
+                        }
+                        ariaLabel="Timetable slots"
+                        boardLabel={
+                          section
+                            ? `${section.name} timetable, ${cellsHook.filledCount} slots, ${
+                                cellsHook.isLocked ? "approved" : cellsHook.editMode ? "editing" : "in progress"
+                              }`
+                            : "Timetable"
+                        }
+                        footer={
+                          cellsHook.isLocked ? (
+                            <p className="px-1 text-xs text-muted-foreground">
+                              Approved timetable — the official record for this term. It is read-only
+                              until you press Edit.
+                            </p>
+                          ) : cellsHook.editMode && cellsHook.serverLocked ? (
+                            <p className="px-1 text-xs text-muted-foreground">
+                              Editing a working draft. The approved slots stay official until you
+                              press Save — Cancel edit leaves the approval untouched.
+                            </p>
+                          ) : null
+                        }
+                      >
+                        <ScheduleTemplateGrid
+                          rows={rows}
+                          cells={cellsHook.cells}
+                          subjects={gradeSubjects.map((s) => ({
+                            id: s.id,
+                            name: s.name,
+                            code: s.code,
+                            category: s.category,
+                          }))}
+                          teachers={catalog.teachers}
+                          subjectTeacherMap={cellsHook.dialogSubjectTeacherMap}
+                          conflictedCells={conflicts.conflictedCells}
+                          stagedKeys={stagedKeys}
+                          isLocked={cellsHook.isLocked}
+                          saving={cellsHook.saveProgress?.active ?? false}
+                          onChange={handleTemplateChange}
+                          onClear={handleTemplateClear}
+                        />
+                      </KanbanBoard>
+                    </>
+                  )}
+                  {cellsHook.splitSubjects.length > 0 ? (
+                    <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
+                      <p className="font-medium">Blocked: subject split across teachers in {section?.name}.</p>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
+                        {cellsHook.splitSubjects.map((s) => (
+                          <li key={s.subjectId}>
+                            {s.subjectName} — {s.teacherNames.join(", ")}. Clear its slots to unify it.
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </section>
+          </>
+        )}
+
+        {view === "config" && configEditorOpen ? (
+          <TemplateFormOverlay open onClose={collapseConfigView} label="Configure school day">
+            {activeConfig ? (
+              <ScheduleConfigKanban
+                config={{ ...activeConfig, workload }}
+                onClose={collapseConfigView}
+                onApply={handleConfigApply}
+                saving={configMutation.isPending}
+              />
+            ) : (
+              <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground shadow-xl">
+                Loading day configuration…
+              </div>
+            )}
+          </TemplateFormOverlay>
+        ) : null}
+
+        {confirmUnlock && section ? (
+          <ScheduleUnlockConfirm
+            section={section}
+            onCancel={() => setConfirmUnlock(false)}
+            onConfirm={() => {
+              // Local-only: entering the edit session does not touch the
+              // approval. The unlock happens when a change is actually saved.
+              cellsHook.beginEdit();
+              setConfirmUnlock(false);
+            }}
+          />
+        ) : null}
+      </div>
     </section>
   );
 }

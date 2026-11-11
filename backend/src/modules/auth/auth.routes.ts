@@ -4,7 +4,7 @@ import { gradeBandGuard } from "../../middleware/gradeBand.js";
 import { validate } from "../../middleware/validate.js";
 import { matchLrn } from "../../lib/lrnMatch.js";
 import { AppError } from "../../lib/errors.js";
-import { REALTIME_TOKEN_TTL_SECONDS, signRealtimeToken } from "../../lib/jwt.js";
+import { REALTIME_TOKEN_TTL_SECONDS, signRealtimeToken, verifyAccess, verifyRefresh } from "../../lib/jwt.js";
 import {
   clearRefreshCookie,
   getRefreshCookie,
@@ -15,6 +15,9 @@ import type { GradeLevel } from "../../generated/prisma/client.js";
 import {
   approveSchema,
   changePasswordSchema,
+  googleCompleteSchema,
+  googleCompleteStaffSchema,
+  googleExchangeSchema,
   loginSchema,
   pendingAccountsQuerySchema,
   registerSchema,
@@ -26,21 +29,42 @@ import {
   refreshTokens,
   register,
 } from "../../services/auth/session.service.js";
+import {
+  completeGoogleSignup,
+  completeGoogleStaffSignup,
+  exchangeGoogleSession,
+  type GooglePortalRole,
+} from "../../services/auth/google.service.js";
 import { approveAccount, listPending, rejectAccount } from "../../services/auth/approval.service.js";
+import { clearPresence, clientIp, recordLogout } from "../../services/presence.service.js";
 
 const router = Router();
 
 router.post("/register/:kind", validate("body", registerSchema), async (req, res, next) => {
   try {
-    const { email, password, fullName, role, contactNumber, lrn } = req.body as {
-      email: string;
-      password: string;
-      fullName: string;
-      role: "student" | "parent" | "subject_teacher" | "adviser";
-      contactNumber?: string;
-      lrn?: string;
-    };
-    const user = await register({ email, password, fullName, role, contactNumber, lrn });
+    const { email, password, fullName, suffix, role, contactNumber, lrn, employeeId, department } =
+      req.body as {
+        email: string;
+        password: string;
+        fullName: string;
+        suffix?: string;
+        role: "student" | "parent" | "subject_teacher" | "adviser";
+        contactNumber?: string;
+        lrn?: string;
+        employeeId?: string;
+        department?: string;
+      };
+    const user = await register({
+      email,
+      password,
+      fullName,
+      suffix,
+      role,
+      contactNumber,
+      lrn,
+      employeeId,
+      department,
+    });
     res.status(201).json(user);
   } catch (e) {
     next(e);
@@ -69,9 +93,14 @@ router.post("/login", validate("body", loginSchema), async (req, res, next) => {
     const { email, password, role } = req.body as {
       email: string;
       password: string;
-      role: "student" | "staff" | "parent";
+      role: "student" | "staff" | "parent" | "admin";
     };
-    const { accessToken, refreshToken, role: userRole } = await login({ email, password, role });
+    const { accessToken, refreshToken, role: userRole } = await login({
+      email,
+      password,
+      role,
+      ip: clientIp(req),
+    });
 
     setRefreshCookie(res, refreshToken, { secure: isSecureContext() });
     res.json({ accessToken, role: userRole });
@@ -79,6 +108,69 @@ router.post("/login", validate("body", loginSchema), async (req, res, next) => {
     next(e);
   }
 });
+
+// Google sign-in/sign-up: the browser completes OAuth with Supabase Auth, then
+// exchanges the Supabase access token for the app's own session here.
+router.post("/google/exchange", validate("body", googleExchangeSchema), async (req, res, next) => {
+  try {
+    const { supabaseAccessToken, role, intent } = req.body as {
+      supabaseAccessToken: string;
+      role: GooglePortalRole;
+      intent: "login" | "signup";
+    };
+    const result = await exchangeGoogleSession(supabaseAccessToken, role, intent, clientIp(req));
+    if (result.status === "active") {
+      setRefreshCookie(res, result.refreshToken, { secure: isSecureContext() });
+      res.json({ accessToken: result.accessToken, role: result.role });
+      return;
+    }
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post("/google/complete", validate("body", googleCompleteSchema), async (req, res, next) => {
+  try {
+    const { supabaseAccessToken, lrn, contactNumber } = req.body as {
+      supabaseAccessToken: string;
+      lrn: string;
+      contactNumber?: string;
+    };
+    res.json(await completeGoogleSignup(supabaseAccessToken, { lrn, contactNumber }));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post(
+  "/google/complete-staff",
+  validate("body", googleCompleteStaffSchema),
+  async (req, res, next) => {
+    try {
+      const { supabaseAccessToken, fullName, suffix, contactNumber, employeeId, department } =
+        req.body as {
+          supabaseAccessToken: string;
+          fullName: string;
+          suffix?: string;
+          contactNumber?: string;
+          employeeId?: string;
+          department?: string;
+        };
+      res.json(
+        await completeGoogleStaffSignup(supabaseAccessToken, {
+          fullName,
+          suffix,
+          contactNumber,
+          employeeId,
+          department,
+        }),
+      );
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 router.post(
   "/change-password",
@@ -101,7 +193,7 @@ router.post("/refresh", async (req, res, next) => {
   try {
     const token = getRefreshCookie(req);
     if (!token) throw new AppError(401, "INVALID_REFRESH", "Invalid refresh token");
-    const { accessToken, refreshToken } = await refreshTokens(token);
+    const { accessToken, refreshToken } = await refreshTokens(token, clientIp(req));
 
     setRefreshCookie(res, refreshToken, { secure: isSecureContext() });
     res.json({ accessToken });
@@ -110,9 +202,35 @@ router.post("/refresh", async (req, res, next) => {
   }
 });
 
-router.post("/logout", async (_req, res, next) => {
+router.post("/logout", async (req, res, next) => {
   try {
     clearRefreshCookie(res, { secure: isSecureContext() });
+    // Remove the user from the admin presence globe right away instead of
+    // waiting for the 5-minute activity window to lapse. The refresh cookie
+    // identifies them even when the access token has already expired.
+    let userId: string | null = null;
+    const refresh = getRefreshCookie(req);
+    if (refresh) {
+      try {
+        userId = verifyRefresh(refresh).sub;
+      } catch {
+        // Expired/invalid refresh cookie — try the access token below.
+      }
+    }
+    if (!userId) {
+      const header = req.headers.authorization;
+      if (header?.startsWith("Bearer ")) {
+        try {
+          userId = verifyAccess(header.slice(7)).sub;
+        } catch {
+          // Nothing identifiable left; the cookie is still cleared.
+        }
+      }
+    }
+    if (userId) {
+      clearPresence(userId);
+      void recordLogout(userId, clientIp(req));
+    }
     res.json({ loggedOut: true });
   } catch (e) {
     next(e);
@@ -125,7 +243,7 @@ router.post("/logout", async (_req, res, next) => {
 router.get("/realtime-token", requireAuth, (req, res, next) => {
   try {
     res.json({
-      token: signRealtimeToken(req.user!.id),
+      token: signRealtimeToken(req.user!.id, req.user!.role),
       expiresIn: REALTIME_TOKEN_TTL_SECONDS,
     });
   } catch (e) {
@@ -137,7 +255,9 @@ router.post(
   "/approve/:userId",
   requireAuth,
   requireRole("record_keeper", "registrar"),
-  gradeBandGuard(async (req) => String(req.params.userId)),
+  // Parents have no LRN/roster entry, so the band check only applies to
+  // students; the approval service itself provisions student profiles.
+  gradeBandGuard(async (req) => String(req.params.userId), { allowNonStudent: true }),
   validate("params", approveSchema),
   async (req, res, next) => {
     try {

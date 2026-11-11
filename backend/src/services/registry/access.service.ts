@@ -2,6 +2,11 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 import type { RegistryContext } from "./registry.types.js";
 
@@ -93,6 +98,7 @@ export async function listAccessRequests(query: AccessListQuery) {
   });
 
   const sectionIds = [...new Set(rows.map((r) => r.sectionId).filter((id): id is string => !!id))];
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [allStudents, allRoster] =
     sectionIds.length > 0
       ? await Promise.all([
@@ -100,6 +106,7 @@ export async function listAccessRequests(query: AccessListQuery) {
             where: {
               sectionId: { in: sectionIds },
               ...(scope === "request" ? { gradeLevel: { in: band } } : {}),
+              ...excludeArchivedProfiles(archivedLearners),
             },
             select: {
               sectionId: true,
@@ -110,7 +117,7 @@ export async function listAccessRequests(query: AccessListQuery) {
             orderBy: { lrn: "asc" },
           }),
           prisma.studentRoster.findMany({
-            where: { sectionId: { in: sectionIds } },
+            where: { sectionId: { in: sectionIds }, ...excludeArchivedRosters(archivedLearners) },
             select: { sectionId: true, lrn: true, fullName: true, mascot: true },
             orderBy: { lrn: "asc" },
           }),
@@ -243,17 +250,21 @@ async function fetchAccessMatch(
     throw new AppError(403, "FORBIDDEN", "Not in desk grade band");
   }
   const picked = new Set(request.requestedLrns ?? []);
+  const archivedLearners = await archivedAdvisoryLearnerIds();
 
   const [students, rosterEntries] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: enforceBand
-        ? { sectionId: request.sectionId, gradeLevel: { in: band } }
-        : { sectionId: request.sectionId, gradeLevel: request.gradeLevel },
+      where: {
+        ...(enforceBand
+          ? { sectionId: request.sectionId, gradeLevel: { in: band } }
+          : { sectionId: request.sectionId, gradeLevel: request.gradeLevel }),
+        ...excludeArchivedProfiles(archivedLearners),
+      },
       select: { lrn: true, user: { select: { fullName: true } } },
       orderBy: { lrn: "asc" },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId: request.sectionId },
+      where: { sectionId: request.sectionId, ...excludeArchivedRosters(archivedLearners) },
       select: { lrn: true, fullName: true },
       orderBy: { lrn: "asc" },
     }),

@@ -2,12 +2,16 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { CalendarDays } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
-import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
-import { ScheduleTable, type ScheduleSection } from "./components/schedule-table";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import {
+  SectionScheduleTable as ScheduleTable,
+  type ScheduleSection,
+} from "@/components/schedule/section-schedule-table";
 import { ScheduleRail } from "./components/schedule-rail";
+import { sectionPath } from "./components/section-path";
+import { ScheduleSkeleton } from "./components/schedule-skeleton";
 import { ScheduleReviewOverlay } from "./components/schedule-review-overlay";
 import page from "./components/schedule.module.css";
 
@@ -34,30 +38,29 @@ export default function PrincipalSchedulePage() {
   return (
     <section className={page.page} aria-busy={loading || undefined}>
       {sectionsQuery.isPending ? (
-        <div className="mx-auto w-full max-w-5xl" aria-busy="true" aria-label="Loading sections">
-          <div className="flex flex-col gap-3 rounded-xl border border-border p-2.5">
-            <div className="h-4 w-40 rounded bg-muted" />
-            <div className="h-40 rounded-lg bg-muted/60" />
-          </div>
-        </div>
+        <ScheduleSkeleton />
       ) : sectionsQuery.isError ? (
         <p role="alert" className="text-sm text-destructive">
           Could not load sections.
         </p>
       ) : isEmpty ? (
-        <PrincipalEmptyCard
-          icon={CalendarDays}
-          title="No sections yet"
-          hint="Sections for grades 7–12 will appear here."
-          centered
-        />
-      ) : (
-        <div className={page.layout}>
-          <div className={page.stack}>
-            <ScheduleTable sections={sections} onReview={setReviewSection} />
-          </div>
-          <ScheduleRail sections={sections} />
+        // Empty board reads as a plain insight callout centered in the page —
+        // same treatment as the academics section board and assign board.
+        <div className={page.emptyCallout}>
+          <InsightCallout role="status">
+            No sections yet for this school year. Sections for grades 7–12 will appear
+            here once created.
+          </InsightCallout>
         </div>
+      ) : (
+        <>
+          <div className={page.topBar}>
+            <ScheduleRail sections={sections} />
+          </div>
+          <div className={page.stack}>
+            <ScheduleTable sections={sections} onReview={setReviewSection} hrefFor={sectionPath} />
+          </div>
+        </>
       )}
       <ScheduleReviewOverlay section={reviewSection} onClose={() => setReviewSection(null)} />
     </section>

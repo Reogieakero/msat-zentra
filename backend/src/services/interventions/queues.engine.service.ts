@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
+import { loadSubjectMeetups } from "../attendance/sections.service.js";
 import { evaluateRisk, evaluateRosterRisk, recomputeRisk, recomputeRosterRisk } from "../risk.js";
 
 export interface EngineQuery {
@@ -20,7 +21,20 @@ export async function getEngineBreakdown(query: EngineQuery) {
 
   const gradeWhere = studentId ? { studentId, termId } : { rosterId: rosterId!, termId };
   const attWhere = studentId ? { studentId, termId } : { rosterId: rosterId!, termId };
-  const [grades, attendance, anecdotals, snapshot, flagged] = await Promise.all([
+  const sectionSource = studentId
+    ? prisma.studentProfile
+        .findUnique({ where: { userId: studentId }, select: { sectionId: true } })
+        .then((p) => ({ sectionId: p?.sectionId ?? null, learnerStart: null as Date | null }))
+    : prisma.studentRoster
+        .findUnique({
+          where: { id: rosterId! },
+          select: { sectionId: true, learnerType: true, createdAt: true },
+        })
+        .then((r) => ({
+          sectionId: r?.sectionId ?? null,
+          learnerStart: r?.learnerType === "transferee" ? r.createdAt : null,
+        }));
+  const [grades, attendance, anecdotals, snapshot, flagged, section] = await Promise.all([
     prisma.finalGrade.findMany({
       where: gradeWhere,
       select: {
@@ -35,11 +49,15 @@ export async function getEngineBreakdown(query: EngineQuery) {
       select: {
         status: true,
         subjectId: true,
+        date: true,
+        slot: true,
         subject: { select: { name: true, code: true } },
       },
     }),
     prisma.anecdotalRecord.findMany({
-      where: studentId ? { studentId, termId } : { rosterId: rosterId!, termId },
+      where: studentId
+        ? { studentId, termId, deletedAt: null }
+        : { rosterId: rosterId!, termId, deletedAt: null },
       select: { category: true, observationDatetime: true },
       orderBy: { observationDatetime: "desc" },
       take: 5,
@@ -54,11 +72,61 @@ export async function getEngineBreakdown(query: EngineQuery) {
       orderBy: { id: "desc" },
       select: { riskLevelAtFlag: true },
     }),
+    sectionSource,
   ]);
 
   const present = attendance.filter((a) => a.status === "present").length;
   const subjectEra = attendance.some((a) => a.subjectId !== null);
-  const rate = attendance.length > 0 ? present / attendance.length : null;
+
+  // Attendance is rated on scheduled meetups — the same denominator the teacher
+  // advisory card and the risk engine use (`loadSubjectMeetups`). A learner with
+  // no marks yet therefore reads "0 of N" (the reason the engine flags them)
+  // instead of "—", which made this card disagree with the advisory desk.
+  const meetupPlan = section.sectionId
+    ? await loadSubjectMeetups(section.sectionId, termId)
+    : null;
+  let meetupPresent = 0;
+  let meetupTotal = 0;
+  if (meetupPlan?.termStarted && meetupPlan.subjects.size > 0) {
+    const presentSlots = new Map<string, Map<string, Set<number>>>();
+    for (const a of attendance) {
+      if (!a.subjectId || a.status !== "present") continue;
+      let byDate = presentSlots.get(a.subjectId);
+      if (!byDate) {
+        byDate = new Map();
+        presentSlots.set(a.subjectId, byDate);
+      }
+      const dateKey = a.date.toISOString().slice(0, 10);
+      let slots = byDate.get(dateKey);
+      if (!slots) {
+        slots = new Set();
+        byDate.set(dateKey, slots);
+      }
+      slots.add(a.slot);
+    }
+    const enlistStr = section.learnerStart
+      ? section.learnerStart.toISOString().slice(0, 10)
+      : null;
+    for (const subjectId of meetupPlan.subjects.keys()) {
+      const scheduled = meetupPlan.scheduledCountBySubjectDate.get(subjectId);
+      const counts =
+        scheduled && scheduled.size > 0
+          ? scheduled
+          : meetupPlan.recordedCountBySubjectDate.get(subjectId);
+      if (!counts) continue;
+      for (const [date, count] of counts) {
+        if (enlistStr && date <= enlistStr) continue;
+        meetupTotal += count;
+        meetupPresent += Math.min(count, presentSlots.get(subjectId)?.get(date)?.size ?? 0);
+      }
+    }
+  }
+  const metered = meetupTotal > 0;
+  const rate = metered
+    ? meetupPresent / meetupTotal
+    : attendance.length > 0
+      ? present / attendance.length
+      : null;
 
   const raws = grades
     .map((g) => g.computedAverage)
@@ -137,8 +205,8 @@ export async function getEngineBreakdown(query: EngineQuery) {
     },
     attendance: {
       rate,
-      present,
-      total: attendance.length,
+      present: metered ? meetupPresent : present,
+      total: metered ? meetupTotal : attendance.length,
       subjectEra,
       threshold: 0.8,
       bySubject,

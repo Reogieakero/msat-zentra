@@ -29,6 +29,8 @@ export const CACHE_TAGS = {
 /** Short TTLs for live dashboards/counts; long for static lookups. */
 export const CACHE_TTLS = {
   dashboard: 15,
+  /** Sidebar "new activity" queues — polled every 5s by the desks. */
+  counts: 4,
   list: 30,
   semiStatic: 300,
   lookup: 3600,

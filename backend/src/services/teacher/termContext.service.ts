@@ -332,8 +332,10 @@ export async function getTermContext(ctx: TeacherContext): Promise<TermContextVi
 
   const classDiff = diffRefs(currentClasses, previousClasses);
   const changedSinceAck = !!acknowledged && acknowledged.rosterFingerprint !== fingerprint;
-  const needsConfirmation =
-    baseline === "previous-term" && (!acknowledged || changedSinceAck);
+  // One prompt per term: once the adviser has answered, later roster changes
+  // (e.g. a newly enlisted learner) never reopen it — the roster is edited on
+  // the advisory list instead.
+  const needsConfirmation = baseline === "previous-term" && !acknowledged;
 
   return {
     term: termView(term),
@@ -350,11 +352,7 @@ export async function getTermContext(ctx: TeacherContext): Promise<TermContextVi
     acknowledgedAt: acknowledged ? iso(acknowledged.acknowledgedAt) : null,
     changedSinceAck,
     needsConfirmation,
-    reason: needsConfirmation
-      ? changedSinceAck
-        ? "roster-changed"
-        : "first-visit"
-      : null,
+    reason: needsConfirmation ? "first-visit" : null,
   };
 }
 

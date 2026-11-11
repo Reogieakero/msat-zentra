@@ -3,6 +3,11 @@ import { rosterCountsByGrade } from "../enrollment.js";
 import { buildDayAxis, phTodayKey } from "../attendance.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 import { GRADE_LABEL, GRADE_ORDER } from "../../modules/attendance/attendance.repository.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+} from "../../lib/learnerVisibility.js";
 
 export type HeatSession = "AM" | "PM";
 
@@ -17,9 +22,10 @@ export interface HeatmapQuery {
 export async function getHeatmap(query: HeatmapQuery) {
   const { session, statusFilter, termId, startDate, endDate } = query;
   const where = { session, ...(termId ? { termId } : {}) };
+  const archivedLearners = await archivedAdvisoryLearnerIds();
 
   const records = await prisma.attendanceRecord.findMany({
-    where,
+    where: { ...where, ...excludeArchivedLearnerRows(archivedLearners) },
     select: {
       date: true,
       status: true,
@@ -33,6 +39,7 @@ export async function getHeatmap(query: HeatmapQuery) {
   const [enrollCounts, rosterByGrade] = await Promise.all([
     prisma.studentProfile.groupBy({
       by: ["gradeLevel"],
+      where: excludeArchivedProfiles(archivedLearners),
       _count: { _all: true },
     }),
     rosterCountsByGrade([...GRADE_ORDER] as GradeLevel[]),

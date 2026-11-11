@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Check, X } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
@@ -16,7 +16,7 @@ import {
   sectionCardStatus,
 } from "@/components/schedule/SectionScheduleCard";
 import { scheduleTone } from "@/lib/labels/status-tone";
-import type { ScheduleSection } from "./schedule-table";
+import type { ScheduleSection } from "@/components/schedule/section-schedule-table";
 import styles from "./schedule.module.css";
 
 function errorMessage(err: unknown): string {
@@ -141,10 +141,11 @@ export function ScheduleReviewOverlay({
             <Button
               variant="destructive"
               size="sm"
-              className="h-6 px-2 text-xs"
+              className="h-6 border-transparent bg-red-600 px-2 text-xs text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
               onClick={() => submit("reject")}
               disabled={submitted === 0}
             >
+              <X size={12} aria-hidden />
               <span aria-live="polite">Reject</span>
             </Button>
             <Button
@@ -153,6 +154,7 @@ export function ScheduleReviewOverlay({
               onClick={() => submit("approve")}
               disabled={submitted === 0}
             >
+              <Check size={12} aria-hidden />
               <span aria-live="polite">Approve</span>
             </Button>
           </div>

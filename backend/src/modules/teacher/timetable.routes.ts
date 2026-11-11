@@ -286,7 +286,7 @@ router.post(
     try {
       const { fullName } = req.body as { fullName: string };
       const teacher = await createTeacherName(ctxOf(req), fullName);
-      await invalidateTags(["teacher", "schedule", "academics", "principal"]);
+      await invalidateTags(["teacher", "schedule", "academics", "principal", "directory"]);
       res.status(201).json(teacher);
     } catch (e) {
       next(e);
@@ -301,7 +301,7 @@ router.delete(
   async (req, res, next) => {
     try {
       const result = await deleteTeacherName(ctxOf(req), req.params.id as string);
-      await invalidateTags(["teacher", "schedule", "academics", "principal"]);
+      await invalidateTags(["teacher", "schedule", "academics", "principal", "directory"]);
       res.json(result);
     } catch (e) {
       next(e);
@@ -316,7 +316,7 @@ router.delete(
   async (req, res, next) => {
     try {
       const result = await clearTeacherNames(await termCtxOf(req));
-      await invalidateTags(["teacher", "schedule", "academics", "principal"]);
+      await invalidateTags(["teacher", "schedule", "academics", "principal", "directory"]);
       res.json(result);
     } catch (e) {
       next(e);

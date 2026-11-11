@@ -27,6 +27,20 @@ const envSchema = z.object({
     .default("true")
     .transform((v) => v === "true"),
   GRADE_FLAG_ESCALATION_DAYS: z.coerce.number().default(7),
+  // Proxy hops to trust for req.ip (presence geolocation). Defaults to 1 in
+  // production so a reverse proxy's X-Forwarded-For is honoured.
+  TRUST_PROXY: z.string().min(1).optional(),
+  // Base64 32-byte key for AES-256-GCM contact-number encryption.
+  CONTACT_ENCRYPTION_KEY: z.string().min(1).optional(),
+}).superRefine((value, ctx) => {
+  // Never ship to production with plaintext contact numbers.
+  if (value.NODE_ENV === "production" && !value.CONTACT_ENCRYPTION_KEY) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["CONTACT_ENCRYPTION_KEY"],
+      message: "CONTACT_ENCRYPTION_KEY is required in production",
+    });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

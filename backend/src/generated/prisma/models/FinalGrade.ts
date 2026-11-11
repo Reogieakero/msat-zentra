@@ -775,14 +775,6 @@ export type FinalGradeUncheckedUpdateManyWithoutSubjectNestedInput = {
   deleteMany?: Prisma.FinalGradeScalarWhereInput | Prisma.FinalGradeScalarWhereInput[]
 }
 
-export type NullableFloatFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type NullableEnumRemarksFieldUpdateOperationsInput = {
   set?: $Enums.Remarks | null
 }

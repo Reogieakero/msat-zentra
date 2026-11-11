@@ -48,6 +48,8 @@ export interface BamaRecordCard {
   attendanceSummary: string;
   observationDateTime: string;
   filedOn: string;
+  /** Preview belongs to an edit of an existing record (chat edit mode). */
+  editing?: boolean;
 }
 
 export interface Sf10RequestCard {

@@ -1,5 +1,10 @@
 import { prisma } from "../lib/prisma.js";
 import { Prisma, type GradeLevel } from "../generated/prisma/client.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../lib/learnerVisibility.js";
 
 async function registeredLrns(lrns: string[]): Promise<Set<string>> {
   if (lrns.length === 0) return new Set();
@@ -24,6 +29,11 @@ export async function rosterCountsBySection(
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
   if (sectionIds.length === 0) return counts;
+  const archived = await archivedAdvisoryLearnerIds();
+  const archivedClause =
+    archived.rosterIds.length > 0
+      ? Prisma.sql`AND r."id" NOT IN (${Prisma.join(archived.rosterIds)})`
+      : Prisma.empty;
   // One round-trip instead of activeYear → roster → registered-LRN lookups.
   // Every serial query against the remote pooler costs ~0.5s and this helper
   // sits on the principal/adviser heatmap and risk paths.
@@ -39,6 +49,7 @@ export async function rosterCountsBySection(
       FROM "StudentRoster" r
       WHERE r."sectionId" IN (${Prisma.join(sectionIds)})
         AND ${yearClause}
+        ${archivedClause}
         AND NOT EXISTS (SELECT 1 FROM "StudentProfile" p WHERE p."lrn" = r."lrn")
       GROUP BY r."sectionId"
     `,
@@ -53,11 +64,12 @@ export async function sectionHeadcounts(
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>(sectionIds.map((id) => [id, 0]));
   if (sectionIds.length === 0) return counts;
+  const archived = await archivedAdvisoryLearnerIds();
   const [profileGroups, rosterCounts] = await Promise.all([
     preloadedProfileGroups ??
       prisma.studentProfile.groupBy({
         by: ["sectionId"],
-        where: { sectionId: { in: sectionIds } },
+        where: { sectionId: { in: sectionIds }, ...excludeArchivedProfiles(archived) },
         _count: { _all: true },
       }),
     rosterCountsBySection(sectionIds),
@@ -83,27 +95,30 @@ export async function sectionEnrollmentCounts(
   const counts = new Map<string, number>(sectionIds.map((id) => [id, 0]));
   if (sectionIds.length === 0) return counts;
 
-  const [profiles, rosters] = await Promise.all([
+  const [archived, profiles, rosters] = await Promise.all([
+    archivedAdvisoryLearnerIds(),
     prisma.studentProfile.findMany({
       where: { sectionId: { in: sectionIds } },
-      select: { sectionId: true, lrn: true },
+      select: { userId: true, sectionId: true, lrn: true },
     }),
     prisma.studentRoster.findMany({
       where: { sectionId: { in: sectionIds } },
-      select: { sectionId: true, lrn: true },
+      select: { id: true, sectionId: true, lrn: true },
     }),
   ]);
+  const hiddenProfiles = new Set(archived.studentIds);
+  const hiddenRosters = new Set(archived.rosterIds);
 
   const registeredBySection = new Map<string, Set<string>>();
   for (const p of profiles) {
-    if (!p.sectionId) continue;
+    if (!p.sectionId || hiddenProfiles.has(p.userId)) continue;
     const set = registeredBySection.get(p.sectionId) ?? new Set<string>();
     set.add(p.lrn);
     registeredBySection.set(p.sectionId, set);
     counts.set(p.sectionId, (counts.get(p.sectionId) ?? 0) + 1);
   }
   for (const r of rosters) {
-    if (!r.sectionId) continue;
+    if (!r.sectionId || hiddenRosters.has(r.id)) continue;
     if (registeredBySection.get(r.sectionId)?.has(r.lrn)) continue;
     counts.set(r.sectionId, (counts.get(r.sectionId) ?? 0) + 1);
   }
@@ -117,10 +132,12 @@ export async function rosterCountsByGrade(
   const counts = new Map<GradeLevel, number>();
   if (grades.length === 0) return counts;
   const yearId = schoolYearId === undefined ? await activeYearId() : schoolYearId;
+  const archived = await archivedAdvisoryLearnerIds();
   const rows = await prisma.studentRoster.findMany({
     where: {
       gradeLevel: { in: grades },
       ...(yearId ? { schoolYearId: yearId } : {}),
+      ...excludeArchivedRosters(archived),
     },
     select: { lrn: true, gradeLevel: true },
   });
@@ -133,8 +150,9 @@ export async function rosterCountsByGrade(
 
 export async function totalRosterHeadcount(schoolYearId?: string | null): Promise<number> {
   const yearId = schoolYearId === undefined ? await activeYearId() : schoolYearId;
+  const archived = await archivedAdvisoryLearnerIds();
   const rows = await prisma.studentRoster.findMany({
-    where: yearId ? { schoolYearId: yearId } : {},
+    where: { ...(yearId ? { schoolYearId: yearId } : {}), ...excludeArchivedRosters(archived) },
     select: { lrn: true },
   });
   const registered = await registeredLrns(rows.map((r) => r.lrn));

@@ -36,12 +36,24 @@ import termContextRoutes from "./modules/teacher/term-context.routes.js";
 import guidanceRoutes from "./modules/guidance/guidance.routes.js";
 import nurseRoutes from "./modules/nurse/nurse.routes.js";
 import principalRoutes from "./modules/principal/principal.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
 import sessionsRoutes from "./modules/sessions/sessions.routes.js";
 import studentRoutes from "./modules/student/modules.routes.js";
 
 export function createApp() {
   const env = getEnv();
   const app = express();
+  // Presence geolocation needs the real client IP when the API sits behind a
+  // reverse proxy. Only trust forwarded headers when explicitly configured (or
+  // in production, where the deployment is expected to be proxied).
+  if (env.TRUST_PROXY) {
+    app.set(
+      "trust proxy",
+      /^\d+$/.test(env.TRUST_PROXY) ? Number(env.TRUST_PROXY) : env.TRUST_PROXY,
+    );
+  } else if (env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
   app.use(helmet());
   app.use(cors({ origin: [env.WEB_ORIGIN, env.MOBILE_ORIGIN], credentials: true }));
   if (env.NODE_ENV !== "test") {
@@ -99,6 +111,7 @@ app.use("/api/teacher", termContextRoutes);
   app.use("/api/guidance", guidanceRoutes);
   app.use("/api/nurse", nurseRoutes);
   app.use("/api/principal", principalRoutes);
+  app.use("/api/admin", adminRoutes);
   app.use("/api/my-sessions", sessionsRoutes);
   app.use("/api/student", studentRoutes);
 

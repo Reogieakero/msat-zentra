@@ -1,0 +1,36 @@
+/* Empty page — the shared insight callout centered in the space below the
+   shell header. The centering height comes from the viewport minus the topbar
+   (3rem desktop / 6rem mobile tab bar) and the main padding (1rem each side);
+   `flex: 1` keeps it full-width inside flex-row desk layouts. Column direction
+   stacks the optional action under the callout. */
+.wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: calc(100vh - 5rem);
+  padding: 1.5rem 0;
+}
+
+/* Parent already owns the height — no viewport min-height, no scroll. */
+.fit {
+  min-height: 0;
+}
+
+.wrap > p {
+  text-align: center;
+}
+
+.action {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 1023px) {
+  .wrap {
+    min-height: calc(100vh - 8rem);
+  }
+}

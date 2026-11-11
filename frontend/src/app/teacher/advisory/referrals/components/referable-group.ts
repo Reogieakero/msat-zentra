@@ -6,6 +6,8 @@ export interface ReferableRecord {
   studentName: string;
   section: string;
   lrn: string;
+  /** Persisted sprite mascot; null falls back to the derived one. */
+  mascot?: string | null;
   category: string;
   excerpt: string;
   hasReferral?: boolean;
@@ -15,6 +17,7 @@ export interface StudentOption {
   studentName: string;
   lrn: string;
   section: string;
+  mascot?: string | null;
   records: ReferableRecord[];
 }
 export function groupReferable(records: ReferableRecord[]): StudentOption[] {
@@ -29,6 +32,7 @@ export function groupReferable(records: ReferableRecord[]): StudentOption[] {
         studentName: r.studentName,
         lrn: r.lrn,
         section: r.section,
+        mascot: r.mascot ?? null,
         records: [],
       };
       map.set(key, entry);

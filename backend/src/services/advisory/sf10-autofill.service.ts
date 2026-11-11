@@ -2,6 +2,11 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { GRADE_BAND_7_10 } from "../../lib/roles.js";
 import { fanoutToRole } from "../../lib/notify.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 import { normalizeSubjectName } from "../sf10/subject-aliases.js";
 import {
@@ -217,9 +222,10 @@ async function loadContext(
     throw new AppError(403, "FORBIDDEN", "You can only auto-fill your own advisory section");
   }
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, roster, terms, grants] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         lrn: true,
@@ -230,7 +236,7 @@ async function loadContext(
       orderBy: { lrn: "asc" },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, lrn: true, fullName: true, mascot: true, gradeLevel: true },
       orderBy: { lrn: "asc" },
     }),

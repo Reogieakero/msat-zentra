@@ -1,10 +1,15 @@
 import { prisma } from "../../lib/prisma.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 import { meetsAcademicExcellenceAward } from "../../services/grading.js";
-import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../../services/risk.js";
+import { attendanceTotalFor, computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import { mascotFor } from "../../services/mascot.js";
 import { gradeToNumber as gradeNumber } from "../../lib/grades.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
@@ -80,6 +85,7 @@ export async function getLiveHonorRoll(scope?: {
     resolvedYearId = activeYear?.id ?? null;
   }
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const sections = await prisma.section.findMany({
     where: {
       ...(resolvedYearId ? { schoolYearId: resolvedYearId } : {}),
@@ -99,6 +105,7 @@ export async function getLiveHonorRoll(scope?: {
         select: { staffProfile: { select: { shareStudentData: true } } },
       },
       students: {
+        where: excludeArchivedProfiles(archivedLearners),
         select: {
           userId: true,
           lrn: true,
@@ -107,6 +114,7 @@ export async function getLiveHonorRoll(scope?: {
         },
       },
       rosterEntries: {
+        where: excludeArchivedRosters(archivedLearners),
         select: { id: true, lrn: true, fullName: true, mascot: true },
       },
     },
@@ -164,6 +172,7 @@ export async function getLiveHonorRoll(scope?: {
     prisma.anecdotalRecord.findMany({
       where: {
         termId,
+        deletedAt: null,
         OR: [
           ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
           ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
@@ -257,12 +266,13 @@ export async function getLiveHonorRoll(scope?: {
     const meta = sectionOf.get(key);
     const identity = nameOf.get(key);
     if (!meta || !identity) continue;
+    const rosterId = key.startsWith("roster:") ? key.slice("roster:".length) : null;
     const liveLevel = levelFromFlags(
       computeRiskFactors({
         finalGrades: [],
         rawAverages: subjects.map((s) => s.average),
         attendance: attendanceByKey.get(key) ?? [],
-        attendanceTotal: sectionTotals.get(meta.sectionId),
+        attendanceTotal: attendanceTotalFor(sectionTotals, meta.sectionId, rosterId),
         anecdotalCount: anecdotalByKey.get(key) ?? 0,
         enrolled: headcounts.get(meta.sectionId) ?? 0,
       }),

@@ -5,6 +5,7 @@ import alertsRoutes from "./alerts.routes.js";
 import anecdotalRoutes from "./anecdotal.routes.js";
 import casesRoutes from "./cases.routes.js";
 import insightsRoutes from "./insights.routes.js";
+import navCountsRoutes from "./navCounts.routes.js";
 import overviewRoutes from "./overview.routes.js";
 import scheduleRoutes from "./schedule.routes.js";
 import settingsRoutes from "./settings.routes.js";
@@ -12,6 +13,7 @@ import settingsRoutes from "./settings.routes.js";
 const router = Router();
 
 router.use(overviewRoutes);
+router.use(navCountsRoutes);
 router.use(insightsRoutes);
 router.use(alertCasesRoutes);
 router.use(alertsRoutes);

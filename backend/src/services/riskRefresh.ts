@@ -12,7 +12,7 @@ export async function refreshRiskSnapshots(): Promise<{ profiles: number; roster
   if (!termId) return { profiles: 0, rosters: 0, pruned: 0 };
   const freshSince = new Date(Date.now() - SNAPSHOT_FRESH_MS);
 
-  const [staleProfiles, staleRosters] = await Promise.all([
+  const [staleProfiles, staleRosters, newProfiles, newRosters] = await Promise.all([
     prisma.studentProfile.findMany({
       where: {
         section: { schoolYear: { isActive: true } },
@@ -29,24 +29,54 @@ export async function refreshRiskSnapshots(): Promise<{ profiles: number; roster
       select: { id: true },
       take: BATCH_CAP,
     }),
+    // Learners with no snapshot at all this term. The engine only writes on a
+    // flag flip, so a learner whose risk never changed would stay invisible to
+    // the term's charts — force one baseline row per learner per term.
+    prisma.studentProfile.findMany({
+      where: {
+        section: { schoolYear: { isActive: true } },
+        riskSnapshots: { none: { termId } },
+      },
+      select: { userId: true },
+      take: BATCH_CAP,
+    }),
+    prisma.studentRoster.findMany({
+      where: {
+        schoolYear: { isActive: true },
+        riskSnapshots: { none: { termId } },
+      },
+      select: { id: true },
+      take: BATCH_CAP,
+    }),
   ]);
 
-  let profiles = 0;
+  const profileWork = new Map<string, boolean>();
+  for (const p of newProfiles) profileWork.set(p.userId, true);
   for (const p of staleProfiles) {
+    if (!profileWork.has(p.userId)) profileWork.set(p.userId, false);
+  }
+  const rosterWork = new Map<string, boolean>();
+  for (const r of newRosters) rosterWork.set(r.id, true);
+  for (const r of staleRosters) {
+    if (!rosterWork.has(r.id)) rosterWork.set(r.id, false);
+  }
+
+  let profiles = 0;
+  for (const [userId, forceSnapshot] of profileWork) {
     try {
-      await recomputeRisk(p.userId, termId);
+      await recomputeRisk(userId, termId, { forceSnapshot });
       profiles += 1;
     } catch (err) {
-      logger.warn({ err, studentId: p.userId }, "Risk refresh failed for profile");
+      logger.warn({ err, studentId: userId }, "Risk refresh failed for profile");
     }
   }
   let rosters = 0;
-  for (const r of staleRosters) {
+  for (const [rosterId, forceSnapshot] of rosterWork) {
     try {
-      await recomputeRosterRisk(r.id, termId);
+      await recomputeRosterRisk(rosterId, termId, { forceSnapshot });
       rosters += 1;
     } catch (err) {
-      logger.warn({ err, rosterId: r.id }, "Risk refresh failed for roster entry");
+      logger.warn({ err, rosterId }, "Risk refresh failed for roster entry");
     }
   }
 

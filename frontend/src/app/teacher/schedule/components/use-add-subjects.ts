@@ -1,9 +1,11 @@
 "use client";
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { toast } from "@/components/ui/sonner";
+import { consumeOptimisticCancelled } from "./schedule-optimistic";
+import type { ScheduleSubject } from "../page";
 export type SubjectRow = {
   name: string;
   code: string;
@@ -20,7 +22,42 @@ export type SubjectCreateProgress = {
   gradeLabel: string;
   categoryLabel: string;
 };
+type CreateVars = {
+  items: SubjectRow[];
+  category: string;
+  /** Rows painted into the catalog immediately, before the POSTs land. */
+  optimistic: ScheduleSubject[];
+};
+
+/**
+ * Apply a patch to every cached subject catalog. The board reads
+ * `["teacher-schedule-subjects", …]`, one cache per term scope, so all of
+ * them are kept in sync — no waiting for a refetch.
+ */
+function patchSubjectLists(
+  qc: QueryClient,
+  patch: (list: ScheduleSubject[]) => ScheduleSubject[],
+) {
+  for (const entry of qc.getQueryCache().findAll({ queryKey: ["teacher-schedule-subjects"] })) {
+    qc.setQueryData(entry.queryKey, (prev: unknown) => {
+      if (
+        prev &&
+        typeof prev === "object" &&
+        Array.isArray((prev as { subjects?: unknown }).subjects)
+      ) {
+        return {
+          ...(prev as Record<string, unknown>),
+          subjects: patch((prev as { subjects: ScheduleSubject[] }).subjects ?? []),
+        };
+      }
+      if (Array.isArray(prev)) return patch(prev as ScheduleSubject[]);
+      return prev;
+    });
+  }
+}
+
 export function useAddSubjects(onClose: () => void, onProgress?: (p: SubjectCreateProgress | null) => void) {
+  const qc = useQueryClient();
   const invalidateTeacher = useTeacherInvalidate();
   const [rows, setRows] = useState<SubjectRow[]>([{ name: "", code: "" }]);
   const [gradeLevel, setGradeLevel] = useState("G7");
@@ -33,7 +70,7 @@ export function useAddSubjects(onClose: () => void, onProgress?: (p: SubjectCrea
   const codes = filled.map((r) => r.code.trim().toUpperCase());
   const dupCode = codes.length !== new Set(codes).size;
   const createMany = useMutation({
-    mutationFn: async (vars: { items: SubjectRow[]; category: string }) => {
+    mutationFn: async (vars: CreateVars) => {
       const results = await Promise.allSettled(
         vars.items.map((it) =>
           apiClient.post("/api/teacher/schedule/subjects", {
@@ -44,13 +81,36 @@ export function useAddSubjects(onClose: () => void, onProgress?: (p: SubjectCrea
           }),
         ),
       );
-      return { items: vars.items, results };
+      return { items: vars.items, results, optimistic: vars.optimistic };
     },
-    onSuccess: ({ items, results }) => {
+    onSuccess: ({ items, results, optimistic }) => {
       const okIndexes = new Set(
         results.map((r, i) => (r.status === "fulfilled" ? i : -1)).filter((i) => i >= 0),
       );
       const failed = items.filter((_, i) => !okIndexes.has(i));
+      // Swap the placeholder rows for the server rows in one cache write so the
+      // list never flashes back to stale data. A placeholder the user deleted
+      // while the POST was in flight is dropped and its new server row is
+      // removed again (compensating DELETE) — it must not come back.
+      const created: ScheduleSubject[] = [];
+      results.forEach((r, i) => {
+        if (r.status !== "fulfilled") return;
+        const row = r.value?.data as ScheduleSubject | undefined;
+        if (!row?.id) return;
+        if (optimistic[i] && consumeOptimisticCancelled(optimistic[i].id)) {
+          void apiClient
+            .delete(`/api/teacher/schedule/subjects/${row.id}`)
+            .catch(() => undefined);
+          return;
+        }
+        created.push(row);
+      });
+      const optimisticIds = new Set(optimistic.map((s) => s.id));
+      patchSubjectLists(qc, (list) => {
+        const base = list.filter((s) => !optimisticIds.has(s.id));
+        const known = new Set(base.map((s) => s.id));
+        return [...base, ...created.filter((s) => s.id && !known.has(s.id))];
+      });
       if (okIndexes.size > 0) {
         invalidateTeacher.schedule();
         toast.success({
@@ -74,11 +134,16 @@ export function useAddSubjects(onClose: () => void, onProgress?: (p: SubjectCrea
         onClose();
       }
     },
+    onError: (_err, vars) => {
+      // Mutation-level failure (no per-row results): drop the placeholders.
+      const optimisticIds = new Set(vars.optimistic.map((s) => s.id));
+      patchSubjectLists(qc, (list) => list.filter((s) => !optimisticIds.has(s.id)));
+    },
     onSettled: () => {
       onProgress?.(null);
     },
   });
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     if (partial.length > 0) {
       setFormError("Finish every started row: subject name and code.");
       return;
@@ -97,8 +162,20 @@ export function useAddSubjects(onClose: () => void, onProgress?: (p: SubjectCrea
       gradeLabel: `Grade ${gradeLevel.replace("G", "")}`,
       categoryLabel: category === "ELECTIVE" ? "Elective" : "Core",
     });
-    createMany.mutate({ items: filled, category });
-  };
+    // Optimistic catalog write + instant dismiss: the new rows are already in
+    // the board (and animate in) before the requests are sent.
+    const stamp = Date.now();
+    const optimistic: ScheduleSubject[] = filled.map((r, i) => ({
+      id: `optimistic-${stamp}-${i}`,
+      name: r.name.trim(),
+      code: r.code.trim().toUpperCase(),
+      gradeLevel,
+      category,
+    }));
+    patchSubjectLists(qc, (list) => [...list, ...optimistic]);
+    onClose();
+    createMany.mutate({ items: filled, category, optimistic });
+  }, [category, createMany, dupCode, filled, gradeLevel, onClose, onProgress, partial, qc]);
   return {
     rows,
     setRows,

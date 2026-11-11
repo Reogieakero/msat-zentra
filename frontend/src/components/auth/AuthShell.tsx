@@ -6,6 +6,7 @@ import {
   Asterisk,
   Briefcase,
   GraduationCap,
+  ShieldCheck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -13,7 +14,7 @@ import { ScrollField } from "@/components/landing/ScrollField";
 import type { Palette } from "@/components/landing/palette";
 import styles from "./AuthShell.module.css";
 
-type AuthRole = "student" | "staff" | "parent";
+type AuthRole = "student" | "staff" | "parent" | "admin";
 
 const BROWSER_CONTENT: Record<
   AuthRole,
@@ -43,12 +44,21 @@ const BROWSER_CONTENT: Record<
       "Track ADM learners and refer at-risk students.",
     ],
   },
+  admin: {
+    title: "System administration",
+    items: [
+      "Manage account access and staff provisioning.",
+      "Monitor desks and system-wide activity.",
+      "Keep the school's records and roles in order.",
+    ],
+  },
 };
 
 const ROLE_ICONS: Record<AuthRole, LucideIcon> = {
   student: GraduationCap,
   staff: Briefcase,
   parent: Users,
+  admin: ShieldCheck,
 };
 
 interface AuthShellProps {

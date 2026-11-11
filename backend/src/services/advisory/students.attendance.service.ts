@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { buildDayAxis, isWeekendKey, schoolDaysToDate, termHasStarted } from "../attendance.js";
+import { loadSubjectMeetups } from "../attendance/sections.service.js";
 import { assertAdvisee } from "./students.auth.js";
 import { sharingMap, canBypassSharing } from "../teacher/dataShare.service.js";
 import type { AdvisoryContext } from "./advisory.types.js";
@@ -29,6 +30,8 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
           lrn: entry.lrn,
           section: entry.section,
           rosterId: entry.id,
+          learnerType: entry.learnerType,
+          enrolledAt: entry.createdAt,
           studentId: null as string | null,
         };
       })()
@@ -40,6 +43,8 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
           lrn: profile.lrn,
           section: profile.section,
           rosterId: null as string | null,
+          learnerType: null as "regular" | "transferee" | null,
+          enrolledAt: null as Date | null,
           studentId: profile.userId,
         };
       })();
@@ -111,14 +116,90 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
   });
   const restricted = records.length !== allRecords.length;
 
-  const schoolDays = schoolDaysToDate(term?.startDate ?? null, term?.endDate ?? null);
+  // Transferees are rated from the day AFTER their enlistment: that day's
+  // sessions may already have been taken without them, so a fresh transferee
+  // must not read "0 of N sessions — at risk" the moment they are added. The
+  // same window is used by the risk engine and the auto-absent sweep.
+  const enlistment = student.enrolledAt;
+  const learnerStart =
+    student.learnerType === "transferee" && enlistment
+      ? new Date(enlistment.getTime() + 86_400_000)
+      : null;
+  const termStart = term?.startDate ?? null;
+  const axisStart =
+    learnerStart && (!termStart || learnerStart > termStart) ? learnerStart : termStart;
+  const axisStartKey = axisStart ? axisStart.toISOString().slice(0, 10) : null;
+  const scoped =
+    axisStartKey === null
+      ? records
+      : records.filter((r) => r.date.toISOString().slice(0, 10) >= axisStartKey);
+
+  // Subject attendance is rated on scheduled meetups — the same per-subject
+  // windows the attendance desk and the risk engine use. The legacy `summary`
+  // below counts the AM/PM axis (2 sessions per school day) and only applies to
+  // sections that never record attendance per subject; reading it for a
+  // subject-based section is what made this card disagree with that desk.
+  const sectionId = student.section?.id ?? null;
+  const meetupPlan = sectionId ? await loadSubjectMeetups(sectionId, termId) : null;
+  const enlistStr =
+    student.learnerType === "transferee" && student.enrolledAt
+      ? student.enrolledAt.toISOString().slice(0, 10)
+      : null;
+  const presentSlotsBySubjectDate = new Map<string, Map<string, Set<number>>>();
+  for (const r of scoped) {
+    if (!r.subjectId || r.status !== "present") continue;
+    let byDate = presentSlotsBySubjectDate.get(r.subjectId);
+    if (!byDate) {
+      byDate = new Map();
+      presentSlotsBySubjectDate.set(r.subjectId, byDate);
+    }
+    const dateKey = r.date.toISOString().slice(0, 10);
+    let slots = byDate.get(dateKey);
+    if (!slots) {
+      slots = new Set();
+      byDate.set(dateKey, slots);
+    }
+    slots.add(r.slot);
+  }
+  const subjectRows =
+    meetupPlan?.termStarted
+      ? [...meetupPlan.subjects.values()].flatMap((subject) => {
+          const scheduled = meetupPlan.scheduledCountBySubjectDate.get(subject.id);
+          const counts =
+            scheduled && scheduled.size > 0
+              ? scheduled
+              : meetupPlan.recordedCountBySubjectDate.get(subject.id);
+          if (!counts || counts.size === 0) return [];
+          const presentByDate = presentSlotsBySubjectDate.get(subject.id);
+          let total = 0;
+          let present = 0;
+          for (const [date, count] of counts) {
+            if (enlistStr && date <= enlistStr) continue;
+            total += count;
+            present += Math.min(count, presentByDate?.get(date)?.size ?? 0);
+          }
+          if (total === 0) return [];
+          return [
+            {
+              subjectId: subject.id,
+              name: subject.name,
+              code: subject.code,
+              present,
+              total,
+              rate: present / total,
+            },
+          ];
+        })
+      : [];
+
+  const schoolDays = schoolDaysToDate(axisStart, term?.endDate ?? null);
   const possible = schoolDays * 2;
-  const weekdayRecords = records.filter(
+  const weekdayRecords = scoped.filter(
     (r) => !isWeekendKey(r.date.toISOString().slice(0, 10))
   );
   const counts = { present: 0, absent: 0, late: 0, excused: 0 };
   for (const r of weekdayRecords) counts[r.status]++;
-  const unrecorded = Math.max(0, possible - records.length);
+  const unrecorded = Math.max(0, possible - scoped.length);
   const absent = counts.absent + unrecorded;
   const rate = possible === 0 ? 1 : counts.present / possible;
   const summary = {
@@ -137,12 +218,7 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
     string,
     Record<string, { status: string; slot: number; name: string; code: string }>
   >();
-  const subjectTotals = new Map<
-    string,
-    { name: string; code: string; present: number; total: number }
-  >();
-  const subjectCounts = { present: 0, absent: 0, late: 0, excused: 0, total: 0 };
-  for (const r of records) {
+  for (const r of scoped) {
     const key = r.date.toISOString().slice(0, 10);
     if (r.subjectId) {
       if (isWeekendKey(key)) continue;
@@ -159,27 +235,13 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
         };
       }
       subjectsByDate.set(key, perDay);
-      subjectCounts.total += 1;
-      if (r.status === "present") subjectCounts.present++;
-      else if (r.status === "absent") subjectCounts.absent++;
-      else if (r.status === "late") subjectCounts.late++;
-      else if (r.status === "excused") subjectCounts.excused++;
-      const agg = subjectTotals.get(r.subjectId) ?? {
-        name: r.subject?.name ?? r.subjectId,
-        code: r.subject?.code ?? r.subjectId,
-        present: 0,
-        total: 0,
-      };
-      agg.total += 1;
-      if (r.status === "present") agg.present += 1;
-      subjectTotals.set(r.subjectId, agg);
     } else {
       const sessions = byDate.get(key) ?? {};
       sessions[r.session] = r.status;
       byDate.set(key, sessions);
     }
   }
-  const days = buildDayAxis(term?.startDate ?? null, term?.endDate ?? null)
+  const days = buildDayAxis(axisStart, term?.endDate ?? null)
     .filter((key) => !isWeekendKey(key))
     .reverse()
     .map((key) => {
@@ -193,26 +255,26 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
         subjects: subjectsByDate.get(key) ?? {},
       };
     });
-  const hasSubjectRows = subjectCounts.total > 0;
-  const subjectSummary = hasSubjectRows
-    ? {
-        present: subjectCounts.present,
-        absent: subjectCounts.absent,
-        late: subjectCounts.late,
-        excused: subjectCounts.excused,
-        total: subjectCounts.total,
-        rate: subjectCounts.present / subjectCounts.total,
-        isRisk: subjectCounts.present / subjectCounts.total < 0.8,
-        bySubject: [...subjectTotals.entries()].map(([subjectId, agg]) => ({
-          subjectId,
-          name: agg.name,
-          code: agg.code,
-          present: agg.present,
-          total: agg.total,
-          rate: agg.total > 0 ? agg.present / agg.total : 1,
-        })),
-      }
-    : null;
+  const subjectTotals = subjectRows.reduce(
+    (acc, row) => ({ present: acc.present + row.present, total: acc.total + row.total }),
+    { present: 0, total: 0 },
+  );
+  // Subject-based sections always report through this summary (even at 0 of 0),
+  // so the card never falls back to the legacy AM/PM axis and disagrees with
+  // the attendance desk's per-subject meetup counts.
+  const subjectSummary =
+    meetupPlan?.termStarted && meetupPlan.subjects.size > 0
+      ? {
+          present: subjectTotals.present,
+          absent: Math.max(0, subjectTotals.total - subjectTotals.present),
+          late: 0,
+          excused: 0,
+          total: subjectTotals.total,
+          rate: subjectTotals.total > 0 ? subjectTotals.present / subjectTotals.total : 0,
+          isRisk: subjectTotals.total > 0 && subjectTotals.present / subjectTotals.total < 0.8,
+          bySubject: subjectRows,
+        }
+      : null;
 
   return {
     student: {

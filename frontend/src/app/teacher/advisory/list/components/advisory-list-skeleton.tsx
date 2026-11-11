@@ -86,7 +86,7 @@ export function AdvisoryListSkeleton() {
       aria-busy="true"
       aria-label="Loading advisory list"
     >
-      <div className="grid w-full items-start gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid w-full items-start gap-4">
         <div className={listStyles.panel} aria-hidden>
           <header className={listStyles.boardHead}>
             <span className={listStyles.boardIcon} aria-hidden>
@@ -95,6 +95,12 @@ export function AdvisoryListSkeleton() {
             <div className="min-w-0 flex-1">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="mt-1 h-3 w-56" />
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Skeleton className="h-6 w-16 rounded-md" />
+              <Skeleton className="h-6 w-20 rounded-md" />
+              <Skeleton className="h-6 w-20 rounded-md" />
+              <Skeleton className="h-6 w-24 rounded-md" />
             </div>
           </header>
 
@@ -134,10 +140,11 @@ export function AdvisoryListSkeleton() {
           </div>
         </div>
 
-        {/* Action rail — same two 36px buttons as the loaded page. */}
-        <div className="flex flex-row justify-end gap-2 self-start lg:flex-col lg:items-end">
-          <Skeleton className="h-9 w-9 rounded-xl" />
-          <Skeleton className="h-9 w-9 rounded-xl" />
+        {/* Action gutter — same horizontal 24px buttons as the loaded page. */}
+        <div className="flex flex-row items-center justify-end gap-1.5 self-start">
+          <Skeleton className="h-6 w-6 rounded-md" />
+          <Skeleton className="h-6 w-6 rounded-md" />
+          <Skeleton className="h-6 w-6 rounded-md" />
         </div>
       </div>
     </section>

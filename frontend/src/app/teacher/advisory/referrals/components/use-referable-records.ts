@@ -1,10 +1,11 @@
 "use client";
 import * as React from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 import { groupReferable, type ReferableRecord } from "./referable-group";
 export function useReferableRecords(termKey: string) {
-  const referablesQuery = useQuery<ReferableRecord[]>({
+  const referablesQuery = useLiveQuery<ReferableRecord[]>({
     queryKey: ["referableAnecdotal", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get("/api/anecdotal/referable");

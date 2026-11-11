@@ -11,6 +11,7 @@ export const GUIDANCE_QUERY_KEYS = [
   ["guidance-referrals"],
   ["guidance-referrals-highlight"],
   ["guidance-interventions"],
+  ["guidance-intervention-insights"],
   ["guidance-overview"],
 
   ["guidance-alerts"],
@@ -24,6 +25,7 @@ export const GUIDANCE_QUERY_KEYS = [
   ["guidance-risk-alert-factors"],
   ["guidance-session-documents"],
   ["guidance-notifications"],
+  ["guidance-nav-counts"],
   ["adm-consultation-sessions"],
 ] as const;
 
@@ -39,11 +41,20 @@ export type GuidanceScope =
   | "notifications";
 
 const GUIDANCE_SCOPE_KEYS: Record<GuidanceScope, readonly (readonly string[])[]> = {
-  referrals: [["guidance-referrals"], ["guidance-referrals-highlight"], ["adm-consultation-sessions"]],
-  interventions: [["guidance-interventions"]],
+  referrals: [
+    ["guidance-referrals"],
+    ["guidance-referrals-highlight"],
+    ["guidance-nav-counts"],
+    ["adm-consultation-sessions"],
+  ],
+  interventions: [
+    ["guidance-interventions"],
+    ["guidance-intervention-insights"],
+    ["guidance-nav-counts"],
+  ],
   overview: [["guidance-overview"]],
-  alerts: [["guidance-alerts"]],
-  adm: [["guidance-adm"], ["guidance-adm-report"]],
+  alerts: [["guidance-alerts"], ["guidance-nav-counts"]],
+  adm: [["guidance-adm"], ["guidance-adm-report"], ["guidance-nav-counts"]],
   anecdotal: [["guidance-anecdotal"], ["guidance-risk-behavioral"]],
   risk: [
     ["guidance-risk"],
@@ -53,7 +64,7 @@ const GUIDANCE_SCOPE_KEYS: Record<GuidanceScope, readonly (readonly string[])[]>
     ["guidance-risk-alert-factors"],
   ],
   documents: [["guidance-session-documents"]],
-  notifications: [["guidance-notifications"]],
+  notifications: [["guidance-notifications"], ["guidance-nav-counts"]],
 };
 
 export function invalidateGuidanceQueries(

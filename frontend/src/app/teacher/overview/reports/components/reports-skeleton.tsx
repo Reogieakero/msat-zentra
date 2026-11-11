@@ -96,9 +96,6 @@ export function ReportsSkeleton() {
     <div className={styles.page} aria-busy="true" aria-label="Loading term report">
       <StatColumns count={5} />
       <StatColumns count={6} />
-      <KanbanBoardSkeleton titleWidth="10rem" showDescription>
-        <ClassTableSkeleton />
-      </KanbanBoardSkeleton>
       <div className={styles.panels}>
         <KanbanBoardSkeleton
           titleWidth="8.5rem"
@@ -117,6 +114,9 @@ export function ReportsSkeleton() {
           <ActivitySkeleton />
         </KanbanBoardSkeleton>
       </div>
+      <KanbanBoardSkeleton titleWidth="10rem" showDescription>
+        <ClassTableSkeleton />
+      </KanbanBoardSkeleton>
     </div>
   );
 }

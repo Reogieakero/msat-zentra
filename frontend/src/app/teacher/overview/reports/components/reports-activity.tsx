@@ -92,72 +92,67 @@ export function ReportsActivity({
       description="Records and referrals you filed this term."
       className="flex-1"
     >
-      <div className={styles.activityBody}>
-        <div className={styles.donutWrap}>
-          <ResponsiveContainer width="100%" height={176}>
-            <PieChart>
-              <Pie
-                data={
-                  total > 0
-                    ? slices
-                    : [{ key: "empty", label: "No activity", value: 1, percent: 0, fill: "var(--muted)" }]
-                }
-                dataKey="value"
-                nameKey="label"
-                innerRadius="62%"
-                outerRadius="92%"
-                paddingAngle={total > 0 ? 2 : 0}
-                stroke="transparent"
-                strokeWidth={2}
-                isAnimationActive
-                animationDuration={700}
-              >
-                {(total > 0
-                  ? slices
-                  : [{ key: "empty", fill: "var(--muted)" }]
-                ).map((slice) => (
-                  <Cell key={slice.key} fill={slice.fill} />
-                ))}
-              </Pie>
-              <Tooltip
-                cursor={false}
-                content={<ActivityTooltip />}
-                wrapperStyle={{ outline: "none", zIndex: 80 }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className={styles.donutCenter} aria-hidden="true">
-            <span className={styles.donutValue}>{total}</span>
-            <span className={styles.donutLabel}>case records</span>
+      {total > 0 ? (
+        <div className={styles.activityBody}>
+          <div className={styles.donutWrap}>
+            <ResponsiveContainer width="100%" height={176}>
+              <PieChart>
+                <Pie
+                  data={slices}
+                  dataKey="value"
+                  nameKey="label"
+                  innerRadius="62%"
+                  outerRadius="92%"
+                  paddingAngle={2}
+                  stroke="transparent"
+                  strokeWidth={2}
+                  isAnimationActive
+                  animationDuration={700}
+                >
+                  {slices.map((slice) => (
+                    <Cell key={slice.key} fill={slice.fill} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  cursor={false}
+                  content={<ActivityTooltip />}
+                  wrapperStyle={{ outline: "none", zIndex: 80 }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className={styles.donutCenter} aria-hidden="true">
+              <span className={styles.donutValue}>{total}</span>
+              <span className={styles.donutLabel}>case records</span>
+            </div>
           </div>
-        </div>
 
-        <ul className={styles.activityLegend}>
-          {slices.map((slice) => (
-            <li key={slice.key} className={styles.activityLegendItem}>
-              <span className={styles.legendSwatch} style={{ background: slice.fill }} aria-hidden />
-              <span className={styles.legendLabel}>{slice.label}</span>
-              <Pill tone={slice.value > 0 ? "amber" : "neutral"} label={slice.label}>
-                {slice.value} · {slice.percent}%
-              </Pill>
-            </li>
-          ))}
-        </ul>
-
-        {activity.referrals.byStatus.length > 0 ? (
-          <div className={styles.chips}>
-            {activity.referrals.byStatus.map((item) => (
-              <Pill
-                key={item.status}
-                tone={item.count > 0 ? "amber" : "neutral"}
-                label="Referral status"
-              >
-                {REFERRAL_STATUS_LABELS[item.status] ?? item.status}: {item.count}
-              </Pill>
+          <ul className={styles.activityLegend}>
+            {slices.map((slice) => (
+              <li key={slice.key} className={styles.activityLegendItem}>
+                <span className={styles.legendSwatch} style={{ background: slice.fill }} aria-hidden />
+                <span className={styles.legendLabel}>{slice.label}</span>
+                <Pill tone={slice.value > 0 ? "amber" : "neutral"} label={slice.label}>
+                  {slice.value} · {slice.percent}%
+                </Pill>
+              </li>
             ))}
-          </div>
-        ) : null}
-      </div>
+          </ul>
+
+          {activity.referrals.byStatus.length > 0 ? (
+            <div className={styles.chips}>
+              {activity.referrals.byStatus.map((item) => (
+                <Pill
+                  key={item.status}
+                  tone={item.count > 0 ? "amber" : "neutral"}
+                  label="Referral status"
+                >
+                  {REFERRAL_STATUS_LABELS[item.status] ?? item.status}: {item.count}
+                </Pill>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <div className={styles.footerSlot}>
         <InsightCallout className={styles.interpretation}>
           <span className={styles.interpretationLabel}>What it means · </span>

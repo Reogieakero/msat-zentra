@@ -1,4 +1,10 @@
 import { prisma } from "../../lib/prisma.js";
+import { findTeacherTermGrant } from "../../lib/teacherGrant.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import { GRADE_LABELS } from "../../modules/teacher/teacher.repository.js";
 import {
@@ -6,6 +12,7 @@ import {
   resolveGradeOwnerIds,
   sharingMap,
 } from "./dataShare.service.js";
+import { resolveTeacherClassPairs } from "./timetable.read.service.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 export type LockGradesView = "classes" | "advisees";
@@ -162,10 +169,7 @@ export async function getLockGrades(ctx: TeacherContext, view: LockGradesView) {
         where: { userId: teacherId },
         select: { id: true },
       }),
-      prisma.teacherTermGrant.findUnique({
-        where: { userId_termId: { userId: teacherId, termId } },
-        select: { id: true },
-      }),
+      findTeacherTermGrant(teacherId, termId),
       prisma.teacherSubjectAssignment.count({ where: { teacherId, termId } }),
     ]);
 
@@ -195,25 +199,10 @@ export async function getLockGrades(ctx: TeacherContext, view: LockGradesView) {
       };
     }
 
-    const linkedSlots = await prisma.sectionTimetableEntry.findMany({
-      where: {
-        termId,
-        status: { in: ["APPROVED", "SUBMITTED"] },
-        teacherName: { userId: teacherId },
-      },
-      select: {
-        subjectId: true,
-        sectionId: true,
-        subject: { select: { name: true, code: true } },
-        section: { select: { name: true, gradeLevel: true } },
-      },
-      orderBy: [{ section: { name: "asc" } }, { subject: { name: "asc" } }],
-    });
-    const linkedPairs = [
-      ...new Map(
-        linkedSlots.map((s) => [`${s.subjectId}|${s.sectionId}`, s]),
-      ).values(),
-    ];
+    // The class list carries across the terms of a school year (same rule as
+    // the classes/grading desks), but the lock counts below are read with the
+    // *selected* termId — another term's lock grades are never shown here.
+    const linkedPairs = await resolveTeacherClassPairs(teacherId, termId);
     const isSubjectTeacher = linkedPairs.length > 0 || assignmentCount > 0;
 
     const classes = await getClassRows(termId, linkedPairs);
@@ -244,9 +233,10 @@ export async function getLockGrades(ctx: TeacherContext, view: LockGradesView) {
   }
 
   const sectionIds = advisorySections.map((s) => s.id);
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [advisees, rosterEntries, assignRows, entryRows] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         lrn: true,
@@ -258,7 +248,7 @@ export async function getLockGrades(ctx: TeacherContext, view: LockGradesView) {
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedRosters(archivedLearners) },
       select: {
         id: true,
         lrn: true,

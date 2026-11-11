@@ -39,6 +39,8 @@ export interface AdviseeRow {
   hasOpenFlag: boolean;
   openFlagCount: number;
   hasAccount: boolean;
+  /** Transferees are rated from their enlistment date, not the term start. */
+  learnerType?: "regular" | "transferee";
   /** Signed ADM case — attendance is exempt, module work is the evidence. */
   admExempt: boolean;
   grades: AdviseeSubjectGrade[];
@@ -55,6 +57,17 @@ export interface AdvisoryRoster {
   termId: string | null;
   students: AdviseeRow[];
   subjects: AdvisoryRosterSubject[];
+}
+
+/** A learner the adviser removed from the advisory list (restorable). */
+export interface ArchivedAdvisee {
+  archiveId: string;
+  studentId: string;
+  name: string;
+  lrn: string;
+  section: string;
+  archivedAt: string;
+  hasAccount: boolean;
 }
 
 export interface AdviseeGrade {

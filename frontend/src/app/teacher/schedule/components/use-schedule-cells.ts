@@ -98,16 +98,122 @@ export function useScheduleCells(
   }, [dock]);
   const [cells, setCells] = useState<Record<string, SlotValue | null>>(() => buildCells(section));
   const [cellsSectionId, setCellsSectionId] = useState(section.id);
+  const [editMode, setEditMode] = useState(false);
+  // One unlock per edit session: every write path awaits the same promise so
+  // a batch of slot saves can't fire the unlock N times. Keyed by section so a
+  // switch starts a fresh session.
+  const unlockRef = useRef<{ sectionId: string; promise: Promise<void> } | null>(null);
+  // Approved slots captured when the edit session opens. Cancel restores this
+  // exact snapshot, so a refetch landing mid-edit can never empty the grid.
+  const editSnapshotRef = useRef<{
+    sectionId: string;
+    entries: ScheduleSection["timetableEntries"];
+  } | null>(null);
+  // True once this session wrote anything: past that point the server status is
+  // a draft, so cancelling can only discard staged picks.
+  const sessionWroteRef = useRef(false);
   if (cellsSectionId !== section.id) {
     // Resync when switching sections (template picker) — state init runs once.
     setCellsSectionId(section.id);
     setCells(buildCells(section));
+    setEditMode(false);
   }
+  // Principal-approved timetable: the server rejects writes to APPROVED slots
+  // (409 SCHEDULE_LOCKED), so the grid stays read-only until the user starts an
+  // edit. Starting an edit is local-only — the approved status, and with it the
+  // principal's sign-off, only changes once the user actually saves.
+  const serverLocked =
+    section.timetableEntries.length > 0 &&
+    section.timetableEntries.every((e) => e.status === "APPROVED");
+  const isLocked = serverLocked && !editMode;
+  const ensureEditable = useCallback(async () => {
+    // Unlock only at write time: an edit the user abandons leaves the approval
+    // untouched. Concurrent writes share one in-flight unlock.
+    if (!serverLocked) return;
+    const current = unlockRef.current;
+    if (current && current.sectionId === section.id) {
+      await current.promise;
+      return;
+    }
+    const promise = apiClient
+      .post("/api/teacher/schedule/unlock", { sectionId: section.id })
+      .then(() => undefined)
+      .catch((err: unknown) => {
+        // Already unlocked (another tab, or an earlier write in this session) —
+        // NOTHING_LOCKED is not a failure for us.
+        if ((err as { response?: { status?: number } })?.response?.status === 404) return;
+        throw err;
+      })
+      .finally(() => {
+        if (unlockRef.current?.promise === promise) unlockRef.current = null;
+      });
+    unlockRef.current = { sectionId: section.id, promise };
+    await promise;
+  }, [serverLocked, section.id]);
+  const beginEdit = useCallback(() => {
+    editSnapshotRef.current = { sectionId: section.id, entries: section.timetableEntries };
+    sessionWroteRef.current = false;
+    setEditMode(true);
+  }, [section.id, section.timetableEntries]);
+  // Live server changes (the principal approving/sending back, or another
+  // master teacher saving slots) arrive through the realtime channel as a new
+  // `timetableEntries` array. Re-seed the grid from it so the open template
+  // updates without a refresh, while keeping picks staged but not yet saved.
+  const serverSnapshotRef = useRef<{
+    sectionId: string;
+    entries: ScheduleSection["timetableEntries"];
+  }>({ sectionId: section.id, entries: section.timetableEntries });
+  useEffect(() => {
+    // Mid edit-session the user's working copy wins: a poll / realtime snapshot
+    // must never drop slots under their cursor (that emptied the board and
+    // looked like the approval itself had been wiped). Cancel restores the
+    // approved snapshot explicitly; saving re-syncs after the writes land.
+    if (editMode) return;
+    const snapshot = serverSnapshotRef.current;
+    const next = section.timetableEntries;
+    if (snapshot.sectionId === section.id && snapshot.entries === next) return;
+    serverSnapshotRef.current = { sectionId: section.id, entries: next };
+    // Section switches are reseeded above; only merges concern us here.
+    if (snapshot.sectionId !== section.id) return;
+    const serialize = (cell: SlotValue | null | undefined) =>
+      cell ? `${cell.subjectId}:${cell.teacherNameId ?? ""}` : null;
+    const previousByKey = new Map(
+      snapshot.entries.map((e) => [
+        cellKey(e.day, e.period),
+        `${e.subjectId}:${e.teacherNameId ?? ""}`,
+      ]),
+    );
+    const nextByKey = new Map(
+      next.map((e) => [
+        cellKey(e.day, e.period),
+        { subjectId: e.subjectId, teacherNameId: e.teacherNameId },
+      ]),
+    );
+    setCells((current) => {
+      let changed = false;
+      const merged: Record<string, SlotValue | null> = { ...current };
+      // Slots the server dropped: only clear cells still holding the old
+      // server value — a staged pick in that cell is the user's, not ours.
+      for (const [key, previousServer] of previousByKey) {
+        if (nextByKey.has(key)) continue;
+        if (serialize(merged[key]) !== previousServer) continue;
+        delete merged[key];
+        changed = true;
+      }
+      // Slots the server changed or added win over the old server value.
+      for (const [key, entry] of nextByKey) {
+        const live = serialize(merged[key]);
+        if (live !== null && live !== previousByKey.get(key)) continue;
+        merged[key] = { subjectId: entry.subjectId, teacherNameId: entry.teacherNameId };
+        changed = true;
+      }
+      return changed ? merged : current;
+    });
+  }, [section.id, section.timetableEntries, editMode]);
   useEffect(() => {
     // Persist unsaved local picks so an unexpected reload never restarts
     // the template from scratch. Server-confirmed slots are dropped.
-    if (!persistKey || typeof window === "undefined") return;
-    try {
+    if (!persistKey || typeof window === "undefined") return;    try {
       const serverMap = new Map(
         section.timetableEntries.map((e) => [
           cellKey(e.day, e.period),
@@ -142,6 +248,8 @@ export function useScheduleCells(
       period: number;
       key: string;
     }) => {
+      await ensureEditable();
+      sessionWroteRef.current = true;
       const { data } = await apiClient.post<{ warnings?: Array<{ message: string }> }>(
         "/api/teacher/schedule/entries",
         {
@@ -214,6 +322,8 @@ export function useScheduleCells(
   });
   const removeSlot = useMutation({
     mutationFn: async (vars: { day: number; period: number; key: string }) => {
+      await ensureEditable();
+      sessionWroteRef.current = true;
       await apiClient.delete("/api/teacher/schedule/entries", {
         params: { sectionId: section.id, day: vars.day, period: vars.period },
       });
@@ -323,6 +433,16 @@ export function useScheduleCells(
         prev ? { ...prev, rows: prev.rows.map((r) => (r.key === key ? { ...r, ...patch } : r)) } : prev,
       );
     };
+    try {
+      await ensureEditable();
+      sessionWroteRef.current = true;
+    } catch (err) {
+      const message = apiErrorMessage(err, "Failed to unlock the approved timetable.");
+      for (const slot of orderedBatch) mark(slot.key, { status: "failed", message });
+      setSaveProgress((prev) => (prev ? { ...prev, active: false, done: true } : prev));
+      toast.error({ title: "Could not save slots", description: message });
+      return;
+    }
     await Promise.all(
       batch.map(async (slot) => {
         try {
@@ -348,8 +468,11 @@ export function useScheduleCells(
       }),
     );
     invalidateTeacher.schedule();
+    // The writes unlocked the section: it is a draft now, so leave the local
+    // edit session (the server status is authoritative from here on).
+    setEditMode(false);
     setSaveProgress((prev) => (prev ? { ...prev, active: false, done: true } : prev));
-  }, [cells, section, saveProgress, setSaveProgress, invalidateTeacher, subjectById, teacherById]);
+  }, [cells, section, saveProgress, setSaveProgress, invalidateTeacher, subjectById, teacherById, ensureEditable]);
 
   // Discard staged (unsaved) picks and revert the grid to last-saved server state.
   const discardStaged = useCallback(() => {
@@ -369,11 +492,40 @@ export function useScheduleCells(
       `Staged picks discarded — ${section.name} is back to its last saved slots.`,
     );
   }, [section]);
-  const isLocked =
-    section.timetableEntries.length > 0 &&
-    section.timetableEntries.every((e) => e.status === "APPROVED");
+
+  /**
+   * Leave the approved-schedule edit session without saving: staged picks are
+   * dropped and the grid returns to the approved slots captured when the
+   * session opened. Nothing was written to the server, so the approval status
+   * never changed — and the grid can never be left empty by a mid-edit refetch.
+   */
+  const cancelEdit = useCallback(() => {
+    const snapshot = editSnapshotRef.current;
+    const entries =
+      snapshot && snapshot.sectionId === section.id ? snapshot.entries : section.timetableEntries;
+    // Never wipe the board: only restore when there is something to restore to.
+    if (entries.length > 0) {
+      const next: Record<string, SlotValue | null> = {};
+      for (const e of entries) {
+        next[cellKey(e.day, e.period)] = { subjectId: e.subjectId, teacherNameId: e.teacherNameId };
+      }
+      setCells(next);
+    }
+    setSlotError(null);
+    setEditMode(false);
+    editSnapshotRef.current = null;
+    if (serverLocked && !sessionWroteRef.current) {
+      toast.success({
+        title: "Edit cancelled",
+        description: `${section.name} is unchanged and still approved.`,
+      });
+    }
+    sessionWroteRef.current = false;
+  }, [section, serverLocked]);
   const removeAll = useMutation({
     mutationFn: async () => {
+      await ensureEditable();
+      sessionWroteRef.current = true;
       const { data } = await apiClient.delete("/api/teacher/schedule/entries/all", {
         params: { sectionId: section.id },
       });
@@ -390,6 +542,7 @@ export function useScheduleCells(
       setCells({});
       setSlotModal(null);
       setConfirmClearOpen(false);
+      setEditMode(false);
       invalidateTeacher.schedule();
       const skipped = data.skippedApproved ?? 0;
       const summary =
@@ -567,6 +720,10 @@ export function useScheduleCells(
     discardStaged,
     filledCount,
     isLocked,
+    serverLocked,
+    editMode,
+    beginEdit,
+    cancelEdit,
     sectionSubjectTeachers,
     splitSubjects,
     serverStatus,

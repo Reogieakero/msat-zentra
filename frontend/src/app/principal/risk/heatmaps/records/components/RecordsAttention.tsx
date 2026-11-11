@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import type { RecordStudent } from "../types";
 import { fetchRecords } from "@/services/principal/records.service";
+import { liveQueryOptions } from "@/lib/api/live";
 import styles from "./RecordsOverview.module.css";
 
 const TOP_STUDENTS = 3;
@@ -24,6 +25,7 @@ function highCount(s: RecordStudent) {
  */
 export function RecordsAttentionContent() {
   const { data, isPending, isError } = useQuery({
+    ...liveQueryOptions,
     queryKey: ["records-heatmap"],
     queryFn: fetchRecords,
   });

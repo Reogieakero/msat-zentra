@@ -1,16 +1,46 @@
 "use client";
 
+import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Pill } from "@/components/ui/pill";
+import { outcomeTone } from "@/lib/labels/status-tone";
 import type { InterventionInsightKpis } from "@/services/guidance/insights.types";
 import styles from "../../../pages.module.css";
 
+const OUTCOMES = [
+  { key: "ongoing", tooltip: "Ongoing follow-ups" },
+  { key: "resolved", tooltip: "Resolved follow-ups" },
+  { key: "unresolved", tooltip: "Unresolved follow-ups" },
+] as const;
+
 export function InsightsKpis({ kpis }: { kpis: InterventionInsightKpis }) {
   const closed = kpis.resolved + kpis.unresolved;
-  const cards = [
+  // Plan mix reads as three status chips (same tones as the board) instead of
+  // one dot-separated sentence; each chip names its bucket on hover.
+  const outcomeDetail = (
+    <div className="mt-1 flex flex-wrap items-center gap-1">
+      {OUTCOMES.map((outcome) => (
+        <Pill
+          key={outcome.key}
+          tone={outcomeTone(outcome.key)}
+          label={outcome.tooltip}
+        >
+          {kpis[outcome.key]}{" "}
+          {outcome.key.charAt(0).toUpperCase() + outcome.key.slice(1)}
+        </Pill>
+      ))}
+    </div>
+  );
+  const cards: {
+    label: string;
+    value: number | string;
+    hint?: string;
+    detail?: React.ReactNode;
+  }[] = [
     {
       label: "Follow-ups this term",
       value: kpis.total,
-      hint: `${kpis.ongoing} ongoing · ${kpis.resolved} resolved · ${kpis.unresolved} unresolved`,
+      detail: outcomeDetail,
     },
     {
       label: "Intervention success rate",
@@ -36,7 +66,7 @@ export function InsightsKpis({ kpis }: { kpis: InterventionInsightKpis }) {
           <CardContent>
             <p className={styles.kpiLabel}>{kpi.label}</p>
             <p className={styles.kpiValue}>{kpi.value}</p>
-            <p className={styles.kpiHint}>{kpi.hint}</p>
+            {kpi.detail ?? <p className={styles.kpiHint}>{kpi.hint}</p>}
           </CardContent>
         </Card>
       ))}

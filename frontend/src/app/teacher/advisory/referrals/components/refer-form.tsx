@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { useTerm } from "@/lib/term/TermContext";
 import { useTeacherInvalidate } from "../../../components/use-teacher-invalidate";
 import { apiClient } from "@/lib/api/client";
@@ -196,6 +197,7 @@ export function ReferForm({
               valueNode={
                 student ? (
                   <span className="flex min-w-0 items-center gap-1.5">
+                    <StudentMascot name={student.studentName} character={student.mascot ?? undefined} size={20} />
                     <span className="min-w-0 truncate text-sm font-medium" title={studentLabel(student)}>
                       {student.studentName}
                     </span>
@@ -217,6 +219,7 @@ export function ReferForm({
                       }}
                     >
                       <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                        <StudentMascot name={s.studentName} character={s.mascot ?? undefined} size={20} />
                         <span className="truncate text-sm font-medium" title={studentLabel(s)}>
                           {s.studentName}
                         </span>

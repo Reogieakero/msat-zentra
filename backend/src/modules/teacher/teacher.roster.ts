@@ -1,15 +1,21 @@
 import { prisma } from "../../lib/prisma.js";
 import { subjectAverageAttendance, termHasStarted } from "../../services/attendance.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 
 export async function advisoryRoster(termId: string, sectionId: string) {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosterEntries, assignSubs, entrySubs] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
       select: { userId: true, lrn: true, mascot: true, user: { select: { fullName: true } } },
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, lrn: true, fullName: true, mascot: true },
       orderBy: { fullName: "asc" },
     }),
@@ -61,6 +67,7 @@ export async function advisoryRoster(termId: string, sectionId: string) {
       ? prisma.anecdotalRecord.findMany({
           where: {
             termId,
+            deletedAt: null,
             OR: [
               ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
               ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),

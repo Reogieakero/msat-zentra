@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useQueries } from "@tanstack/react-query";
+import { useLiveQueries } from "@/lib/api/live";
 import { Search } from "lucide-react";
 
 import {
@@ -78,7 +78,7 @@ export function TeacherGlobalSearch() {
     () => (isAdviser ? (accessRequests.data ?? []).map((r) => r.id) : []),
     [isAdviser, accessRequests.data],
   );
-  const verifications = useQueries({
+  const verifications = useLiveQueries({
     queries: requestIds.map((id) => ({
       queryKey: ["teacher-sf10-access", id, "records"],
       queryFn: () => fetchMyVerification(id),

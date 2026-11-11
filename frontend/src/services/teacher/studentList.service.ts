@@ -1,7 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
+import { liveQueryOptions } from "@/lib/api/live";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
 import type { ClassPick, StudentListResponse } from "./studentList.types";
@@ -41,7 +42,7 @@ export function useStudentList(pick: ClassPick | null) {
   // Term-scoped key: grades, attendance and anecdotes in the response belong
   // to the selected term, so a term switch must never reuse the old payload.
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery({
+  return useLiveQuery({
     queryKey: studentListKey(teacherId, pick, termKey),
     queryFn: () => fetchStudentList(pick),
     enabled: !!teacherId,
@@ -49,5 +50,6 @@ export function useStudentList(pick: ClassPick | null) {
     gcTime: 5 * 60_000,
     placeholderData: (previous) => previous,
     retry: false,
+    ...liveQueryOptions,
   });
 }

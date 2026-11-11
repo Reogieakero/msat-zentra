@@ -20,6 +20,7 @@ import {
 } from "./guidance-referrals-format";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 import { useSearchParams } from "next/navigation";
 import styles from "./guidance-referrals.module.css";
@@ -128,6 +129,7 @@ export function GuidanceReferralsView({
   ];
 
   const referralsQuery = useQuery<GuidanceReferralsData>({
+    ...liveQueryOptions,
     queryKey,
     queryFn: ({ signal }) =>
       fetchGuidanceReferrals(
@@ -147,7 +149,6 @@ export function GuidanceReferralsView({
       previousData && previousQuery?.queryKey?.[1] === requestedPage
         ? previousData
         : undefined,
-    staleTime: 60_000,
     enabled: termReady,
   });
 

@@ -3,6 +3,11 @@ import { AppError } from "../../lib/errors.js";
 import { termHasStarted } from "../attendance.date.utils.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import { advisoryRoster, GRADE_LABELS } from "../../modules/teacher/teacher.repository.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 export interface StudentListQuery {
@@ -15,6 +20,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
   const classIdParam = query.classId;
   const advisorySectionParam = query.advisorySectionId;
   const termId = ctx.termId;
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   if (!termId) {
     return {
       classes: [],
@@ -26,18 +32,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
     };
   }
 
-  const [assignments, linkedSlots, advisedSections] = await Promise.all([
-    prisma.teacherSubjectAssignment.findMany({
-      where: { teacherId, termId },
-      select: {
-        id: true,
-        subjectId: true,
-        sectionId: true,
-        subject: { select: { id: true, name: true, code: true } },
-        section: { select: { id: true, name: true, gradeLevel: true } },
-      },
-      orderBy: [{ section: { name: "asc" } }, { subject: { name: "asc" } }],
-    }),
+  const [linkedSlots, advisedSections] = await Promise.all([
     prisma.sectionTimetableEntry.findMany({
       where: {
         termId,
@@ -61,18 +56,17 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
   const linkedPairs = [...new Map(
     linkedSlots.map((s) => [`${s.subjectId}|${s.sectionId}`, s]),
   ).values()];
+  // Classes come only from the code link entered on /teacher/classes — same
+  // rule as My Classes, Grading and Attendance. Academics-desk assignment rows
+  // do not mean this login owns the class.
   const handledSectionIds = Array.from(
-    new Set(
-      (linkedPairs.length > 0
-        ? linkedPairs.map((s) => s.sectionId)
-        : assignments.map((a) => a.sectionId)),
-    ),
+    new Set(linkedPairs.map((s) => s.sectionId)),
   );
   const railSectionIds = Array.from(
     new Set([...handledSectionIds, ...advisedSections.map((s) => s.id)]),
   );
 
-  if (linkedPairs.length === 0 && assignments.length === 0 && advisedSections.length === 0) {
+  if (linkedPairs.length === 0 && advisedSections.length === 0) {
     return {
       classes: [],
       advisorySections: [],
@@ -103,24 +97,18 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
       if (sep >= 0) {
         return { subjectId: classId.slice(0, sep), sectionId: classId.slice(sep + 1) };
       }
-      const match = assignments.find((a) => a.id === classId);
-      return match ? { subjectId: match.subjectId, sectionId: match.sectionId } : null;
+      return null;
     };
 
     const activeId =
       classIdParam ||
-      (linkedPairs.length > 0
-        ? `${linkedPairs[0].subjectId}|${linkedPairs[0].sectionId}`
-        : (assignments[0]?.id ?? ""));
+      (linkedPairs.length > 0 ? `${linkedPairs[0].subjectId}|${linkedPairs[0].sectionId}` : "");
     const pair = resolvePair(activeId);
     const owns =
       !!pair &&
-      (assignments.some(
-        (a) => a.subjectId === pair.subjectId && a.sectionId === pair.sectionId,
-      ) ||
-        linkedPairs.some(
-          (s) => s.subjectId === pair.subjectId && s.sectionId === pair.sectionId,
-        ));
+      linkedPairs.some(
+        (s) => s.subjectId === pair.subjectId && s.sectionId === pair.sectionId,
+      );
     if (!pair || !owns) {
       throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
     }
@@ -134,7 +122,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
         select: { id: true, name: true, gradeLevel: true },
       }),
       prisma.studentProfile.findMany({
-        where: { sectionId: pair.sectionId },
+        where: { sectionId: pair.sectionId, ...excludeArchivedProfiles(archivedLearners) },
         select: {
           userId: true,
           lrn: true,
@@ -144,7 +132,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
         orderBy: { user: { fullName: "asc" } },
       }),
       prisma.studentRoster.findMany({
-        where: { sectionId: pair.sectionId },
+        where: { sectionId: pair.sectionId, ...excludeArchivedRosters(archivedLearners) },
         select: { id: true, lrn: true, fullName: true, mascot: true },
         orderBy: { fullName: "asc" },
       }),
@@ -162,23 +150,14 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
   })();
   const [headcounts, roster] = await Promise.all([headcountsPromise, rosterPromise]);
 
-  const classes = (linkedPairs.length > 0
-    ? linkedPairs.map((s) => ({
-        id: `${s.subjectId}|${s.sectionId}`,
-        subject: s.subject.name,
-        code: s.subject.code,
-        gradeLevel: GRADE_LABELS[s.section.gradeLevel] ?? s.section.gradeLevel,
-        section: s.section.name,
-        studentCount: headcounts.get(s.sectionId) ?? 0,
-      }))
-    : assignments.map((a) => ({
-        id: a.id,
-        subject: a.subject.name,
-        code: a.subject.code,
-        gradeLevel: GRADE_LABELS[a.section.gradeLevel] ?? a.section.gradeLevel,
-        section: a.section.name,
-        studentCount: headcounts.get(a.sectionId) ?? 0,
-      })));
+  const classes = linkedPairs.map((s) => ({
+    id: `${s.subjectId}|${s.sectionId}`,
+    subject: s.subject.name,
+    code: s.subject.code,
+    gradeLevel: GRADE_LABELS[s.section.gradeLevel] ?? s.section.gradeLevel,
+    section: s.section.name,
+    studentCount: headcounts.get(s.sectionId) ?? 0,
+  }));
   const advisorySections = advisedSections.map((s) => ({
     id: s.id,
     name: s.name,
@@ -242,7 +221,15 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
         })
       : Promise.resolve([] as { rosterId: string | null; computedAverage: number | null; transmutedGrade: number | null }[]),
     prisma.attendanceRecord.findMany({
-      where: { termId, sectionId, subjectId },
+      where: {
+        termId,
+        sectionId,
+        subjectId,
+        OR: [
+          ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
+          ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
+        ],
+      },
       select: { studentId: true, rosterId: true, status: true, date: true },
     }),
 
@@ -264,6 +251,7 @@ export async function getStudentList(ctx: TeacherContext, query: StudentListQuer
           where: {
             termId,
             sectionId,
+            deletedAt: null,
             OR: [
               ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
               ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import {
   BookOpen,
   CalendarClock,
@@ -13,7 +13,7 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
-import { riskDotColor } from "@/lib/risk/status";
+import { riskBadgeVariant, riskDotColor } from "@/lib/risk/status";
 import type {
   AdviseeRow,
   AdviseeRiskFlag,
@@ -72,7 +72,7 @@ export function AdvisoryInsightBoard({
   const studentId = student?.studentId ?? null;
   const isRoster = studentId?.startsWith("roster:") ?? false;
 
-  const attendanceQuery = useQuery<StudentAttendance>({
+  const attendanceQuery = useLiveQuery<StudentAttendance>({
     queryKey: ["advisee-attendance", studentId],
     queryFn: () => fetchStudentAttendance(studentId as string),
     enabled: !!studentId,
@@ -81,7 +81,7 @@ export function AdvisoryInsightBoard({
     refetchInterval: 30_000,
   });
 
-  const academicQuery = useQuery<StudentAcademic>({
+  const academicQuery = useLiveQuery<StudentAcademic>({
     queryKey: ["advisee-academic", studentId],
     queryFn: () => fetchStudentAcademic(studentId as string),
     enabled: !!studentId,
@@ -90,7 +90,7 @@ export function AdvisoryInsightBoard({
     refetchInterval: 30_000,
   });
 
-  const anecdotalQuery = useQuery<AnecdotalResponse>({
+  const anecdotalQuery = useLiveQuery<AnecdotalResponse>({
     queryKey: ["advisee-anecdotal", studentId],
     queryFn: () => fetchAdviseeAnecdotal(studentId as string),
     enabled: !!studentId && !isRoster,
@@ -195,6 +195,11 @@ export function AdvisoryInsightBoard({
             </Pill>
           </span>
         </div>
+        {/* Risk level lives at the panel's top-right (moved out of the list
+            table so the left lane stays a pure name/LRN roster). */}
+        <Pill tone={riskBadgeVariant(student.riskLevel)} label="Risk level">
+          {student.riskLevel}
+        </Pill>
       </header>
 
       {loading ? (
@@ -247,18 +252,6 @@ export function AdvisoryInsightBoard({
                     <ShieldAlert size={18} />
                   </span>
                   <h4 className={styles.colTitle}>Risk factors</h4>
-                  <Pill
-                    tone={
-                      student.riskLevel === "High"
-                        ? "red"
-                        : student.riskLevel === "Low"
-                          ? "green"
-                          : "neutral"
-                    }
-                    label="Risk level"
-                  >
-                    {student.riskLevel}
-                  </Pill>
                 </header>
                 {activeFlags.length === 0 ? (
                   <p className={styles.empty}>All clear — no active factors.</p>
@@ -322,7 +315,7 @@ export function AdvisoryInsightBoard({
                         {!hasAttendanceData
                           ? "No sessions in this term"
                           : subjectSummary
-                            ? `${subjectSummary.present} of ${subjectSummary.total} subject marks · ${subjectSummary.bySubject.length} subjects`
+                            ? `${subjectSummary.present} of ${subjectSummary.total} meetups`
                             : attendanceQuery.data
                               ? `${attendanceQuery.data.summary.present} of ${attendanceQuery.data.summary.total} sessions`
                               : "Snapshot from roster"}

@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
+import { liveQueryOptions, useLiveQuery } from "@/lib/api/live";
+
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
@@ -79,7 +81,7 @@ export async function fetchOfferedSubjects(
 }
 
 export function useOfferedSubjects(sectionId: string | undefined, termId: string | undefined) {
-  return useQuery({
+  return useLiveQuery({
     queryKey: offeredSubjectsKey(sectionId, termId),
     queryFn: () => fetchOfferedSubjects(sectionId as string, termId as string),
     enabled: !!sectionId && !!termId,
@@ -88,6 +90,7 @@ export function useOfferedSubjects(sectionId: string | undefined, termId: string
     gcTime: SHEET_GC_MS,
 
     placeholderData: keepPreviousData,
+    ...liveQueryOptions,
   });
 }
 
@@ -96,7 +99,7 @@ export function useSheetContext() {
   const { activeTerm } = useTerm();
   const teacherId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery({
+  return useLiveQuery({
     queryKey: advisoryRosterKey(teacherId, termKey),
     queryFn: fetchAdvisoryRoster,
     enabled: !!teacherId,
@@ -104,6 +107,7 @@ export function useSheetContext() {
     staleTime: SHEET_STALE_MS,
     gcTime: SHEET_GC_MS,
     select: toSheetContext,
+    ...liveQueryOptions,
   });
 }
 
@@ -117,7 +121,7 @@ export function useSheetMarks(
   const { activeTerm } = useTerm();
   const teacherId = auth?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery({
+  return useLiveQuery({
     queryKey: sheetMarksKey(teacherId, date, subjectId ?? "none", slot, sectionId ?? null, termKey),
     queryFn: () =>
       fetchSheetMarks(`${date}T00:00:00Z`, subjectId as string, slot, sectionId ?? null),
@@ -129,6 +133,7 @@ export function useSheetMarks(
     // Keep the long-standing map shape for every marks consumer; the owner
     // metadata rides along in the same cached response.
     select: (data) => data.marks,
+    ...liveQueryOptions,
   });
 }
 
@@ -147,7 +152,7 @@ export function useSheetOwner(
   const { activeTerm } = useTerm();
   const teacherId = auth?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery({
+  return useLiveQuery({
     queryKey: sheetMarksKey(teacherId, date, subjectId ?? "none", slot, sectionId ?? null, termKey),
     queryFn: () =>
       fetchSheetMarks(`${date}T00:00:00Z`, subjectId as string, slot, sectionId ?? null),
@@ -157,6 +162,7 @@ export function useSheetOwner(
     gcTime: MARKS_GC_MS,
     placeholderData: keepPreviousData,
     select: (data) => ({ mine: data.mine, submittedBy: data.submittedBy }),
+    ...liveQueryOptions,
   });
 }
 
@@ -182,7 +188,7 @@ export function useSubjectDays(
 ) {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery({
+  return useLiveQuery({
     queryKey: subjectDaysKey(sectionId, subjectId, mine, termKey),
     queryFn: async (): Promise<SubjectDays> => {
       const params = new URLSearchParams({
@@ -201,6 +207,7 @@ export function useSubjectDays(
     gcTime: SHEET_GC_MS,
 
     placeholderData: keepPreviousData,
+    ...liveQueryOptions,
   });
 }
 
@@ -268,7 +275,7 @@ export function sectionRosterKey(sectionId: string | undefined, termKey = "") {
 export function useSectionRoster(sectionId: string | undefined) {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery({
+  return useLiveQuery({
     queryKey: sectionRosterKey(sectionId, termKey),
     queryFn: async (): Promise<SectionRoster> => {
       const params = new URLSearchParams({ sectionId: sectionId as string });
@@ -283,6 +290,7 @@ export function useSectionRoster(sectionId: string | undefined) {
     gcTime: ROSTER_GC_MS,
 
     placeholderData: keepPreviousData,
+    ...liveQueryOptions,
   });
 }
 

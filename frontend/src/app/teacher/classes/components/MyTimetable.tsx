@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { liveQueryOptions, useLiveQuery } from "@/lib/api/live";
+
 import { KeyRound, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
@@ -52,6 +54,8 @@ export function MyTimetable() {
   const [confirmReleaseOpen, setConfirmReleaseOpen] = useState(false);
   // Unlink progress now lives in the single shared Dock.
   const unlinkTaskRef = useRef<string | null>(null);
+  // Term-entry verification also reports into the shared Dock.
+  const verifyTaskRef = useRef<string | null>(null);
   const { activeTerm } = useTerm();
   const termLabel = activeTerm
     ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
@@ -67,7 +71,7 @@ export function MyTimetable() {
     return () => window.clearInterval(id);
   }, []);
 
-  const meQuery = useQuery<{ teacherName: LinkedName | null; termGrant: TermGrant | null; isMasterTeacher?: boolean }>({
+  const meQuery = useLiveQuery<{ teacherName: LinkedName | null; termGrant: TermGrant | null; isMasterTeacher?: boolean }>({
     queryKey: ["teacher-schedule-me", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{
@@ -77,12 +81,13 @@ export function MyTimetable() {
       }>("/api/teacher/schedule/teachers/me");
       return data;
     },
+    ...liveQueryOptions,
   });
 
   const linked = meQuery.data?.teacherName ?? null;
   const termGrant = meQuery.data?.termGrant ?? null;
 
-  const slotsQuery = useQuery<{ slots: MySlot[] }>({
+  const slotsQuery = useLiveQuery<{ slots: MySlot[] }>({
     queryKey: ["teacher-my-slots", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ slots: MySlot[] }>(
@@ -91,15 +96,17 @@ export function MyTimetable() {
       return data;
     },
     enabled: linked !== null,
+    ...liveQueryOptions,
   });
 
-  const configQuery = useQuery<{ config: DayConfig }>({
+  const configQuery = useLiveQuery<{ config: DayConfig }>({
     queryKey: ["teacher-schedule-config", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ config: DayConfig }>("/api/teacher/schedule/config");
       return data;
     },
     enabled: linked !== null,
+    ...liveQueryOptions,
   });
 
   const nowKey = useMemo(() => {
@@ -198,6 +205,13 @@ export function MyTimetable() {
     },
     onSuccess: () => {
       setAttCodeError(null);
+      const id = verifyTaskRef.current;
+      verifyTaskRef.current = null;
+      try {
+        if (id) dockRef.current.completeTask(id, "Term entered · classes are open");
+      } catch {
+        /* ignore */
+      }
       void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-me"] });
       void queryClient.invalidateQueries({ queryKey: ["teacher-notifications"] });
       toast.success({
@@ -208,6 +222,13 @@ export function MyTimetable() {
     onError: (err: unknown) => {
       const message = getErrorMessage(err, "Could not verify teacher code.");
       setAttCodeError(message);
+      const id = verifyTaskRef.current;
+      verifyTaskRef.current = null;
+      try {
+        if (id) dockRef.current.failTask(id, message);
+      } catch {
+        /* ignore */
+      }
       toast.error({ title: "Could not verify code", description: message });
     },
   });
@@ -219,6 +240,15 @@ export function MyTimetable() {
       return;
     }
     setAttCodeError(null);
+    try {
+      verifyTaskRef.current = dockRef.current.startTask({
+        kind: "link-code",
+        title: "Entering term",
+        description: `Verifying ${attCode.trim().toUpperCase()} for ${termLabel}`,
+      });
+    } catch {
+      verifyTaskRef.current = null;
+    }
     verify.mutate(attCode.trim());
   };
 
@@ -294,7 +324,7 @@ export function MyTimetable() {
                     ))}
                 </span>
               }
-              description="Enter your teacher code to open your classes. Codes never carry across terms."
+              description="Enter your teacher code once to open your classes — it stays valid for every term of this school year."
             >
               <div className="flex flex-col px-1 py-1">
                 <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -378,11 +408,28 @@ export function MyTimetable() {
     <div className="flex flex-col gap-4">
       <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="flex min-w-0 flex-col gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight">My Classes</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Your attached timetable for the week.
-            </p>
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight">My Classes</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your attached timetable for the week.
+              </p>
+            </div>
+            <span className="flex shrink-0 items-center gap-1.5">
+              {termLabel
+                .split("·")
+                .map((part) => part.trim())
+                .filter(Boolean)
+                .map((part, index) => (
+                  <Pill
+                    key={part}
+                    tone="amber"
+                    label={index === 0 ? "School year" : "Active term"}
+                  >
+                    {part}
+                  </Pill>
+                ))}
+            </span>
           </div>
           {loadingSlots ? (
             <div

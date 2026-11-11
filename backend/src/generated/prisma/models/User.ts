@@ -20,8 +20,20 @@ export type UserModel = runtime.Types.Result.DefaultSelection<Prisma.$UserPayloa
 
 export type AggregateUser = {
   _count: UserCountAggregateOutputType | null
+  _avg: UserAvgAggregateOutputType | null
+  _sum: UserSumAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
+}
+
+export type UserAvgAggregateOutputType = {
+  lastLat: number | null
+  lastLng: number | null
+}
+
+export type UserSumAggregateOutputType = {
+  lastLat: number | null
+  lastLng: number | null
 }
 
 export type UserMinAggregateOutputType = {
@@ -36,6 +48,12 @@ export type UserMinAggregateOutputType = {
   approvedBy: string | null
   approvedAt: Date | null
   createdAt: Date | null
+  lastActiveAt: Date | null
+  lastIp: string | null
+  lastCity: string | null
+  lastCountry: string | null
+  lastLat: number | null
+  lastLng: number | null
 }
 
 export type UserMaxAggregateOutputType = {
@@ -50,6 +68,12 @@ export type UserMaxAggregateOutputType = {
   approvedBy: string | null
   approvedAt: Date | null
   createdAt: Date | null
+  lastActiveAt: Date | null
+  lastIp: string | null
+  lastCity: string | null
+  lastCountry: string | null
+  lastLat: number | null
+  lastLng: number | null
 }
 
 export type UserCountAggregateOutputType = {
@@ -64,9 +88,25 @@ export type UserCountAggregateOutputType = {
   approvedBy: number
   approvedAt: number
   createdAt: number
+  lastActiveAt: number
+  lastIp: number
+  lastCity: number
+  lastCountry: number
+  lastLat: number
+  lastLng: number
   _all: number
 }
 
+
+export type UserAvgAggregateInputType = {
+  lastLat?: true
+  lastLng?: true
+}
+
+export type UserSumAggregateInputType = {
+  lastLat?: true
+  lastLng?: true
+}
 
 export type UserMinAggregateInputType = {
   id?: true
@@ -80,6 +120,12 @@ export type UserMinAggregateInputType = {
   approvedBy?: true
   approvedAt?: true
   createdAt?: true
+  lastActiveAt?: true
+  lastIp?: true
+  lastCity?: true
+  lastCountry?: true
+  lastLat?: true
+  lastLng?: true
 }
 
 export type UserMaxAggregateInputType = {
@@ -94,6 +140,12 @@ export type UserMaxAggregateInputType = {
   approvedBy?: true
   approvedAt?: true
   createdAt?: true
+  lastActiveAt?: true
+  lastIp?: true
+  lastCity?: true
+  lastCountry?: true
+  lastLat?: true
+  lastLng?: true
 }
 
 export type UserCountAggregateInputType = {
@@ -108,6 +160,12 @@ export type UserCountAggregateInputType = {
   approvedBy?: true
   approvedAt?: true
   createdAt?: true
+  lastActiveAt?: true
+  lastIp?: true
+  lastCity?: true
+  lastCountry?: true
+  lastLat?: true
+  lastLng?: true
   _all?: true
 }
 
@@ -149,6 +207,18 @@ export type UserAggregateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: UserAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: UserSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: UserMinAggregateInputType
@@ -179,6 +249,8 @@ export type UserGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
   take?: number
   skip?: number
   _count?: UserCountAggregateInputType | true
+  _avg?: UserAvgAggregateInputType
+  _sum?: UserSumAggregateInputType
   _min?: UserMinAggregateInputType
   _max?: UserMaxAggregateInputType
 }
@@ -195,7 +267,15 @@ export type UserGroupByOutputType = {
   approvedBy: string | null
   approvedAt: Date | null
   createdAt: Date
+  lastActiveAt: Date | null
+  lastIp: string | null
+  lastCity: string | null
+  lastCountry: string | null
+  lastLat: number | null
+  lastLng: number | null
   _count: UserCountAggregateOutputType | null
+  _avg: UserAvgAggregateOutputType | null
+  _sum: UserSumAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
 }
@@ -230,6 +310,12 @@ export type UserWhereInput = {
   approvedBy?: Prisma.StringNullableFilter<"User"> | string | null
   approvedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
+  lastActiveAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  lastIp?: Prisma.StringNullableFilter<"User"> | string | null
+  lastCity?: Prisma.StringNullableFilter<"User"> | string | null
+  lastCountry?: Prisma.StringNullableFilter<"User"> | string | null
+  lastLat?: Prisma.FloatNullableFilter<"User"> | number | null
+  lastLng?: Prisma.FloatNullableFilter<"User"> | number | null
   studentProfile?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
   parentProfile?: Prisma.XOR<Prisma.ParentProfileNullableScalarRelationFilter, Prisma.ParentProfileWhereInput> | null
   staffProfile?: Prisma.XOR<Prisma.StaffProfileNullableScalarRelationFilter, Prisma.StaffProfileWhereInput> | null
@@ -258,6 +344,7 @@ export type UserWhereInput = {
   auditLogs?: Prisma.AuditLogListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
   refreshTokens?: Prisma.RefreshTokenListRelationFilter
+  loginEvents?: Prisma.LoginEventListRelationFilter
   sectionsAdvised?: Prisma.SectionListRelationFilter
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestListRelationFilter
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestListRelationFilter
@@ -285,6 +372,12 @@ export type UserOrderByWithRelationInput = {
   approvedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   approvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  lastActiveAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastIp?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastCity?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastCountry?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastLat?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastLng?: Prisma.SortOrderInput | Prisma.SortOrder
   studentProfile?: Prisma.StudentProfileOrderByWithRelationInput
   parentProfile?: Prisma.ParentProfileOrderByWithRelationInput
   staffProfile?: Prisma.StaffProfileOrderByWithRelationInput
@@ -313,6 +406,7 @@ export type UserOrderByWithRelationInput = {
   auditLogs?: Prisma.AuditLogOrderByRelationAggregateInput
   notifications?: Prisma.NotificationOrderByRelationAggregateInput
   refreshTokens?: Prisma.RefreshTokenOrderByRelationAggregateInput
+  loginEvents?: Prisma.LoginEventOrderByRelationAggregateInput
   sectionsAdvised?: Prisma.SectionOrderByRelationAggregateInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestOrderByRelationAggregateInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestOrderByRelationAggregateInput
@@ -343,6 +437,12 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   approvedBy?: Prisma.StringNullableFilter<"User"> | string | null
   approvedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
+  lastActiveAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  lastIp?: Prisma.StringNullableFilter<"User"> | string | null
+  lastCity?: Prisma.StringNullableFilter<"User"> | string | null
+  lastCountry?: Prisma.StringNullableFilter<"User"> | string | null
+  lastLat?: Prisma.FloatNullableFilter<"User"> | number | null
+  lastLng?: Prisma.FloatNullableFilter<"User"> | number | null
   studentProfile?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
   parentProfile?: Prisma.XOR<Prisma.ParentProfileNullableScalarRelationFilter, Prisma.ParentProfileWhereInput> | null
   staffProfile?: Prisma.XOR<Prisma.StaffProfileNullableScalarRelationFilter, Prisma.StaffProfileWhereInput> | null
@@ -371,6 +471,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   auditLogs?: Prisma.AuditLogListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
   refreshTokens?: Prisma.RefreshTokenListRelationFilter
+  loginEvents?: Prisma.LoginEventListRelationFilter
   sectionsAdvised?: Prisma.SectionListRelationFilter
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestListRelationFilter
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestListRelationFilter
@@ -398,9 +499,17 @@ export type UserOrderByWithAggregationInput = {
   approvedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   approvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  lastActiveAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastIp?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastCity?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastCountry?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastLat?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastLng?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
+  _avg?: Prisma.UserAvgOrderByAggregateInput
   _max?: Prisma.UserMaxOrderByAggregateInput
   _min?: Prisma.UserMinOrderByAggregateInput
+  _sum?: Prisma.UserSumOrderByAggregateInput
 }
 
 export type UserScalarWhereWithAggregatesInput = {
@@ -418,6 +527,12 @@ export type UserScalarWhereWithAggregatesInput = {
   approvedBy?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   approvedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
+  lastActiveAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  lastIp?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  lastCity?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  lastCountry?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  lastLat?: Prisma.FloatNullableWithAggregatesFilter<"User"> | number | null
+  lastLng?: Prisma.FloatNullableWithAggregatesFilter<"User"> | number | null
 }
 
 export type UserCreateInput = {
@@ -432,6 +547,12 @@ export type UserCreateInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -460,6 +581,7 @@ export type UserCreateInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -487,6 +609,12 @@ export type UserUncheckedCreateInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -515,6 +643,7 @@ export type UserUncheckedCreateInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -542,6 +671,12 @@ export type UserUpdateInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -570,6 +705,7 @@ export type UserUpdateInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -597,6 +733,12 @@ export type UserUncheckedUpdateInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -625,6 +767,7 @@ export type UserUncheckedUpdateInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -652,6 +795,12 @@ export type UserCreateManyInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
 }
 
 export type UserUpdateManyMutationInput = {
@@ -666,6 +815,12 @@ export type UserUpdateManyMutationInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type UserUncheckedUpdateManyInput = {
@@ -680,6 +835,12 @@ export type UserUncheckedUpdateManyInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type UserCountOrderByAggregateInput = {
@@ -694,6 +855,17 @@ export type UserCountOrderByAggregateInput = {
   approvedBy?: Prisma.SortOrder
   approvedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  lastActiveAt?: Prisma.SortOrder
+  lastIp?: Prisma.SortOrder
+  lastCity?: Prisma.SortOrder
+  lastCountry?: Prisma.SortOrder
+  lastLat?: Prisma.SortOrder
+  lastLng?: Prisma.SortOrder
+}
+
+export type UserAvgOrderByAggregateInput = {
+  lastLat?: Prisma.SortOrder
+  lastLng?: Prisma.SortOrder
 }
 
 export type UserMaxOrderByAggregateInput = {
@@ -708,6 +880,12 @@ export type UserMaxOrderByAggregateInput = {
   approvedBy?: Prisma.SortOrder
   approvedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  lastActiveAt?: Prisma.SortOrder
+  lastIp?: Prisma.SortOrder
+  lastCity?: Prisma.SortOrder
+  lastCountry?: Prisma.SortOrder
+  lastLat?: Prisma.SortOrder
+  lastLng?: Prisma.SortOrder
 }
 
 export type UserMinOrderByAggregateInput = {
@@ -722,6 +900,17 @@ export type UserMinOrderByAggregateInput = {
   approvedBy?: Prisma.SortOrder
   approvedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  lastActiveAt?: Prisma.SortOrder
+  lastIp?: Prisma.SortOrder
+  lastCity?: Prisma.SortOrder
+  lastCountry?: Prisma.SortOrder
+  lastLat?: Prisma.SortOrder
+  lastLng?: Prisma.SortOrder
+}
+
+export type UserSumOrderByAggregateInput = {
+  lastLat?: Prisma.SortOrder
+  lastLng?: Prisma.SortOrder
 }
 
 export type UserScalarRelationFilter = {
@@ -756,6 +945,28 @@ export type NullableDateTimeFieldUpdateOperationsInput = {
 
 export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
+}
+
+export type NullableFloatFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
+export type UserCreateNestedOneWithoutLoginEventsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLoginEventsInput, Prisma.UserUncheckedCreateWithoutLoginEventsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLoginEventsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutLoginEventsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLoginEventsInput, Prisma.UserUncheckedCreateWithoutLoginEventsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLoginEventsInput
+  upsert?: Prisma.UserUpsertWithoutLoginEventsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutLoginEventsInput, Prisma.UserUpdateWithoutLoginEventsInput>, Prisma.UserUncheckedUpdateWithoutLoginEventsInput>
 }
 
 export type UserCreateNestedOneWithoutStudentProfileInput = {
@@ -1354,7 +1565,7 @@ export type UserUpdateOneRequiredWithoutRefreshTokensNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutRefreshTokensInput, Prisma.UserUpdateWithoutRefreshTokensInput>, Prisma.UserUncheckedUpdateWithoutRefreshTokensInput>
 }
 
-export type UserCreateWithoutStudentProfileInput = {
+export type UserCreateWithoutLoginEventsInput = {
   id?: string
   email: string
   passwordHash: string
@@ -1366,6 +1577,13 @@ export type UserCreateWithoutStudentProfileInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
@@ -1408,7 +1626,7 @@ export type UserCreateWithoutStudentProfileInput = {
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
 }
 
-export type UserUncheckedCreateWithoutStudentProfileInput = {
+export type UserUncheckedCreateWithoutLoginEventsInput = {
   id?: string
   email: string
   passwordHash: string
@@ -1420,6 +1638,13 @@ export type UserUncheckedCreateWithoutStudentProfileInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
@@ -1447,6 +1672,266 @@ export type UserUncheckedCreateWithoutStudentProfileInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedCreateNestedManyWithoutUserInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserCreateOrConnectWithoutLoginEventsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutLoginEventsInput, Prisma.UserUncheckedCreateWithoutLoginEventsInput>
+}
+
+export type UserUpsertWithoutLoginEventsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutLoginEventsInput, Prisma.UserUncheckedUpdateWithoutLoginEventsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutLoginEventsInput, Prisma.UserUncheckedCreateWithoutLoginEventsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutLoginEventsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutLoginEventsInput, Prisma.UserUncheckedUpdateWithoutLoginEventsInput>
+}
+
+export type UserUpdateWithoutLoginEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutRecorderNestedInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUpdateManyWithoutUserNestedInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutUploaderNestedInput
+  admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUpdateManyWithoutRecorderNestedInput
+  sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUpdateManyWithoutUserNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutLoginEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutRecorderNestedInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUncheckedUpdateManyWithoutUserNestedInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedUpdateManyWithoutCreatorNestedInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedUpdateManyWithoutRecorderNestedInput
+  sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationUncheckedUpdateManyWithoutUserNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserCreateWithoutStudentProfileInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
+  parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutRecorderInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeCreateNestedManyWithoutUserInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutUploaderInput
+  admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionCreateNestedManyWithoutRecorderInput
+  sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  termRosterConfirmations?: Prisma.TermRosterConfirmationCreateNestedManyWithoutUserInput
+  gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserUncheckedCreateWithoutStudentProfileInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
+  parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutRecorderInput
+  admMeetingInvites?: Prisma.AdmMeetingInviteeUncheckedCreateNestedManyWithoutUserInput
+  admMeetingAttachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutUploaderInput
+  admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  advisoryModules?: Prisma.AdvisoryModuleUncheckedCreateNestedManyWithoutCreatorInput
+  advisoryModuleSubmissions?: Prisma.AdvisoryModuleSubmissionUncheckedCreateNestedManyWithoutRecorderInput
+  sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -1490,6 +1975,12 @@ export type UserUpdateWithoutStudentProfileInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
@@ -1517,6 +2008,7 @@ export type UserUpdateWithoutStudentProfileInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -1544,6 +2036,12 @@ export type UserUncheckedUpdateWithoutStudentProfileInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
@@ -1571,6 +2069,7 @@ export type UserUncheckedUpdateWithoutStudentProfileInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -1598,6 +2097,12 @@ export type UserCreateWithoutParentProfileInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
@@ -1625,6 +2130,7 @@ export type UserCreateWithoutParentProfileInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -1652,6 +2158,12 @@ export type UserUncheckedCreateWithoutParentProfileInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
@@ -1679,6 +2191,7 @@ export type UserUncheckedCreateWithoutParentProfileInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -1722,6 +2235,12 @@ export type UserUpdateWithoutParentProfileInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
@@ -1749,6 +2268,7 @@ export type UserUpdateWithoutParentProfileInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -1776,6 +2296,12 @@ export type UserUncheckedUpdateWithoutParentProfileInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
@@ -1803,6 +2329,7 @@ export type UserUncheckedUpdateWithoutParentProfileInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -1830,6 +2357,12 @@ export type UserCreateWithoutStaffProfileInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
@@ -1857,6 +2390,7 @@ export type UserCreateWithoutStaffProfileInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -1884,6 +2418,12 @@ export type UserUncheckedCreateWithoutStaffProfileInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
@@ -1911,6 +2451,7 @@ export type UserUncheckedCreateWithoutStaffProfileInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -1954,6 +2495,12 @@ export type UserUpdateWithoutStaffProfileInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
@@ -1981,6 +2528,7 @@ export type UserUpdateWithoutStaffProfileInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -2008,6 +2556,12 @@ export type UserUncheckedUpdateWithoutStaffProfileInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
@@ -2035,6 +2589,7 @@ export type UserUncheckedUpdateWithoutStaffProfileInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -2062,6 +2617,12 @@ export type UserCreateWithoutSectionsAdvisedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -2090,6 +2651,7 @@ export type UserCreateWithoutSectionsAdvisedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
@@ -2116,6 +2678,12 @@ export type UserUncheckedCreateWithoutSectionsAdvisedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2144,6 +2712,7 @@ export type UserUncheckedCreateWithoutSectionsAdvisedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
@@ -2186,6 +2755,12 @@ export type UserUpdateWithoutSectionsAdvisedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -2214,6 +2789,7 @@ export type UserUpdateWithoutSectionsAdvisedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
@@ -2240,6 +2816,12 @@ export type UserUncheckedUpdateWithoutSectionsAdvisedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -2268,6 +2850,7 @@ export type UserUncheckedUpdateWithoutSectionsAdvisedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
@@ -2294,6 +2877,12 @@ export type UserCreateWithoutTermRosterConfirmationsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -2322,6 +2911,7 @@ export type UserCreateWithoutTermRosterConfirmationsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -2348,6 +2938,12 @@ export type UserUncheckedCreateWithoutTermRosterConfirmationsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2376,6 +2972,7 @@ export type UserUncheckedCreateWithoutTermRosterConfirmationsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -2418,6 +3015,12 @@ export type UserUpdateWithoutTermRosterConfirmationsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -2446,6 +3049,7 @@ export type UserUpdateWithoutTermRosterConfirmationsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -2472,6 +3076,12 @@ export type UserUncheckedUpdateWithoutTermRosterConfirmationsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -2500,6 +3110,7 @@ export type UserUncheckedUpdateWithoutTermRosterConfirmationsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -2526,6 +3137,12 @@ export type UserCreateWithoutTeacherAssignmentsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -2554,6 +3171,7 @@ export type UserCreateWithoutTeacherAssignmentsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -2580,6 +3198,12 @@ export type UserUncheckedCreateWithoutTeacherAssignmentsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2608,6 +3232,7 @@ export type UserUncheckedCreateWithoutTeacherAssignmentsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -2650,6 +3275,12 @@ export type UserUpdateWithoutTeacherAssignmentsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -2678,6 +3309,7 @@ export type UserUpdateWithoutTeacherAssignmentsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -2704,6 +3336,12 @@ export type UserUncheckedUpdateWithoutTeacherAssignmentsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -2732,6 +3370,7 @@ export type UserUncheckedUpdateWithoutTeacherAssignmentsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -2758,6 +3397,12 @@ export type UserCreateWithoutSubmittedTimetablesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -2786,6 +3431,7 @@ export type UserCreateWithoutSubmittedTimetablesInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -2812,6 +3458,12 @@ export type UserUncheckedCreateWithoutSubmittedTimetablesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2840,6 +3492,7 @@ export type UserUncheckedCreateWithoutSubmittedTimetablesInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -2871,6 +3524,12 @@ export type UserCreateWithoutReviewedTimetablesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -2899,6 +3558,7 @@ export type UserCreateWithoutReviewedTimetablesInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -2925,6 +3585,12 @@ export type UserUncheckedCreateWithoutReviewedTimetablesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2953,6 +3619,7 @@ export type UserUncheckedCreateWithoutReviewedTimetablesInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -2995,6 +3662,12 @@ export type UserUpdateWithoutSubmittedTimetablesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -3023,6 +3696,7 @@ export type UserUpdateWithoutSubmittedTimetablesInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -3049,6 +3723,12 @@ export type UserUncheckedUpdateWithoutSubmittedTimetablesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3077,6 +3757,7 @@ export type UserUncheckedUpdateWithoutSubmittedTimetablesInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -3114,6 +3795,12 @@ export type UserUpdateWithoutReviewedTimetablesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -3142,6 +3829,7 @@ export type UserUpdateWithoutReviewedTimetablesInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -3168,6 +3856,12 @@ export type UserUncheckedUpdateWithoutReviewedTimetablesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3196,6 +3890,7 @@ export type UserUncheckedUpdateWithoutReviewedTimetablesInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -3222,6 +3917,12 @@ export type UserCreateWithoutTeacherNameInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -3250,6 +3951,7 @@ export type UserCreateWithoutTeacherNameInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -3276,6 +3978,12 @@ export type UserUncheckedCreateWithoutTeacherNameInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -3304,6 +4012,7 @@ export type UserUncheckedCreateWithoutTeacherNameInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -3346,6 +4055,12 @@ export type UserUpdateWithoutTeacherNameInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -3374,6 +4089,7 @@ export type UserUpdateWithoutTeacherNameInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -3400,6 +4116,12 @@ export type UserUncheckedUpdateWithoutTeacherNameInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3428,6 +4150,7 @@ export type UserUncheckedUpdateWithoutTeacherNameInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -3454,6 +4177,12 @@ export type UserCreateWithoutTermGrantsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -3482,6 +4211,7 @@ export type UserCreateWithoutTermGrantsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -3508,6 +4238,12 @@ export type UserUncheckedCreateWithoutTermGrantsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -3536,6 +4272,7 @@ export type UserUncheckedCreateWithoutTermGrantsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -3578,6 +4315,12 @@ export type UserUpdateWithoutTermGrantsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -3606,6 +4349,7 @@ export type UserUpdateWithoutTermGrantsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -3632,6 +4376,12 @@ export type UserUncheckedUpdateWithoutTermGrantsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3660,6 +4410,7 @@ export type UserUncheckedUpdateWithoutTermGrantsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -3686,6 +4437,12 @@ export type UserCreateWithoutArchivedAdviseesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -3714,6 +4471,7 @@ export type UserCreateWithoutArchivedAdviseesInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -3740,6 +4498,12 @@ export type UserUncheckedCreateWithoutArchivedAdviseesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -3768,6 +4532,7 @@ export type UserUncheckedCreateWithoutArchivedAdviseesInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -3810,6 +4575,12 @@ export type UserUpdateWithoutArchivedAdviseesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -3838,6 +4609,7 @@ export type UserUpdateWithoutArchivedAdviseesInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -3864,6 +4636,12 @@ export type UserUncheckedUpdateWithoutArchivedAdviseesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3892,6 +4670,7 @@ export type UserUncheckedUpdateWithoutArchivedAdviseesInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -3918,6 +4697,12 @@ export type UserCreateWithoutGradeFlagsRaisedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -3946,6 +4731,7 @@ export type UserCreateWithoutGradeFlagsRaisedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -3972,6 +4758,12 @@ export type UserUncheckedCreateWithoutGradeFlagsRaisedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -4000,6 +4792,7 @@ export type UserUncheckedCreateWithoutGradeFlagsRaisedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -4031,6 +4824,12 @@ export type UserCreateWithoutGradeFlagsOwnedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -4059,6 +4858,7 @@ export type UserCreateWithoutGradeFlagsOwnedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -4085,6 +4885,12 @@ export type UserUncheckedCreateWithoutGradeFlagsOwnedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -4113,6 +4919,7 @@ export type UserUncheckedCreateWithoutGradeFlagsOwnedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -4144,6 +4951,12 @@ export type UserCreateWithoutGradeFlagsResolvedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -4172,6 +4985,7 @@ export type UserCreateWithoutGradeFlagsResolvedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -4198,6 +5012,12 @@ export type UserUncheckedCreateWithoutGradeFlagsResolvedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -4226,6 +5046,7 @@ export type UserUncheckedCreateWithoutGradeFlagsResolvedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -4268,6 +5089,12 @@ export type UserUpdateWithoutGradeFlagsRaisedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -4296,6 +5123,7 @@ export type UserUpdateWithoutGradeFlagsRaisedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -4322,6 +5150,12 @@ export type UserUncheckedUpdateWithoutGradeFlagsRaisedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -4350,6 +5184,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsRaisedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -4387,6 +5222,12 @@ export type UserUpdateWithoutGradeFlagsOwnedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -4415,6 +5256,7 @@ export type UserUpdateWithoutGradeFlagsOwnedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -4441,6 +5283,12 @@ export type UserUncheckedUpdateWithoutGradeFlagsOwnedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -4469,6 +5317,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsOwnedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -4506,6 +5355,12 @@ export type UserUpdateWithoutGradeFlagsResolvedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -4534,6 +5389,7 @@ export type UserUpdateWithoutGradeFlagsResolvedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -4560,6 +5416,12 @@ export type UserUncheckedUpdateWithoutGradeFlagsResolvedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -4588,6 +5450,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsResolvedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -4614,6 +5477,12 @@ export type UserCreateWithoutAnecdotalRecordsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -4641,6 +5510,7 @@ export type UserCreateWithoutAnecdotalRecordsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -4668,6 +5538,12 @@ export type UserUncheckedCreateWithoutAnecdotalRecordsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -4695,6 +5571,7 @@ export type UserUncheckedCreateWithoutAnecdotalRecordsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -4738,6 +5615,12 @@ export type UserUpdateWithoutAnecdotalRecordsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -4765,6 +5648,7 @@ export type UserUpdateWithoutAnecdotalRecordsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -4792,6 +5676,12 @@ export type UserUncheckedUpdateWithoutAnecdotalRecordsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -4819,6 +5709,7 @@ export type UserUncheckedUpdateWithoutAnecdotalRecordsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -4846,6 +5737,12 @@ export type UserCreateWithoutAnecdotalFoldersInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -4873,6 +5770,7 @@ export type UserCreateWithoutAnecdotalFoldersInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -4900,6 +5798,12 @@ export type UserUncheckedCreateWithoutAnecdotalFoldersInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -4927,6 +5831,7 @@ export type UserUncheckedCreateWithoutAnecdotalFoldersInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -4970,6 +5875,12 @@ export type UserUpdateWithoutAnecdotalFoldersInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -4997,6 +5908,7 @@ export type UserUpdateWithoutAnecdotalFoldersInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -5024,6 +5936,12 @@ export type UserUncheckedUpdateWithoutAnecdotalFoldersInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -5051,6 +5969,7 @@ export type UserUncheckedUpdateWithoutAnecdotalFoldersInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -5078,6 +5997,12 @@ export type UserCreateWithoutAnecdotalFollowupsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -5105,6 +6030,7 @@ export type UserCreateWithoutAnecdotalFollowupsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -5132,6 +6058,12 @@ export type UserUncheckedCreateWithoutAnecdotalFollowupsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -5159,6 +6091,7 @@ export type UserUncheckedCreateWithoutAnecdotalFollowupsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -5202,6 +6135,12 @@ export type UserUpdateWithoutAnecdotalFollowupsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -5229,6 +6168,7 @@ export type UserUpdateWithoutAnecdotalFollowupsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -5256,6 +6196,12 @@ export type UserUncheckedUpdateWithoutAnecdotalFollowupsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -5283,6 +6229,7 @@ export type UserUncheckedUpdateWithoutAnecdotalFollowupsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -5310,6 +6257,12 @@ export type UserCreateWithoutReferralsMadeInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -5337,6 +6290,7 @@ export type UserCreateWithoutReferralsMadeInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -5364,6 +6318,12 @@ export type UserUncheckedCreateWithoutReferralsMadeInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -5391,6 +6351,7 @@ export type UserUncheckedCreateWithoutReferralsMadeInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -5434,6 +6395,12 @@ export type UserUpdateWithoutReferralsMadeInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -5461,6 +6428,7 @@ export type UserUpdateWithoutReferralsMadeInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -5488,6 +6456,12 @@ export type UserUncheckedUpdateWithoutReferralsMadeInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -5515,6 +6489,7 @@ export type UserUncheckedUpdateWithoutReferralsMadeInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -5542,6 +6517,12 @@ export type UserCreateWithoutSessionsCreatedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -5569,6 +6550,7 @@ export type UserCreateWithoutSessionsCreatedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -5596,6 +6578,12 @@ export type UserUncheckedCreateWithoutSessionsCreatedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -5623,6 +6611,7 @@ export type UserUncheckedCreateWithoutSessionsCreatedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -5666,6 +6655,12 @@ export type UserUpdateWithoutSessionsCreatedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -5693,6 +6688,7 @@ export type UserUpdateWithoutSessionsCreatedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -5720,6 +6716,12 @@ export type UserUncheckedUpdateWithoutSessionsCreatedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -5747,6 +6749,7 @@ export type UserUncheckedUpdateWithoutSessionsCreatedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -5774,6 +6777,12 @@ export type UserCreateWithoutSessionAttachmentsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -5801,6 +6810,7 @@ export type UserCreateWithoutSessionAttachmentsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -5828,6 +6838,12 @@ export type UserUncheckedCreateWithoutSessionAttachmentsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -5855,6 +6871,7 @@ export type UserUncheckedCreateWithoutSessionAttachmentsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -5898,6 +6915,12 @@ export type UserUpdateWithoutSessionAttachmentsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -5925,6 +6948,7 @@ export type UserUpdateWithoutSessionAttachmentsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -5952,6 +6976,12 @@ export type UserUncheckedUpdateWithoutSessionAttachmentsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -5979,6 +7009,7 @@ export type UserUncheckedUpdateWithoutSessionAttachmentsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -6006,6 +7037,12 @@ export type UserCreateWithoutAssignedInterventionsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -6033,6 +7070,7 @@ export type UserCreateWithoutAssignedInterventionsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -6060,6 +7098,12 @@ export type UserUncheckedCreateWithoutAssignedInterventionsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -6087,6 +7131,7 @@ export type UserUncheckedCreateWithoutAssignedInterventionsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -6130,6 +7175,12 @@ export type UserUpdateWithoutAssignedInterventionsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -6157,6 +7208,7 @@ export type UserUpdateWithoutAssignedInterventionsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -6184,6 +7236,12 @@ export type UserUncheckedUpdateWithoutAssignedInterventionsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -6211,6 +7269,7 @@ export type UserUncheckedUpdateWithoutAssignedInterventionsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -6238,6 +7297,12 @@ export type UserCreateWithoutHealthRecordsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -6265,6 +7330,7 @@ export type UserCreateWithoutHealthRecordsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -6292,6 +7358,12 @@ export type UserUncheckedCreateWithoutHealthRecordsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -6319,6 +7391,7 @@ export type UserUncheckedCreateWithoutHealthRecordsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -6362,6 +7435,12 @@ export type UserUpdateWithoutHealthRecordsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -6389,6 +7468,7 @@ export type UserUpdateWithoutHealthRecordsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -6416,6 +7496,12 @@ export type UserUncheckedUpdateWithoutHealthRecordsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -6443,6 +7529,7 @@ export type UserUncheckedUpdateWithoutHealthRecordsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -6470,6 +7557,12 @@ export type UserCreateWithoutHomeVisitationsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -6497,6 +7590,7 @@ export type UserCreateWithoutHomeVisitationsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -6524,6 +7618,12 @@ export type UserUncheckedCreateWithoutHomeVisitationsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -6551,6 +7651,7 @@ export type UserUncheckedCreateWithoutHomeVisitationsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -6594,6 +7695,12 @@ export type UserUpdateWithoutHomeVisitationsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -6621,6 +7728,7 @@ export type UserUpdateWithoutHomeVisitationsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -6648,6 +7756,12 @@ export type UserUncheckedUpdateWithoutHomeVisitationsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -6675,6 +7789,7 @@ export type UserUncheckedUpdateWithoutHomeVisitationsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -6702,6 +7817,12 @@ export type UserCreateWithoutAdmProfilesPreparedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -6729,6 +7850,7 @@ export type UserCreateWithoutAdmProfilesPreparedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -6756,6 +7878,12 @@ export type UserUncheckedCreateWithoutAdmProfilesPreparedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -6783,6 +7911,7 @@ export type UserUncheckedCreateWithoutAdmProfilesPreparedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -6815,6 +7944,12 @@ export type UserCreateWithoutAdmProfilesApprovedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -6842,6 +7977,7 @@ export type UserCreateWithoutAdmProfilesApprovedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -6869,6 +8005,12 @@ export type UserUncheckedCreateWithoutAdmProfilesApprovedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -6896,6 +8038,7 @@ export type UserUncheckedCreateWithoutAdmProfilesApprovedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -6939,6 +8082,12 @@ export type UserUpdateWithoutAdmProfilesPreparedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -6966,6 +8115,7 @@ export type UserUpdateWithoutAdmProfilesPreparedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -6993,6 +8143,12 @@ export type UserUncheckedUpdateWithoutAdmProfilesPreparedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -7020,6 +8176,7 @@ export type UserUncheckedUpdateWithoutAdmProfilesPreparedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -7058,6 +8215,12 @@ export type UserUpdateWithoutAdmProfilesApprovedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -7085,6 +8248,7 @@ export type UserUpdateWithoutAdmProfilesApprovedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -7112,6 +8276,12 @@ export type UserUncheckedUpdateWithoutAdmProfilesApprovedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -7139,6 +8309,7 @@ export type UserUncheckedUpdateWithoutAdmProfilesApprovedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -7166,6 +8337,12 @@ export type UserCreateWithoutAdmMeetingsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -7193,6 +8370,7 @@ export type UserCreateWithoutAdmMeetingsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -7220,6 +8398,12 @@ export type UserUncheckedCreateWithoutAdmMeetingsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -7247,6 +8431,7 @@ export type UserUncheckedCreateWithoutAdmMeetingsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -7290,6 +8475,12 @@ export type UserUpdateWithoutAdmMeetingsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -7317,6 +8508,7 @@ export type UserUpdateWithoutAdmMeetingsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -7344,6 +8536,12 @@ export type UserUncheckedUpdateWithoutAdmMeetingsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -7371,6 +8569,7 @@ export type UserUncheckedUpdateWithoutAdmMeetingsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -7398,6 +8597,12 @@ export type UserCreateWithoutAdmMeetingInvitesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -7425,6 +8630,7 @@ export type UserCreateWithoutAdmMeetingInvitesInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -7452,6 +8658,12 @@ export type UserUncheckedCreateWithoutAdmMeetingInvitesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -7479,6 +8691,7 @@ export type UserUncheckedCreateWithoutAdmMeetingInvitesInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -7522,6 +8735,12 @@ export type UserUpdateWithoutAdmMeetingInvitesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -7549,6 +8768,7 @@ export type UserUpdateWithoutAdmMeetingInvitesInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -7576,6 +8796,12 @@ export type UserUncheckedUpdateWithoutAdmMeetingInvitesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -7603,6 +8829,7 @@ export type UserUncheckedUpdateWithoutAdmMeetingInvitesInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -7630,6 +8857,12 @@ export type UserCreateWithoutAdmMeetingAttachmentsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -7657,6 +8890,7 @@ export type UserCreateWithoutAdmMeetingAttachmentsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -7684,6 +8918,12 @@ export type UserUncheckedCreateWithoutAdmMeetingAttachmentsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -7711,6 +8951,7 @@ export type UserUncheckedCreateWithoutAdmMeetingAttachmentsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -7754,6 +8995,12 @@ export type UserUpdateWithoutAdmMeetingAttachmentsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -7781,6 +9028,7 @@ export type UserUpdateWithoutAdmMeetingAttachmentsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -7808,6 +9056,12 @@ export type UserUncheckedUpdateWithoutAdmMeetingAttachmentsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -7835,6 +9089,7 @@ export type UserUncheckedUpdateWithoutAdmMeetingAttachmentsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -7862,6 +9117,12 @@ export type UserCreateWithoutAdmModulesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -7889,6 +9150,7 @@ export type UserCreateWithoutAdmModulesInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -7916,6 +9178,12 @@ export type UserUncheckedCreateWithoutAdmModulesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -7943,6 +9211,7 @@ export type UserUncheckedCreateWithoutAdmModulesInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -7986,6 +9255,12 @@ export type UserUpdateWithoutAdmModulesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -8013,6 +9288,7 @@ export type UserUpdateWithoutAdmModulesInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -8040,6 +9316,12 @@ export type UserUncheckedUpdateWithoutAdmModulesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -8067,6 +9349,7 @@ export type UserUncheckedUpdateWithoutAdmModulesInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -8094,6 +9377,12 @@ export type UserCreateWithoutAdmDevicesIssuedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -8121,6 +9410,7 @@ export type UserCreateWithoutAdmDevicesIssuedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -8148,6 +9438,12 @@ export type UserUncheckedCreateWithoutAdmDevicesIssuedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -8175,6 +9471,7 @@ export type UserUncheckedCreateWithoutAdmDevicesIssuedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -8218,6 +9515,12 @@ export type UserUpdateWithoutAdmDevicesIssuedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -8245,6 +9548,7 @@ export type UserUpdateWithoutAdmDevicesIssuedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -8272,6 +9576,12 @@ export type UserUncheckedUpdateWithoutAdmDevicesIssuedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -8299,6 +9609,7 @@ export type UserUncheckedUpdateWithoutAdmDevicesIssuedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -8326,6 +9637,12 @@ export type UserCreateWithoutAdmFormsUploadedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -8353,6 +9670,7 @@ export type UserCreateWithoutAdmFormsUploadedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -8380,6 +9698,12 @@ export type UserUncheckedCreateWithoutAdmFormsUploadedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -8407,6 +9731,7 @@ export type UserUncheckedCreateWithoutAdmFormsUploadedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -8450,6 +9775,12 @@ export type UserUpdateWithoutAdmFormsUploadedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -8477,6 +9808,7 @@ export type UserUpdateWithoutAdmFormsUploadedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -8504,6 +9836,12 @@ export type UserUncheckedUpdateWithoutAdmFormsUploadedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -8531,6 +9869,7 @@ export type UserUncheckedUpdateWithoutAdmFormsUploadedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -8558,6 +9897,12 @@ export type UserCreateWithoutAdvisoryModulesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -8585,6 +9930,7 @@ export type UserCreateWithoutAdvisoryModulesInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -8612,6 +9958,12 @@ export type UserUncheckedCreateWithoutAdvisoryModulesInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -8639,6 +9991,7 @@ export type UserUncheckedCreateWithoutAdvisoryModulesInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -8682,6 +10035,12 @@ export type UserUpdateWithoutAdvisoryModulesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -8709,6 +10068,7 @@ export type UserUpdateWithoutAdvisoryModulesInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -8736,6 +10096,12 @@ export type UserUncheckedUpdateWithoutAdvisoryModulesInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -8763,6 +10129,7 @@ export type UserUncheckedUpdateWithoutAdvisoryModulesInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -8790,6 +10157,12 @@ export type UserCreateWithoutAdvisoryModuleSubmissionsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -8817,6 +10190,7 @@ export type UserCreateWithoutAdvisoryModuleSubmissionsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -8844,6 +10218,12 @@ export type UserUncheckedCreateWithoutAdvisoryModuleSubmissionsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -8871,6 +10251,7 @@ export type UserUncheckedCreateWithoutAdvisoryModuleSubmissionsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -8914,6 +10295,12 @@ export type UserUpdateWithoutAdvisoryModuleSubmissionsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -8941,6 +10328,7 @@ export type UserUpdateWithoutAdvisoryModuleSubmissionsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -8968,6 +10356,12 @@ export type UserUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -8995,6 +10389,7 @@ export type UserUncheckedUpdateWithoutAdvisoryModuleSubmissionsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -9022,6 +10417,12 @@ export type UserCreateWithoutSf10RecordsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -9049,6 +10450,7 @@ export type UserCreateWithoutSf10RecordsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -9076,6 +10478,12 @@ export type UserUncheckedCreateWithoutSf10RecordsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -9103,6 +10511,7 @@ export type UserUncheckedCreateWithoutSf10RecordsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -9135,6 +10544,12 @@ export type UserCreateWithoutSf10ValidatedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -9162,6 +10577,7 @@ export type UserCreateWithoutSf10ValidatedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -9189,6 +10605,12 @@ export type UserUncheckedCreateWithoutSf10ValidatedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -9216,6 +10638,7 @@ export type UserUncheckedCreateWithoutSf10ValidatedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -9259,6 +10682,12 @@ export type UserUpdateWithoutSf10RecordsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -9286,6 +10715,7 @@ export type UserUpdateWithoutSf10RecordsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -9313,6 +10743,12 @@ export type UserUncheckedUpdateWithoutSf10RecordsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -9340,6 +10776,7 @@ export type UserUncheckedUpdateWithoutSf10RecordsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -9378,6 +10815,12 @@ export type UserUpdateWithoutSf10ValidatedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -9405,6 +10848,7 @@ export type UserUpdateWithoutSf10ValidatedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -9432,6 +10876,12 @@ export type UserUncheckedUpdateWithoutSf10ValidatedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -9459,6 +10909,7 @@ export type UserUncheckedUpdateWithoutSf10ValidatedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -9486,6 +10937,12 @@ export type UserCreateWithoutSf10VersionsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -9513,6 +10970,7 @@ export type UserCreateWithoutSf10VersionsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -9540,6 +10998,12 @@ export type UserUncheckedCreateWithoutSf10VersionsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -9567,6 +11031,7 @@ export type UserUncheckedCreateWithoutSf10VersionsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -9610,6 +11075,12 @@ export type UserUpdateWithoutSf10VersionsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -9637,6 +11108,7 @@ export type UserUpdateWithoutSf10VersionsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -9664,6 +11136,12 @@ export type UserUncheckedUpdateWithoutSf10VersionsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -9691,6 +11169,7 @@ export type UserUncheckedUpdateWithoutSf10VersionsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -9718,6 +11197,12 @@ export type UserCreateWithoutAuditLogsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -9745,6 +11230,7 @@ export type UserCreateWithoutAuditLogsInput = {
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -9772,6 +11258,12 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -9799,6 +11291,7 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -9842,6 +11335,12 @@ export type UserUpdateWithoutAuditLogsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -9869,6 +11368,7 @@ export type UserUpdateWithoutAuditLogsInput = {
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -9896,6 +11396,12 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -9923,6 +11429,7 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -9950,6 +11457,12 @@ export type UserCreateWithoutSf10AccessRequestsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -9978,6 +11491,7 @@ export type UserCreateWithoutSf10AccessRequestsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
@@ -10004,6 +11518,12 @@ export type UserUncheckedCreateWithoutSf10AccessRequestsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -10032,6 +11552,7 @@ export type UserUncheckedCreateWithoutSf10AccessRequestsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
@@ -10063,6 +11584,12 @@ export type UserCreateWithoutSf10AccessDecidedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -10091,6 +11618,7 @@ export type UserCreateWithoutSf10AccessDecidedInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
@@ -10117,6 +11645,12 @@ export type UserUncheckedCreateWithoutSf10AccessDecidedInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -10145,6 +11679,7 @@ export type UserUncheckedCreateWithoutSf10AccessDecidedInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
@@ -10187,6 +11722,12 @@ export type UserUpdateWithoutSf10AccessRequestsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -10215,6 +11756,7 @@ export type UserUpdateWithoutSf10AccessRequestsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
@@ -10241,6 +11783,12 @@ export type UserUncheckedUpdateWithoutSf10AccessRequestsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -10269,6 +11817,7 @@ export type UserUncheckedUpdateWithoutSf10AccessRequestsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
@@ -10306,6 +11855,12 @@ export type UserUpdateWithoutSf10AccessDecidedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -10334,6 +11889,7 @@ export type UserUpdateWithoutSf10AccessDecidedInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
@@ -10360,6 +11916,12 @@ export type UserUncheckedUpdateWithoutSf10AccessDecidedInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -10388,6 +11950,7 @@ export type UserUncheckedUpdateWithoutSf10AccessDecidedInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
@@ -10414,6 +11977,12 @@ export type UserCreateWithoutNotificationsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -10441,6 +12010,7 @@ export type UserCreateWithoutNotificationsInput = {
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -10468,6 +12038,12 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -10495,6 +12071,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -10538,6 +12115,12 @@ export type UserUpdateWithoutNotificationsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -10565,6 +12148,7 @@ export type UserUpdateWithoutNotificationsInput = {
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -10592,6 +12176,12 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -10619,6 +12209,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -10646,6 +12237,12 @@ export type UserCreateWithoutRefreshTokensInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
@@ -10673,6 +12270,7 @@ export type UserCreateWithoutRefreshTokensInput = {
   sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
@@ -10700,6 +12298,12 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   approvedBy?: string | null
   approvedAt?: Date | string | null
   createdAt?: Date | string
+  lastActiveAt?: Date | string | null
+  lastIp?: string | null
+  lastCity?: string | null
+  lastCountry?: string | null
+  lastLat?: number | null
+  lastLng?: number | null
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
@@ -10727,6 +12331,7 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  loginEvents?: Prisma.LoginEventUncheckedCreateNestedManyWithoutUserInput
   sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
@@ -10770,6 +12375,12 @@ export type UserUpdateWithoutRefreshTokensInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
@@ -10797,6 +12408,7 @@ export type UserUpdateWithoutRefreshTokensInput = {
   sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
@@ -10824,6 +12436,12 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastCountry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastLat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lastLng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -10851,6 +12469,7 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  loginEvents?: Prisma.LoginEventUncheckedUpdateManyWithoutUserNestedInput
   sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
   sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
@@ -10897,6 +12516,7 @@ export type UserCountOutputType = {
   auditLogs: number
   notifications: number
   refreshTokens: number
+  loginEvents: number
   sectionsAdvised: number
   sf10AccessRequests: number
   sf10AccessDecided: number
@@ -10937,6 +12557,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   auditLogs?: boolean | UserCountOutputTypeCountAuditLogsArgs
   notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
   refreshTokens?: boolean | UserCountOutputTypeCountRefreshTokensArgs
+  loginEvents?: boolean | UserCountOutputTypeCountLoginEventsArgs
   sectionsAdvised?: boolean | UserCountOutputTypeCountSectionsAdvisedArgs
   sf10AccessRequests?: boolean | UserCountOutputTypeCountSf10AccessRequestsArgs
   sf10AccessDecided?: boolean | UserCountOutputTypeCountSf10AccessDecidedArgs
@@ -11139,6 +12760,13 @@ export type UserCountOutputTypeCountRefreshTokensArgs<ExtArgs extends runtime.Ty
 /**
  * UserCountOutputType without action
  */
+export type UserCountOutputTypeCountLoginEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LoginEventWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
 export type UserCountOutputTypeCountSectionsAdvisedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.SectionWhereInput
 }
@@ -11233,6 +12861,12 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   approvedBy?: boolean
   approvedAt?: boolean
   createdAt?: boolean
+  lastActiveAt?: boolean
+  lastIp?: boolean
+  lastCity?: boolean
+  lastCountry?: boolean
+  lastLat?: boolean
+  lastLng?: boolean
   studentProfile?: boolean | Prisma.User$studentProfileArgs<ExtArgs>
   parentProfile?: boolean | Prisma.User$parentProfileArgs<ExtArgs>
   staffProfile?: boolean | Prisma.User$staffProfileArgs<ExtArgs>
@@ -11261,6 +12895,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   auditLogs?: boolean | Prisma.User$auditLogsArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
   refreshTokens?: boolean | Prisma.User$refreshTokensArgs<ExtArgs>
+  loginEvents?: boolean | Prisma.User$loginEventsArgs<ExtArgs>
   sectionsAdvised?: boolean | Prisma.User$sectionsAdvisedArgs<ExtArgs>
   sf10AccessRequests?: boolean | Prisma.User$sf10AccessRequestsArgs<ExtArgs>
   sf10AccessDecided?: boolean | Prisma.User$sf10AccessDecidedArgs<ExtArgs>
@@ -11289,6 +12924,12 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   approvedBy?: boolean
   approvedAt?: boolean
   createdAt?: boolean
+  lastActiveAt?: boolean
+  lastIp?: boolean
+  lastCity?: boolean
+  lastCountry?: boolean
+  lastLat?: boolean
+  lastLng?: boolean
 }, ExtArgs["result"]["user"]>
 
 export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -11303,6 +12944,12 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   approvedBy?: boolean
   approvedAt?: boolean
   createdAt?: boolean
+  lastActiveAt?: boolean
+  lastIp?: boolean
+  lastCity?: boolean
+  lastCountry?: boolean
+  lastLat?: boolean
+  lastLng?: boolean
 }, ExtArgs["result"]["user"]>
 
 export type UserSelectScalar = {
@@ -11317,9 +12964,15 @@ export type UserSelectScalar = {
   approvedBy?: boolean
   approvedAt?: boolean
   createdAt?: boolean
+  lastActiveAt?: boolean
+  lastIp?: boolean
+  lastCity?: boolean
+  lastCountry?: boolean
+  lastLat?: boolean
+  lastLng?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "role" | "fullName" | "contactNumber" | "lrn" | "status" | "approvedBy" | "approvedAt" | "createdAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "role" | "fullName" | "contactNumber" | "lrn" | "status" | "approvedBy" | "approvedAt" | "createdAt" | "lastActiveAt" | "lastIp" | "lastCity" | "lastCountry" | "lastLat" | "lastLng", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   studentProfile?: boolean | Prisma.User$studentProfileArgs<ExtArgs>
   parentProfile?: boolean | Prisma.User$parentProfileArgs<ExtArgs>
@@ -11349,6 +13002,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   auditLogs?: boolean | Prisma.User$auditLogsArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
   refreshTokens?: boolean | Prisma.User$refreshTokensArgs<ExtArgs>
+  loginEvents?: boolean | Prisma.User$loginEventsArgs<ExtArgs>
   sectionsAdvised?: boolean | Prisma.User$sectionsAdvisedArgs<ExtArgs>
   sf10AccessRequests?: boolean | Prisma.User$sf10AccessRequestsArgs<ExtArgs>
   sf10AccessDecided?: boolean | Prisma.User$sf10AccessDecidedArgs<ExtArgs>
@@ -11398,6 +13052,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
     refreshTokens: Prisma.$RefreshTokenPayload<ExtArgs>[]
+    loginEvents: Prisma.$LoginEventPayload<ExtArgs>[]
     sectionsAdvised: Prisma.$SectionPayload<ExtArgs>[]
     sf10AccessRequests: Prisma.$AdviserSf10AccessRequestPayload<ExtArgs>[]
     sf10AccessDecided: Prisma.$AdviserSf10AccessRequestPayload<ExtArgs>[]
@@ -11424,6 +13079,12 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     approvedBy: string | null
     approvedAt: Date | null
     createdAt: Date
+    lastActiveAt: Date | null
+    lastIp: string | null
+    lastCity: string | null
+    lastCountry: string | null
+    lastLat: number | null
+    lastLng: number | null
   }, ExtArgs["result"]["user"]>
   composites: {}
 }
@@ -11846,6 +13507,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   auditLogs<T extends Prisma.User$auditLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifications<T extends Prisma.User$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   refreshTokens<T extends Prisma.User$refreshTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$refreshTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RefreshTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  loginEvents<T extends Prisma.User$loginEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$loginEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LoginEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sectionsAdvised<T extends Prisma.User$sectionsAdvisedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sectionsAdvisedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sf10AccessRequests<T extends Prisma.User$sf10AccessRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sf10AccessRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdviserSf10AccessRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sf10AccessDecided<T extends Prisma.User$sf10AccessDecidedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sf10AccessDecidedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdviserSf10AccessRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -11899,6 +13561,12 @@ export interface UserFieldRefs {
   readonly approvedBy: Prisma.FieldRef<"User", 'String'>
   readonly approvedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly lastActiveAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly lastIp: Prisma.FieldRef<"User", 'String'>
+  readonly lastCity: Prisma.FieldRef<"User", 'String'>
+  readonly lastCountry: Prisma.FieldRef<"User", 'String'>
+  readonly lastLat: Prisma.FieldRef<"User", 'Float'>
+  readonly lastLng: Prisma.FieldRef<"User", 'Float'>
 }
     
 
@@ -12946,6 +14614,30 @@ export type User$refreshTokensArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.RefreshTokenScalarFieldEnum | Prisma.RefreshTokenScalarFieldEnum[]
+}
+
+/**
+ * User.loginEvents
+ */
+export type User$loginEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LoginEvent
+   */
+  select?: Prisma.LoginEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LoginEvent
+   */
+  omit?: Prisma.LoginEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LoginEventInclude<ExtArgs> | null
+  where?: Prisma.LoginEventWhereInput
+  orderBy?: Prisma.LoginEventOrderByWithRelationInput | Prisma.LoginEventOrderByWithRelationInput[]
+  cursor?: Prisma.LoginEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LoginEventScalarFieldEnum | Prisma.LoginEventScalarFieldEnum[]
 }
 
 /**

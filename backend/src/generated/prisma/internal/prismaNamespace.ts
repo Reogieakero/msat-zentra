@@ -398,6 +398,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   User: 'User',
+  LoginEvent: 'LoginEvent',
   StudentProfile: 'StudentProfile',
   ParentProfile: 'ParentProfile',
   ParentStudentLink: 'ParentStudentLink',
@@ -462,7 +463,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "termRosterConfirmation" | "subject" | "teacherSubjectAssignment" | "scheduleConfig" | "sectionTimetableEntry" | "teacherName" | "teacherTermGrant" | "adviserArchivedStudent" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "attendanceRecordLegacy" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admMeetingInvitee" | "admMeetingAttachment" | "admModule" | "admDevice" | "admForm" | "advisoryModule" | "advisoryModuleSubmission" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
+    modelProps: "user" | "loginEvent" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "termRosterConfirmation" | "subject" | "teacherSubjectAssignment" | "scheduleConfig" | "sectionTimetableEntry" | "teacherName" | "teacherTermGrant" | "adviserArchivedStudent" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "attendanceRecordLegacy" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admMeetingInvitee" | "admMeetingAttachment" | "admModule" | "admDevice" | "admForm" | "advisoryModule" | "advisoryModuleSubmission" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -537,6 +538,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    LoginEvent: {
+      payload: Prisma.$LoginEventPayload<ExtArgs>
+      fields: Prisma.LoginEventFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LoginEventFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LoginEventFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload>
+        }
+        findFirst: {
+          args: Prisma.LoginEventFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LoginEventFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload>
+        }
+        findMany: {
+          args: Prisma.LoginEventFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload>[]
+        }
+        create: {
+          args: Prisma.LoginEventCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload>
+        }
+        createMany: {
+          args: Prisma.LoginEventCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LoginEventCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload>[]
+        }
+        delete: {
+          args: Prisma.LoginEventDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload>
+        }
+        update: {
+          args: Prisma.LoginEventUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload>
+        }
+        deleteMany: {
+          args: Prisma.LoginEventDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LoginEventUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LoginEventUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload>[]
+        }
+        upsert: {
+          args: Prisma.LoginEventUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginEventPayload>
+        }
+        aggregate: {
+          args: Prisma.LoginEventAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLoginEvent>
+        }
+        groupBy: {
+          args: Prisma.LoginEventGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LoginEventGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LoginEventCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LoginEventCountAggregateOutputType> | number
         }
       }
     }
@@ -4216,10 +4291,27 @@ export const UserScalarFieldEnum = {
   status: 'status',
   approvedBy: 'approvedBy',
   approvedAt: 'approvedAt',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  lastActiveAt: 'lastActiveAt',
+  lastIp: 'lastIp',
+  lastCity: 'lastCity',
+  lastCountry: 'lastCountry',
+  lastLat: 'lastLat',
+  lastLng: 'lastLng'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const LoginEventScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  ip: 'ip',
+  kind: 'kind',
+  occurredAt: 'occurredAt'
+} as const
+
+export type LoginEventScalarFieldEnum = (typeof LoginEventScalarFieldEnum)[keyof typeof LoginEventScalarFieldEnum]
 
 
 export const StudentProfileScalarFieldEnum = {
@@ -4329,6 +4421,7 @@ export const StudentRosterScalarFieldEnum = {
   sectionId: 'sectionId',
   schoolYearId: 'schoolYearId',
   mascot: 'mascot',
+  learnerType: 'learnerType',
   riskCount: 'riskCount',
   riskLevel: 'riskLevel',
   academicFlag: 'academicFlag',
@@ -4582,7 +4675,9 @@ export const AnecdotalRecordScalarFieldEnum = {
   folderId: 'folderId',
   signedBy: 'signedBy',
   signedAt: 'signedAt',
-  signatureImageUrl: 'signatureImageUrl'
+  signatureImageUrl: 'signatureImageUrl',
+  deletedAt: 'deletedAt',
+  deletedBy: 'deletedBy'
 } as const
 
 export type AnecdotalRecordScalarFieldEnum = (typeof AnecdotalRecordScalarFieldEnum)[keyof typeof AnecdotalRecordScalarFieldEnum]
@@ -5117,6 +5212,34 @@ export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
 
 
 /**
+ * Reference to a field of type 'Float'
+ */
+export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
+ * Reference to a field of type 'Float[]'
+ */
+export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+    
+
+
+/**
+ * Reference to a field of type 'LoginEventKind'
+ */
+export type EnumLoginEventKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LoginEventKind'>
+    
+
+
+/**
+ * Reference to a field of type 'LoginEventKind[]'
+ */
+export type ListEnumLoginEventKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LoginEventKind[]'>
+    
+
+
+/**
  * Reference to a field of type 'GradeLevel'
  */
 export type EnumGradeLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GradeLevel'>
@@ -5166,6 +5289,20 @@ export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
 
 
 /**
+ * Reference to a field of type 'LearnerType'
+ */
+export type EnumLearnerTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LearnerType'>
+    
+
+
+/**
+ * Reference to a field of type 'LearnerType[]'
+ */
+export type ListEnumLearnerTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LearnerType[]'>
+    
+
+
+/**
  * Reference to a field of type 'SubjectCategory'
  */
 export type EnumSubjectCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubjectCategory'>
@@ -5204,20 +5341,6 @@ export type EnumComponentTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$Pr
  * Reference to a field of type 'ComponentType[]'
  */
 export type ListEnumComponentTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ComponentType[]'>
-    
-
-
-/**
- * Reference to a field of type 'Float'
- */
-export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
-    
-
-
-/**
- * Reference to a field of type 'Float[]'
- */
-export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
 
 
@@ -5736,6 +5859,7 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
+  loginEvent?: Prisma.LoginEventOmit
   studentProfile?: Prisma.StudentProfileOmit
   parentProfile?: Prisma.ParentProfileOmit
   parentStudentLink?: Prisma.ParentStudentLinkOmit

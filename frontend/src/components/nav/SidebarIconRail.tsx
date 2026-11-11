@@ -17,6 +17,8 @@ export type SidebarNavItem = {
   href: string;
   icon: LucideIcon;
   badge?: string;
+  /** Red "new activity" dot pinned to the icon (guidance desk). */
+  dot?: boolean;
 };
 
 export type SidebarNavGroup = {
@@ -54,9 +56,19 @@ export function SidebarIconRail({
                       href={t.href}
                       className={`${styles.iconBtn} ${active ? styles.iconBtnActive : ""}`}
                       aria-current={active ? "page" : undefined}
-                      aria-label={`${t.title} (${group.label})`}
+                      aria-label={
+                        t.dot
+                          ? `${t.title} (${group.label}) — new activity`
+                          : `${t.title} (${group.label})`
+                      }
                     >
                       <t.icon size={17} strokeWidth={1.8} aria-hidden="true" />
+                      {t.dot ? <span className={styles.dot} aria-hidden="true" /> : null}
+                      {t.badge ? (
+                        <span className={styles.badge} aria-hidden="true">
+                          {t.badge}
+                        </span>
+                      ) : null}
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={10}>

@@ -32,6 +32,7 @@ import styles from "./accounts.module.css";
 import cascade from "@/components/shared/desk-cascade.module.css";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { PendingStaffQueue, usePendingStaffTotal } from "@/components/registry/pending-staff-queue";
 import { useSearchParams } from "next/navigation";
 
 async function fetchPendingStudents(page: number, q: string, signal?: AbortSignal) {
@@ -283,9 +284,11 @@ function AccountApprovalsPageInner() {
 
   // True empty (no records at all, not a search with no matches):
   // hide the KPI board and queue/breakdown cards entirely and
-  // render a single centered card instead.
+  // render a single centered card instead. A pending teacher request still
+  // keeps the desk in its normal layout so it can be approved.
+  const staffPending = usePendingStaffTotal("record_keeper");
   const isTrueEmpty =
-    !isPending && !isError && !breakdownPending && !hasRecords && !searching;
+    !isPending && !isError && !breakdownPending && !hasRecords && !searching && staffPending === 0;
 
   if (isTrueEmpty) {
     return (
@@ -430,6 +433,8 @@ function AccountApprovalsPageInner() {
             )}
           </KanbanBoard>
         </div>
+
+        <PendingStaffQueue desk="record_keeper" />
       </div>
 
       {verifyTarget ? (

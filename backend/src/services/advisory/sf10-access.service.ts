@@ -3,6 +3,11 @@ import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { GRADE_BAND_7_10 } from "../../lib/roles.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 
 export interface MyAccessRequest {
@@ -16,6 +21,8 @@ export interface MyAccessRequest {
   decisionReason: string | null;
   requestedAt: string;
   decidedAt: string | null;
+  /** Term the request was filed in (null when the school year has no date ranges). */
+  termNumber: number | null;
   total: number;
   has: number;
   missing: number;
@@ -45,6 +52,8 @@ export interface HasRow {
   approved: boolean;
   /** ISO timestamp of the per-student grant, if granted individually. */
   approvedAt: string | null;
+  /** Term the SF10 access was granted in — shared across the school year. */
+  grantedTermNumber: number | null;
   record: VerificationRecord | null;
 }
 
@@ -156,14 +165,15 @@ async function matchAdvisoryLrns(
   onlyLrns: Set<string>,
   sectionName: string,
 ): Promise<LrnMatch[]> {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [sectionProfiles, rosterEntries] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
       select: { lrn: true, mascot: true, gradeLevel: true, user: { select: { fullName: true } } },
       orderBy: { lrn: "asc" },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
       select: { lrn: true, fullName: true, mascot: true, gradeLevel: true },
       orderBy: { lrn: "asc" },
     }),
@@ -225,19 +235,65 @@ async function matchAdvisoryLrns(
 
 /** LRNs enlisted in a section (profiles + roster-only), for validating picks. */
 async function sectionLrns(sectionId: string): Promise<Set<string>> {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, roster] = await Promise.all([
-    prisma.studentProfile.findMany({ where: { sectionId }, select: { lrn: true } }),
-    prisma.studentRoster.findMany({ where: { sectionId }, select: { lrn: true } }),
+    prisma.studentProfile.findMany({
+      where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
+      select: { lrn: true },
+    }),
+    prisma.studentRoster.findMany({
+      where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
+      select: { lrn: true },
+    }),
   ]);
   return new Set([...profiles.map((p) => p.lrn), ...roster.map((r) => r.lrn)]);
+}
+
+interface YearTerm {
+  termNumber: number;
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
+/** Term date ranges grouped by school year, for dating non-term-scoped rows. */
+async function termsBySchoolYear(yearIds: string[]): Promise<Map<string, YearTerm[]>> {
+  const byYear = new Map<string, YearTerm[]>();
+  if (yearIds.length === 0) return byYear;
+  const terms = await prisma.term.findMany({
+    where: { schoolYearId: { in: yearIds } },
+    select: { schoolYearId: true, termNumber: true, startDate: true, endDate: true },
+    orderBy: { termNumber: "asc" },
+  });
+  for (const t of terms) {
+    const list = byYear.get(t.schoolYearId) ?? [];
+    list.push({ termNumber: t.termNumber, startDate: t.startDate, endDate: t.endDate });
+    byYear.set(t.schoolYearId, list);
+  }
+  return byYear;
+}
+
+function termNumberForDate(date: Date, terms: YearTerm[]): number | null {
+  for (const t of terms) {
+    if (t.startDate && t.endDate && t.startDate <= date && date <= t.endDate) {
+      return t.termNumber;
+    }
+  }
+  return null;
 }
 
 export async function listMyRequests(userId: string): Promise<{ requests: MyAccessRequest[] }> {
   const rows = await prisma.adviserSf10AccessRequest.findMany({
     where: { adviserId: userId },
-    include: { section: { select: { id: true, name: true } } },
+    include: { section: { select: { id: true, name: true, schoolYearId: true } } },
     orderBy: [{ requestedAt: "desc" }],
   });
+  const yearTerms = await termsBySchoolYear([
+    ...new Set(
+      rows
+        .map((r) => r.section?.schoolYearId)
+        .filter((v): v is string => typeof v === "string" && v.length > 0),
+    ),
+  ]);
   const requests: MyAccessRequest[] = [];
   // Every request that shares a section reuses one LRN lookup, and the
   // per-request counts resolve concurrently (was a serial N+1).
@@ -267,6 +323,9 @@ export async function listMyRequests(userId: string): Promise<{ requests: MyAcce
         decisionReason: r.decisionReason,
         requestedAt: r.requestedAt.toISOString(),
         decidedAt: r.decidedAt?.toISOString() ?? null,
+        termNumber: r.section
+          ? termNumberForDate(r.requestedAt, yearTerms.get(r.section.schoolYearId) ?? [])
+          : null,
         total: counts.total,
         has: counts.has,
         missing: counts.missing,
@@ -376,7 +435,7 @@ export interface VerificationResult {
 export async function getMyVerification(userId: string, requestId: string): Promise<VerificationResult> {
   const request = await prisma.adviserSf10AccessRequest.findUnique({
     where: { id: requestId },
-    include: { section: { select: { id: true, name: true } } },
+    include: { section: { select: { id: true, name: true, schoolYearId: true } } },
   });
   if (!request) throw new AppError(404, "REQUEST_NOT_FOUND", "Access request not found");
   if (request.adviserId !== userId)
@@ -392,6 +451,11 @@ export async function getMyVerification(userId: string, requestId: string): Prom
   // Empty picks = whole section (pre-selection behavior).
   const picked = new Set(request.requestedLrns ?? []);
   const sectionName = request.section?.name ?? "Unsectioned";
+  const grantedTerms = request.section
+    ? (
+        await termsBySchoolYear([request.section.schoolYearId])
+      ).get(request.section.schoolYearId) ?? []
+    : [];
 
   const rows = await matchAdvisoryLrns(sectionId, picked, sectionName);
   const hasSf10: HasRow[] = [];
@@ -402,6 +466,12 @@ export async function getMyVerification(userId: string, requestId: string): Prom
       const rec = row.rec;
       const granted = wholeApproved || approvedLrns.has(row.lrn);
       const at = approvedLrnAt[row.lrn];
+      const grantedAt =
+        typeof at === "string" && at
+          ? at
+          : wholeApproved && request.decidedAt
+            ? request.decidedAt.toISOString()
+            : null;
       hasSf10.push({
         lrn: row.lrn,
         name: row.name,
@@ -411,12 +481,9 @@ export async function getMyVerification(userId: string, requestId: string): Prom
         section: row.section,
         sf10Status: sf10StatusOf(String(rec.status)),
         approved: granted,
-        approvedAt:
-          typeof at === "string" && at
-            ? at
-            : wholeApproved && request.decidedAt
-              ? request.decidedAt.toISOString()
-              : null,
+        approvedAt: grantedAt,
+        grantedTermNumber:
+          granted && grantedAt ? termNumberForDate(new Date(grantedAt), grantedTerms) : null,
         record: {
           id: rec.id,
           source: String(rec.source),

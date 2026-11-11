@@ -15,6 +15,7 @@ import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
 import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import {
   GuidanceBehavioralFilters,
   type BehavioralCategoryFilter,
@@ -77,6 +78,7 @@ function GuidanceBehavioralPageInner() {
 
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<GuidanceAnecdotalData>({
+      ...liveQueryOptions,
       queryKey: ["guidance-risk-behavioral", page, query, category, termKey],
       queryFn: ({ signal }) =>
         fetchGuidanceAnecdotal(
@@ -88,7 +90,6 @@ function GuidanceBehavioralPageInner() {
           },
           { signal }
         ),
-      staleTime: 60_000,
       placeholderData: keepPreviousData,
       enabled: termReady,
     });

@@ -30,15 +30,19 @@ export interface RowListMetaPill {
 export interface RowListItem {
   key: string;
   status: { label: string; tone: RowTone };
+  /** Field name shown in the status pill's tooltip (defaults to "Risk status"). */
+  statusTitle?: string;
   /** Primary text (e.g. student name). */
   title: string;
   /** Rectangle id pill rendered after the title (e.g. LRN). */
   idLabel?: string;
+  /** Field name shown in the id pill's tooltip (defaults to "LRN"). */
+  idLabelTitle?: string;
   /** Override for the id pill's size/weight (defaults to `text-[11px] font-medium`). */
   idLabelClassName?: string;
   /** Optional rectangle pill rendered before the status pill (e.g. a term
       chip). Renders in a meta tone with no dot; defaults to amber. */
-  leadPill?: { label: string; tone?: RowTone };
+  leadPill?: { label: string; tone?: RowTone; title?: string };
   /** Right-side factor pills. */
   meta?: RowListMetaPill[];
   /** Optional detected/snapshot date pill on the right. Omit when unknown. */
@@ -87,11 +91,19 @@ function initialsOf(name: string): string {
   return `${first}${second}`.toUpperCase();
 }
 
-function StatusPill({ label, tone }: { label: string; tone: RowTone }) {
+function StatusPill({
+  label,
+  tone,
+  title = "Risk status",
+}: {
+  label: string;
+  tone: RowTone;
+  title?: string;
+}) {
   return (
     <Pill
       tone={STATUS_TONE[tone]}
-      label="Risk status"
+      label={title}
       className="w-fit max-w-full justify-center"
     >
       {label}
@@ -148,7 +160,7 @@ function RowListRow({
         item.leadPill ? (
           <Pill
             tone={STATUS_TONE[item.leadPill.tone ?? "amber"]}
-            label="Term"
+            label={item.leadPill.title ?? "Term"}
             className="w-fit max-w-full justify-center"
           >
             {item.leadPill.label}
@@ -157,7 +169,11 @@ function RowListRow({
           <span aria-hidden />
         )
       ) : null}
-      <StatusPill label={item.status.label} tone={item.status.tone} />
+      <StatusPill
+        label={item.status.label}
+        tone={item.status.tone}
+        title={item.statusTitle}
+      />
       <span className={styles.sep} aria-hidden>
         |
       </span>
@@ -176,7 +192,7 @@ function RowListRow({
         {item.idLabel ? (
           <Pill
             tone="neutral"
-            label="LRN"
+            label={item.idLabelTitle ?? "LRN"}
             title={item.idLabel}
             className={item.idLabelClassName ?? "text-[11px] font-medium"}
           >

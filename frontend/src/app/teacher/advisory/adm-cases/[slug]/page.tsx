@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { Loader2, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDock } from "@/components/dock/dock-store";
@@ -35,7 +36,7 @@ export default function AdmMonitoringPage() {
   // Shared dock task started when the dialog closes; finished by the mutation.
   const dockTaskRef = React.useRef<string | null>(null);
 
-  const monitoringQuery = useQuery({
+  const monitoringQuery = useLiveQuery({
     queryKey: admMonitoringKey(caseRef),
     queryFn: ({ signal }) => fetchAdmMonitoringCase(caseRef, signal),
     enabled: Boolean(caseRef),

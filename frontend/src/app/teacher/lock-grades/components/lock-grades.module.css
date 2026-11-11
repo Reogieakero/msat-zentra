@@ -197,9 +197,17 @@
 .learnersHead,
 .learnerRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 4.25rem 4.5rem auto;
+  /* Fixed trailing column: the row is its own grid, so an `auto` status
+     column sized differently per row and pushed the header labels off their
+     data. */
+  grid-template-columns: minmax(0, 1fr) 4.25rem 4.5rem 8.5rem;
   align-items: center;
   gap: 0.5rem;
+}
+
+.learnersHead > :last-child,
+.learnerRow > :last-child {
+  justify-self: start;
 }
 
 .learnersHead {

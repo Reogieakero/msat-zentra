@@ -85,6 +85,10 @@ export interface TeacherReportsPayload {
     attendanceRate: number | null;
     atRisk: number;
     highRisk: number;
+    /** High-risk learners in the teacher's advisory section. */
+    highRiskAdvisees: number;
+    /** High-risk learners who are only in the teacher's subject classes. */
+    highRiskSubjectStudents: number;
     openFlags: number;
     anecdotal: number;
     referrals: number;

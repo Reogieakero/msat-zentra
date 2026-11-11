@@ -9,8 +9,11 @@ import { TEACHER_ROLES } from "./advisory.repository.js";
 import { attendanceSheetQuerySchema } from "./teacher.schemas.js";
 import { rosterSchema, rosterUpdateSchema } from "./advisory.schemas.js";
 import {
+  archiveAdvisoryStudent,
   enlistRoster,
   getAttendanceSheet,
+  listArchivedAdvisoryStudents,
+  restoreAdvisoryStudent,
   updateRosterStudent,
 } from "../../services/advisory/roster.service.js";
 
@@ -35,13 +38,19 @@ router.post(
   validate("body", rosterSchema),
   async (req, res, next) => {
     try {
-      const body = req.body as { fullName: string; lrn: string; sectionId?: string };
+      const body = req.body as {
+        fullName: string;
+        lrn: string;
+        sectionId?: string;
+        learnerType?: "regular" | "transferee";
+      };
 
       const yearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
       const response = await enlistRoster(ctxOf(req), {
         fullName: body.fullName,
         lrn: body.lrn,
         sectionId: body.sectionId,
+        learnerType: body.learnerType,
       }, yearId);
 
       res.status(201).json(response);
@@ -67,6 +76,49 @@ router.patch(
           { fullName: body.fullName, lrn: body.lrn },
           yearId,
         ),
+      );
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
+  "/archived",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  async (req, res, next) => {
+    try {
+      const yearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
+      res.json(await listArchivedAdvisoryStudents(ctxOf(req), yearId));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.post(
+  "/archived/:archiveId/restore",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  async (req, res, next) => {
+    try {
+      res.json(await restoreAdvisoryStudent(req.user!.id, String(req.params.archiveId)));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.delete(
+  "/roster/:studentId",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  async (req, res, next) => {
+    try {
+      const yearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
+      res.json(
+        await archiveAdvisoryStudent(ctxOf(req), String(req.params.studentId), yearId),
       );
     } catch (e) {
       next(e);

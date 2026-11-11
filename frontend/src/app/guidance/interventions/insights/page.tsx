@@ -19,6 +19,7 @@ import { GuidancePageHeader } from "../../components/GuidancePageHeader";
 import { fetchGuidanceInterventionInsights } from "@/services/guidance/insights.service";
 import type { InterventionInsightsData } from "@/services/guidance/insights.types";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import { InsightsKpis } from "./components/insights-kpis";
 import { InsightsTrendBoard } from "./components/insights-trend-board";
 import { InsightsSessionBoard } from "./components/insights-session-board";
@@ -32,10 +33,10 @@ export default function GuidanceInterventionInsightsPage() {
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<InterventionInsightsData>({
+      ...liveQueryOptions,
       queryKey: ["guidance-intervention-insights", termKey],
       queryFn: ({ signal }) => fetchGuidanceInterventionInsights(signal),
       placeholderData: keepPreviousData,
-      staleTime: 60_000,
       enabled: termReady,
     });
 
@@ -139,7 +140,7 @@ export default function GuidanceInterventionInsightsPage() {
       <div className="grid gap-3 lg:grid-cols-2">
         <InsightsOutcomeBoard
           title="Success by risk level"
-          description="Closed vs. open follow-ups at the risk level flagged when the case was opened."
+          description="Closed vs. open follow-ups by the learner's current risk level; cases that left the at-risk list keep the level they were flagged at."
           rows={data.successByRisk}
           icon={ShieldCheck}
           emptyTitle="No interventions recorded"

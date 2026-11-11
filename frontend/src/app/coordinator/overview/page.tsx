@@ -17,6 +17,7 @@ import {
   CoordinatorOverviewError,
   CoordinatorOverviewSkeleton,
 } from "./components/coordinator-overview-states";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import styles from "./components/coordinator-overview.module.css";
 
 export default function CoordinatorOverviewPage() {
@@ -42,6 +43,27 @@ export default function CoordinatorOverviewPage() {
         onRetry={overview.refetch}
         isRefetching={overview.isRefetching}
       />
+    );
+  }
+
+  // No ADM activity at all → one centered callout instead of empty boards.
+  const isEmpty =
+    overview.referredToMe === 0 &&
+    overview.certificationsIssued === 0 &&
+    overview.activeEnrolled === 0 &&
+    overview.forwards.rows.length === 0 &&
+    overview.booked.rows.length === 0 &&
+    overview.devices.oldestOut.length === 0 &&
+    overview.stageDonut.every((entry) => entry.value === 0);
+
+  if (isEmpty) {
+    return (
+      <section className={styles.page}>
+        <PageEmptyCallout>
+          No ADM activity for the selected term yet. Referrals, certifications,
+          and device tracking will appear here once cases are filed.
+        </PageEmptyCallout>
+      </section>
     );
   }
 

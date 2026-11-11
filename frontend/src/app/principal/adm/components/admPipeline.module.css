@@ -29,7 +29,7 @@
   border-radius: 50%;
   border: 1px solid var(--border, #e5e5e5);
   background: var(--card, #ffffff);
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-inter), ui-monospace, monospace;
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--muted-foreground);

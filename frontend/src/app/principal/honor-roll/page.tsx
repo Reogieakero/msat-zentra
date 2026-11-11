@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Trophy } from "lucide-react";
-import { PrincipalEmptyCard } from "../components/PrincipalEmptyCard";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { CandidateTable } from "./components/CandidateTable";
 import { HonorRollSkeleton } from "./components/HonorRollSkeleton";
 import {
@@ -77,13 +76,11 @@ export default function PrincipalHonorRollPage() {
   if (isEmpty) {
     return (
       <section className={styles.page}>
-        <PrincipalEmptyCard
-          icon={Trophy}
-          title="No awardees this term"
-          hint="Students from adviser-shared sections with a live general average of 90+ and no subject below 80 will appear here as scores are recorded."
-          label="Honor Roll & Awards"
-          centered
-        />
+        <PageEmptyCallout>
+          No awardees this term yet. Students from adviser-shared sections with
+          a live general average of 90+ and no subject below 80 will appear here
+          as scores are recorded.
+        </PageEmptyCallout>
       </section>
     );
   }

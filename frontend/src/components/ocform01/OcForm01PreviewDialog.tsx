@@ -11,7 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FileDown, ImageDown, Loader2, PenLine, Trash2 } from "lucide-react";
+import { FileDown, ImageDown, Loader2, Pencil, PenLine, Trash2 } from "lucide-react";
 import { OcForm01Print } from "./OcForm01Print";
 import { SignaturePad } from "./SignaturePad";
 import styles from "./OcForm01PreviewDialog.module.css";
@@ -30,12 +30,21 @@ interface OcForm01PreviewDialogProps {
   onClose: () => void;
   /** Opened from inside another dialog — paint above it. */
   raised?: boolean;
+  /** Teacher desk only: open the edit form (shown when the record is yours). */
+  onEdit?: (recordId: string) => void;
+  /** Teacher desk only: soft-delete the record (shown when the record is yours). */
+  onDelete?: (recordId: string) => Promise<void> | void;
+  /** True while the delete request is in flight. */
+  deleting?: boolean;
 }
 
 export function OcForm01PreviewDialog({
   recordId,
   onClose,
   raised = false,
+  onEdit,
+  onDelete,
+  deleting = false,
 }: OcForm01PreviewDialogProps) {
   const [detail, setDetail] = useState<OcForm01Detail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,6 +56,7 @@ export function OcForm01PreviewDialog({
   const [applying, setApplying] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [mySignatureUrl, setMySignatureUrl] = useState<string | null>(null);
   const [mySigLoading, setMySigLoading] = useState(false);
   /* Visible export box (sheet + 16px gutters). Captured as PNG/JPG. */
@@ -81,6 +91,7 @@ export function OcForm01PreviewDialog({
     setSigning(false);
     setSignError(null);
     setConfirmingRemove(false);
+    setConfirmingDelete(false);
     setMySignatureUrl(null);
     setExportError(null);
     setExporting(null);
@@ -259,6 +270,16 @@ export function OcForm01PreviewDialog({
     }
   }
 
+  async function handleDelete() {
+    if (!recordId || !onDelete) return;
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+    setConfirmingDelete(false);
+    await onDelete(recordId);
+  }
+
   return (
     <KanbanModal
       open={recordId !== null}
@@ -361,6 +382,53 @@ export function OcForm01PreviewDialog({
                 {confirmingRemove
                   ? "Click again to remove your signature"
                   : "Remove the applied signature"}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+          {detail && !signing && detail.canEdit && onEdit ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  disabled={deleting}
+                  onClick={() => {
+                    if (recordId) onEdit(recordId);
+                  }}
+                >
+                  <Pencil aria-hidden />
+                  Edit
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Edit this record</TooltipContent>
+            </Tooltip>
+          ) : null}
+          {detail && !signing && detail.canEdit && onDelete ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={`h-6 px-2 text-[11px] ${confirmingDelete ? styles.dangerBtn : ""}`}
+                  disabled={deleting}
+                  onClick={() => void handleDelete()}
+                  onBlur={() => setConfirmingDelete(false)}
+                >
+                  {deleting ? (
+                    <Loader2 size={14} className="animate-spin" aria-hidden />
+                  ) : (
+                    <Trash2 aria-hidden />
+                  )}
+                  {deleting ? "Deleting…" : confirmingDelete ? "Confirm delete" : "Delete"}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {confirmingDelete
+                  ? "Click again to move this record to Deleted records"
+                  : "Delete this record — you can restore it from Deleted records"}
               </TooltipContent>
             </Tooltip>
           ) : null}

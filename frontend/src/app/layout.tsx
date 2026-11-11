@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import styles from "./layout.module.css";
 
+/* Desk typography: every role shell renders in Inter (sans). */
 const inter = Inter({
   variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const geist = Geist({
-  variable: "--font-geist",
   subsets: ["latin"],
 });
 
@@ -25,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geist.variable} ${inter.variable} h-full antialiased`}
+      className={`${inter.variable} h-full antialiased`}
     >
       <body className={styles.root}>
         <Providers>{children}</Providers>

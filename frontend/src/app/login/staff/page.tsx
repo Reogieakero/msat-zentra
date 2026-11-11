@@ -10,6 +10,8 @@ export default function StaffLoginPage() {
         description="For teachers, advisers, guidance, ADM coordinator, and school leadership."
         emailLabel="School email"
         emailPlaceholder="name@msat.edu"
+        signupHref="/register/teacher"
+        signupLabel="Sign up"
       />
     </AuthShell>
   );

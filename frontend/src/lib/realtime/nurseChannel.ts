@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
+import { markRealtimeUpdate } from "@/lib/api/fresh";
 import { toast } from "@/components/ui/sonner";
 import { useSession } from "@/lib/auth/useSession";
 import { nurseNotificationTitle } from "@/lib/notifications/label";
@@ -50,6 +51,7 @@ export function useNurseRealtime(enabled = true) {
 
   const invalidate = React.useCallback(
     (scopes?: NurseScope | NurseScope[]) => {
+      markRealtimeUpdate();
       const list: NurseScope[] = !scopes
         ? (["alerts", "overview", "risk", "notifications"] as NurseScope[])
         : Array.isArray(scopes) ? scopes : [scopes];
@@ -120,7 +122,10 @@ export function useNurseRealtime(enabled = true) {
 
     let seeded = false;
     async function poll() {
-      if (cancelled || document.hidden) return;
+      // Runs while hidden too: a fanout notification must still land (and toast
+      // on return) when the desk is in another tab or another site. This is the
+      // fallback for a socket that is down or blocked by RLS.
+      if (cancelled) return;
       try {
         const { data } = await apiClient.get<NurseNotification[]>(
           "/api/notifications/?take=10",

@@ -24,11 +24,14 @@ export async function referRecord(
       studentId: true,
       rosterId: true,
       sectionId: true,
+      deletedAt: true,
       student: { select: { sectionId: true } },
       roster: { select: { sectionId: true } },
     },
   });
-  if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+  if (!record || record.deletedAt) {
+    throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+  }
   // A teacher's advisory scope wins over the JWT role: advisory sections are
   // claimed in settings, so the role can still read `subject_teacher`.
   const advised = await prisma.section.findMany({

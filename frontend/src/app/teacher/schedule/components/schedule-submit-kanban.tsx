@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
+import { motion, useReducedMotion, type Variants } from "motion/react";
 import { CheckCircle2, Loader2, Send, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { ScrollList } from "@/components/ui/scroll-list";
 import { Pill } from "@/components/ui/pill";
 import { apiClient } from "@/lib/api/client";
@@ -13,7 +16,10 @@ import { useTerm } from "@/lib/term/TermContext";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { toast } from "@/components/ui/sonner";
 import type { ScheduleSectionSummary } from "../page";
-import kanbanStyles from "./subject-kanban.module.css";
+import { sectionSlug } from "@/lib/sectionSlug";
+// Reuse the student list's section-card grid verbatim so the send desk reads
+// as the same board as /teacher/overview/students.
+import gridStyles from "@/app/teacher/overview/students/components/student-list.module.css";
 
 export type SubmitRowState = {
   sectionId: string;
@@ -150,9 +156,29 @@ export function SubmitDockRows({ rows }: { rows: SubmitRowState[] }) {
 
 export { SUBMIT_STEPS };
 
+const gridListVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.055, delayChildren: 0.05 } },
+};
+
+const gridItemVariants: Variants = {
+  hidden: { opacity: 0, y: 16, scale: 0.98 },
+  show: (index: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.45,
+      ease: "easeOut",
+      delay: Math.min(index * 0.055, 0.35),
+    },
+  }),
+};
+
 /**
- * Standalone Send-to-principal tab: full-width kanban under the header with
- * one card per section holding drafts, then a Send footer.
+ * Standalone Send-to-principal tab. Uses the student list's section-card grid
+ * (`/teacher/overview/students`) so the desk reads as the same board: one
+ * bordered card per section holding drafts, with the Send action below.
  */
 export function SendToPrincipalKanban({
   onSubmitProgress,
@@ -161,8 +187,10 @@ export function SendToPrincipalKanban({
 }) {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const reduceMotion = useReducedMotion() ?? false;
+  const router = useRouter();
 
-  const sectionsQuery = useQuery<{ sections: ScheduleSectionSummary[] }>({
+  const sectionsQuery = useLiveQuery<{ sections: ScheduleSectionSummary[] }>({
     queryKey: ["teacher-schedule-summary", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: ScheduleSectionSummary[] }>(
@@ -179,84 +207,133 @@ export function SendToPrincipalKanban({
     .map((s) => ({
       id: s.id,
       name: s.name,
+      gradeLevel: s.gradeLevel,
       count: s.timetableEntries.filter((e) => e.status === "DRAFT").length,
     }))
     .filter((s) => s.count > 0);
   const totalDrafts = drafts.reduce((n, s) => n + s.count, 0);
 
+  const openSectionGrid = (picked: { name: string; gradeLevel: string }) => {
+    const slug = sectionSlug(picked.name, picked.gradeLevel, sections);
+    router.push(`/teacher/schedule/template/${encodeURIComponent(slug)}?view=grid`);
+  };
+
+  // No drafts → no board at all, just the shared empty callout (same treatment
+  // as the Subjects/Teachers tabs).
+  if (!sectionsQuery.isPending && !sectionsQuery.isError && drafts.length === 0) {
+    return (
+      <div className="flex min-h-80 items-center justify-center" aria-label="Send to principal">
+        <InsightCallout role="status" className="w-fit max-w-xl text-center">
+          No draft slots — stage timetable cells first.
+        </InsightCallout>
+      </div>
+    );
+  }
+
+  if (sectionsQuery.isPending) {
+    return (
+      <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading drafts">
+        <ul className={gridStyles.sectionCardGrid} aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <li key={i}>
+              <span className="flex min-h-[124px] flex-col gap-2 rounded-xl border border-border bg-muted/20 p-2.5">
+                <span className="h-4 w-2/3 rounded bg-muted" />
+                <span className="h-4 w-20 rounded-full bg-muted" />
+                <span className="mt-auto h-14 rounded-lg bg-muted" />
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  if (sectionsQuery.isError) {
+    return (
+      <p role="alert" className="px-1 font-sans text-sm text-destructive">
+        Could not load drafts.
+      </p>
+    );
+  }
+
   return (
-    <div className={kanbanStyles.view} aria-label="Send to principal">
-      <div className={`${kanbanStyles.column} mx-auto w-full max-w-3xl`}>
-        <KanbanBoard
-          title="Send to principal"
-          icon={
-            <span className="text-amber-500" aria-hidden>
-              <Send size={14} />
-            </span>
-          }
-          count={<span className="text-amber-600 dark:text-amber-500">{totalDrafts}</span>}
-          description={
-            totalDrafts > 0
-              ? `${totalDrafts} draft slot${totalDrafts === 1 ? "" : "s"} awaiting review. Submitted slots await principal approval.`
-              : undefined
-          }
-          className="h-full"
-          footer={
-            <div className="flex justify-end gap-1.5 px-1 pb-1">
-              <Button
-                size="sm"
-                onClick={() => void submit()}
-                disabled={totalDrafts === 0 || submitting}
-                aria-busy={submitting || undefined}
-                className="h-6 border-input bg-white font-sans text-black hover:bg-neutral-100 hover:text-black dark:border-transparent dark:bg-white dark:text-black dark:hover:bg-neutral-200 dark:hover:text-black"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
-                    <span aria-live="polite">Sending…</span>
-                  </>
-                ) : (
-                  `Send${totalDrafts > 0 ? ` (${totalDrafts})` : ""}`
-                )}
-              </Button>
-            </div>
-          }
+    <div className="flex flex-col gap-4" aria-label="Send to principal">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span className="text-xs text-muted-foreground">
+          {totalDrafts} draft slot{totalDrafts === 1 ? "" : "s"} awaiting review. Submitted slots
+          await principal approval.
+        </span>
+        <Button
+          size="sm"
+          onClick={() => void submit()}
+          disabled={totalDrafts === 0 || submitting}
+          aria-busy={submitting || undefined}
+          className="h-6 border-input bg-white font-sans text-black hover:bg-neutral-100 hover:text-black dark:border-transparent dark:bg-white dark:text-black dark:hover:bg-neutral-200 dark:hover:text-black"
         >
-          {sectionsQuery.isPending ? (
-            <div className="flex flex-col gap-1.5 px-1" aria-busy="true" aria-label="Loading drafts">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="h-9 rounded-lg bg-muted" />
-              ))}
-            </div>
-          ) : sectionsQuery.isError ? (
-            <p role="alert" className="px-1 font-sans text-sm text-destructive">
-              Could not load drafts.
-            </p>
-          ) : drafts.length === 0 ? (
-            <p className={kanbanStyles.empty}>No draft slots — stage timetable cells first.</p>
+          {submitting ? (
+            <>
+              <Loader2 size={16} className="animate-spin" aria-hidden />
+              <span aria-live="polite">Sending…</span>
+            </>
           ) : (
-            <ScrollList className="grid max-h-[50dvh] grid-cols-1 gap-1.5 px-1 sm:grid-cols-2" role="list" ariaLabel="Sections with drafts">
-              {drafts.map((s, idx) => (
-                <div
-                  key={s.id}
-                  role="listitem"
-                  className={kanbanStyles.card}
-                  style={{ animationDelay: `${Math.min(idx, 8) * 35}ms` }}
-                >
-                  <span className={`${kanbanStyles.name} font-sans`} title={s.name}>
+            <>
+              <Send size={12} aria-hidden />
+              Send{totalDrafts > 0 ? ` (${totalDrafts})` : ""}
+            </>
+          )}
+        </Button>
+      </div>
+
+      <motion.ul
+        className={gridStyles.sectionCardGrid}
+        variants={gridListVariants}
+        initial={reduceMotion ? false : "hidden"}
+        animate="show"
+      >
+        {drafts.map((s, idx) => (
+          <motion.li
+            key={s.id}
+            className="flex min-w-0"
+            variants={gridItemVariants}
+            custom={idx}
+            style={{ willChange: "transform, opacity" }}
+          >
+            <div className={`${gridStyles.sectionCard} ${gridStyles.sectionCardStatic}`}>
+              <span className={gridStyles.sectionCardHead}>
+                <span className={gridStyles.sectionCardHeading}>
+                  <span className={gridStyles.sectionCardName} title={s.name}>
                     {s.name}
                   </span>
-                  <span className={kanbanStyles.meta}>
-                    <Pill tone="amber">
+                  <span className={gridStyles.sectionCardMetaRow}>
+                    <Pill tone="amber" label="Grade level">
+                      Grade {s.gradeLevel.replace("G", "")}
+                    </Pill>
+                    <Pill tone="neutral" label="Draft slots">
                       {s.count} slot{s.count === 1 ? "" : "s"}
                     </Pill>
                   </span>
-                </div>
-              ))}
-            </ScrollList>
-          )}
-        </KanbanBoard>
-      </div>
+                </span>
+                <span className={gridStyles.sectionCardIcon} aria-hidden>
+                  <Send size={13} />
+                </span>
+              </span>
+              <span className={gridStyles.sectionCardPanel}>
+                <span className={gridStyles.sectionCardStat}>
+                  <span className={gridStyles.sectionCardStatIcon} aria-hidden>
+                    <Send />
+                  </span>
+                  <Pill tone="blue" label="Draft slots" className="tabular-nums">
+                    {s.count}
+                  </Pill>
+                  <span className={gridStyles.sectionCardStatLabel}>
+                    Draft slot{s.count === 1 ? "" : "s"}
+                  </span>
+                </span>
+              </span>
+            </div>
+          </motion.li>
+        ))}
+      </motion.ul>
     </div>
   );
 }

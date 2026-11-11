@@ -1,18 +1,32 @@
 import { prisma } from "../../lib/prisma.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+} from "../../lib/learnerVisibility.js";
 import { GRADE_LABELS, GRADE_ORDER } from "../../lib/grades.js";
+import { getInterventionStudents } from "../../modules/risk/interventions.service.js";
 import { SESSION_TYPES } from "../../modules/interventions/interventions.repository.js";
 import type { GuidanceContext } from "./guidance.types.js";
 
 /**
  * Intervention insights — one aggregate read of the term's intervention
- * pipeline for the guidance desk's reporting page. Everything is computed
- * from `Intervention` + its `CounselingSession` rows (never the live risk
+ * pipeline for the guidance desk's reporting page.
+ *
+ * The outcome/session math runs on `Intervention` rows (never the live risk
  * cohort: closed follow-ups leave the cohort, so it cannot report outcomes).
+ * The live cohort is still read, but only to add the learners the interventions
+ * board currently shows as "No action yet" — flagged by the engine with no
+ * follow-up record yet (or only an older term's record). Without them the
+ * board and this page disagree on the case count.
  *
  * `Intervention` has no `createdAt`/`resolvedAt` columns, so:
  *  - "opened" is bucketed by `assignedAt` (falling back to the first session);
  *  - "resolved" is bucketed by the last completed session (resolution proxy);
  *  - avg resolution time runs from `assignedAt` to that last completed session.
+ *
+ * Risk buckets follow the learner's live level while the case is still in the
+ * cohort (that is what the board shows); a case that left the cohort keeps
+ * `riskLevelAtFlag`.
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -125,6 +139,12 @@ export async function getInterventionInsights(
 ): Promise<InterventionInsightsData> {
   const termId = ctx.termId;
 
+  // Adviser-scoped soft delete (archive): a learner the section adviser removed
+  // from the advisory list must not surface on this desk's reporting either —
+  // their intervention history, sessions and outcomes are hidden with them
+  // (the live cohort below already excludes these learners).
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+
   const [term, interventions] = await Promise.all([
     termId
       ? prisma.term.findUnique({
@@ -138,9 +158,14 @@ export async function getInterventionInsights(
         })
       : null,
     prisma.intervention.findMany({
-      where: termId ? { termId } : undefined,
+      where: {
+        ...(termId ? { termId } : {}),
+        ...excludeArchivedLearnerRows(archivedLearners),
+      },
       select: {
         id: true,
+        studentId: true,
+        rosterId: true,
         riskLevelAtFlag: true,
         outcomeStatus: true,
         assignedAt: true,
@@ -172,6 +197,24 @@ export async function getInterventionInsights(
   const termLabel = term
     ? `${term.schoolYear.name.split(" ")[0]} · Term ${term.termNumber}`
     : "No active term";
+
+  // The interventions board lists the live risk cohort, so a learner flagged
+  // by the engine but with no follow-up record (or only another term's record)
+  // still appears there as "No action yet". Read the same cohort here and add
+  // those rows below — otherwise the board shows 8 cases and this page 7.
+  const countedInterventionIds = new Set(interventions.map((iv) => iv.id));
+  const cohort = termId
+    ? await getInterventionStudents(
+        { page: 1, pageSize: 2000, fullCohort: true, includeRecovered: true },
+        { termId, schoolYearId: ctx.schoolYearId },
+      )
+    : null;
+  // The board shows each learner's live risk level, so bucket the cases that
+  // are still in the cohort by the same level. Only cases that left the
+  // cohort (resolved/unresolved, learner no longer flagged) keep the level
+  // recorded when the case was opened.
+  const liveLevelByKey = new Map<string, string>();
+  for (const s of cohort?.students ?? []) liveLevelByKey.set(s.studentId, s.riskLevel);
 
   const kpis: InterventionInsightKpis = {
     total: 0,
@@ -228,7 +271,13 @@ export async function getInterventionInsights(
       intervention.roster?.section?.name ??
       "Unassigned";
 
-    const riskBucket = byRisk.get(intervention.riskLevelAtFlag);
+    const riskBucket = byRisk.get(
+      (intervention.studentId
+        ? liveLevelByKey.get(intervention.studentId)
+        : intervention.rosterId
+          ? liveLevelByKey.get(`roster:${intervention.rosterId}`)
+          : undefined) ?? intervention.riskLevelAtFlag,
+    );
     if (riskBucket) addOutcome(riskBucket, intervention.outcomeStatus);
 
     if (gradeLevel) {
@@ -293,6 +342,40 @@ export async function getInterventionInsights(
         bucket.sessions++;
         if (session.status === "completed") bucket.completedSessions++;
       }
+    }
+  }
+
+  // Flagged learners the board shows without a follow-up record. They are
+  // part of the desk's live caseload, so they count as ongoing and open in the
+  // month the engine detected them.
+  for (const s of cohort?.students ?? []) {
+    const linked = s.intervention?.id;
+    if (linked && countedInterventionIds.has(linked)) continue;
+
+    kpis.total++;
+    kpis.ongoing++;
+
+    const riskBucket = byRisk.get(s.riskLevel);
+    if (riskBucket) addOutcome(riskBucket, "ongoing");
+
+    const gradeBucket = byGrade.get(s.gradeLevel as (typeof GRADE_ORDER)[number]);
+    if (gradeBucket) addOutcome(gradeBucket, "ongoing");
+
+    const sectionKey = `${s.gradeLevel}|${s.section}`;
+    let sectionBucket = bySection.get(sectionKey);
+    if (!sectionBucket) {
+      sectionBucket = {
+        ...emptyOutcome(),
+        section: s.section,
+        grade: GRADE_LABELS[s.gradeLevel as keyof typeof GRADE_LABELS] ?? s.gradeLevel,
+      };
+      bySection.set(sectionKey, sectionBucket);
+    }
+    addOutcome(sectionBucket, "ongoing");
+
+    if (s.snapshotDate) {
+      const at = new Date(s.snapshotDate);
+      if (!Number.isNaN(at.getTime())) ensureBucket(monthKey(at)).opened++;
     }
   }
 

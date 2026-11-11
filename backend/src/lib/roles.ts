@@ -18,7 +18,7 @@ export const STAFF_ROLES: Role[] = [
   "principal",
 ];
 
-export const KNOWN_ROLES: Role[] = [...STAFF_ROLES, "student", "parent"];
+export const KNOWN_ROLES: Role[] = [...STAFF_ROLES, "student", "parent", "admin"];
 
 export const TEACHER_ROLES: Role[] = ["subject_teacher", "adviser"];
 

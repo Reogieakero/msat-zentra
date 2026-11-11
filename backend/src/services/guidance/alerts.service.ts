@@ -6,6 +6,11 @@ import {
   type AdmStage,
 } from "../../modules/guidance/guidance.repository.js";
 import type { GuidanceContext } from "./guidance.types.js";
+import { getInterventionStudents } from "../../modules/risk/interventions.service.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+} from "../../lib/learnerVisibility.js";
 
 export interface AlertsQuery {
   level: "High" | "Moderate" | null;
@@ -20,6 +25,43 @@ const FLAG_COLUMN: Record<string, string> = {
   attendance: "attendanceFlag",
   behavioral: "behavioralFlag",
 };
+
+export interface GuidanceAlertCounts {
+  high: number;
+  moderate: number;
+  total: number;
+}
+
+/**
+ * Lightweight live at-risk counters for the guidance shell's alert sound and
+ * tab-title badge. Same scope/archive rules as `getAlerts`, without the page
+ * payload — polled every few seconds by every guidance desk.
+ */
+export async function getAlertCounts(ctx: GuidanceContext): Promise<GuidanceAlertCounts> {
+  // Count from the same live cohort the interventions board renders (grades +
+  // attendance + anecdotes recomputed on demand) instead of the persisted
+  // `riskLevel` columns. The persisted level only moves when the risk engine
+  // happens to run for that learner, so a newly flagged learner could sit in
+  // the board while the counters (and therefore the sound + tab title) lag.
+  // The cohort scan is memoized for 20s and shared with the board request.
+  const { students } = await getInterventionStudents(
+    {
+      page: 1,
+      pageSize: 2000,
+      fullCohort: true,
+      includeRecovered: true,
+    },
+    { termId: ctx.termId, schoolYearId: ctx.schoolYearId },
+  );
+
+  let high = 0;
+  let moderate = 0;
+  for (const student of students) {
+    if (student.riskLevel === "High") high += 1;
+    else if (student.riskLevel === "Moderate") moderate += 1;
+  }
+  return { high, moderate, total: high + moderate };
+}
 
 export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
   const { levelFilter, factorFilter, q, page, pageSize } = {
@@ -44,6 +86,7 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
   const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
   const needle = q.trim();
   const atRiskLevels = levelFilter ? [levelFilter] : ["High", "Moderate"];
+  const archivedLearners = await archivedAdvisoryLearnerIds();
 
   const profileSearch: any = needle
     ? {
@@ -57,6 +100,7 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
   const profileScope: any = {
     AND: [
       ...(schoolYearId ? [{ section: { schoolYearId } }] : []),
+      excludeArchivedProfiles(archivedLearners),
       ...(profileSearch ? [profileSearch] : []),
     ],
   };
@@ -73,6 +117,8 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
       Prisma.sql`r."riskLevel" IN (${levelFilter ? levelFilter : Prisma.raw("'High', 'Moderate'")})`,
     ];
     if (schoolYearId) conds.push(Prisma.sql`r."schoolYearId" = ${schoolYearId}`);
+    if (archivedLearners.rosterIds.length > 0)
+      conds.push(Prisma.sql`r."id" NOT IN (${Prisma.join(archivedLearners.rosterIds)})`);
     if (filtered && factorFilter)
       conds.push(Prisma.sql`${Prisma.raw(`r."${FLAG_COLUMN[factorFilter]}"`)} = TRUE`);
     if (needle)
@@ -194,14 +240,18 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
       windowProfileIds.length
         ? prisma.anecdotalRecord.groupBy({
             by: ["studentId"],
-            where: { ...(termId ? { termId } : {}), studentId: { in: windowProfileIds } },
+            where: {
+              ...(termId ? { termId } : {}),
+              studentId: { in: windowProfileIds },
+              deletedAt: null,
+            },
             _count: { _all: true },
           })
         : Promise.resolve([] as { studentId: string | null; _count: { _all: number } }[]),
       windowRosterIds.length
         ? prisma.anecdotalRecord.groupBy({
             by: ["rosterId"],
-            where: { ...(termId ? { termId } : {}), rosterId: { in: windowRosterIds } },
+            where: { ...(termId ? { termId } : {}), rosterId: { in: windowRosterIds }, deletedAt: null },
             _count: { _all: true },
           })
         : Promise.resolve([] as { rosterId: string | null; _count: { _all: number } }[]),

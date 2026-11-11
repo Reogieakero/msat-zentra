@@ -136,14 +136,21 @@ export default function TeacherAdvisoryStudentsPage() {
               >
                 {formatSurnameFirst(row.original.name)}
               </span>
-              <Pill
-                tone="neutral"
-                label="LRN"
-                className="mt-1 max-w-full truncate"
-                title={row.original.lrn}
-              >
-                {row.original.lrn}
-              </Pill>
+              <span className="mt-1 flex max-w-full flex-col items-start gap-1">
+                <Pill
+                  tone="neutral"
+                  label="LRN"
+                  className="max-w-full truncate"
+                  title={row.original.lrn}
+                >
+                  {row.original.lrn}
+                </Pill>
+                {row.original.learnerType === "transferee" ? (
+                  <Pill tone="amber" label="Learner type">
+                    Transferee
+                  </Pill>
+                ) : null}
+              </span>
             </div>
           </div>
         ),

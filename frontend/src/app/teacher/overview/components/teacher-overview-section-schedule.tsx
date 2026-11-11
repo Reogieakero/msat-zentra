@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { BookOpenText, CalendarDays, Clock3, Hourglass, UserRound } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { liveQueryOptions } from "@/lib/api/live";
 import {
   buildTimetable,
   formatRange,
@@ -49,7 +50,7 @@ export function AdvisorySectionSchedule({ onEmptyChange }: { onEmptyChange?: (em
     return () => window.clearInterval(id);
   }, []);
 
-  const schedQuery = useQuery<{ sections: ScheduleSectionRow[] }>({
+  const schedQuery = useLiveQuery<{ sections: ScheduleSectionRow[] }>({
     queryKey: ["teacher-schedule-section", section?.id ?? "none", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: ScheduleSectionRow[] }>(
@@ -62,8 +63,9 @@ export function AdvisorySectionSchedule({ onEmptyChange }: { onEmptyChange?: (em
     staleTime: 30_000,
     gcTime: 5 * 60_000,
     placeholderData: (previous) => previous,
+    ...liveQueryOptions,
   });
-  const configQuery = useQuery<{ config: DayConfig }>({
+  const configQuery = useLiveQuery<{ config: DayConfig }>({
     queryKey: ["teacher-schedule-config", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ config: DayConfig }>(
@@ -76,6 +78,7 @@ export function AdvisorySectionSchedule({ onEmptyChange }: { onEmptyChange?: (em
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     placeholderData: (previous) => previous,
+    ...liveQueryOptions,
   });
   const live = schedQuery.data?.sections.find((s) => s.id === section?.id) ?? null;
   const slots = !section

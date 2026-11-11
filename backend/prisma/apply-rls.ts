@@ -17,11 +17,21 @@ drop policy if exists home_visitation_write on "HomeVisitationRecord";
 drop policy if exists adm_visible on "AdmLearnerProfile";
 drop policy if exists adm_write on "AdmLearnerProfile";
 drop policy if exists notification_own on "Notification";
+drop policy if exists section_visible on "Section";
+drop policy if exists intervention_visible on "Intervention";
+drop policy if exists counseling_session_visible on "CounselingSession";
+drop policy if exists risk_snapshot_visible on "RiskSnapshot";
+drop policy if exists referral_visible on "Referral";
+drop function if exists zentra_advises_intervention(text);
+drop function if exists zentra_advises_learner(text, text);
 drop function if exists zentra_role();
 drop function if exists zentra_uid();
 `;
 
-const allSql = drop + "\n" + raw;
+// Strip `--` comments BEFORE splitting on ";" — a semicolon inside a comment
+// (e.g. "…read-all policy is enough; writes go through the backend") would
+// otherwise split a statement in half and leave policies dropped.
+const allSql = (drop + "\n" + raw).replace(/--.*$/gm, "");
 
 const statements: string[] = [];
 let buf = "";

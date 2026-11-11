@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -11,7 +11,6 @@ import {
 } from "@tanstack/react-table";
 import {
   Search,
-  ShieldCheck,
   Bell,
   HeartHandshake,
   Radar,
@@ -31,7 +30,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { toast } from "@/components/ui/sonner";
-import { PrincipalEmptyCard } from "../../../components/PrincipalEmptyCard";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { riskTone } from "@/lib/labels/status-tone";
 import { Pagination } from "@/components/shared/pagination";
 import type { RiskSnapshotStudent, RiskLevelKey } from "../types";
@@ -43,6 +42,7 @@ import { useInterventionFilters, type InterventionActionFilter } from "./use-int
 import { AlertGuidanceDialog } from "./alert-guidance-dialog";
 import styles from "./InterventionsListTable.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useLiveQuery } from "@/lib/api/live";
 
 const ACTION_TABS: { key: InterventionActionFilter; label: string }[] = [
   { key: "all", label: "All" },
@@ -75,7 +75,10 @@ export function InterventionsListTable() {
     actionFilter,
     setActionFilter,
   } = useInterventionFilters();
-  const { data, isPending, isError, refetch } = useQuery({
+  // Live desk: the cohort changes when the risk sweep, guidance, or the
+  // adviser touches a case, so it polls while the tab is visible (20s) and the
+  // principal realtime channel invalidates instantly on Intervention changes.
+  const { data, isPending, isError, refetch } = useLiveQuery({
     // One unfiltered cohort per term: search + tabs filter in memory so typing
     // is instant and never stacks a second stale result set.
     queryKey: ["interventions-list", termId, schoolYearId],
@@ -84,7 +87,6 @@ export function InterventionsListTable() {
     // window serves instantly with skeleton only on genuine first loads.
     staleTime: 120_000,
     gcTime: 600_000,
-    refetchOnWindowFocus: false,
   });
   const allStudents = React.useMemo(() => data?.students ?? [], [data]);
 
@@ -299,13 +301,10 @@ export function InterventionsListTable() {
   const isEmpty = !isPending && allStudents.length === 0;
   if (isEmpty) {
     return (
-      <PrincipalEmptyCard
-        icon={ShieldCheck}
-        title="No at-risk students yet"
-        hint="Students flagged by the system will appear here once detected."
-        label="Intervention cases"
-        centered
-      />
+      <PageEmptyCallout>
+        No at-risk students yet. Students flagged by the system will appear here
+        once detected.
+      </PageEmptyCallout>
     );
   }
   return (

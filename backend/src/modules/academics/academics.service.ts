@@ -3,9 +3,14 @@ import {
   remarksFromTransmuted,
   meetsAcademicExcellenceAward,
 } from "../../services/grading.js";
-import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../../services/risk.js";
+import { attendanceTotalFor, computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../../services/risk.js";
 import { schoolDaysToDate } from "../../services/attendance.js";
 import { gradeLabel } from "../../lib/grades.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
@@ -141,6 +146,7 @@ export async function getAcademicsSummary(
     resolvedYearId = activeYear?.id ?? null;
   }
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const sections = await prisma.section.findMany({
     where: resolvedYearId ? { schoolYearId: resolvedYearId } : undefined,
     include: {
@@ -148,6 +154,7 @@ export async function getAcademicsSummary(
         select: { staffProfile: { select: { shareStudentData: true } } },
       },
       students: {
+        where: excludeArchivedProfiles(archivedLearners),
         include: {
           user: { select: { fullName: true } },
           finalGrades: {
@@ -167,13 +174,14 @@ export async function getAcademicsSummary(
             select: { status: true, session: true, date: true },
           },
           anecdotalRecords: {
-            where: { termId },
+            where: { termId, deletedAt: null },
             select: { id: true },
           },
         },
       },
 
       rosterEntries: {
+        where: excludeArchivedRosters(archivedLearners),
         select: {
           id: true,
           lrn: true,
@@ -196,7 +204,7 @@ export async function getAcademicsSummary(
             select: { status: true, session: true, date: true },
           },
           anecdotalRecords: {
-            where: { termId },
+            where: { termId, deletedAt: null },
             select: { id: true },
           },
         },
@@ -544,7 +552,7 @@ export async function getStudentHoverStats(
       where: { ...owner, termId: term.id },
       select: { status: true },
     }),
-    prisma.anecdotalRecord.count({ where: { ...owner, termId: term.id } }),
+    prisma.anecdotalRecord.count({ where: { ...owner, termId: term.id, deletedAt: null } }),
     // The denominator is the whole section's term, anchored at the TERM START
     // DATE — not at this learner's add date. A classmate added mid-term must
     // read the same /N as everyone else (their pre-join meetups simply count
@@ -560,7 +568,11 @@ export async function getStudentHoverStats(
     .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
   const present = attendance.filter((a) => a.status === "present").length;
   // Never report fewer meetups than the learner actually has marks in.
-  const total = Math.max(sectionId ? totals.get(sectionId) ?? 0 : 0, attendance.length);
+  // Transferees are rated from the day after their enlistment, not term start.
+  const total = Math.max(
+    sectionId ? attendanceTotalFor(totals, sectionId, rosterId) ?? 0 : 0,
+    attendance.length,
+  );
 
   return {
     ...base,

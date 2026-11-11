@@ -20,6 +20,7 @@ import type {
   GuidanceAnecdotalRecord,
 } from "@/services/guidance/anecdotal.types";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import styles from "./components/guidance-anecdotal.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
@@ -54,9 +55,9 @@ function GuidanceAnecdotalPageInner() {
   // all client-side — typing never triggers a fetch or a stale request stack.
   const { data, isPending, isError, refetch, isRefetching } =
     useQuery<GuidanceAnecdotalData>({
+      ...liveQueryOptions,
       queryKey: ["guidance-anecdotal", "queue", termKey],
       queryFn: ({ signal }) => fetchAllGuidanceAnecdotal({ signal }),
-      staleTime: 60_000,
       enabled: termReady,
     });
 

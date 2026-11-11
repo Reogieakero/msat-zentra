@@ -34,6 +34,7 @@ import {
   fetchRecords,
 } from "@/services/principal/records.service";
 import type { BehavioralCategory, BehavioralRecord } from "../types";
+import { liveQueryOptions } from "@/lib/api/live";
 import styles from "./RecordsCharts.module.css";
 
 const categoryChartConfig = Object.fromEntries(
@@ -103,10 +104,9 @@ function emptyDateRow(date: string): DateRow {
 
 export function RecordsCharts() {
   const { data, isPending } = useQuery({
+    ...liveQueryOptions,
     queryKey: ["records-heatmap"],
     queryFn: fetchRecords,
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
   });
 
   const { gradeRows, dateRows, allRecords } = React.useMemo(() => {

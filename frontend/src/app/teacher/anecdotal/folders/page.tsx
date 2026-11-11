@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { useTerm } from "@/lib/term/TermContext";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,7 @@ function groupByStudent(records: MyAnecdotalRecord[]): StudentGroup[] {
 export default function AnecdotalFoldersPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const recordsQuery = useQuery<MyAnecdotalRecord[]>({
+  const recordsQuery = useLiveQuery<MyAnecdotalRecord[]>({
     queryKey: ["anecdotal-mine", termKey],
     queryFn: fetchMyRecords,
   });

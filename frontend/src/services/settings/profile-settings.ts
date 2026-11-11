@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 
@@ -56,7 +56,7 @@ const SETTINGS_GC_MS = 5 * 60_000;
 export function useProfileSettings(desk: SettingsDesk) {
   const session = useSession();
   const userId = session?.sub ?? null;
-  return useQuery({
+  return useLiveQuery({
     queryKey: profileSettingsKey(desk, userId),
     queryFn: () => fetchProfileSettings(desk),
     enabled: !!userId,

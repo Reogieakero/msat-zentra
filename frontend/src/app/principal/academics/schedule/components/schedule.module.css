@@ -9,30 +9,112 @@
   min-width: 0;
 }
 
-/* Centered board + icon-only rail column. */
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 2.75rem;
-  gap: 1rem;
-  align-items: start;
-  min-width: 0;
+/* Empty page — the shared insight callout centered in the space below the
+   shell header (topbar 3rem desktop / 6rem mobile tab bar + main padding). */
+.emptyCallout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 5rem);
+  padding: 1.5rem 0;
+}
+
+.emptyCallout > p {
+  text-align: center;
+}
+
+/* ---- Loading skeleton — mirrors the live board + table row layout -------- */
+.skelIconBtn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.75rem;
+}
+
+.skelTitleIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 0.375rem;
+}
+
+.skelTitle {
+  width: 9rem;
+  height: 0.875rem;
+}
+
+.skelDescription {
+  width: min(28rem, 70%);
+  height: 0.75rem;
+  margin-inline: 0.25rem;
+}
+
+.skelFilterPill {
+  width: 4.5rem;
+  height: 1.375rem;
+  border-radius: 9999px;
+}
+
+.skelAvatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.skelName {
+  width: 8rem;
+  max-width: 60%;
+  height: 0.8125rem;
+}
+
+.skelPill {
+  width: 5.5rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+}
+
+.skelPillWide {
+  width: 9rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+}
+
+.skelCount {
+  width: 1.25rem;
+  height: 0.8125rem;
+}
+
+.skelActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.skelAction {
+  width: 4rem;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
 }
 
 @media (max-width: 1023px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
+  .emptyCallout {
+    min-height: calc(100vh - 8rem);
   }
 }
 
+/* Bucket buttons — labeled 24px controls pinned to the page's top-right. */
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+/* Centered board column — the bucket controls sit above it, so there is no
+   right rail. */
 .stack {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 1rem;
   min-width: 0;
-  /* Table sits in the vertical middle of the desk; the rail stays pinned to
-     the top of the page (16px under the navbar). */
-  min-height: calc(100dvh - 8rem);
 }
 
 /* The table board sits centered in the content column. */
@@ -41,11 +123,6 @@
   max-width: 60rem;
   margin-inline: auto;
   animation: board-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-}
-
-/* Right rail slides in from the gutter once the board has landed. */
-.railIn {
-  animation: rail-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.9s backwards;
 }
 
 /* Grade filter — shared pills, one button each. */
@@ -339,7 +416,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .boardWrap,
-  .railIn,
   .filterRow > *,
   .table tbody tr {
     animation: none;

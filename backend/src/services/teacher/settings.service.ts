@@ -5,6 +5,7 @@ import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { CACHE_TAGS } from "../../lib/cacheTags.js";
 import { gradeToNumber } from "../../modules/teacher/teacher.repository.js";
+import { resolveTeacherClassPairs } from "./timetable.read.service.js";
 import { isMascotCharacter } from "../mascot.js";
 import type { TeacherContext } from "./teacher.types.js";
 
@@ -287,45 +288,28 @@ export async function updateProfilePhoto(ctx: TeacherContext, photoUrl: string) 
 }
 
 export async function readDataSharing(teacherId: string, termId: string | null) {
-  const [profile, assignments, linked, advised] = await Promise.all([
+  const [profile, advised, pairs] = await Promise.all([
     prisma.staffProfile.findUnique({
       where: { userId: teacherId },
       select: { shareStudentData: true, shareUpdatedAt: true },
     }),
-    termId
-      ? prisma.teacherSubjectAssignment.findMany({
-          where: { teacherId, termId },
-          select: {
-            subject: { select: { name: true } },
-            section: { select: { id: true, name: true, adviserId: true } },
-          },
-        })
-      : Promise.resolve([] as { subject: { name: string }; section: { id: string; name: string; adviserId: string | null } }[]),
-    termId
-      ? prisma.sectionTimetableEntry.findMany({
-          where: {
-            termId,
-            status: { in: ["APPROVED", "SUBMITTED"] },
-            teacherName: { userId: teacherId },
-          },
-          select: {
-            subject: { select: { name: true } },
-            section: { select: { id: true, name: true, adviserId: true } },
-          },
-        })
-      : Promise.resolve([] as { subject: { name: string }; section: { id: string; name: string; adviserId: string | null } }[]),
     prisma.section.findMany({
       where: { adviserId: teacherId },
       select: { id: true },
     }),
+    // Handled classes come from the code link entered on /teacher/classes
+    // (TeacherName.userId), exactly like My Classes/Grading/Attendance.
+    // TeacherSubjectAssignment rows are academics-desk rows and do not mean
+    // this login has linked the class, so they are not listed here.
+    termId ? resolveTeacherClassPairs(teacherId, termId) : Promise.resolve([]),
   ]);
   // Handled classes only — never the teacher's own advisory-section classes.
   const advisedIds = new Set(advised.map((s) => s.id));
   const seen = new Map<string, { subject: string; section: string }>();
-  for (const a of [...assignments, ...linked]) {
-    if (advisedIds.has(a.section.id) || a.section.adviserId === teacherId) continue;
-    const key = `${a.subject.name}|${a.section.name}`;
-    if (!seen.has(key)) seen.set(key, { subject: a.subject.name, section: a.section.name });
+  for (const p of pairs) {
+    if (advisedIds.has(p.sectionId)) continue;
+    const key = `${p.subject.name}|${p.section.name}`;
+    if (!seen.has(key)) seen.set(key, { subject: p.subject.name, section: p.section.name });
   }
   return {
     shareStudentData: profile?.shareStudentData ?? false,

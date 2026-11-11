@@ -212,6 +212,37 @@ a.item {
   white-space: nowrap;
 }
 
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: none;
+  margin-left: auto;
+  margin-right: 8px;
+  padding: 0;
+  border-radius: 9999px;
+  background-color: #dc2626;
+  color: #ffffff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  margin-left: auto;
+  margin-right: 10px;
+  border-radius: 9999px;
+  background-color: #dc2626;
+  box-shadow: 0 0 0 2px color-mix(in oklch, #dc2626 22%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marker {
     transition: opacity 150ms ease;

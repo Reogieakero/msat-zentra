@@ -15,6 +15,7 @@ import {
 } from "@/components/anecdotal/anecdotal-record-kanban-card";
 import styles from "./RecordsHeatblocks.module.css";
 import { CATEGORY_META, fetchRecords } from "@/services/principal/records.service";
+import { liveQueryOptions } from "@/lib/api/live";
 import { Pagination } from "@/components/shared/pagination";
 
 const RECORDS_PAGE_SIZE = 16;
@@ -26,6 +27,7 @@ export function RecordsHeatblocks() {
   const [privacyFor, setPrivacyFor] = React.useState<string | null>(null);
 
   const { data, isPending, isError } = useQuery({
+    ...liveQueryOptions,
     queryKey: ["records-heatmap"],
     queryFn: fetchRecords,
   });

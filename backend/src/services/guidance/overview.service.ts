@@ -1,6 +1,11 @@
 import { prisma } from "../../lib/prisma.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
+import {
   computeRiskFactors,
   isAtRisk,
   levelFromFlags,
@@ -34,6 +39,7 @@ export async function getOverview(ctx: GuidanceContext) {
     ? `${term.schoolYear.name.split(" ")[0]} · Term ${term.termNumber}`
     : "No active term";
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [
     pendingAdm,
     pendingCounseling,
@@ -256,7 +262,10 @@ export async function getOverview(ctx: GuidanceContext) {
       },
     }),
     prisma.studentProfile.findMany({
-      where: schoolYearId ? { section: { schoolYearId } } : undefined,
+      where: {
+        ...(schoolYearId ? { section: { schoolYearId } } : {}),
+        ...excludeArchivedProfiles(archivedLearners),
+      },
       select: {
         lrn: true,
         gradeLevel: true,
@@ -272,13 +281,16 @@ export async function getOverview(ctx: GuidanceContext) {
           select: { status: true },
         },
         anecdotalRecords: {
-          where: termId ? { termId } : undefined,
+          where: { deletedAt: null, ...(termId ? { termId } : {}) },
           select: { id: true },
         },
       },
     }),
     prisma.studentRoster.findMany({
-      where: schoolYearId ? { schoolYearId } : undefined,
+      where: {
+        ...(schoolYearId ? { schoolYearId } : {}),
+        ...excludeArchivedRosters(archivedLearners),
+      },
       select: {
         lrn: true,
         gradeLevel: true,
@@ -292,7 +304,7 @@ export async function getOverview(ctx: GuidanceContext) {
           select: { status: true },
         },
         anecdotalRecords: {
-          where: termId ? { termId } : undefined,
+          where: { deletedAt: null, ...(termId ? { termId } : {}) },
           select: { id: true },
         },
       },

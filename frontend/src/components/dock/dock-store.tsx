@@ -290,7 +290,10 @@ export function DockProvider({ children }: { children: React.ReactNode }) {
   // Heartbeat: owned running tasks stay fresh so other tabs know they are live.
   // Backstop: a running task owned by another tab and silent for over two
   // minutes means its tab died without saying goodbye — fail it plainly
-  // instead of spinning forever.
+  // instead of spinning forever. Same for our own task that has outlived any
+  // reasonable request: without this a lost task id leaves "Working on 1 task"
+  // spinning (and X disabled) until the tab closes.
+  const OWN_TASK_MAX_AGE_MS = 10 * 60_000;
   React.useEffect(() => {
     const id = window.setInterval(() => {
       const tabId = tabIdRef.current;
@@ -299,6 +302,15 @@ export function DockProvider({ children }: { children: React.ReactNode }) {
         let changed = false;
         const next = prev.map((t) => {
           if (t.status === "running" && t.ownerTabId === tabId) {
+            if (now - t.createdAt > OWN_TASK_MAX_AGE_MS) {
+              changed = true;
+              return {
+                ...t,
+                status: "failed" as const,
+                error: "This task took too long and was stopped. Please try again.",
+                updatedAt: now,
+              };
+            }
             if (t.updatedAt > now - 4000) return t;
             changed = true;
             return { ...t, updatedAt: now };

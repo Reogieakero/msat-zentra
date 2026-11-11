@@ -1,21 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchMyRecords, type MyAnecdotalRecord } from "@/components/ocform01/folders";
 import { useTerm } from "@/lib/term/TermContext";
 import { AnecdotalEmptyKanban } from "./components/AnecdotalEmptyKanban";
+import { AnecdotalArchiveDialog } from "./components/AnecdotalArchiveDialog";
 import { AnecdotalRepoFolders } from "./components/AnecdotalRepoFolders";
 import { AnecdotalRepoFoldersSkeleton } from "./components/AnecdotalRepoFoldersSkeleton";
-import { AnecdotalSidebar, ChatWithBamaCard, FolderLegendCard } from "./components/AnecdotalSideRail";
+import { AnecdotalToolbarActions } from "./components/AnecdotalSideRail";
 import styles from "./components/anecdotal-repo.module.css";
 
 export default function TeacherAnecdotalPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const recordsQuery = useQuery<MyAnecdotalRecord[]>({
+  const recordsQuery = useLiveQuery<MyAnecdotalRecord[]>({
     queryKey: ["anecdotal-mine", termKey],
     queryFn: fetchMyRecords,
     retry: false,
@@ -25,6 +26,7 @@ export default function TeacherAnecdotalPage() {
     () => (Array.isArray(recordsQuery.data) ? recordsQuery.data : []),
     [recordsQuery.data]
   );
+  const [archiveOpen, setArchiveOpen] = React.useState(false);
 
   if (recordsQuery.isPending) {
     return <AnecdotalRepoFoldersSkeleton />;
@@ -58,24 +60,21 @@ export default function TeacherAnecdotalPage() {
       <section className={styles.page} aria-label="Anecdotal records">
         <div className="flex flex-1 flex-col items-center justify-center">
           <div className="w-full">
-            <AnecdotalEmptyKanban />
+            <AnecdotalEmptyKanban onOpenArchive={() => setArchiveOpen(true)} />
           </div>
         </div>
+        <AnecdotalArchiveDialog open={archiveOpen} onClose={() => setArchiveOpen(false)} />
       </section>
     );
   }
 
   return (
     <section className={styles.page}>
-      <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
-        <div className={`${styles.main} flex min-w-0 flex-col`}>
-          <AnecdotalRepoFolders records={records} />
-        </div>
-        <AnecdotalSidebar />
-      </div>
-      <div className="flex min-w-0 flex-col gap-4 lg:hidden">
-        <ChatWithBamaCard />
-        <FolderLegendCard />
+      <div className={`${styles.main} flex min-w-0 flex-col`}>
+        <AnecdotalRepoFolders
+          records={records}
+          toolbarActions={<AnecdotalToolbarActions />}
+        />
       </div>
     </section>
   );

@@ -1,13 +1,22 @@
 import { prisma } from "../../lib/prisma.js";
 import { phTodayKey } from "../attendance.date.utils.js";
+import { attendanceTotalFor, computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../risk.js";
+import { ATTENDANCE_RISK_CUTOFF, subjectAverageAttendance, termHasStarted } from "../attendance.js";
+import { admExemptStudentIds } from "../adm/attendancePolicy.js";
+import { sectionHeadcounts } from "../enrollment.js";
+import { archivedAdvisoryLearnerIds } from "../../lib/learnerVisibility.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 /**
  * Day-by-day detection series for the teacher overview charts.
  *
  * Two sources, both scoped to the same learner population:
- * - `RiskSnapshot` (hourly rows) → count High/Moderate/Low per calendar day,
- *   keeping only the latest snapshot per learner per day.
+ * - Live risk factors (the advisory board's derivation) → the current
+ *   High/Moderate/Low mix, and `RiskSnapshot` (hourly rows) → count
+ *   High/Moderate/Low per calendar day, keeping only the latest snapshot per
+ *   learner per day. Days before a learner's first snapshot fall back to the
+ *   live level, so a learner whose flags never changed still appears instead
+ *   of reading "unassessed".
  * - `AttendanceRecord` (per-subject + legacy AM/PM rows) → one status per
  *   learner per day using the worst-of-the-day rank (absent > late > excused >
  *   present), the same rule the attendance sheet uses.
@@ -55,8 +64,11 @@ export interface TeacherOverviewInsights {
   /** Per-school-day series (weekends skipped), oldest first. */
   series: OverviewInsightDay[];
   /**
-   * Latest risk level per learner inside the window. `unassessed` are learners
-   * with no snapshot yet, so the donut can total `learnerCount` honestly.
+   * Current level per learner, derived live from the same factors the adviser
+   * board uses (grades < 75, attendance < 80%, ≥1 anecdote) — never the
+   * persisted `riskLevel`, which lags behind until the hourly engine runs.
+   * Every learner in scope gets a level, so `unassessed` stays 0 (kept for the
+   * client contract).
    */
   riskMix: {
     high: number;
@@ -117,24 +129,29 @@ function buildAxis(
 }
 
 /**
- * Sections the insights cover: the advisory section when the teacher is an
- * adviser, otherwise the assigned + timetable-linked sections.
+ * Sections the insights cover: the teacher's advisory sections for the selected
+ * school year when they are an adviser, otherwise the assigned +
+ * timetable-linked sections. Kept in step with the advisory board's
+ * `adviserSectionsOr404` so both desks count the same learners.
  */
 async function resolveScopeSections(ctx: TeacherContext) {
   const teacherId = ctx.userId;
   const termId = ctx.termId;
   if (!termId) return null;
 
-  const advisory = await prisma.section.findFirst({
-    where: { adviserId: teacherId },
+  const advisory = await prisma.section.findMany({
+    where: {
+      adviserId: teacherId,
+      ...(ctx.schoolYearId ? { schoolYearId: ctx.schoolYearId } : {}),
+    },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
-  if (advisory) {
+  if (advisory.length > 0) {
     return {
-      sectionId: advisory.id as string | null,
-      sectionName: advisory.name as string | null,
-      sectionIds: [advisory.id],
+      sectionId: advisory[0]!.id as string | null,
+      sectionName: advisory[0]!.name as string | null,
+      sectionIds: advisory.map((s) => s.id),
       populationLabel: "advisees" as const,
     };
   }
@@ -223,16 +240,28 @@ export async function getOverviewInsights(
     };
   }
 
-  const [profiles, rosterEntries] = await Promise.all([
+  // Same population the advisory board shows: archived learners hidden, and a
+  // roster entry whose LRN already has an account is not counted twice.
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const archivedStudentIds = new Set(archivedLearners.studentIds);
+  const archivedRosterIds = new Set(archivedLearners.rosterIds);
+
+  const [profileRows, rosterRows] = await Promise.all([
     prisma.studentProfile.findMany({
       where: { sectionId: { in: scope.sectionIds } },
-      select: { userId: true },
+      select: { userId: true, lrn: true, sectionId: true },
     }),
     prisma.studentRoster.findMany({
       where: { sectionId: { in: scope.sectionIds } },
-      select: { id: true },
+      select: { id: true, lrn: true, sectionId: true },
     }),
   ]);
+  const profiles = profileRows.filter((p) => !archivedStudentIds.has(p.userId));
+  const registeredLrns = new Set(profiles.map((p) => p.lrn));
+  const rosterEntries = rosterRows.filter(
+    (r) => !archivedRosterIds.has(r.id) && !registeredLrns.has(r.lrn),
+  );
+
   const profileIds = profiles.map((p) => p.userId);
   const rosterIds = rosterEntries.map((r) => r.id);
   const learnerCount = profileIds.length + rosterIds.length;
@@ -245,13 +274,48 @@ export async function getOverviewInsights(
     };
   }
 
+  const sectionIdOf = new Map<string, string>();
+  for (const p of profiles) {
+    if (p.sectionId) sectionIdOf.set(p.userId, p.sectionId);
+  }
+  for (const r of rosterEntries) {
+    sectionIdOf.set(`roster:${r.id}`, r.sectionId);
+  }
+
+  // Section headcounts exactly as the advisory board reads them (`enrolled` is
+  // the attendance denominator for account holders), so the flags match.
+  const enrolledBySection = await sectionHeadcounts(
+    scope.sectionIds,
+    profileRows
+      .filter((p) => !!p.sectionId)
+      .reduce(
+        (groups, p) => {
+          const existing = groups.find((g) => g.sectionId === p.sectionId);
+          if (existing) existing._count._all += 1;
+          else groups.push({ sectionId: p.sectionId, _count: { _all: 1 } });
+          return groups;
+        },
+        [] as { sectionId: string | null; _count: { _all: number } }[],
+      ),
+  );
+
   const start = new Date(`${axis[0]}T00:00:00.000Z`);
   const learnerOr = [
     ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
     ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
   ];
 
-  const [snapshots, attendance] = await Promise.all([
+  const [
+    snapshots,
+    attendance,
+    finalGrades,
+    rawRows,
+    attendanceMarks,
+    anecdotalRows,
+    sectionTotals,
+    subjectAvgs,
+    admExempt,
+  ] = await Promise.all([
     prisma.riskSnapshot.findMany({
       where: {
         termId: ctx.termId,
@@ -279,7 +343,93 @@ export async function getOverviewInsights(
         date: true,
       },
     }),
+    // Current-level inputs, derived exactly like the advisory board's live
+    // risk so the donut and the board can never disagree.
+    prisma.finalGrade.findMany({
+      where: { termId: ctx.termId, OR: learnerOr },
+      select: {
+        studentId: true,
+        rosterId: true,
+        computedAverage: true,
+        transmutedGrade: true,
+      },
+    }),
+    prisma.studentGrade.findMany({
+      where: {
+        assessment: { gradeComponent: { termId: ctx.termId } },
+        OR: learnerOr,
+      },
+      select: {
+        studentId: true,
+        rosterId: true,
+        percentageScore: true,
+        assessment: { select: { gradeComponent: { select: { subjectId: true } } } },
+      },
+    }),
+    // Status-only marks, full term — the advisory board's own inputs (no
+    // subjectId: that flag means "subject marks exist" and switches the
+    // denominator, which the board does not do).
+    prisma.attendanceRecord.findMany({
+      where: {
+        termId: ctx.termId,
+        OR: learnerOr,
+      },
+      select: { studentId: true, rosterId: true, status: true },
+    }),
+    prisma.anecdotalRecord.findMany({
+      where: { termId: ctx.termId, deletedAt: null, OR: learnerOr },
+      select: { studentId: true, rosterId: true },
+    }),
+    sectionAttendanceTotals(scope.sectionIds, ctx.termId),
+    subjectAverageAttendance(scope.sectionIds, ctx.termId),
+    admExemptStudentIds(ctx.termId),
   ]);
+
+  const keyOf = (
+    studentId: string | null,
+    rosterId: string | null,
+  ): string | null => studentId ?? (rosterId ? `roster:${rosterId}` : null);
+
+  const finalsByKey = new Map<
+    string,
+    { computedAverage: number | null; transmutedGrade: number | null }[]
+  >();
+  for (const f of finalGrades) {
+    const key = keyOf(f.studentId, f.rosterId);
+    if (!key) continue;
+    const arr = finalsByKey.get(key) ?? [];
+    arr.push({ computedAverage: f.computedAverage, transmutedGrade: f.transmutedGrade });
+    finalsByKey.set(key, arr);
+  }
+
+  const rawBySubject = new Map<string, Map<string, { sum: number; count: number }>>();
+  for (const row of rawRows) {
+    const key = keyOf(row.studentId, row.rosterId);
+    if (!key) continue;
+    const subjectId = row.assessment.gradeComponent.subjectId;
+    if (!rawBySubject.has(key)) rawBySubject.set(key, new Map());
+    const perSubject = rawBySubject.get(key)!;
+    const cell = perSubject.get(subjectId) ?? { sum: 0, count: 0 };
+    cell.sum += row.percentageScore;
+    cell.count += 1;
+    perSubject.set(subjectId, cell);
+  }
+
+  const marksByKey = new Map<string, { status: string }[]>();
+  for (const r of attendanceMarks) {
+    const key = keyOf(r.studentId, r.rosterId);
+    if (!key) continue;
+    const arr = marksByKey.get(key) ?? [];
+    arr.push({ status: r.status });
+    marksByKey.set(key, arr);
+  }
+
+  const anecdoteCountByKey = new Map<string, number>();
+  for (const a of anecdotalRows) {
+    const key = keyOf(a.studentId, a.rosterId);
+    if (!key) continue;
+    anecdoteCountByKey.set(key, (anecdoteCountByKey.get(key) ?? 0) + 1);
+  }
 
   // Latest snapshot per learner per day: at most one snapshot row is counted
   // on a given day, otherwise a learner would inflate the count hourly.
@@ -293,30 +443,73 @@ export async function getOverviewInsights(
     if (!prev || at > prev.at) latestSnapshot.set(key, { at, level: s.riskLevel });
   }
 
-  const levelCounts = new Map<string, { high: number; moderate: number; low: number }>();
-  for (const [key, snap] of latestSnapshot) {
-    const date = key.slice(key.indexOf("|") + 1);
-    const cell = levelCounts.get(date) ?? { high: 0, moderate: 0, low: 0 };
-    if (snap.level === "High") cell.high += 1;
-    else if (snap.level === "Moderate") cell.moderate += 1;
-    else cell.low += 1;
-    levelCounts.set(date, cell);
-  }
-
-  // Current mix = latest snapshot per learner across the whole window.
-  const latestByLearner = new Map<string, { at: number; level: string }>();
-  for (const [key, snap] of latestSnapshot) {
-    const learner = key.slice(0, key.indexOf("|"));
-    const prev = latestByLearner.get(learner);
-    if (!prev || snap.at > prev.at) latestByLearner.set(learner, snap);
-  }
+  // Current level per learner = the live derivation the advisory board uses
+  // (never the persisted `riskLevel`, which only refreshes when the hourly
+  // engine sees a flag flip and therefore drifts from the board).
+  const started = termHasStarted(term?.startDate);
+  const currentLevelByLearner = new Map<string, string>();
   const riskMix = { high: 0, moderate: 0, low: 0, unassessed: 0 };
-  for (const snap of latestByLearner.values()) {
-    if (snap.level === "High") riskMix.high += 1;
-    else if (snap.level === "Moderate") riskMix.moderate += 1;
+  const learnerKeys = [
+    ...profileIds,
+    ...rosterIds.map((id) => `roster:${id}`),
+  ];
+  for (const key of learnerKeys) {
+    let level: string = "Low";
+    if (started) {
+      const flags = computeRiskFactors({
+        finalGrades: finalsByKey.get(key) ?? [],
+        rawAverages: Array.from(
+          (rawBySubject.get(key) ?? new Map()).values(),
+        ).map((cell) => cell.sum / cell.count),
+        attendance: marksByKey.get(key) ?? [],
+        attendanceTotal: attendanceTotalFor(
+          sectionTotals,
+          sectionIdOf.get(key),
+          key.startsWith("roster:") ? key.slice("roster:".length) : null,
+        ),
+        anecdotalCount: anecdoteCountByKey.get(key) ?? 0,
+        enrolled: enrolledBySection.get(sectionIdOf.get(key) ?? "") ?? 0,
+        attendanceExempt: admExempt.has(key),
+      });
+      // Subject-level attendance override, same gate as the advisory board.
+      const subjAvg = subjectAvgs.get(key);
+      if (subjAvg?.hasSubjectData) {
+        flags.attendanceFlag = subjAvg.average < ATTENDANCE_RISK_CUTOFF;
+      }
+      level = levelFromFlags(flags);
+    }
+    currentLevelByLearner.set(key, level);
+    if (level === "High") riskMix.high += 1;
+    else if (level === "Moderate") riskMix.moderate += 1;
     else riskMix.low += 1;
   }
-  riskMix.unassessed = Math.max(0, learnerCount - latestByLearner.size);
+  riskMix.unassessed = Math.max(0, learnerCount - currentLevelByLearner.size);
+
+  const snapshotsByLearner = new Map<string, { date: string; level: string }[]>();
+  for (const [key, snap] of latestSnapshot) {
+    const learner = key.slice(0, key.indexOf("|"));
+    const date = key.slice(key.indexOf("|") + 1);
+    const list = snapshotsByLearner.get(learner) ?? [];
+    list.push({ date, level: snap.level });
+    snapshotsByLearner.set(learner, list);
+  }
+  for (const list of snapshotsByLearner.values()) {
+    list.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /** Level known on a given day: last snapshot on/before it, else the persisted level. */
+  const levelOn = (learner: string, date: string): string | null => {
+    const list = snapshotsByLearner.get(learner);
+    if (list) {
+      let level: string | null = null;
+      for (const s of list) {
+        if (s.date > date) break;
+        level = s.level;
+      }
+      if (level) return level;
+    }
+    return currentLevelByLearner.get(learner) ?? null;
+  };
 
   // Worst-of-the-day attendance per learner, then count learners per status.
   const worstByLearnerDay = new Map<string, number>();
@@ -336,7 +529,14 @@ export async function getOverviewInsights(
   }
 
   const series: OverviewInsightDay[] = axis.map((date) => {
-    const levels = levelCounts.get(date) ?? { high: 0, moderate: 0, low: 0 };
+    const levels = { high: 0, moderate: 0, low: 0 };
+    for (const learner of currentLevelByLearner.keys()) {
+      const level = levelOn(learner, date);
+      if (!level) continue;
+      if (level === "High") levels.high += 1;
+      else if (level === "Moderate") levels.moderate += 1;
+      else levels.low += 1;
+    }
     const marks = attendanceCounts.get(date) ?? [0, 0, 0, 0];
     const [present, excused, late, absent] = marks;
     const marked = present + excused + late + absent;

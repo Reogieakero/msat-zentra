@@ -47,6 +47,12 @@ export { Prisma }
  */
 export type User = Prisma.UserModel
 /**
+ * Model LoginEvent
+ * A sign-in or sign-out event, used by the administrator overview's
+ * login-activity chart.
+ */
+export type LoginEvent = Prisma.LoginEventModel
+/**
  * Model StudentProfile
  * 
  */

@@ -21,6 +21,7 @@ import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { FolderCard } from "@/components/ui/FolderCard";
+import { Pill } from "@/components/ui/pill";
 import {
   Popover,
   PopoverContent,
@@ -247,9 +248,9 @@ export function BamaThread({
     <>
       <div className={styles.threadHead}>
         <p className={styles.threadTitle}>{active.title}</p>
-        <span className="inline-flex shrink-0 items-center rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-amber-700 dark:text-amber-300">
+        <Pill tone="amber" label="Chat type">
           {typeLabel}
-        </span>
+        </Pill>
       </div>
       <div ref={threadRef} className={styles.thread} aria-live="polite" aria-label="Messages">
         {active.messages.map((m) =>
@@ -267,11 +268,11 @@ export function BamaThread({
                   >
                     <PickColumnHead
                       icon={<ClipboardCheck size={14} aria-hidden className="text-amber-500" />}
-                      title="Review before filing"
+                      title={m.preview.editing ? "Review changes before saving" : "Review before filing"}
                       action={
-                        <span className="inline-flex shrink-0 items-center rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-amber-700 dark:text-amber-300">
+                        <Pill tone="amber" label="Section">
                           {m.preview.section}
-                        </span>
+                        </Pill>
                       }
                     />
                     <div className={`${PICK_CARD} cursor-default`}>
@@ -282,9 +283,7 @@ export function BamaThread({
                         <span className="text-sm font-medium text-foreground">
                           {m.preview.studentName}
                         </span>
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                          {m.preview.lrn}
-                        </span>
+                        <Pill label="LRN">{m.preview.lrn}</Pill>
                       </span>
                     </div>
                     <div className={`${PICK_CARD} cursor-default`}>
@@ -292,18 +291,10 @@ export function BamaThread({
                         Details
                       </span>
                       <span className="flex flex-wrap gap-1.5">
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                          {m.preview.category}
-                        </span>
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                          {m.preview.tier}
-                        </span>
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                          {m.preview.observationDateTime}
-                        </span>
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                          {m.preview.location}
-                        </span>
+                        <Pill label="Category">{m.preview.category}</Pill>
+                        <Pill label="Confidentiality tier">{m.preview.tier}</Pill>
+                        <Pill label="Observation date & time">{m.preview.observationDateTime}</Pill>
+                        <Pill label="Location">{m.preview.location}</Pill>
                       </span>
                     </div>
                     <div className={`${PICK_CARD} cursor-default`}>
@@ -330,7 +321,13 @@ export function BamaThread({
                         {flow.filing ? (
                           <Loader2 size={16} className="animate-spin" aria-hidden />
                         ) : null}
-                        {flow.filing ? "Filing…" : "File record"}
+                        {flow.filing
+                          ? m.preview.editing
+                            ? "Saving…"
+                            : "Filing…"
+                          : m.preview.editing
+                            ? "Save changes"
+                            : "File record"}
                       </Button>
                     </div>
                   </div>
@@ -372,9 +369,9 @@ export function BamaThread({
                               icon={<ClipboardCheck size={14} aria-hidden className="text-amber-500" />}
                               title="Review before submitting"
                               action={
-                                <span className="inline-flex shrink-0 items-center rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-amber-700 dark:text-amber-300">
+                                <Pill tone="amber" label="Section">
                                   {m.sf10Preview.section} · {m.sf10Preview.gradeLevel}
-                                </span>
+                                </Pill>
                               }
                             />
                             <div className={`${PICK_CARD} cursor-default`}>
@@ -391,17 +388,14 @@ export function BamaThread({
                               </span>
                               <span className="flex flex-wrap gap-1.5">
                                 {m.sf10Preview.studentNames.slice(0, 8).map((n, i) => (
-                                  <span
-                                    key={`${n}-${i}`}
-                                    className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
-                                  >
+                                  <Pill key={`${n}-${i}`} label="Student name">
                                     {n}
-                                  </span>
+                                  </Pill>
                                 ))}
                                 {m.sf10Preview.studentNames.length > 8 ? (
-                                  <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                  <Pill label="More students">
                                     +{m.sf10Preview.studentNames.length - 8} more
-                                  </span>
+                                  </Pill>
                                 ) : null}
                               </span>
                             </div>
@@ -1017,9 +1011,9 @@ export function BamaThread({
               count={autofillFlow.preview?.students.length}
               action={
                 autofillFlow.preview?.schoolYear.name ? (
-                  <span className="inline-flex shrink-0 items-center rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-emerald-700 dark:text-emerald-300">
+                  <Pill tone="green" label="School year">
                     {autofillFlow.preview.schoolYear.name}
-                  </span>
+                  </Pill>
                 ) : null
               }
             />

@@ -100,7 +100,7 @@
 
 .heading {
   margin: 0 0 1rem;
-  font-family: var(--font-geist), var(--font-inter), sans-serif;
+  font-family: var(--font-inter), var(--font-inter), sans-serif;
   font-size: clamp(1.9rem, 4vw, 3.1rem);
   font-weight: 300;
   line-height: 1.02;

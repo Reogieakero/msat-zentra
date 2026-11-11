@@ -113,6 +113,19 @@ export const TEACHER_SCOPE_KEYS = {
     ["adm-my-cases"],
     ["adm-monitoring"],
   ],
+  /**
+   * Risk-snapshot writes (hourly refresh + live recompute after attendance /
+   * grading saves). Narrower than `advisory` on purpose: a snapshot only moves
+   * risk levels/flags, so it must never invalidate ADM cases or SF10 access.
+   */
+  risk: [
+    ["advisory-interventions"],
+    ["advisory-students"],
+    ["teacher-overview"],
+    ["teacher-overview-insights"],
+  ],
+  /** The adviser monitoring desk is the only teacher surface reading plans. */
+  interventions: [["advisory-interventions"]],
   modules: [["advisory-modules"], ["advisory-students"], ["teacher-overview"]],
   adm: [
     ["adm-my-cases"],
@@ -186,7 +199,7 @@ const SCOPES_BY_TYPE: Record<string, readonly TeacherInvalidateScope[]> = {
   teacher_code_claimed: ["schedule", "overview"],
   teacher_code_claimed_self: ["schedule"],
   teacher_code_released: ["schedule", "overview"],
-  master_teacher_changed: ["settings", "schedule"],
+  master_teacher_changed: ["settings", "schedule", "overview"],
 
   // SF10
   sf10_access_requested: ["sf10"],
@@ -278,6 +291,23 @@ export function scopesForNotification(row: {
 
 export function isSelfNotification(row: { type?: string | null }): boolean {
   return (row.type ?? "").toLowerCase().endsWith("_self");
+}
+
+/**
+ * Postgres table name as Realtime reports it (PascalCase) → teacher scopes.
+ * Used for the direct table subscriptions (not the Notification rows, which go
+ * through `scopesForNotification`).
+ */
+export function scopesForRealtimeTable(table: string): readonly TeacherInvalidateScope[] {
+  switch (table) {
+    case "Intervention":
+    case "CounselingSession":
+      return ["interventions"];
+    case "RiskSnapshot":
+      return ["risk", "overview"];
+    default:
+      return ["notifications"];
+  }
 }
 
 /** Keys covered by one or more scopes, de-duplicated. */

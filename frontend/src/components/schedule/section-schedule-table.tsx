@@ -2,25 +2,26 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Inbox } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, Inbox } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import { SECTION_CARD_STATUS_META, sectionCardStatus } from "@/components/schedule/SectionScheduleCard";
+import {
+  SECTION_CARD_STATUS_META,
+  sectionCardStatus,
+  type StatusEntry,
+} from "@/components/schedule/SectionScheduleCard";
 import { scheduleTone } from "@/lib/labels/status-tone";
-import { sectionPath } from "./section-path";
-import styles from "./schedule.module.css";
+import styles from "./section-schedule-table.module.css";
 
-export interface ScheduleEntry {
-  day: number;
-  period: number;
-  status: "DRAFT" | "SUBMITTED" | "APPROVED";
-  reviewNote?: string | null;
-  subject: { id: string; name: string; code: string };
-  teacherName: { id: string; name: string } | null;
-  submittedAt: string | null;
-  submitter: { fullName: string } | null;
+export interface ScheduleEntry extends StatusEntry {
+  day?: number;
+  period?: number;
+  subject?: { id: string; name: string; code: string };
+  teacherName?: { id: string; name: string } | null;
+  submittedAt?: string | null;
+  submitter?: { fullName: string } | null;
 }
 
 export interface ScheduleSection {
@@ -31,7 +32,7 @@ export interface ScheduleSection {
   timetableEntries: ScheduleEntry[];
 }
 
-/** Every grade the desk covers — even when no sections exist yet. */
+/** Every grade the desks cover — even when no sections exist yet. */
 const ALL_GRADES = [7, 8, 9, 10, 11, 12] as const;
 
 function gradeNumber(grade: string): number {
@@ -43,19 +44,38 @@ function teacherCount(entries: ScheduleEntry[]): number {
 }
 
 /**
- * Schedule approval table — the shared KanbanBoard shell wrapped around a
- * data table, centered on the page. Grade-level filter chips are shared pills;
- * status chips use the same pill with the status-tone palette. Grades 11–12
- * stay listed even before they have sections or a master timetable. The table
- * has no header row — every cell is a labelled pill so the columns explain
- * themselves.
+ * Section timetable table — the shared KanbanBoard shell wrapped around a data
+ * table, centered on the page. Used by the principal approval desk and the
+ * teacher master-schedule desk so both read the same way: grade-level filter
+ * chips are shared pills, status chips use the status-tone palette, and grades
+ * stay listed even before they have sections. The table has no header row —
+ * every cell is a labelled pill so the columns explain themselves.
  */
-export function ScheduleTable({
+export function SectionScheduleTable({
   sections,
   onReview,
+  hrefFor,
+  linkTarget,
+  title = "Schedule approval",
+  description = "Timetables sent by the master teacher appear here for review.",
+  emptyHint,
+  grades = ALL_GRADES,
+  actionLabel = "Open",
 }: {
   sections: ScheduleSection[];
   onReview?: (section: ScheduleSection) => void;
+  /** Resolves where a row's action points. */
+  hrefFor?: (section: ScheduleSection) => string;
+  /** Set to "_blank" to open the action in a new tab. */
+  linkTarget?: "_blank";
+  title?: string;
+  description?: string;
+  /** Overrides the per-grade "No sections yet" row copy. */
+  emptyHint?: string;
+  /** Grade numbers to list — defaults to every grade 7–12. */
+  grades?: readonly number[];
+  /** Label for the row action button. */
+  actionLabel?: string;
 }) {
   const [grade, setGrade] = React.useState<number | null>(null);
 
@@ -68,7 +88,7 @@ export function ScheduleTable({
     [sections],
   );
 
-  const visibleGrades = grade == null ? [...ALL_GRADES] : [grade];
+  const visibleGrades = grade == null ? [...grades] : [grade];
 
   // Rows cascade in on mount and whenever the grade filter changes — the
   // tbody is keyed by the filter so it remounts and replays the stagger.
@@ -97,18 +117,18 @@ export function ScheduleTable({
   return (
     <div className={styles.boardWrap}>
       <KanbanBoard
-        title="Schedule approval"
+        title={title}
         icon={
           <span className="text-primary" aria-hidden>
             <CalendarDays size={14} />
           </span>
         }
-        description="Timetables sent by the master teacher appear here for review."
-        ariaLabel="Schedule approval table"
+        description={description}
+        ariaLabel="Schedule table"
         actions={
           <div className={styles.filterRow} role="group" aria-label="Filter by grade level">
             {filter(null, "All grades")}
-            {ALL_GRADES.map((g) => filter(g, `Grade ${g}`))}
+            {grades.map((g) => filter(g, `Grade ${g}`))}
           </div>
         }
       >
@@ -125,7 +145,7 @@ export function ScheduleTable({
                           <span className={styles.sectionName}>
                             <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                               <Inbox size={13} aria-hidden />
-                              No sections yet
+                              {emptyHint ?? "No sections yet"}
                             </span>
                           </span>
                         </span>
@@ -149,7 +169,7 @@ export function ScheduleTable({
                 return rows.map((section) => {
                   const status = sectionCardStatus(section.timetableEntries);
                   const meta = SECTION_CARD_STATUS_META[status];
-                  const href = sectionPath(section);
+                  const href = hrefFor ? hrefFor(section) : "#";
                   return (
                     <tr key={section.id} style={rowDelay()}>
                       <td>
@@ -192,25 +212,35 @@ export function ScheduleTable({
                       </td>
                       <td className={styles.actionCol}>
                         <span className="inline-flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="xs"
-                            className="h-6 px-1.5 text-[11px]"
-                            onClick={() => onReview?.(section)}
-                            aria-label={`Review schedule for ${section.name}`}
-                          >
-                            Review
-                            <ArrowRight size={12} aria-hidden />
-                          </Button>
+                          {/* Review only exists once the master teacher has
+                              sent the timetable — drafts never reach that desk. */}
+                          {onReview && status === "submitted" ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="xs"
+                              className="h-6 px-1.5 text-[11px]"
+                              onClick={() => onReview(section)}
+                              aria-label={`Review schedule for ${section.name}`}
+                            >
+                              Review
+                              <ArrowRight size={12} aria-hidden />
+                            </Button>
+                          ) : null}
                           <Button
                             asChild
                             variant="default"
                             size="xs"
                             className="h-6 px-1.5 text-[11px]"
                           >
-                            <Link href={href} aria-label={`Open timetable for ${section.name}`}>
-                              Open
+                            <Link
+                              href={href}
+                              target={linkTarget}
+                              rel={linkTarget === "_blank" ? "noopener noreferrer" : undefined}
+                              aria-label={`Open timetable for ${section.name}`}
+                            >
+                              {actionLabel}
+                              <ArrowUpRight size={12} aria-hidden />
                             </Link>
                           </Button>
                         </span>

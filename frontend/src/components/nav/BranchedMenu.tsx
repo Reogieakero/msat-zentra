@@ -9,6 +9,10 @@ export interface BranchedMenuChild {
   label: string;
   icon?: React.ReactNode;
   href?: string;
+  /** Optional numeric/text pill after the label (sidebar counters). */
+  badge?: string;
+  /** Optional status dot after the label (guidance "new activity" marker). */
+  dot?: boolean;
 }
 
 export interface BranchedMenuItem {
@@ -255,6 +259,12 @@ export default function BranchedMenu({
                             </span>
                           ) : null}
                           <span className={styles.label}>{kid.label}</span>
+                          {kid.dot ? (
+                            <span className={styles.dot} aria-hidden="true" />
+                          ) : null}
+                          {kid.badge ? (
+                            <span className={styles.badge}>{kid.badge}</span>
+                          ) : null}
                         </>
                       );
                       return kid.href ? (

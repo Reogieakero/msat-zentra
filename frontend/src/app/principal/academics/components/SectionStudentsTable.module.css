@@ -103,6 +103,26 @@
   color: var(--primary);
 }
 
+/* Empty roster — the shared insight callout centered in the page, not a card
+   shell (mirrors the empty section board). */
+.emptyCallout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 11rem);
+  padding: 1.5rem 0;
+}
+
+.emptyCallout > p {
+  text-align: center;
+}
+
+@media (max-width: 1023px) {
+  .emptyCallout {
+    min-height: calc(100vh - 14rem);
+  }
+}
+
 /* No search hits — amber insight callout, same as the teacher roster. */
 .noMatch {
   display: flex;

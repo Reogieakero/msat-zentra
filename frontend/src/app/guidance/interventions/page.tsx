@@ -18,6 +18,7 @@ import {
   GuidanceInterventionsTable,
 } from "./components/guidance-interventions-table";
 import { useTerm } from "@/lib/term/TermContext";
+import { guidanceLiveQueryOptions } from "@/lib/api/live";
 import styles from "./components/guidance-interventions.module.css";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 
@@ -39,7 +40,6 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const searchParams = useSearchParams();
-  const landing = highlightId !== null;
 
   // Filters live in the URL so refresh/back-forward keep them, but the board
   // filters the already-loaded queue locally — typing never triggers a fetch.
@@ -47,7 +47,8 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
   const [level, setLevelState] = React.useState<RiskLevelFilter>(() => {
     const fromUrl = searchParams.get("level");
     if (fromUrl === "High" || fromUrl === "Moderate" || fromUrl === "All") return fromUrl;
-    return landing ? "All" : "High";
+    // Default board view is every at-risk learner, not just the High bucket.
+    return "All";
   });
   const [grade, setGradeState] = React.useState<GradeFilter>(() => {
     const fromUrl = searchParams.get("grade");
@@ -63,10 +64,10 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
     refetch,
     isRefetching,
   } = useQuery<GuidanceInterventionsData>({
+    ...guidanceLiveQueryOptions,
     queryKey: ["guidance-interventions", "queue", termKey],
     queryFn: ({ signal }) => fetchAllGuidanceInterventions({ signal }),
     placeholderData: keepPreviousData,
-    staleTime: 60_000,
     enabled: termReady,
   });
 

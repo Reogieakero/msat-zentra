@@ -162,7 +162,8 @@ export async function fanoutNotification(input: NotifyInput) {
 
 export async function notifyInterventionDetected(input: {
   level: string;
-  interventionId: string;
+  /** Null when the learner was flagged but no intervention row was opened. */
+  interventionId: string | null;
   studentId?: string | null;
   rosterId?: string | null;
 }) {
@@ -202,21 +203,32 @@ export async function notifyInterventionDetected(input: {
       sourceTable: "interventions",
       action: "detect",
       message: `New ${input.level}-risk intervention: ${who} — auto-flagged for follow-up.`,
-      sourceId: input.interventionId,
+      sourceId: input.interventionId ?? undefined,
     });
     if (adviserId) {
       await fanoutNotification({
         userId: adviserId,
         sourceTable: "interventions",
         action: "detect",
-        message: `Your advisee ${who} was flagged ${input.level} risk — a guidance intervention was opened.`,
-        sourceId: input.interventionId,
+        message: input.interventionId
+          ? `Your advisee ${who} was flagged ${input.level} risk — a guidance intervention was opened.`
+          : `Your advisee ${who} was flagged ${input.level} risk — Guidance has been notified.`,
+        sourceId: input.interventionId ?? undefined,
       });
     }
+    // A fresh detection changes the live at-risk counters the guidance shell
+    // polls for its alert sound / tab-title badge, so bust those desks now
+    // instead of letting them serve a stale summary for the cache TTL.
+    void invalidateTags(["interventions", "alerts", "guidance", "overview", "risk"]);
   } catch (e) {
     logger.error({ err: e, interventionId: input.interventionId }, "intervention detect fanout failed");
   }
 }
+
+/** Notification fanout is the desk's realtime feed — never truncate the role. */
+const FANOUT_PAGE_SIZE = 200;
+/** Bounded concurrency: each recipient opens its own transaction. */
+const FANOUT_CONCURRENCY = 25;
 
 export async function fanoutToRole(
   role: string,
@@ -226,25 +238,43 @@ export async function fanoutToRole(
   },
 ) {
   try {
-    const users = await prisma.user.findMany({
-      where: { role: role as never, status: "active" },
-      select: { id: true, fullName: true },
-      take: 10,
-    });
-    await Promise.all(
-      users
-        .filter((u) => u.id !== input.excludeUserId)
-        .map((u) =>
-          fanoutNotification({
-            userId: u.id,
-            sourceTable: input.sourceTable,
-            action: input.action,
-            message: input.messageFor?.(u) ?? input.message,
-            sourceId: input.sourceId,
-            channel: input.channel,
-          }),
-        ),
-    );
+    // Every active holder of the role gets the row. This used to `take: 10`,
+    // which silently dropped recipients 11+ (a school has more than ten
+    // teachers), so those users never saw the notification — neither in the
+    // bell nor on their realtime channel. Page through the role instead of
+    // loading it in one shot, and keep the per-recipient concurrency bounded.
+    let cursor: string | undefined;
+    let delivered = 0;
+    for (;;) {
+      const users = await prisma.user.findMany({
+        where: { role: role as never, status: "active" },
+        select: { id: true, fullName: true },
+        orderBy: { id: "asc" },
+        take: FANOUT_PAGE_SIZE,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      });
+      const recipients = users.filter((u) => u.id !== input.excludeUserId);
+      for (let i = 0; i < recipients.length; i += FANOUT_CONCURRENCY) {
+        await Promise.all(
+          recipients.slice(i, i + FANOUT_CONCURRENCY).map((u) =>
+            fanoutNotification({
+              userId: u.id,
+              sourceTable: input.sourceTable,
+              action: input.action,
+              message: input.messageFor?.(u) ?? input.message,
+              sourceId: input.sourceId,
+              channel: input.channel,
+            }),
+          ),
+        );
+      }
+      delivered += recipients.length;
+      if (users.length < FANOUT_PAGE_SIZE) break;
+      cursor = users[users.length - 1].id;
+    }
+    if (delivered === 0) {
+      logger.debug({ role }, "role notification fanout had no active recipients");
+    }
   } catch (e) {
     logger.error({ err: e, role }, "role notification fanout failed");
   }

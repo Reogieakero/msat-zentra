@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
+import { fetchMyRecords } from "@/components/ocform01/folders";
+import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
+import type {
+  AnecdotalCategory,
+  AnecdotalTier,
+} from "@/services/anecdotal/anecdotal.types";
 import {
   createConversation,
   loadBamaStore,
@@ -16,7 +22,7 @@ import {
   type BamaConversation,
 } from "./bama-conversations";
 import { TEXT_QUESTION_LABELS, TEXT_QUESTION_PLACEHOLDERS } from "./bama-flow";
-import { useAnecdotalFlow } from "./useAnecdotalFlow";
+import { useAnecdotalFlow, type AnecdotalEditInput } from "./useAnecdotalFlow";
 import { useSf10AccessFlow } from "./useSf10AccessFlow";
 import { useSf10AutofillFlow } from "./useSf10AutofillFlow";
 import { BamaSidebar } from "./BamaSidebar";
@@ -65,6 +71,7 @@ export function BamaChat() {
   const [sending, setSending] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BamaConversation | null>(null);
   const [previewRecordId, setPreviewRecordId] = useState<string | null>(null);
+  const [pendingEdit, setPendingEdit] = useState<AnecdotalEditInput | null>(null);
 
   const threadRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -201,6 +208,40 @@ export function BamaChat() {
       t === "sf10-autofill"
     ) {
       startChat(t);
+      const editId = searchParams.get("edit");
+      if (t === "anecdotal" && editId) {
+        void (async () => {
+          try {
+            const [records, detail] = await Promise.all([
+              fetchMyRecords(),
+              fetchOcForm01Detail(editId),
+            ]);
+            const record = records.find((r) => r.id === editId);
+            if (!record) return;
+            const category = (detail.category ?? record.category) as AnecdotalCategory;
+            const tier = (detail.confidentialityLevel ??
+              record.confidentialityLevel) as AnecdotalTier;
+            setPendingEdit({
+              recordId: record.id,
+              studentId: record.studentId,
+              studentName: record.studentName,
+              lrn: record.lrn,
+              section: record.section,
+              category,
+              tier: tier === "confidential" ? "confidential" : "restricted",
+              observationDatetime:
+                detail.observationDatetime ?? record.observationDatetime,
+              incident: detail.descriptionOfIncident ?? record.incident,
+              location: detail.descriptionOfLocation ?? "",
+              notes: detail.notesRecommendationsActions ?? "",
+              classPerformance: detail.classPerformance ?? "",
+              attendanceSummary: detail.attendanceSummary ?? "",
+            });
+          } catch {
+            /* keep the plain anecdotal chat open if the record can't be loaded */
+          }
+        })();
+      }
     } else {
       flow.resetFlowStates();
       sf10Flow.resetFlowStates();
@@ -214,6 +255,26 @@ export function BamaChat() {
     router.replace(standalone ? "/teacher/chat?standalone=1" : "/teacher/chat");
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [hydrated, searchParams, router]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Apply a chat "edit this record" deep link once its review conversation is
+  // active (the flow seeds itself against the live conversation id).
+  /* eslint-disable react-hooks/set-state-in-effect -- one-shot deep-link seed */
+  useEffect(() => {
+    if (!pendingEdit || !activeId || active?.type !== "anecdotal") return;
+    const input = pendingEdit;
+    setPendingEdit(null);
+    flow.startEdit(input);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [pendingEdit, activeId, active?.type]);
+
+  // In edit mode each context question starts with the record's current value,
+  // so the teacher only rewrites what changed.
+  useEffect(() => {
+    if (!flow.editingRecordId || !flow.editPrefill || !flow.textQuestion) return;
+    setDraft(flow.editPrefill[flow.textQuestion] ?? "");
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [flow.editingRecordId, flow.textQuestion]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleNewChat() {

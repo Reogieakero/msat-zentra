@@ -1,5 +1,11 @@
 import { prisma } from "../../lib/prisma.js";
 import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
+import {
   attendanceTrend,
   avgPresentPercent,
   below80Days,
@@ -45,12 +51,18 @@ export async function getSectionStats(query: SectionStatsQuery) {
   const schoolDays = countSchoolDays(dayKeys);
 
   const sectionIds = sections.map((s) => s.id);
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   // Headcounts is its own chain of 3–4 round-trips; run it alongside the data
   // reads instead of ahead of them. Against the remote pooler every serial
   // query costs ~0.5s, so this is the difference between a ~9s and a ~4s page.
   const [subjectTakes, entries, profiles, rosterEntries, headcounts] = await Promise.all([
     prisma.attendanceRecord.findMany({
-      where: { termId, sectionId: { in: sectionIds }, NOT: { subjectId: null } },
+      where: {
+        termId,
+        sectionId: { in: sectionIds },
+        NOT: { subjectId: null },
+        ...excludeArchivedLearnerRows(archivedLearners),
+      },
       select: {
         sectionId: true,
         studentId: true,
@@ -69,11 +81,11 @@ export async function getSectionStats(query: SectionStatsQuery) {
       select: { sectionId: true, subjectId: true, day: true },
     }),
     prisma.studentProfile.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedProfiles(archivedLearners) },
       select: { userId: true, lrn: true, sectionId: true },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, lrn: true, sectionId: true },
     }),
     sectionHeadcounts(sectionIds),

@@ -15,6 +15,12 @@ import {
 } from "../../services/risk.js";
 import { meetsAcademicExcellenceAward } from "../../services/grading.js";
 import { GRADE_LABELS, GRADE_ORDER } from "../../lib/grades.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 
 const router = Router();
 
@@ -50,6 +56,7 @@ router.get(
         })
       ).map((s) => s.id);
 
+      const archivedLearners = await archivedAdvisoryLearnerIds();
       const [teacherAssignments, anecdotals, students, rosterCohort, admPipeline, admReferrals, accountApprovals, sectionPopulations] =
         await Promise.all([
           // Teaching staff working in the adviser-shared sections the principal
@@ -65,6 +72,7 @@ router.get(
           prisma.anecdotalRecord.count({
             where: {
               sectionId: { in: connectedSectionIds },
+              deletedAt: null,
               ...(termId ? { termId } : {}),
             },
           }),
@@ -72,6 +80,7 @@ router.get(
             where: {
               sectionId: { in: connectedSectionIds },
               ...(schoolYearId ? { section: { schoolYearId } } : {}),
+              ...excludeArchivedProfiles(archivedLearners),
             },
             select: {
               lrn: true,
@@ -83,7 +92,7 @@ router.get(
                 select: { status: true },
               },
               anecdotalRecords: {
-                where: termId ? { termId } : undefined,
+                where: { deletedAt: null, ...(termId ? { termId } : {}) },
                 select: { id: true },
               },
             },
@@ -93,6 +102,7 @@ router.get(
             where: {
               sectionId: { in: connectedSectionIds },
               ...(schoolYearId ? { schoolYearId } : {}),
+              ...excludeArchivedRosters(archivedLearners),
             },
             select: {
               lrn: true,
@@ -104,7 +114,7 @@ router.get(
                 select: { status: true },
               },
               anecdotalRecords: {
-                where: termId ? { termId } : undefined,
+                where: { deletedAt: null, ...(termId ? { termId } : {}) },
                 select: { id: true },
               },
             },
@@ -115,7 +125,11 @@ router.get(
               student: {
                 sectionId: { in: connectedSectionIds },
                 ...(schoolYearId ? { section: { schoolYearId } } : {}),
+                ...excludeArchivedProfiles(archivedLearners),
               },
+              ...(archivedLearners.rosterIds.length > 0
+                ? { rosterId: { notIn: archivedLearners.rosterIds } }
+                : {}),
             },
           }),
 
@@ -124,6 +138,7 @@ router.get(
               referredToRole: "adm_coordinator",
               status: { in: ["pending", "in_progress"] },
               admProfiles: { none: {} },
+              ...excludeArchivedLearnerRows(archivedLearners),
               // Learner must sit in an adviser-shared section (dual identity).
               OR: [
                 {

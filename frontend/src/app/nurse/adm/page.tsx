@@ -3,6 +3,7 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import { FileBarChart2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NurseEmptyCard } from "../components/NurseEmptyCard";
@@ -34,11 +35,11 @@ export default function NurseAdmPage() {
 
   const { data: alertsData, isPending, isError, refetch, isFetching } =
     useQuery<NurseAlertsPage>({
+      ...liveQueryOptions,
       queryKey: ["nurse-alerts", "preview", termKey],
       queryFn: ({ signal }) =>
         fetchNurseAlerts({ page: 1, pageSize: PAGE_SIZE, signal }),
       placeholderData: keepPreviousData,
-      staleTime: 60_000,
       enabled: termReady,
     });
 
@@ -64,9 +65,9 @@ export default function NurseAdmPage() {
     isError: riskError,
     refetch: refetchRisk,
   } = useQuery<Record<string, NurseRiskLevel>>({
+    ...liveQueryOptions,
     queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
-    staleTime: 300_000,
     enabled: termReady && studentIds.length > 0,
   });
 

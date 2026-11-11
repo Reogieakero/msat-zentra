@@ -1,6 +1,19 @@
 import { prisma } from "../../lib/prisma.js";
 import { paginated, clampPage } from "../../lib/pagination.js";
 import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
+import {
+  attendanceTotalFor,
+  computeRiskFactors,
+  levelFromFlags,
+  sectionAttendanceTotals,
+} from "../../services/risk.js";
+import { sectionHeadcounts } from "../../services/enrollment.js";
+import { admCaseSnapshot } from "../../services/adm/attendancePolicy.js";
 import type { AdvisoryContext } from "../../services/advisory/advisory.types.js";
 import type {
   AdvisoryInterventionFactor,
@@ -106,11 +119,12 @@ interface SectionInfo {
   gradeLevel: string;
 }
 
-interface TermRiskSnapshot {
+interface LearnerRisk {
   riskLevel: string;
   riskCount: number;
   factors: AdvisoryInterventionRow["factors"];
-  snapshotDate: Date;
+  /** Newest attendance sheet / anecdote date — fallback for "detected". */
+  lastEvidence: Date | null;
 }
 
 const iso = (value: Date | null): string | null =>
@@ -121,10 +135,13 @@ const iso = (value: Date | null): string | null =>
  * StudentProfile are dropped — same merge rule as the advisory list, so a
  * learner never appears twice.
  */
-async function sectionLearners(sectionIds: string[]): Promise<LearnerRef[]> {
+async function sectionLearners(
+  sectionIds: string[],
+): Promise<{ learners: LearnerRef[]; enrolledAt: Map<string, Date> }> {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosters] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         lrn: true,
@@ -134,12 +151,13 @@ async function sectionLearners(sectionIds: string[]): Promise<LearnerRef[]> {
         academicFlag: true,
         attendanceFlag: true,
         behavioralFlag: true,
+        createdAt: true,
         section: { select: { id: true, name: true, gradeLevel: true } },
         user: { select: { fullName: true } },
       },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedRosters(archivedLearners) },
       select: {
         id: true,
         lrn: true,
@@ -150,14 +168,21 @@ async function sectionLearners(sectionIds: string[]): Promise<LearnerRef[]> {
         academicFlag: true,
         attendanceFlag: true,
         behavioralFlag: true,
+        createdAt: true,
         sectionId: true,
         section: { select: { id: true, name: true, gradeLevel: true } },
       },
     }),
   ]);
 
+  const enrolledAt = new Map<string, Date>();
+  for (const p of profiles) enrolledAt.set(p.userId, p.createdAt);
+  for (const r of rosters) enrolledAt.set(`roster:${r.id}`, r.createdAt);
+
   const enrolledLrns = new Set(profiles.map((p) => p.lrn));
-  return [
+  return {
+    enrolledAt,
+    learners: [
     ...profiles.map((p) => ({
       key: p.userId,
       studentId: p.userId,
@@ -196,7 +221,8 @@ async function sectionLearners(sectionIds: string[]): Promise<LearnerRef[]> {
           behavioral: r.behavioralFlag,
         },
       })),
-  ];
+    ],
+  };
 }
 
 /** Latest intervention per learner key for the term (full session detail). */
@@ -283,12 +309,16 @@ async function interventionsByLearner(
   return byLearner;
 }
 
-/** Latest risk snapshot per learner key for the term, with its flags. */
-async function termSnapshots(
+/**
+ * Latest risk snapshot date per learner key for the term. The level/flags on
+ * this desk are computed live (see `liveRiskByLearner`); the snapshot only
+ * supplies the "detected" timestamp the board shows.
+ */
+async function latestSnapshotDates(
   termId: string,
   profileIds: string[],
   rosterIds: string[],
-): Promise<Map<string, TermRiskSnapshot>> {
+): Promise<Map<string, Date>> {
   if (profileIds.length === 0 && rosterIds.length === 0) return new Map();
 
   const rows = await prisma.riskSnapshot.findMany({
@@ -300,35 +330,164 @@ async function termSnapshots(
       ],
     },
     orderBy: { snapshotDate: "desc" },
-    select: {
-      studentId: true,
-      rosterId: true,
-      riskLevel: true,
-      riskLevelFinal: true,
-      riskCount: true,
-      academicFlag: true,
-      attendanceFlag: true,
-      behavioralFlag: true,
-      snapshotDate: true,
-    },
+    select: { studentId: true, rosterId: true, snapshotDate: true },
   });
 
-  const snapshots = new Map<string, TermRiskSnapshot>();
+  const dates = new Map<string, Date>();
   for (const row of rows) {
     const key = row.studentId ?? (row.rosterId ? `roster:${row.rosterId}` : null);
-    if (!key || snapshots.has(key)) continue;
-    snapshots.set(key, {
-      riskLevel: String(row.riskLevelFinal ?? row.riskLevel),
-      riskCount: row.riskCount,
+    if (!key || dates.has(key)) continue;
+    dates.set(key, row.snapshotDate);
+  }
+  return dates;
+}
+
+/**
+ * Live risk for the adviser's section, computed with the same rule as the
+ * guidance interventions desk (`getInterventionStudents` → `loadLiveCohort`).
+ *
+ * Reading only stored `RiskSnapshot` rows made this board lag behind guidance:
+ * a learner enlisted or flagged today has no snapshot until the hourly sweep,
+ * so guidance showed the card and this desk did not. Everything below is
+ * term-scoped (grades, attendance and anecdotes all filter on `termId`), so
+ * computing live can't leak another term's flags.
+ */
+async function liveRiskByLearner(
+  termId: string,
+  learners: LearnerRef[],
+): Promise<Map<string, LearnerRisk>> {
+  const sectionIds = [...new Set(learners.map((l) => l.sectionId).filter(Boolean))];
+  const profileIds = learners
+    .map((l) => l.studentId)
+    .filter((id): id is string => Boolean(id));
+  const rosterIds = learners
+    .map((l) => l.rosterId)
+    .filter((id): id is string => Boolean(id));
+
+  const [
+    profileGrades,
+    profileAttendance,
+    profileAnecdotes,
+    rosterGrades,
+    rosterAttendance,
+    rosterAnecdotes,
+    sectionTotals,
+    headcounts,
+    admCases,
+  ] = await Promise.all([
+    profileIds.length
+      ? prisma.finalGrade.findMany({
+          where: { termId, studentId: { in: profileIds } },
+          select: { studentId: true, computedAverage: true, transmutedGrade: true },
+        })
+      : Promise.resolve([]),
+    profileIds.length
+      ? prisma.attendanceRecord.findMany({
+          where: { termId, studentId: { in: profileIds } },
+          select: { studentId: true, status: true, subjectId: true, date: true },
+        })
+      : Promise.resolve([]),
+    profileIds.length
+      ? prisma.anecdotalRecord.findMany({
+          where: { termId, studentId: { in: profileIds }, deletedAt: null },
+          select: { studentId: true, observationDatetime: true },
+        })
+      : Promise.resolve([]),
+    rosterIds.length
+      ? prisma.finalGrade.findMany({
+          where: { termId, rosterId: { in: rosterIds } },
+          select: { rosterId: true, computedAverage: true, transmutedGrade: true },
+        })
+      : Promise.resolve([]),
+    rosterIds.length
+      ? prisma.attendanceRecord.findMany({
+          where: { termId, rosterId: { in: rosterIds } },
+          select: { rosterId: true, status: true, subjectId: true, date: true },
+        })
+      : Promise.resolve([]),
+    rosterIds.length
+      ? prisma.anecdotalRecord.findMany({
+          where: { termId, rosterId: { in: rosterIds }, deletedAt: null },
+          select: { rosterId: true, observationDatetime: true },
+        })
+      : Promise.resolve([]),
+    sectionAttendanceTotals(sectionIds, termId),
+    sectionHeadcounts(sectionIds),
+    profileIds.length
+      ? admCaseSnapshot(termId, profileIds)
+      : Promise.resolve(new Map<string, { exempt: boolean; stage: string }>()),
+  ]);
+
+  interface Bucket {
+    grades: { computedAverage: number | null; transmutedGrade: number | null }[];
+    attendance: { status: string; subjectId: string | null; date: Date }[];
+    anecdotes: Date[];
+  }
+  const buckets = new Map<string, Bucket>();
+  const bucketFor = (key: string): Bucket => {
+    const existing = buckets.get(key);
+    if (existing) return existing;
+    const fresh: Bucket = { grades: [], attendance: [], anecdotes: [] };
+    buckets.set(key, fresh);
+    return fresh;
+  };
+
+  for (const row of profileGrades) {
+    if (row.studentId) bucketFor(row.studentId).grades.push(row);
+  }
+  for (const row of profileAttendance) {
+    if (row.studentId) bucketFor(row.studentId).attendance.push(row);
+  }
+  for (const row of profileAnecdotes) {
+    if (row.studentId) bucketFor(row.studentId).anecdotes.push(row.observationDatetime);
+  }
+  for (const row of rosterGrades) {
+    if (row.rosterId) bucketFor(`roster:${row.rosterId}`).grades.push(row);
+  }
+  for (const row of rosterAttendance) {
+    if (row.rosterId) bucketFor(`roster:${row.rosterId}`).attendance.push(row);
+  }
+  for (const row of rosterAnecdotes) {
+    if (row.rosterId) bucketFor(`roster:${row.rosterId}`).anecdotes.push(row.observationDatetime);
+  }
+
+  const out = new Map<string, LearnerRisk>();
+  for (const learner of learners) {
+    const bucket = bucketFor(learner.key);
+    const flags = computeRiskFactors({
+      finalGrades: bucket.grades,
+      attendance: bucket.attendance,
+      attendanceTotal: attendanceTotalFor(
+        sectionTotals,
+        learner.sectionId,
+        learner.rosterId,
+      ),
+      anecdotalCount: bucket.anecdotes.length,
+      enrolled: headcounts.get(learner.sectionId) ?? 0,
+      attendanceExempt: learner.studentId
+        ? (admCases.get(learner.studentId)?.exempt ?? false)
+        : false,
+    });
+    const evidenceTimes = [
+      ...bucket.attendance.map((a) => a.date.getTime()),
+      ...bucket.anecdotes.map((d) => d.getTime()),
+    ].filter((t) => Number.isFinite(t));
+    out.set(learner.key, {
+      riskLevel: levelFromFlags(flags),
+      riskCount:
+        (flags.academicFlag ? 1 : 0) +
+        (flags.attendanceFlag ? 1 : 0) +
+        (flags.behavioralFlag ? 1 : 0),
       factors: {
-        academic: row.academicFlag ?? false,
-        attendance: row.attendanceFlag ?? false,
-        behavioral: row.behavioralFlag ?? false,
+        academic: flags.academicFlag,
+        attendance: flags.attendanceFlag,
+        behavioral: flags.behavioralFlag,
       },
-      snapshotDate: row.snapshotDate,
+      lastEvidence:
+        evidenceTimes.length > 0 ? new Date(Math.max(...evidenceTimes)) : null,
     });
   }
-  return snapshots;
+  return out;
 }
 
 export async function listAdvisoryInterventions(
@@ -357,7 +516,7 @@ export async function listAdvisoryInterventions(
     };
   }
 
-  const learners = await sectionLearners(sectionIds);
+  const { learners, enrolledAt } = await sectionLearners(sectionIds);
   const profileIds = learners
     .map((learner) => learner.studentId)
     .filter((id): id is string => Boolean(id));
@@ -365,25 +524,34 @@ export async function listAdvisoryInterventions(
     .map((learner) => learner.rosterId)
     .filter((id): id is string => Boolean(id));
 
-  const [interventionByKey, snapshotByKey] = await Promise.all([
+  const [interventionByKey, snapshotDates, liveRisk] = await Promise.all([
     interventionsByLearner(termId, profileIds, rosterIds),
-    termSnapshots(termId, profileIds, rosterIds),
+    latestSnapshotDates(termId, profileIds, rosterIds),
+    liveRiskByLearner(termId, learners),
   ]);
 
   const allRows: AdvisoryInterventionRow[] = learners.map((learner) => {
     const intervention = interventionByKey.get(learner.key) ?? null;
-    // Risk flags on the profile are live (current term only). The desk follows
-    // the teacher's selected term, so its level/flags must come from that
-    // term's snapshot — otherwise last term's flags leak onto this board.
-    const snapshot = snapshotByKey.get(learner.key) ?? null;
+    // Level/flags are computed live for the selected term, exactly like the
+    // guidance desk, so a learner flagged (or enlisted) today shows up here
+    // without waiting for the hourly snapshot write.
+    const risk = liveRisk.get(learner.key);
     return {
       ...learner,
-      riskLevel: snapshot?.riskLevel ?? "Low",
-      riskCount: snapshot?.riskCount ?? 0,
+      riskLevel: risk?.riskLevel ?? "Low",
+      riskCount: risk?.riskCount ?? 0,
       factors:
-        snapshot?.factors ?? { academic: false, attendance: false, behavioral: false },
+        risk?.factors ?? { academic: false, attendance: false, behavioral: false },
+      // "Detected" never renders as a dash: newest snapshot → plan assignment →
+      // newest evidence (attendance/anecdote) → enrolment date. The last one is
+      // why a learner enlisted today (flagged because the term's meetups have
+      // already elapsed with no marks) reads "just now" instead of "—", which is
+      // the same thing the guidance board shows.
       detectedAt:
-        iso(snapshot?.snapshotDate ?? null) ?? intervention?.assignedAt ?? null,
+        iso(snapshotDates.get(learner.key) ?? null) ??
+        intervention?.assignedAt ??
+        iso(risk?.lastEvidence ?? null) ??
+        iso(enrolledAt.get(learner.key) ?? null),
       intervention,
     };
   });

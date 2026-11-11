@@ -19,6 +19,16 @@
   background: var(--muted);
 }
 
+/* Approved/locked timetable: the trigger reads as read-only until Edit. */
+.dropdown:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dropdown:disabled:hover {
+  background: var(--card);
+}
+
 .value {
   flex: 1 1 auto;
   min-width: 0;

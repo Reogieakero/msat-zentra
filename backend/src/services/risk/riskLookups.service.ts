@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import {
+  attendanceTotalFor,
   computeRiskFactors,
   evaluateRisk,
   evaluateRosterRisk,
@@ -8,6 +9,11 @@ import {
   sectionAttendanceTotals,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { Request } from "express";
 
 export async function getBatchLevels(
@@ -30,9 +36,10 @@ export async function getBatchLevels(
     throw err;
   }
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosters] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { userId: { in: ids } },
+      where: { userId: { in: ids }, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         riskLevel: true,
@@ -40,7 +47,7 @@ export async function getBatchLevels(
       },
     }),
     prisma.studentRoster.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, ...excludeArchivedRosters(archivedLearners) },
       select: {
         id: true,
         sectionId: true,
@@ -86,7 +93,7 @@ export async function getBatchLevels(
             where: { termId },
             select: { status: true, subjectId: true },
           },
-          anecdotalRecords: { where: { termId }, select: { id: true } },
+          anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true } },
         },
       });
       const pSectionIds = [
@@ -131,7 +138,7 @@ export async function getBatchLevels(
         }),
         prisma.anecdotalRecord.groupBy({
           by: ["rosterId"],
-          where: { rosterId: { in: rosterIds }, termId },
+          where: { rosterId: { in: rosterIds }, termId, deletedAt: null },
           _count: { _all: true },
         }),
         sectionHeadcounts([...new Set(rosterSection.values())]),
@@ -162,7 +169,7 @@ export async function getBatchLevels(
         const flags = computeRiskFactors({
           finalGrades: gradesBy.get(rid) ?? [],
           attendance: attBy.get(rid) ?? [],
-          attendanceTotal: sectionId ? rosterTotals.get(sectionId) : undefined,
+          attendanceTotal: attendanceTotalFor(rosterTotals, sectionId, rid),
           anecdotalCount: anecBy.get(rid) ?? 0,
           enrolled,
         });
@@ -249,13 +256,18 @@ export async function getSingleStudentLevel(
 }
 
 export async function getSectionFactorCounts(sectionId: string, termId: string) {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const students = await prisma.studentProfile.findMany({
-    where: { sectionId },
+    where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
     select: { userId: true },
   });
   const ids = students.map((s) => s.userId);
   const [anecdotals, finals, attendance] = await Promise.all([
-    prisma.anecdotalRecord.groupBy({ by: ["studentId"], where: { sectionId, termId }, _count: true }),
+    prisma.anecdotalRecord.groupBy({
+      by: ["studentId"],
+      where: { studentId: { in: ids }, sectionId, termId, deletedAt: null },
+      _count: true,
+    }),
     prisma.finalGrade.findMany({
       where: { studentId: { in: ids }, termId },
       select: { studentId: true, computedAverage: true, transmutedGrade: true },
@@ -265,7 +277,7 @@ export async function getSectionFactorCounts(sectionId: string, termId: string) 
     // the pooler was among the largest Supabase egress sources.
     prisma.attendanceRecord.groupBy({
       by: ["studentId", "status"],
-      where: { sectionId, termId },
+      where: { studentId: { in: ids }, sectionId, termId },
       _count: { _all: true },
     }),
   ]);

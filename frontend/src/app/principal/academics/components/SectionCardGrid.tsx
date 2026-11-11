@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Users, Flame, Gauge, BookOpen, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Users, Flame, Gauge, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Pill } from "@/components/ui/pill";
 import type { SectionSummary } from "@/services/principal/academics";
-import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { SectionCardSkeleton } from "./SectionCardSkeleton";
 import styles from "./SectionCardGrid.module.css";
 
@@ -41,12 +41,12 @@ export function SectionCardGrid({
           ))}
         </div>
       ) : sections.length === 0 ? (
-        <PrincipalEmptyCard
-          icon={BookOpen}
-          title="No sections on file"
-          hint="No sections on file for the active term. Sections will appear here once created."
-          centered
-        />
+        // Empty board reads as a plain insight callout — no card shell.
+        <div className={styles.emptyCallout}>
+          <InsightCallout role="status">
+            No sections on file for the active term. Sections will appear here once created.
+          </InsightCallout>
+        </div>
       ) : (
         // Each card is its own mini kanban board: header row (section + grade)
         // over an inner panel holding the metric lane.

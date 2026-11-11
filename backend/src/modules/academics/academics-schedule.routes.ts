@@ -33,7 +33,12 @@ router.get(
           gradeLevel: true,
           adviser: { select: { fullName: true } },
           timetableEntries: {
-            where: { termId },
+            // Drafts are the master teacher's private working copy: the
+            // principal only receives a timetable once it is sent for review
+            // (SUBMITTED) and keeps seeing it after approval (APPROVED).
+            // Returning this where-clause lets drafts leak onto the desk and
+            // be reviewed before the master teacher has sent them.
+            where: { termId, status: { in: ["SUBMITTED", "APPROVED"] } },
             select: {
               day: true,
               period: true,

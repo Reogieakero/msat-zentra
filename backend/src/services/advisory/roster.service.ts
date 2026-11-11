@@ -3,6 +3,7 @@ import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { clearArchivedLearnerCache } from "../../lib/learnerVisibility.js";
 import { mascotForUnique, sectionTakenMascots } from "../mascot.js";
 import {
   adviserSectionsOr404,
@@ -14,6 +15,8 @@ export interface EnlistInput {
   fullName: string;
   lrn: string;
   sectionId?: string;
+  /** Transferees are rated from the enlistment date, not the term start. */
+  learnerType?: "regular" | "transferee";
 }
 
 /** Marker email domain for placeholder accounts auto-created by SF10 upload. */
@@ -74,6 +77,7 @@ export async function enlistRoster(
       sectionId: section.id,
       schoolYearId: yearId,
       enlistedTermId: ctx.termId ?? null,
+      learnerType: input.learnerType ?? "regular",
     },
     include: { section: { select: { name: true } } },
   });
@@ -94,8 +98,13 @@ export async function enlistRoster(
     hasOpenFlag: false,
     openFlagCount: 0,
     hasAccount: false,
+    learnerType: entry.learnerType,
     admExempt: false,
   };
+  // Cache bust on the response path: the desk refetches the roster the moment
+  // this call settles, so the list read must not hit the pre-enlist cache entry.
+  // Audit + notification stay in the background so the desk does not wait.
+  await invalidateTags(ADVISORY_CACHE_TAGS);
   void (async () => {
     try {
       await writeAudit({
@@ -105,15 +114,6 @@ export async function enlistRoster(
         sourceId: entry.id,
         reason: `Enlisted ${entry.fullName} (${entry.lrn}) to ${entry.section.name}`,
       });
-
-      await invalidateTags([
-        "registrar",
-        "record-keeper",
-        "academics",
-        "overview",
-        "principal",
-        "teacher",
-      ]);
 
       await fanoutNotification({
         userId: teacherId,
@@ -244,6 +244,239 @@ export async function updateRosterStudent(
     `You updated ${input.fullName} (${input.lrn}) in ${profile.section?.name ?? "your advisory"}.`,
   );
   return { studentId: profile.userId, name: input.fullName, lrn: input.lrn };
+}
+
+export interface ArchivedAdvisee {
+  archiveId: string;
+  /** Same id shape the roster uses: `roster:<id>` for roster-only learners. */
+  studentId: string;
+  name: string;
+  lrn: string;
+  section: string;
+  archivedAt: string;
+  hasAccount: boolean;
+}
+
+/**
+ * Adviser-scoped soft delete. Only an `AdviserArchivedStudent` row is written:
+ * grades, attendance, anecdotal records and referrals stay untouched, so a
+ * restore brings the learner's full history back.
+ */
+export async function archiveAdvisoryStudent(
+  ctx: AdvisoryContext,
+  studentId: string,
+  yearId: string | null,
+) {
+  const teacherId = ctx.userId;
+  if (!yearId) {
+    throw new AppError(409, "NO_ACTIVE_YEAR", "No active school year");
+  }
+  const sections = await adviserSectionsOr404(teacherId, yearId);
+  const sectionIds = sections.map((s) => s.id);
+
+  const isRoster = studentId.startsWith("roster:");
+  let name = "";
+  let lrn = "";
+  let sectionName = "";
+  let rosterId: string | null = null;
+  let profileId: string | null = null;
+
+  if (isRoster) {
+    rosterId = studentId.slice("roster:".length);
+    const entry = await prisma.studentRoster.findUnique({
+      where: { id: rosterId },
+      include: { section: { select: { name: true } } },
+    });
+    if (!entry || !sectionIds.includes(entry.sectionId)) {
+      throw new AppError(404, "ADVISEE_NOT_FOUND", "This student is not in your advisory");
+    }
+    name = entry.fullName;
+    lrn = entry.lrn;
+    sectionName = entry.section.name;
+  } else {
+    profileId = studentId;
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId: studentId },
+      select: {
+        sectionId: true,
+        lrn: true,
+        section: { select: { name: true } },
+        user: { select: { fullName: true } },
+      },
+    });
+    if (!profile || !profile.sectionId || !sectionIds.includes(profile.sectionId)) {
+      throw new AppError(404, "ADVISEE_NOT_FOUND", "This student is not in your advisory");
+    }
+    name = profile.user.fullName;
+    lrn = profile.lrn;
+    sectionName = profile.section?.name ?? "";
+  }
+
+  const existing = await prisma.adviserArchivedStudent.findFirst({
+    where: { teacherId, ...(rosterId ? { rosterId } : { studentId: profileId! }) },
+    select: { id: true },
+  });
+  if (!existing) {
+    await prisma.adviserArchivedStudent.create({
+      data: {
+        teacherId,
+        ...(rosterId ? { rosterId } : { studentId: profileId! }),
+      },
+    });
+  }
+  clearArchivedLearnerCache();
+
+  // Cache bust happens on the response path (it is what makes the list read
+  // fresh); only the tag this desk reads is awaited, the wider bust and the
+  // audit/notification run in the background so the desk does not wait.
+  await invalidateTags(["teacher"]);
+  void afterRosterArchiveWrite(
+    teacherId,
+    rosterId ?? profileId!,
+    `Removed ${name} (${lrn}) from ${sectionName || "the advisory list"} (soft delete — restorable)`,
+    "create_self",
+    `You removed ${name} (${lrn}) from ${sectionName || "your advisory list"}. You can restore them any time.`,
+  );
+
+  return { studentId, archived: true, name, lrn, section: sectionName };
+}
+
+/** Learners this adviser hid from the advisory list, newest first. */
+export async function listArchivedAdvisoryStudents(
+  ctx: AdvisoryContext,
+  yearId: string | null,
+): Promise<{ students: ArchivedAdvisee[] }> {
+  const rows = await prisma.adviserArchivedStudent.findMany({
+    where: { teacherId: ctx.userId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const rosterIds = rows.map((r) => r.rosterId).filter((id): id is string => !!id);
+  const profileIds = rows.map((r) => r.studentId).filter((id): id is string => !!id);
+
+  const [rosterRows, profileRows] = await Promise.all([
+    rosterIds.length > 0
+      ? prisma.studentRoster.findMany({
+          where: {
+            id: { in: rosterIds },
+            ...(yearId ? { schoolYearId: yearId } : {}),
+          },
+          select: {
+            id: true,
+            fullName: true,
+            lrn: true,
+            section: { select: { name: true } },
+          },
+        })
+      : Promise.resolve([]),
+    profileIds.length > 0
+      ? prisma.studentProfile.findMany({
+          where: { userId: { in: profileIds } },
+          select: {
+            userId: true,
+            lrn: true,
+            section: { select: { name: true } },
+            user: { select: { fullName: true } },
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const rosterById = new Map(rosterRows.map((r) => [r.id, r]));
+  const profileById = new Map(profileRows.map((p) => [p.userId, p]));
+
+  const students: ArchivedAdvisee[] = [];
+  for (const row of rows) {
+    if (row.rosterId) {
+      const entry = rosterById.get(row.rosterId);
+      // Archives from another school year stay in the DB but are not shown.
+      if (!entry) continue;
+      students.push({
+        archiveId: row.id,
+        studentId: `roster:${entry.id}`,
+        name: entry.fullName,
+        lrn: entry.lrn,
+        section: entry.section.name,
+        archivedAt: row.createdAt.toISOString(),
+        hasAccount: false,
+      });
+      continue;
+    }
+    const profile = row.studentId ? profileById.get(row.studentId) : undefined;
+    if (!profile) continue;
+    students.push({
+      archiveId: row.id,
+      studentId: profile.userId,
+      name: profile.user.fullName,
+      lrn: profile.lrn,
+      section: profile.section?.name ?? "",
+      archivedAt: row.createdAt.toISOString(),
+      hasAccount: true,
+    });
+  }
+
+  return { students };
+}
+
+/** Restore: drop the archive row only — the learner's records were never touched. */
+export async function restoreAdvisoryStudent(teacherId: string, archiveId: string) {
+  const row = await prisma.adviserArchivedStudent.findUnique({
+    where: { id: archiveId },
+    select: { id: true, teacherId: true },
+  });
+  if (!row || row.teacherId !== teacherId) {
+    throw new AppError(404, "ARCHIVE_NOT_FOUND", "This removed student is not in your list");
+  }
+  await prisma.adviserArchivedStudent.delete({ where: { id: row.id } });
+  clearArchivedLearnerCache();
+  await invalidateTags(["teacher"]);
+  void afterRosterArchiveWrite(
+    teacherId,
+    archiveId,
+    "Restored a removed student to the advisory list",
+    "delete_self",
+    "You restored a student to your advisory list.",
+  );
+  return { archiveId, restored: true };
+}
+
+/** Cache tags a roster archive/restore can make stale for every desk. */
+const ADVISORY_CACHE_TAGS = [
+  "registrar",
+  "record-keeper",
+  "academics",
+  "overview",
+  "principal",
+  "teacher",
+];
+
+/** Background audit, wider cache bust and self-notification tail for roster archive/restore writes. */
+async function afterRosterArchiveWrite(
+  teacherId: string,
+  sourceId: string,
+  reason: string,
+  action: "create_self" | "delete_self",
+  notification: string,
+) {
+  try {
+    await invalidateTags(ADVISORY_CACHE_TAGS);
+    await writeAudit({
+      userId: teacherId,
+      actionType: "update",
+      sourceTable: "student_roster",
+      sourceId,
+      reason,
+    });
+    await fanoutNotification({
+      userId: teacherId,
+      sourceTable: "adviser_archived_students",
+      action,
+      message: notification,
+      sourceId,
+    });
+  } catch {
+    /* best-effort side effects */
+  }
 }
 
 /** Shared audit + cache invalidation + self-notification tail for roster writes. */

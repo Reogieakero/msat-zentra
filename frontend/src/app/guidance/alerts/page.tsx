@@ -17,6 +17,7 @@ import type {
   GuidanceAlertCasesData,
 } from "@/services/guidance/alerts.types";
 import { useTerm } from "@/lib/term/TermContext";
+import { guidanceLiveQueryOptions } from "@/lib/api/live";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 import styles from "./components/guidance-alerts.module.css";
 import pageStyles from "../pages.module.css";
@@ -52,10 +53,10 @@ export default function GuidanceAlertsPage() {
   // used to fan out to twenty requests and made the backend recompute the live
   // cohort ten times per visit.
   const casesQuery = useQuery<GuidanceAlertCasesData>({
+    ...guidanceLiveQueryOptions,
     queryKey: ["guidance-alerts", "cases", termKey],
     queryFn: ({ signal }) => fetchAllAlertCases(signal),
     placeholderData: keepPreviousData,
-    staleTime: 60_000,
     enabled: termReady,
   });
 

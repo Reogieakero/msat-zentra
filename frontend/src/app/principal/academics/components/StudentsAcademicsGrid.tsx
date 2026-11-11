@@ -103,7 +103,7 @@ export function StudentsAcademicsGrid() {
           <div className={styles.detailBar}>
             <Button
               type="button"
-              variant="default"
+              variant="ghost"
               size="xs"
               className={cn(styles.backBtn, "h-6 px-2")}
               onClick={() => selectSection(null)}
@@ -123,17 +123,20 @@ export function StudentsAcademicsGrid() {
                 {selectedSection.students?.length ?? 0}
               </Pill>
             </span>
-            <InputGroup className={cn(styles.detailSearch, "rounded-[16px]")}>
-              <InputGroupInput
-                placeholder="Filter students..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                aria-label="Filter students"
-              />
-              <InputGroupAddon>
-                <SearchIcon />
-              </InputGroupAddon>
-            </InputGroup>
+            {/* No roster to filter — hide the search bar with the empty state. */}
+            {(selectedSection.students?.length ?? 0) > 0 && (
+              <InputGroup className={cn(styles.detailSearch, "rounded-[16px]")}>
+                <InputGroupInput
+                  placeholder="Filter students..."
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  aria-label="Filter students"
+                />
+                <InputGroupAddon>
+                  <SearchIcon />
+                </InputGroupAddon>
+              </InputGroup>
+            )}
           </div>
           <SectionStudentsTable section={selectedSection} query={query} />
         </div>

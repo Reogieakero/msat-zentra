@@ -7,6 +7,12 @@ import {
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import { gradeLabel } from "../../lib/grades.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
 export interface RiskBoardResult {
@@ -116,7 +122,8 @@ export async function getRiskBoard(
         : {};
     const yearRoster: any = schoolYearId ? { roster: { schoolYearId } } : {};
     const termScope: any = activeTermId ? { termId: activeTermId } : {};
-    const [
+    const archivedLearners = await archivedAdvisoryLearnerIds();
+  const [
       gradeAvgsP,
       gradeAvgsR,
       subTotalP,
@@ -136,69 +143,73 @@ export async function getRiskBoard(
     ] = await Promise.all([
       prisma.finalGrade.groupBy({
         by: ["studentId"],
-        where: { ...termScope, studentId: { not: null }, ...yearProfile },
+        where: { ...termScope, studentId: { not: null }, ...yearProfile, ...excludeArchivedLearnerRows(archivedLearners) },
         _avg: { computedAverage: true, transmutedGrade: true },
       }),
       prisma.finalGrade.groupBy({
         by: ["rosterId"],
-        where: { ...termScope, rosterId: { not: null }, ...yearRoster },
+        where: { ...termScope, rosterId: { not: null }, ...yearRoster, ...excludeArchivedLearnerRows(archivedLearners) },
         _avg: { computedAverage: true, transmutedGrade: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["studentId"],
-        where: { ...termScope, studentId: { not: null }, subjectId: { not: null }, ...yearProfile },
+        where: { ...termScope, studentId: { not: null }, subjectId: { not: null }, ...yearProfile, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["rosterId"],
-        where: { ...termScope, rosterId: { not: null }, subjectId: { not: null }, ...yearRoster },
+        where: { ...termScope, rosterId: { not: null }, subjectId: { not: null }, ...yearRoster, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["studentId"],
-        where: { ...termScope, studentId: { not: null }, subjectId: { not: null }, status: "present", ...yearProfile },
+        where: { ...termScope, studentId: { not: null }, subjectId: { not: null }, status: "present", ...yearProfile, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["rosterId"],
-        where: { ...termScope, rosterId: { not: null }, subjectId: { not: null }, status: "present", ...yearRoster },
+        where: { ...termScope, rosterId: { not: null }, subjectId: { not: null }, status: "present", ...yearRoster, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["studentId"],
-        where: { ...termScope, studentId: { not: null }, status: "present", ...yearProfile },
+        where: { ...termScope, studentId: { not: null }, status: "present", ...yearProfile, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["rosterId"],
-        where: { ...termScope, rosterId: { not: null }, status: "present", ...yearRoster },
+        where: { ...termScope, rosterId: { not: null }, status: "present", ...yearRoster, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.anecdotalRecord.groupBy({
         by: ["studentId"],
-        where: { ...termScope, studentId: { not: null }, ...yearProfile },
+        where: { ...termScope, studentId: { not: null }, deletedAt: null, ...yearProfile, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.anecdotalRecord.groupBy({
         by: ["rosterId"],
-        where: { ...termScope, rosterId: { not: null }, ...yearRoster },
+        where: { ...termScope, rosterId: { not: null }, deletedAt: null, ...yearRoster, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.studentProfile.findMany({
         where: admOnly
           ? admStudentIds
-            ? { userId: { in: [...admStudentIds] } }
+            ? { userId: { in: [...admStudentIds] }, ...excludeArchivedProfiles(archivedLearners) }
             : { userId: { in: [] } }
           : {
               ...(schoolYearId ? { section: { schoolYearId } } : {}),
               ...(admStudentIds ? { userId: { in: [...admStudentIds] } } : {}),
+              ...excludeArchivedProfiles(archivedLearners),
             },
         select: { userId: true, lrn: true, gradeLevel: true, sectionId: true },
       }),
       admOnly
         ? Promise.resolve([])
         : prisma.studentRoster.findMany({
-            where: schoolYearId ? { schoolYearId } : undefined,
+            where: {
+              ...(schoolYearId ? { schoolYearId } : {}),
+              ...excludeArchivedRosters(archivedLearners),
+            },
             select: { id: true, lrn: true, gradeLevel: true, sectionId: true },
           }),
       // Everything below used to run as its own serial stage after this batch.
@@ -503,7 +514,7 @@ async function connectedLearnerIds(yearId: string): Promise<{
   const sectionIds = sections.map((s) => s.id);
   if (sectionIds.length === 0) return { studentIds: [], rosterIds: [] };
 
-  const [profiles, rosters] = await Promise.all([
+  const [profiles, rosters, archived] = await Promise.all([
     prisma.studentProfile.findMany({
       where: { sectionId: { in: sectionIds } },
       select: { userId: true },
@@ -512,11 +523,14 @@ async function connectedLearnerIds(yearId: string): Promise<{
       where: { sectionId: { in: sectionIds } },
       select: { id: true },
     }),
+    archivedAdvisoryLearnerIds(),
   ]);
 
+  const hiddenProfiles = new Set(archived.studentIds);
+  const hiddenRosters = new Set(archived.rosterIds);
   return {
-    studentIds: profiles.map((p) => p.userId),
-    rosterIds: rosters.map((r) => r.id),
+    studentIds: profiles.map((p) => p.userId).filter((id) => !hiddenProfiles.has(id)),
+    rosterIds: rosters.map((r) => r.id).filter((id) => !hiddenRosters.has(id)),
   };
 }
 

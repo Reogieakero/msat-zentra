@@ -1,10 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
-import type { AdviseeDetail, AdviseeRow, AdvisoryRoster, AdvisorySectionInfo } from "./advisory.types";
+import type { AdviseeDetail, AdviseeRow, AdvisoryRoster, AdvisorySectionInfo, ArchivedAdvisee } from "./advisory.types";
 
 export async function fetchAdvisoryRoster(): Promise<AdvisoryRoster> {
   const { data } = await apiClient.get<AdvisoryRoster>("/api/teacher/advisory/students");
@@ -26,9 +26,40 @@ export function useAdvisoryRoster() {
   const { activeTerm, termReady } = useTerm();
   const teacherId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery<AdvisoryRoster>({
+  return useLiveQuery<AdvisoryRoster>({
     queryKey: advisoryRosterKey(teacherId, termKey),
     queryFn: fetchAdvisoryRoster,
+    enabled: !!teacherId && termReady,
+    retry: false,
+    staleTime: ROSTER_STALE_MS,
+    gcTime: ROSTER_GC_MS,
+  });
+}
+
+export interface ArchivedAdvisoryResponse {
+  students: ArchivedAdvisee[];
+}
+
+export async function fetchArchivedAdvisoryStudents(): Promise<ArchivedAdvisoryResponse> {
+  const { data } = await apiClient.get<ArchivedAdvisoryResponse>(
+    "/api/teacher/advisory/archived"
+  );
+  return data;
+}
+
+export function archivedAdvisoryKey(teacherId: string | null | undefined, termKey = "") {
+  return ["advisory-students-archived", teacherId ?? "anon", termKey] as const;
+}
+
+/** Learners this adviser removed from the advisory list (restorable). */
+export function useArchivedAdvisoryStudents() {
+  const session = useSession();
+  const { activeTerm, termReady } = useTerm();
+  const teacherId = session?.sub ?? null;
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  return useLiveQuery<ArchivedAdvisoryResponse>({
+    queryKey: archivedAdvisoryKey(teacherId, termKey),
+    queryFn: fetchArchivedAdvisoryStudents,
     enabled: !!teacherId && termReady,
     retry: false,
     staleTime: ROSTER_STALE_MS,
@@ -54,7 +85,7 @@ export function useAdvisorySections() {
   const { activeTerm, termReady } = useTerm();
   const teacherId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery<AdvisorySectionsResponse>({
+  return useLiveQuery<AdvisorySectionsResponse>({
     queryKey: advisorySectionsKey(teacherId, termKey),
     queryFn: fetchAdvisorySections,
     enabled: !!teacherId && termReady,

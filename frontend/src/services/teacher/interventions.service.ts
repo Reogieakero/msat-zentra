@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 import type { PaginatedEnvelope } from "@/lib/api/usePaginatedQuery";
 
@@ -146,7 +146,7 @@ export async function fetchAllAdvisoryInterventions(
 }
 
 export function useAdvisoryInterventionsQueue(termKey: string, enabled: boolean) {
-  return useQuery<AdvisoryInterventionsResponse>({
+  return useLiveQuery<AdvisoryInterventionsResponse>({
     queryKey: ["advisory-interventions", "queue", termKey],
     queryFn: ({ signal }) => fetchAllAdvisoryInterventions({ signal }),
     staleTime: 60_000,

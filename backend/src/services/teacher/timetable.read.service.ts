@@ -9,6 +9,89 @@ export interface ScheduleQueryOpts {
   gradeLevel?: string;
 }
 
+/**
+ * Within one school year the classes (and therefore the timetable) are shared
+ * by all three terms — the term-start check only re-confirms the roster, it
+ * does not rebuild the grid. So when the selected term has no rows for a
+ * section yet, read the most recent earlier term in the same school year.
+ * New school years start fresh (different classes), so no cross-year carry.
+ */
+async function previousTimetableTermId(termId: string, sectionId: string) {
+  const current = await prisma.term.findUnique({
+    where: { id: termId },
+    select: { termNumber: true, schoolYearId: true },
+  });
+  if (!current || current.termNumber <= 1) return null;
+  const prior = await prisma.term.findFirst({
+    where: {
+      schoolYearId: current.schoolYearId,
+      termNumber: { lt: current.termNumber },
+      timetableEntries: { some: { sectionId } },
+    },
+    orderBy: { termNumber: "desc" },
+    select: { id: true },
+  });
+  return prior?.id ?? null;
+}
+
+const timetableEntrySelect = {
+  subjectId: true,
+  teacherNameId: true,
+  day: true,
+  period: true,
+  status: true,
+  reviewNote: true,
+  subject: { select: { id: true, name: true, code: true } },
+  teacherName: { select: { id: true, name: true } },
+} as const;
+
+const classPairSelect = {
+  subjectId: true,
+  sectionId: true,
+  subject: { select: { name: true, code: true } },
+  section: { select: { name: true, gradeLevel: true } },
+} as const;
+
+/**
+ * The teacher's timetable-linked subject/section pairs, deduped. Within one
+ * school year the classes are shared by all three terms, so when the selected
+ * term has no entries yet the most recent earlier term's pairs stand in —
+ * grading and lock-grades must list the same classes as /teacher/classes.
+ */
+export async function resolveTeacherClassPairs(teacherId: string, termId: string) {
+  const read = (t: string) =>
+    prisma.sectionTimetableEntry.findMany({
+      where: {
+        termId: t,
+        status: { in: ["APPROVED", "SUBMITTED"] },
+        teacherName: { userId: teacherId },
+      },
+      select: classPairSelect,
+      orderBy: [{ section: { name: "asc" } }, { subject: { name: "asc" } }],
+    });
+
+  let rows = await read(termId);
+  if (rows.length === 0) {
+    const current = await prisma.term.findUnique({
+      where: { id: termId },
+      select: { termNumber: true, schoolYearId: true },
+    });
+    if (current && current.termNumber > 1) {
+      const prior = await prisma.term.findFirst({
+        where: {
+          schoolYearId: current.schoolYearId,
+          termNumber: { lt: current.termNumber },
+          timetableEntries: { some: { teacherName: { userId: teacherId } } },
+        },
+        orderBy: { termNumber: "desc" },
+        select: { id: true },
+      });
+      if (prior) rows = await read(prior.id);
+    }
+  }
+  return [...new Map(rows.map((r) => [`${r.subjectId}|${r.sectionId}`, r])).values()];
+}
+
 /** Grade levels visible in the Master Teacher timeslot workspace. */
 async function allowedGradesFor(teacherId: string): Promise<string[]> {
   const bands = await masterTeacherBands(teacherId);
@@ -75,13 +158,61 @@ export async function getSchedule(ctx: TeacherContext, opts?: ScheduleQueryOpts)
           },
         }),
   });
+  // Advisory view (single section): the timetable is shared by the terms of a
+  // school year, so an unpublished term reads the previous term's grid.
+  if (!opts?.summary && opts?.sectionId && termId && sections.length === 1) {
+    const only = sections[0] as unknown as { id: string; timetableEntries: unknown[] };
+    if (only.timetableEntries.length === 0) {
+      const priorTermId = await previousTimetableTermId(termId, only.id);
+      if (priorTermId) {
+        const carried = await prisma.sectionTimetableEntry.findMany({
+          where: { sectionId: only.id, termId: priorTermId, status: { not: "DRAFT" } },
+          select: timetableEntrySelect,
+          orderBy: [{ day: "asc" }, { period: "asc" }],
+        });
+        if (carried.length > 0) {
+          return {
+            sections: [
+              {
+                ...(sections[0] as object),
+                timetableEntries: carried,
+              } as unknown as (typeof sections)[number],
+            ],
+          };
+        }
+      }
+    }
+  }
   return { sections };
 }
 
 export async function getMySlots(ctx: TeacherContext) {
-  const termId = ctx.termId;
+  let termId = ctx.termId;
   if (!termId) {
     throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
+  }
+  // Same within-school-year rule for the teacher's own classes/attendance:
+  // an unpublished term shows the previous term's slots instead of nothing.
+  const own = await prisma.sectionTimetableEntry.count({
+    where: { termId, teacherName: { userId: ctx.userId } },
+  });
+  if (own === 0) {
+    const current = await prisma.term.findUnique({
+      where: { id: termId },
+      select: { termNumber: true, schoolYearId: true },
+    });
+    if (current && current.termNumber > 1) {
+      const prior = await prisma.term.findFirst({
+        where: {
+          schoolYearId: current.schoolYearId,
+          termNumber: { lt: current.termNumber },
+          timetableEntries: { some: { teacherName: { userId: ctx.userId } } },
+        },
+        orderBy: { termNumber: "desc" },
+        select: { id: true },
+      });
+      if (prior) termId = prior.id;
+    }
   }
   const slots = await prisma.sectionTimetableEntry.findMany({
     where: {

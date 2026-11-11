@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
 import { BookOpen, Users } from "lucide-react";
-import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLiveQueries } from "@/lib/api/live";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
 import {
@@ -110,7 +111,7 @@ export function useStudentRail() {
   // Reactive cache reads (no fetching) over every section pick. The idle
   // prefetch below fills these keys, so each card converges to its real
   // student-list length instead of the backend headcount.
-  const liveQueries = useQueries({
+  const liveQueries = useLiveQueries({
     queries: rail.map((pick) => ({
       queryKey: studentListKey(teacherId, pick, termKey),
       queryFn: (): Promise<StudentListResponse> => fetchStudentList(pick),

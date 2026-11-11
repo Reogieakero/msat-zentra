@@ -1,8 +1,8 @@
 "use client";
 
-import { BookOpen, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TeacherEmptyState } from "../../components/TeacherEmptyCard";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { useTeacherReports } from "@/services/teacher/reports.service";
 import { ReportsScopeBar } from "./components/reports-scope-bar";
 import { ReportsKpiStrip } from "./components/reports-kpi-strip";
@@ -58,23 +58,20 @@ export default function TeacherReportsPage() {
       <ReportsScopeBar data={data} />
 
       {data.classes.length === 0 ? (
-        <div className={styles.card}>
-          <TeacherEmptyState
-            icon={BookOpen}
-            title="No classes in this term"
-            hint="Your report appears once sections and subjects are assigned to you for the selected term."
-          />
-        </div>
+        <PageEmptyCallout>
+          <strong>No classes in this term.</strong> Your report appears once
+          sections and subjects are assigned to you for the selected term.
+        </PageEmptyCallout>
       ) : (
         <>
           <ReportsKpiStrip summary={data.summary} />
-
-          <ReportsClassTable rows={data.classes} />
 
           <div className={styles.panels}>
             <ReportsDistribution distribution={data.distribution} />
             <ReportsActivity activity={data.activity} summary={data.summary} />
           </div>
+
+          <ReportsClassTable rows={data.classes} />
         </>
       )}
     </section>

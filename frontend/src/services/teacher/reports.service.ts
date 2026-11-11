@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import type { TeacherReportsPayload, TeachingLoadSlot } from "./reports.types";
@@ -22,7 +22,7 @@ export function teacherReportsKey(termKey: string) {
 export function useTeacherReports() {
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery<TeacherReportsPayload>({
+  return useLiveQuery<TeacherReportsPayload>({
     queryKey: teacherReportsKey(termKey),
     queryFn: fetchTeacherReports,
     enabled: termReady,
@@ -42,7 +42,7 @@ export async function fetchTeachingLoad(): Promise<{ slots: TeachingLoadSlot[] }
 export function useTeachingLoad() {
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery<{ slots: TeachingLoadSlot[] }>({
+  return useLiveQuery<{ slots: TeachingLoadSlot[] }>({
     queryKey: ["teacher-my-slots", termKey],
     queryFn: fetchTeachingLoad,
     enabled: termReady,

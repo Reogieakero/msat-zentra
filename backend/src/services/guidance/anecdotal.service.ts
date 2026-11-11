@@ -3,6 +3,7 @@ import {
   GRADE_LABELS,
   GRADE_ORDER,
 } from "../../modules/guidance/guidance.repository.js";
+import { archivedAdvisoryLearnerIds } from "../../lib/learnerVisibility.js";
 import type { GuidanceContext } from "./guidance.types.js";
 
 export type AnecdotalCategory = "behavioral" | "bullying" | "academic" | "attendance" | "health";
@@ -226,6 +227,7 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
 }
 
 async function buildAnecdotalSummary(summaryWhere: any) {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const summaryTotal = await prisma.referral.count({ where: summaryWhere });
   const categories = ["behavioral", "bullying", "academic", "attendance", "health"];
   const catCounts = await Promise.all(
@@ -255,14 +257,22 @@ async function buildAnecdotalSummary(summaryWhere: any) {
   const [topProfileGroups, topRosterGroups] = await Promise.all([
     prisma.anecdotalRecord.groupBy({
       by: ["studentId"],
-      where: { studentId: { not: null }, referrals: { some: summaryWhere } },
+      where: {
+        studentId: { not: null, ...(archivedLearners.studentIds.length ? { notIn: archivedLearners.studentIds } : {}) },
+        deletedAt: null,
+        referrals: { some: summaryWhere },
+      },
       _count: { _all: true },
       orderBy: { _count: { studentId: "desc" } },
       take: 5,
     }),
     prisma.anecdotalRecord.groupBy({
       by: ["rosterId"],
-      where: { rosterId: { not: null }, referrals: { some: summaryWhere } },
+      where: {
+        rosterId: { not: null, ...(archivedLearners.rosterIds.length ? { notIn: archivedLearners.rosterIds } : {}) },
+        deletedAt: null,
+        referrals: { some: summaryWhere },
+      },
       _count: { _all: true },
       orderBy: { _count: { rosterId: "desc" } },
       take: 5,

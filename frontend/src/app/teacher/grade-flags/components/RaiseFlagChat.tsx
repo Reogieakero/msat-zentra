@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { useTerm } from "@/lib/term/TermContext";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  const optionsQuery = useQuery({
+  const optionsQuery = useLiveQuery({
     queryKey: ["grade-flags", "options", termKey],
     queryFn: fetchFlagOptions,
   });

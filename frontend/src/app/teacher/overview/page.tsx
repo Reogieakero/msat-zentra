@@ -13,6 +13,7 @@ import {
   useTeacherOverview,
 } from "@/services/teacher/overview.service";
 import { useTerm } from "@/lib/term/TermContext";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import styles from "./components/teacher-overview.module.css";
 
 /** Right-rail width is user-resizable between these bounds (px). */
@@ -179,6 +180,18 @@ export default function TeacherOverviewPage() {
   const atRiskStudents = isAdviser
     ? data.atRiskStudents
     : classStudents.filter((s) => s.riskLevel !== "Low").length;
+
+  // Nothing assigned this term → one centered callout instead of empty boards.
+  if (!data.advisorySection && data.kpi.classCount === 0) {
+    return (
+      <section className={styles.page}>
+        <PageEmptyCallout>
+          No classes or advisees are assigned to you for the selected term yet.
+          Sections and subjects assigned to you will appear here.
+        </PageEmptyCallout>
+      </section>
+    );
+  }
 
   return (
     <section className={styles.page}>

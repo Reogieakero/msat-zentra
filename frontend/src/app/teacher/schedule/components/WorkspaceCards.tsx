@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
+
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { Loader2, Send, SlidersHorizontal } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
@@ -27,7 +29,7 @@ function SendToPrincipalCard() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
-  const sectionsQuery = useQuery<{ sections: ScheduleSectionSummary[] }>({
+  const sectionsQuery = useLiveQuery<{ sections: ScheduleSectionSummary[] }>({
     queryKey: ["teacher-schedule-summary", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: ScheduleSectionSummary[] }>(
@@ -114,7 +116,7 @@ function ConfigureCard() {
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [configOpen, setConfigOpen] = useState(false);
 
-  const configQuery = useQuery<{ config: DayConfig }>({
+  const configQuery = useLiveQuery<{ config: DayConfig }>({
     queryKey: ["teacher-schedule-config", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ config: DayConfig }>("/api/teacher/schedule/config");

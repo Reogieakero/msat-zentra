@@ -13,6 +13,7 @@ import type { NurseAlertsPage } from "@/services/nurse/nurse.types";
 import { useNurseInvalidate } from "../../overview/components/use-nurse-mutation";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import styles from "../nurse-referrals-page.module.css";
 import pageStyles from "../../pages.module.css";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
@@ -103,6 +104,7 @@ function NurseReferralsBoard({ track }: { track: BoardTrack }) {
 
   const { data, isPending, isError, refetch, isRefetching } =
     useQuery<NurseAlertsPage>({
+      ...liveQueryOptions,
       queryKey: [
         "nurse-alerts",
         track,
@@ -127,7 +129,6 @@ function NurseReferralsBoard({ track }: { track: BoardTrack }) {
         previousData && previousQuery?.queryKey?.[2] === requestedPage
           ? previousData
           : undefined,
-      staleTime: 60_000,
       enabled: termReady,
     });
 

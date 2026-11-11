@@ -11,6 +11,11 @@ import {
 import { computeAttendanceRate, computeSubjectAttendanceRate } from "../attendance.js";
 import { AppError } from "../../lib/errors.js";
 import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
+import {
   GRADE_NUMERIC,
   schoolYearClause,
   type DisplayTerm,
@@ -44,9 +49,10 @@ export async function getAtRiskStudents(query: AtRiskQuery) {
   // Loads are scoped to the in-scope sections (this used to read every
   // StudentProfile/StudentRoster in the school) and run in parallel with the
   // term's records instead of ahead of them.
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosterEntries, subjectTakes] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         lrn: true,
@@ -55,7 +61,7 @@ export async function getAtRiskStudents(query: AtRiskQuery) {
       },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, lrn: true, fullName: true, sectionId: true },
     }),
     prisma.attendanceRecord.findMany({

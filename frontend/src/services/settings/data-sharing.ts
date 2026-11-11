@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
@@ -25,7 +25,7 @@ export function useTeacherDataSharing() {
   const { activeTerm } = useTerm();
   const userId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery({
+  return useLiveQuery({
     queryKey: dataSharingKey(userId, termKey),
     queryFn: fetchDataSharing,
     enabled: !!userId,

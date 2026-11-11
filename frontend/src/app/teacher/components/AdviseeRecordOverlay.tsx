@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import {
   ArrowUpRight,
   BookOpen,
@@ -164,13 +164,13 @@ export function AdviseeRecordOverlay({
   // outside clicks belong to it, not to the folders underneath.
   const previewOpen = anecdotalPreviewId !== null;
 
-  const academic = useQuery({
+  const academic = useLiveQuery({
     queryKey: ["advisee-academic", studentId],
     queryFn: () => fetchStudentAcademic(studentId as string),
     enabled: !!studentId,
     staleTime: 30_000,
   });
-  const anecdotal = useQuery({
+  const anecdotal = useLiveQuery({
     queryKey: ["advisee-anecdotal", studentId],
     queryFn: () => fetchAdviseeAnecdotal(studentId as string),
     enabled: !!studentId,
@@ -235,6 +235,11 @@ export function AdviseeRecordOverlay({
     <>
       <Dialog
         open={student !== null}
+        /* The raised GCForm-01 preview is a separate portal (not a Radix
+           dialog), so the Radix scroll lock would swallow wheel/touch events
+           over it and freeze the preview. Hand modality to the preview while
+           it is open — it covers this dialog anyway. */
+        modal={!previewOpen}
         onOpenChange={(open) => {
           if (!open) onClose();
         }}

@@ -1,13 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Pill, type PillTone } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
-import { sileo } from "@/components/ui/sonner";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import {
   Tooltip,
@@ -15,13 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  lockErrorMessage,
-  lockFinalGrade,
-  useClassDetail,
-} from "@/services/teacher/grading.service";
-import type { ClassStudent } from "@/services/teacher/grading.types";
-import { LockGradesButton } from "@/app/teacher/grading/[assignmentId]/components/LockGradesButton";
+import { useClassDetail } from "@/services/teacher/grading.service";
 import type { LockGradesClassRow } from "@/services/teacher/lockGrades.service";
 import styles from "./lock-grades.module.css";
 
@@ -44,32 +36,7 @@ function pct(value: number, total: number) {
 }
 
 function LearnerRows({ assignmentId }: { assignmentId: string }) {
-  const queryClient = useQueryClient();
   const detail = useClassDetail(assignmentId);
-  const [lockingId, setLockingId] = React.useState<string | null>(null);
-
-  const refresh = React.useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["teacher-lock-grades"] });
-    queryClient.invalidateQueries({ queryKey: ["teacher-grading-class"] });
-  }, [queryClient]);
-
-  const handleLock = async (student: ClassStudent) => {
-    const final = student.final;
-    if (!final || lockingId) return;
-    setLockingId(final.id);
-    try {
-      await lockFinalGrade(final.id);
-      refresh();
-      sileo.success({
-        title: "Final grade locked",
-        description: `${student.name}'s final grade is now locked and waiting for adviser approval.`,
-      });
-    } catch (err) {
-      sileo.error({ title: "Could not lock final grade", description: lockErrorMessage(err) });
-    } finally {
-      setLockingId(null);
-    }
-  };
 
   if (detail.isPending) {
     return (
@@ -105,7 +72,6 @@ function LearnerRows({ assignmentId }: { assignmentId: string }) {
       {detail.data.students.map((student) => {
         const final = student.final;
         const status = final?.lockStatus ?? null;
-        const canLock = status === "unlocked" && final?.computedAverage != null;
         return (
           <div key={student.id} className={styles.learnerRow} role="row">
             <span className={styles.learnerName} title={student.name} role="cell">
@@ -121,18 +87,6 @@ function LearnerRows({ assignmentId }: { assignmentId: string }) {
               <Pill tone={statusTone(status)} label="Lock status">
                 {status ? statusLabel[status] ?? status : "No grade"}
               </Pill>
-              {canLock ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-6 px-2 text-[11px]"
-                  disabled={lockingId === final.id}
-                  onClick={() => void handleLock(student)}
-                >
-                  {lockingId === final.id ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                  Lock
-                </Button>
-              ) : null}
             </span>
           </div>
         );
@@ -143,10 +97,8 @@ function LearnerRows({ assignmentId }: { assignmentId: string }) {
 
 export function LockGradesClassCard({
   row,
-  termLabel,
 }: {
   row: LockGradesClassRow;
-  termLabel: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const total = row.learners;
@@ -207,26 +159,24 @@ export function LockGradesClassCard({
           <Pill tone="amber" label="Locked, awaiting approval">
             {row.locked} locked
           </Pill>
-          <Pill tone="green" label="Adviser approved">
-            {row.approved} approved
-          </Pill>
         </span>
       </div>
 
       <div className={styles.cardFoot}>
-        <LockGradesButton
-          assignmentId={row.id}
-          subjectLabel={`${row.subject} (${row.section})`}
-          termLabel={termLabel}
-          unlockCount={row.ready}
-        />
         <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setOpen(true)}>
           View learners
         </Button>
       </div>
 
       {nothingReady ? (
-        <p className={`${styles.muted} ${styles.center}`}>Nothing ready to lock yet.</p>
+        <div className="flex justify-center pt-1">
+          <Pill
+            tone="neutral"
+            label="No computed final grades are ready to lock in this class yet."
+          >
+            Nothing ready to lock yet
+          </Pill>
+        </div>
       ) : null}
 
       <KanbanOverlay
@@ -239,7 +189,19 @@ export function LockGradesClassCard({
             <Users size={14} />
           </span>
         }
-        description={`${row.gradeLevel} · ${row.learners} learner${row.learners === 1 ? "" : "s"} · ${row.ready} ready to lock`}
+        description={
+          <span className="flex flex-wrap items-center gap-1.5">
+            <Pill tone="neutral" label="Grade level">
+              {row.gradeLevel}
+            </Pill>
+            <Pill tone="neutral" label="Learners">
+              {row.learners} learner{row.learners === 1 ? "" : "s"}
+            </Pill>
+            <Pill tone="sky" label="Ready to lock">
+              {row.ready} ready to lock
+            </Pill>
+          </span>
+        }
         width="xl"
       >
         {open ? <LearnerRows assignmentId={row.id} /> : null}

@@ -65,7 +65,7 @@
 }
 
 .title {
-  font-family: var(--font-geist), var(--font-inter), sans-serif;
+  font-family: var(--font-inter), var(--font-inter), sans-serif;
   font-size: clamp(1.7rem, 3vw, 2.2rem);
   font-weight: 300;
   letter-spacing: -0.04em;

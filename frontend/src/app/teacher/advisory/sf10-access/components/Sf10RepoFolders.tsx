@@ -6,6 +6,7 @@ import { FolderCard } from "@/components/ui/FolderCard";
 import { Input } from "@/components/ui/input";
 import { InsightCallout } from "@/components/ui/insight-callout";
 import { Pill } from "@/components/ui/pill";
+import { SharedTermPill } from "@/components/shared/shared-term-pill";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { sf10StatusLabel, sf10StatusTone } from "@/lib/labels/status-tone";
 import { StudentMascot } from "../../referrals/components/StudentMascot";
@@ -233,6 +234,7 @@ export function Sf10RepoFolders({
                           {source === "original" ? sf10StatusLabel(full.sf10Status) : "Bama auto-fill"}
                         </span>
                       </Pill>
+                      <SharedTermPill termNumber={full.grantedTermNumber} action="Granted" />
                     </span>
                     <span className="flex min-w-0 flex-col gap-2 rounded-lg border bg-white p-3 shadow-sm dark:bg-card">
                       <span className="flex min-w-0 items-center gap-2">

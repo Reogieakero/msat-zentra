@@ -6,6 +6,11 @@ import { CACHE_TAGS } from "../../lib/cacheTags.js";
 import { paginated, clampPage } from "../../lib/pagination.js";
 import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
 import { advisorySubmissionObjectPath, uploadFile } from "../../lib/storage.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { ModuleStatus } from "../../modules/teacher/advisory-modules.schemas.js";
 import type { AdvisoryContext } from "./advisory.types.js";
 
@@ -82,15 +87,20 @@ async function resolveSection(
  * rule as the advisory list, so a learner never shows up twice.
  */
 async function sectionLearners(sectionId: string, admOnly = false): Promise<LearnerRef[]> {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, roster] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId, ...(admOnly ? { admProfiles: { some: {} } } : {}) },
+      where: {
+        sectionId,
+        ...(admOnly ? { admProfiles: { some: {} } } : {}),
+        ...excludeArchivedProfiles(archivedLearners),
+      },
       select: { userId: true, lrn: true, mascot: true, user: { select: { fullName: true } } },
     }),
     admOnly
       ? Promise.resolve([])
       : prisma.studentRoster.findMany({
-          where: { sectionId },
+          where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
           select: { id: true, lrn: true, fullName: true, mascot: true },
         }),
   ]);

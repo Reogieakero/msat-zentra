@@ -8,6 +8,7 @@ import {
   Loader2,
   Pencil,
   UserRound,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import type { Submission } from "./use-principal-schedule-section";
 import styles from "./section-rail.module.css";
 
 const MENU_PANEL =
-  "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
+  "absolute right-0 top-9 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
 
 type RailKey = "adviser" | "status" | "review" | "legend";
 
@@ -74,7 +75,7 @@ function GutterIconButton({
       aria-expanded={expanded}
       aria-haspopup="dialog"
       aria-label={expanded ? `Close ${label}` : `Open ${label}`}
-      className={`relative flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
+      className={`relative flex h-8 w-8 items-center justify-center rounded-xl border transition-colors ${
         expanded
           ? "cursor-pointer border-amber-500/60 bg-amber-500/10"
           : "cursor-pointer border-border bg-card hover:border-amber-500/60 hover:bg-amber-500/10"
@@ -92,8 +93,10 @@ const LEGEND: { label: string; key: "draft" | "submitted" | "approved"; Icon: Lu
 ];
 
 /**
- * Right rail for a section's timetable review — amber icon-only rail, same
- * hover tooltip + flyout kanban panels as the principal overview.
+ * Schedule bucket controls for a section's timetable review — the amber
+ * icon-only buttons sit horizontally at the page's top-right corner, matching
+ * the sections desk (`/principal/academics/schedule`). Hover shows a tooltip,
+ * click opens the flyout kanban panel.
  */
 export function SectionRail({
   submission,
@@ -106,7 +109,11 @@ export function SectionRail({
   approving,
   reviewPending,
 }: SectionRailProps) {
-  const [openKey, setOpenKey] = React.useState<RailKey | null>(null);
+  const [openKey, setOpenKey] = React.useState<RailKey | null>(() =>
+    // A submitted timetable is the one thing the principal must act on, so the
+    // Review panel opens itself on landing instead of hiding behind an icon.
+    submittedCount > 0 ? "review" : null,
+  );
   const railRef = React.useRef<HTMLDivElement>(null);
   const StatusIcon = statusMeta.Icon;
   const statusKey = statusMeta.title.toLowerCase();
@@ -214,9 +221,13 @@ export function SectionRail({
                 onClick={() => onReview("reject")}
                 disabled={reviewPending}
                 aria-busy={rejecting || undefined}
-                className="h-6 flex-1 px-2 text-xs"
+                className="h-6 flex-1 border-transparent bg-red-600 px-2 text-xs text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
               >
-                {rejecting ? <Loader2 size={12} className="animate-spin" aria-hidden /> : null}
+                {rejecting ? (
+                  <Loader2 size={12} className="animate-spin" aria-hidden />
+                ) : (
+                  <X size={12} aria-hidden />
+                )}
                 <span aria-live="polite">Reject</span>
               </Button>
               <Button
@@ -226,7 +237,11 @@ export function SectionRail({
                 aria-busy={approving || undefined}
                 className="h-6 flex-1 px-2 text-xs"
               >
-                {approving ? <Loader2 size={12} className="animate-spin" aria-hidden /> : null}
+                {approving ? (
+                  <Loader2 size={12} className="animate-spin" aria-hidden />
+                ) : (
+                  <Check size={12} aria-hidden />
+                )}
                 <span aria-live="polite">Approve</span>
               </Button>
             </div>
@@ -260,8 +275,12 @@ export function SectionRail({
 
   return (
     <TooltipProvider delayDuration={100}>
-      <aside className={rail.rail} style={{ top: "1rem" }} aria-label="Section review">
-        <div ref={railRef} className={rail.railInner}>
+      <div
+        ref={railRef}
+        className="flex min-w-0 flex-wrap items-center justify-end gap-1"
+        role="group"
+        aria-label="Section review"
+      >
           {items.map((item) => {
             const Icon = item.icon;
             const opened = openKey === item.key;
@@ -284,7 +303,7 @@ export function SectionRail({
                       ) : null}
                     </GutterIconButton>
                   </TooltipTrigger>
-                  <TooltipContent side="left" sideOffset={10}>
+                  <TooltipContent side="bottom" sideOffset={10}>
                     <span className={rail.tipTitle}>{item.title}</span>
                     <span className={rail.tipHint}>{item.hint}</span>
                   </TooltipContent>
@@ -318,8 +337,7 @@ export function SectionRail({
               </div>
             );
           })}
-        </div>
-      </aside>
+      </div>
     </TooltipProvider>
   );
 }

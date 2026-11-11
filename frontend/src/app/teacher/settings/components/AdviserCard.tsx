@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
-import { KeyRound, Loader2, Users } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { createPortal } from "react-dom";
+import { Check, KeyRound, Loader2, Users, X } from "lucide-react";
+import { useLiveQuery } from "@/lib/api/live";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +37,7 @@ export type AdviserSectionOption = {
 export function useAdviserSections() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery<{ sections: AdviserSectionOption[] }>({
+  return useLiveQuery<{ sections: AdviserSectionOption[] }>({
     // Term-scoped: advisory assignments differ per school year/term.
     queryKey: ["teacher-settings-adviser-sections", termKey],
     queryFn: async () => {
@@ -74,7 +75,12 @@ export function AdviserCard() {
   const invalidateTeacher = useTeacherInvalidate();
   const runDockAction = useSettingsDockAction();
   const refreshAdvisory = async () => {
+    // Claiming/releasing changes the teacher's advisory status, so the overview
+    // cards, sidebar and advisory desks must re-read too — not just Settings.
     invalidateTeacher.settings();
+    invalidateTeacher.overview();
+    invalidateTeacher.advisory();
+    invalidateTeacher.schedule();
   };
   const selectedTarget = ordered.find((s) => s.id === effectiveSelected) ?? null;
   const codeRequired = !!selectedTarget?.hasCode || !!selectedTarget?.adviserLabel;
@@ -92,6 +98,9 @@ export function AdviserCard() {
       return;
     }
     setSaving(true);
+    // Close the board as soon as the save starts; reopen it if the code is rejected.
+    const previousSelected = effectiveSelected;
+    setSelectedId(null);
     try {
       await runDockAction(
         {
@@ -127,6 +136,8 @@ export function AdviserCard() {
         description: `You are now the adviser of ${target.name}.`,
       });
     } catch (err) {
+      // Bring the board back so the teacher can fix the code and retry.
+      setSelectedId(previousSelected);
       const message = getErrorMessage(err, "Failed to save your advisory section.");
       toast.error({ title: "Could not save", description: message });
     } finally {
@@ -399,31 +410,37 @@ export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, 
           );
         })}
         </div>
-        {showCodeOverlay && selectedTarget ? (
-          <div
-            className={sectionStyles.codeOverlay}
-            role="dialog"
-            aria-label={`Enter advisory code for ${selectedTarget.name}`}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") onDeselect();
-            }}
-          >
+        {showCodeOverlay && selectedTarget
+          ? createPortal(
+              <div
+                className={sectionStyles.codeOverlay}
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Enter advisory code for ${selectedTarget.name}`}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") onDeselect();
+                }}
+              >
             <div className={sectionStyles.codeOverlayCard}>
               <KanbanBoard
                 title={`Code for ${selectedTarget.name}`}
                 icon={<KeyRound size={14} aria-hidden="true" className="text-amber-500" />}
                 description={`Ask your principal for the code for ${selectedTarget.name} — it proves you are the listed adviser.`}
                 ariaLabel={`Advisory code for ${selectedTarget.name}`}
+                actions={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-6"
+                    aria-label="Close"
+                    onClick={onDeselect}
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                  </Button>
+                }
                 footer={
                   <div className="flex items-center justify-end gap-2 px-1 pb-1">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={onDeselect}
-                      className={`${sectionStyles.btn} ${sectionStyles.btnDanger}`}
-                    >
-                      Cancel
-                    </Button>
                     <Button
                       type="button"
                       onClick={onClaim}
@@ -437,7 +454,10 @@ export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, 
                           <span aria-live="polite">Saving…</span>
                         </>
                       ) : (
-                        "Save advisory section"
+                        <>
+                          <Check size={12} aria-hidden="true" />
+                          Save advisory section
+                        </>
                       )}
                     </Button>
                   </div>
@@ -455,12 +475,20 @@ export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, 
                     autoFocus
                     maxLength={16}
                     style={{ textTransform: "uppercase", fontFamily: "ui-monospace, monospace" }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (!saving && (!codeRequired || code.trim())) onClaim();
+                      }
+                    }}
                   />
                 </div>
               </KanbanBoard>
             </div>
-          </div>
-        ) : null}
+          </div>,
+              document.body,
+            )
+          : null}
       </div>
       {!showCodeOverlay ? (
       <div className="flex justify-end">

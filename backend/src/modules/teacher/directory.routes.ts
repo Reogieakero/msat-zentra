@@ -32,7 +32,9 @@ router.get(
   "/schedule/teachers",
   requireAuth,
   requireRole("subject_teacher", "adviser"),
-  cache({ ttl: CACHE_TTLS.lookup, tags: [CACHE_TAGS.teacher, CACHE_TAGS.directory] }),
+  // Short TTL: this catalog is mutated from the template desk (add/delete
+  // names) and a missed invalidation used to pin a deleted teacher for an hour.
+  cache({ ttl: CACHE_TTLS.list, tags: [CACHE_TAGS.teacher, CACHE_TAGS.directory] }),
   etag(),
   async (_req, res, next) => {
     try {

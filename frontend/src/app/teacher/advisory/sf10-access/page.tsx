@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { ShieldQuestion } from "lucide-react";
-import { useQueries } from "@tanstack/react-query";
+import { useLiveQueries } from "@/lib/api/live";
 import { TeacherEmptyCard } from "../../components/TeacherEmptyCard";
 import { toast } from "@/components/ui/sonner";
 import { useAdvisorySections } from "@/services/teacher/advisory.service";
@@ -61,7 +61,7 @@ export default function TeacherSf10AccessPage() {
     () => [...new Set(requests.map((r) => r.id))],
     [requests],
   );
-  const unionVerifications = useQueries({
+  const unionVerifications = useLiveQueries({
     queries: unionRequestIds.map((id) => ({
       queryKey: ["teacher-sf10-access", id, "records"],
       queryFn: () => fetchMyVerification(id),

@@ -1,5 +1,5 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 import type { WorkloadConfig } from "./schedule-time";
 
@@ -26,7 +26,7 @@ export function conflictKey(day: number, period: number, teacherNameId: string):
 }
 
 export function useScheduleConflicts(termKey: string, workload: WorkloadConfig, opts?: { enabled?: boolean }) {
-  const query = useQuery<TemplateConflictsData>({
+  const query = useLiveQuery<TemplateConflictsData>({
     queryKey: ["teacher-schedule-conflicts", termKey, workload.maxDailyPeriods, workload.maxWeeklyPeriods],
     queryFn: async () => {
       const { data } = await apiClient.get<TemplateConflictsData>("/api/teacher/schedule/conflicts", {

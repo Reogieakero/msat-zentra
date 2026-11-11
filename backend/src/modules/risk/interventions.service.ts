@@ -8,6 +8,13 @@ import {
   sectionAttendanceTotals,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+  excludeArchivedRostersSql,
+} from "../../lib/learnerVisibility.js";
+import { riskCohortVersion } from "../../lib/riskCohortCache.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
 export type ApprovalStatusValue = "pending" | "approved" | "rejected" | "modified";
@@ -281,7 +288,7 @@ export async function getInterventionStudents(
               },
             },
             attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
-            anecdotalRecords: { where: { termId }, select: { id: true } },
+            anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true } },
             interventions: {
               orderBy: { id: "desc" },
               take: 1,
@@ -344,7 +351,7 @@ export async function getInterventionStudents(
               },
             },
             attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
-            anecdotalRecords: { where: { termId }, select: { id: true } },
+            anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true } },
             interventions: {
               orderBy: { id: "desc" },
               take: 1,
@@ -555,6 +562,7 @@ export async function getColumnCohortStudents(
   const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
   const needle = (filters.q ?? "").trim();
   const includeRecovered = filters.includeRecovered === true && !filters.riskLevel;
+  const archivedLearners = await archivedAdvisoryLearnerIds();
 
   const hasIntClause = filters.hasIntervention === true
     ? { interventions: { some: {} } }
@@ -586,6 +594,7 @@ export async function getColumnCohortStudents(
   const profileWhere: any = {
     AND: [
       ...(schoolYearId ? [{ section: { schoolYearId } }] : []),
+      excludeArchivedProfiles(archivedLearners),
       ...(filters.section ? [{ section: { name: filters.section } }] : []),
       profileLevelClause,
       ...(hasIntClause ? [hasIntClause] : []),
@@ -600,6 +609,8 @@ export async function getColumnCohortStudents(
   const ivRoster = (extra: Prisma.Sql) => Prisma.sql`EXISTS (SELECT 1 FROM "Intervention" iv WHERE iv."rosterId" = r."id" AND ${extra})`;
   const rosterConds: Prisma.Sql[] = [];
   if (schoolYearId) rosterConds.push(Prisma.sql`r."schoolYearId" = ${schoolYearId}`);
+  if (archivedLearners.rosterIds.length > 0)
+    rosterConds.push(Prisma.sql`r."id" NOT IN (${Prisma.join(archivedLearners.rosterIds)})`);
   if (filters.section) rosterConds.push(Prisma.sql`s."name" = ${filters.section}`);
   if (filters.riskLevel) {
     rosterConds.push(Prisma.sql`r."riskLevel" = ${filters.riskLevel}`);
@@ -667,12 +678,13 @@ export async function getColumnCohortStudents(
       where: {
         AND: [
           ...(schoolYearId ? [{ section: { schoolYearId } }] : []),
+          excludeArchivedProfiles(archivedLearners),
           { riskLevel: { in: ["High", "Moderate"] } },
         ],
       },
     }),
     prisma.$queryRaw<{ count: bigint }[]>(
-      Prisma.sql`SELECT COUNT(*) AS count FROM "StudentRoster" r WHERE ${schoolYearId ? Prisma.sql`r."schoolYearId" = ${schoolYearId} AND ` : Prisma.sql``}r."riskLevel" IN ('High', 'Moderate') AND NOT EXISTS (SELECT 1 FROM "StudentProfile" p WHERE p."lrn" = r."lrn")`
+      Prisma.sql`SELECT COUNT(*) AS count FROM "StudentRoster" r WHERE ${schoolYearId ? Prisma.sql`r."schoolYearId" = ${schoolYearId} AND ` : Prisma.sql``}r."riskLevel" IN ('High', 'Moderate') ${excludeArchivedRostersSql(archivedLearners)} AND NOT EXISTS (SELECT 1 FROM "StudentProfile" p WHERE p."lrn" = r."lrn")`
     ),
   ]);
   const total = profileTotal + Number(rosterTotalRows[0]?.count ?? 0);
@@ -873,6 +885,9 @@ function liveCohort(
   sharedOnly: boolean,
 ): Promise<LiveCohort> {
   const key = [
+    // Bumped by the risk engine on every flag change, so a detection is never
+    // served from a cohort memoized before it.
+    `v${riskCohortVersion()}`,
     termId,
     schoolYearId ?? "-",
     includeRecovered ? 1 : 0,
@@ -915,23 +930,28 @@ async function loadLiveCohort(
   const advisorSharing = sharedOnly
     ? { adviser: { staffProfile: { shareStudentData: true } } }
     : {};
-  const profileWhere =
-    schoolYearId || sharedOnly
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const profileWhere = {
+    ...(schoolYearId || sharedOnly
       ? {
           section: {
             ...(schoolYearId ? { schoolYearId } : {}),
             ...advisorSharing,
           },
         }
-      : undefined;
+      : {}),
+    ...excludeArchivedProfiles(archivedLearners),
+  };
   // Rosters carry their own school year plus the section relation.
-  const rosterWhere =
-    schoolYearId || sharedOnly
+  const rosterWhere = {
+    ...(schoolYearId || sharedOnly
       ? {
           ...(schoolYearId ? { schoolYearId } : {}),
           ...(sharedOnly ? { section: advisorSharing } : {}),
         }
-      : undefined;
+      : {}),
+    ...excludeArchivedRosters(archivedLearners),
+  };
   const [profiles, rosters, profileSnapDates, rosterSnapDates] = await Promise.all([
     prisma.studentProfile.findMany({
       where: profileWhere,
@@ -939,6 +959,7 @@ async function loadLiveCohort(
         userId: true,
         lrn: true,
         gradeLevel: true,
+        createdAt: true,
         section: { select: { id: true, name: true, gradeLevel: true, _count: { select: { students: true } } } },
         mascot: true,
         user: { select: { fullName: true } },
@@ -951,7 +972,7 @@ async function loadLiveCohort(
           },
         },
         attendanceRecords: { where: { termId }, select: { status: true, date: true, subjectId: true } },
-        anecdotalRecords: { where: { termId }, select: { id: true, observationDatetime: true } },
+        anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true, observationDatetime: true } },
         interventions: {
           orderBy: { id: "desc" },
           take: 1,
@@ -993,6 +1014,7 @@ async function loadLiveCohort(
         lrn: true,
         fullName: true,
         gradeLevel: true,
+        createdAt: true,
         sectionId: true,
         section: { select: { id: true, name: true, gradeLevel: true } },
         mascot: true,
@@ -1005,7 +1027,7 @@ async function loadLiveCohort(
           },
         },
         attendanceRecords: { where: { termId }, select: { status: true, date: true, subjectId: true } },
-        anecdotalRecords: { where: { termId }, select: { id: true, observationDatetime: true } },
+        anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true, observationDatetime: true } },
         interventions: {
           orderBy: { id: "desc" },
           take: 1,
@@ -1082,6 +1104,8 @@ async function loadLiveCohort(
     anecdotalCount: number;
     intervention: InterventionRow | undefined;
     snapshotDate: Date | null;
+    /** Enrolment date — fallback "detected" timestamp when no evidence exists. */
+    enrolledAt: Date;
     mascot: string | null;
   };
 
@@ -1130,7 +1154,12 @@ async function loadLiveCohort(
             ? new Date(Math.min(...sessionTimes)).toISOString()
             : evidenceTimes.length > 0
               ? new Date(Math.max(...evidenceTimes)).toISOString()
-              : null));
+              // Last resort: the day the learner joined the roster. A learner
+              // enlisted today is flagged from the term's already-elapsed
+              // meetups with no marks, so "when they became monitorable" is
+              // the honest detection time (and keeps the board from printing a
+              // fabricated "just now").
+              : st.enrolledAt.toISOString()));
 
     return {
       studentId: st.studentId,
@@ -1172,6 +1201,7 @@ async function loadLiveCohort(
       anecdotalCount: p.anecdotalRecords.length,
       intervention: p.interventions[0],
       snapshotDate: snapByStudent.get(p.userId) ?? null,
+      enrolledAt: p.createdAt,
       mascot: p.mascot ?? null,
     });
     if (row) kept.push(row);
@@ -1192,6 +1222,7 @@ async function loadLiveCohort(
       anecdotalCount: r.anecdotalRecords.length,
       intervention: r.interventions[0],
       snapshotDate: snapByRoster.get(r.id) ?? null,
+      enrolledAt: r.createdAt,
       mascot: r.mascot ?? null,
     });
     if (row) kept.push(row);

@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:seed:admin": "tsx prisma/seed-admin.ts",
     "prisma:topup50": "tsx prisma/seed-topup-50.ts",
     "prisma:count": "tsx prisma/count-transactions.ts",
     "prisma:section20": "tsx prisma/seed-section-20.ts",
@@ -33,6 +34,7 @@
     "prisma:seed:pending-students-5": "tsx prisma/seed-pending-student-accounts-5.ts",
     "prisma:seed:guidance-session-docs": "tsx prisma/seed-guidance-session-docs.ts",
     "prisma:seed:wipe": "tsx prisma/seed/wipe.ts",
+    "prisma:seed:roles": "tsx prisma/seed-roles-only.ts",
     "test": "vitest run --testTimeout=15000",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"

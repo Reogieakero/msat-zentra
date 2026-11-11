@@ -25,6 +25,7 @@ export type DockTaskKind =
   | "attendance-save"
   | "timetable-save"
   | "unlink-code"
+  | "link-code"
   | "anecdotal-file"
   | "generic";
 

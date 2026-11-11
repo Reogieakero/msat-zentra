@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
+import { markRealtimeUpdate } from "@/lib/api/fresh";
 import { toast } from "@/components/ui/sonner";
 import { registrarNotificationTitle } from "@/lib/notifications/label";
 
@@ -141,7 +142,10 @@ export function useRegistrarRealtime(enabled = true) {
 
     let seeded = false;
     async function poll() {
-      if (cancelled || document.hidden) return;
+      // Runs while hidden too: a fanout notification must still land (and toast
+      // on return) when the desk is in another tab or another site. This is the
+      // fallback for a socket that is down or blocked by RLS.
+      if (cancelled) return;
       try {
         const { data } = await apiClient.get<RegistrarNotification[]>(
           "/api/notifications/",
@@ -176,7 +180,7 @@ export function useRegistrarRealtime(enabled = true) {
     document.addEventListener("visibilitychange", onFocus);
 
     function invalidate(rows?: RegistrarNotification[]) {
-
+      markRealtimeUpdate();
       const now = Date.now();
       if (rows) {
         for (const row of rows) pendingRows.current.push(row);

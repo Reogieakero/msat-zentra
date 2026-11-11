@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { CalendarClock, type LucideIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
+import { liveQueryOptions } from "@/lib/api/live";
 import { RowList, type RowListItem, type RowTone } from "@/components/ui/row-list";
 import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
 import { KanbanBoardSkeleton, RowListSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
@@ -82,7 +83,7 @@ function toRowListItem(s: AverageRow): RowListItem {
 export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: string }) {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const matrixQuery = useQuery({
+  const matrixQuery = useLiveQuery({
     queryKey: ["attendance-section-matrix", sectionId, termKey],
     queryFn: async () => {
       const params = new URLSearchParams({ sectionId });
@@ -96,6 +97,7 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
       return data;
     },
     retry: false,
+    ...liveQueryOptions,
   });
 
   const data = React.useMemo<AverageRow[]>(

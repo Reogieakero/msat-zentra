@@ -76,7 +76,7 @@
   font-size: 1.5rem;
   font-weight: 600;
   line-height: 1;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-inter), ui-monospace, monospace;
   color: var(--foreground);
 }
 
@@ -103,7 +103,7 @@
   font-size: 1.75rem;
   font-weight: 600;
   line-height: 1;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-inter), ui-monospace, monospace;
   color: var(--foreground);
 }
 

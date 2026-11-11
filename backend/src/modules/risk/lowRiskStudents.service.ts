@@ -1,6 +1,11 @@
 import { prisma } from "../../lib/prisma.js";
-import { computeRiskFactors, levelFromFlags, resolveActiveTermId, sectionAttendanceTotals } from "../../services/risk.js";
+import { attendanceTotalFor, computeRiskFactors, levelFromFlags, resolveActiveTermId, sectionAttendanceTotals } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
 export interface LowRiskStudent {
@@ -51,6 +56,7 @@ export async function getLowRiskStudents(
       }
     : null;
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosters] = await Promise.all([
     prisma.studentProfile.findMany({
       where: {
@@ -58,6 +64,7 @@ export async function getLowRiskStudents(
           ...(schoolYearId ? [{ section: { schoolYearId } }] : []),
           ...(profileSearch ? [profileSearch] : []),
         ],
+        ...excludeArchivedProfiles(archivedLearners),
       },
       orderBy: { lrn: "asc" },
       take: 5000,
@@ -73,7 +80,10 @@ export async function getLowRiskStudents(
           where: termId ? { termId } : undefined,
           select: { status: true, subjectId: true },
         },
-        anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
+        anecdotalRecords: {
+          where: { deletedAt: null, ...(termId ? { termId } : {}) },
+          select: { id: true },
+        },
       },
     }),
     prisma.studentRoster.findMany({
@@ -82,10 +92,12 @@ export async function getLowRiskStudents(
           ...(schoolYearId ? [{ schoolYearId }] : []),
           ...(rosterSearch ? [rosterSearch] : []),
         ],
+        ...excludeArchivedRosters(archivedLearners),
       },
       orderBy: { lrn: "asc" },
       take: 5000,
       select: {
+        id: true,
         lrn: true,
         fullName: true,
         sectionId: true,
@@ -97,7 +109,10 @@ export async function getLowRiskStudents(
           where: termId ? { termId } : undefined,
           select: { status: true, subjectId: true },
         },
-        anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
+        anecdotalRecords: {
+          where: { deletedAt: null, ...(termId ? { termId } : {}) },
+          select: { id: true },
+        },
       },
     }),
   ]);
@@ -130,7 +145,7 @@ export async function getLowRiskStudents(
     const flags = computeRiskFactors({
       finalGrades: r.finalGrades,
       attendance: r.attendanceRecords,
-      attendanceTotal: sectionTotals.get(r.sectionId),
+      attendanceTotal: attendanceTotalFor(sectionTotals, r.sectionId, r.id),
       anecdotalCount: r.anecdotalRecords.length,
       enrolled: headcounts.get(r.sectionId) ?? 0,
     });
