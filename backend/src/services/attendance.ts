@@ -1,3 +1,3 @@
-export { buildDayAxis, buildSchoolDayAxis, countSchoolDays, formatDateKey, isWeekendKey, manilaKey, phTodayKey, schoolDaysToDate } from "./attendance.date.utils.js";
+export { buildDayAxis, buildSchoolDayAxis, countSchoolDays, formatDateKey, isWeekendKey, manilaKey, phTodayKey, schoolDaysToDate, termHasStarted } from "./attendance.date.utils.js";
 export { attendanceTrend, avgPresentPercent, below80Days, buildOfferedMap, dailyFromSubjects, dailyPresentPercent, groupSectionDay, groupSubjectDay, sectionStrictDays, studentDayOutcomes, subjectRate, type AttendanceStatus, type DayAgg, type SectionStrictDay, type SectionSubjectTake, type StudentDayOutcome, type SubjectDayAgg } from "./attendance.agg.utils.js";
 export { ATTENDANCE_RISK_CUTOFF, computeAttendanceRate, computeSubjectAttendanceRate, subjectAverageAttendance, type AttendanceRate, type SubjectAverageEntry, type SubjectAttendanceRate } from "./attendance.rate.service.js";

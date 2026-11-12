@@ -19,6 +19,18 @@
   min-width: 0;
 }
 
+/* Empty board: no title and no grade filter, so the create action is the whole
+   toolbar and pins to the right edge. */
+.toolbar[data-empty] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The create action is a 24px button, matching the per-card actions. */
+.createBtn {
+  height: 1.5rem;
+  padding-inline: 0.5rem;
+}
+
 .toolbarText {
   display: flex;
   flex-direction: column;
@@ -286,18 +298,26 @@
   animation: pending-spin 1s linear infinite;
 }
 
-.emptyCard {
+/* Empty board — the shared insight callout centered under the toolbar, not a
+   dashed card. The shell's content area is only as tall as its children, so the
+   centering height comes from the viewport minus the topbar (3rem desktop, 6rem
+   mobile tab bar), the main padding (2rem) and the toolbar + board gap (~2rem). */
+.emptyCallout {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  min-height: 7rem;
-  padding: 1.5rem;
-  border: 1px dashed var(--border);
-  border-radius: 0.75rem;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  animation: card-in 500ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  min-height: calc(100vh - 7rem);
+  padding: 1.5rem 0;
+}
+
+.emptyCallout > p {
+  text-align: center;
+}
+
+@media (max-width: 1023px) {
+  .emptyCallout {
+    min-height: calc(100vh - 10rem);
+  }
 }
 
 /* ── Loading skeleton — mirrors the flat grid ────────────────────────── */
@@ -377,8 +397,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card,
-  .emptyCard {
+  .card {
     animation: none;
     transition: none;
   }

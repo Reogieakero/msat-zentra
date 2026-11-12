@@ -12,7 +12,7 @@ import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDial
 import { GcForm03PreviewDialog } from "@/app/guidance/adm/components/GcForm03PreviewDialog";
 import { SignReturnConfirmDialog } from "./SignReturnConfirmDialog";
 import { ShieldCheck } from "lucide-react";
-import { PrincipalEmptyCard } from "../../../components/PrincipalEmptyCard";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Pill } from "@/components/ui/pill";
 import { Pagination } from "@/components/shared/pagination";
@@ -21,13 +21,13 @@ import { useAdmReferralsList } from "./components/use-adm-referrals-list";
 import { useGcForm03Opener } from "./components/use-gc-form-03-opener";
 import {
   AdmReferralsTable,
+  matchesLane,
   type AdmReferralLaneFilter,
 } from "./components/adm-referrals-table";
 import { AdmReferralsBoard } from "./components/adm-referrals-board";
 import { AdmFormsModal } from "./components/adm-forms-modal";
 import { AdmPreviewModal, type AdmPreviewState } from "./components/adm-preview-modal";
-import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
-import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useSearchParams } from "next/navigation";
 import { stageLabel } from "../../adm";
 import menu from "../../../risk/heatmaps/components/heatmap.module.css";
@@ -59,23 +59,39 @@ function PrincipalAdmReferralsAllPageInner() {
   const [laneFilter, setLaneFilter] =
     React.useState<AdmReferralLaneFilter>("all");
   const [searchInput, setSearchInput] = React.useState(searchParams.get("q") ?? "");
-  const search = useDebouncedValue(searchInput.trim(), 300);
-  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q"] });
-  const page = pager.page;
-  const setPage = pager.setPage;
-  const { rows, setRows, totalCount, loading, isFetching, error, refetch } =
-    useAdmReferralsList(search, page);
+  const search = searchInput.trim();
+  const [page, setPage] = React.useState(() => {
+    const raw = Number(searchParams.get("page") ?? "1");
+    return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : 1;
+  });
+  const { rows, setRows, loading, isFetching, error, refetch } =
+    useAdmReferralsList();
 
-  // Keep search in the URL and reset to page 1 when it changes.
-  const firstSearchSync = React.useRef(true);
+  // Whole cohort cached once: search + lane filter run in memory, so a
+  // keystroke never fires a request and never shows a stale result set.
+  const filteredRows = React.useMemo(() => {
+    const needle = search.toLowerCase();
+    return rows.filter((row) => {
+      if (laneFilter !== "all" && !matchesLane(row, laneFilter)) return false;
+      if (!needle) return true;
+      return `${row.student} ${row.lrn} ${row.id}`
+        .toLowerCase()
+        .includes(needle);
+    });
+  }, [rows, search, laneFilter]);
+
+  const total = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pageRows = React.useMemo(
+    () => filteredRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [filteredRows, safePage],
+  );
+
+  // A new search/filter always starts at page 1.
   React.useEffect(() => {
-    if (firstSearchSync.current) {
-      firstSearchSync.current = false;
-      return;
-    }
-    pager.setFilters({ q: search || undefined });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+    setPage(1);
+  }, [search, laneFilter]);
   const { gcOpen, setGcOpen, gcData, openGcForm03 } = useGcForm03Opener();
   const [pendingAction, setPendingAction] = React.useState<{
     id: string;
@@ -176,7 +192,7 @@ function PrincipalAdmReferralsAllPageInner() {
   };
   const pendingRow =
     pendingAction && rows.find((r) => r.id === pendingAction.id);
-  const isEmpty = !loading && !error && totalCount === 0 && search.trim() === "";
+  const isEmpty = !loading && !error && rows.length === 0 && search === "";
   return (
     <div className={menu.shell}>
       <div className={menu.layout}>
@@ -186,21 +202,20 @@ function PrincipalAdmReferralsAllPageInner() {
           aria-busy={loading || undefined}
         >
           {isEmpty ? (
-            <PrincipalEmptyCard
-              icon={ShieldCheck}
-              title="No referrals found"
-              hint="Endorsed cases will appear here once filed."
-              label="Endorsed ADM Cases"
-              centered
-            />
+            <PageEmptyCallout>
+              No referrals found. Endorsed ADM cases will appear here once
+              filed.
+            </PageEmptyCallout>
           ) : (
             <KanbanBoard
               title="Endorsed ADM Cases"
               icon={<ShieldCheck size={14} aria-hidden="true" />}
               description={
-                totalCount === 0
-                  ? "No ADM referrals on record."
-                  : `${totalCount} case${totalCount === 1 ? "" : "s"} endorsed by the ADM Coordinator — signed cases stay on this list and are final.`
+                total === 0
+                  ? search
+                    ? "No cases match your search."
+                    : "No ADM referrals on record."
+                  : `${total} case${total === 1 ? "" : "s"} endorsed by the ADM Coordinator — signed cases stay on this list and are final.`
               }
               headerCenter={
                 <div
@@ -247,16 +262,16 @@ function PrincipalAdmReferralsAllPageInner() {
               }
               footer={
                 <Pagination
-                  currentPage={page}
-                  totalItems={totalCount}
+                  currentPage={safePage}
+                  totalItems={total}
+                  pageSize={PAGE_SIZE}
                   onPageChange={setPage}
                 />
               }
             >
               {laneFilter === "all" ? (
                 <AdmReferralsTable
-                  rows={rows}
-                  totalCount={totalCount}
+                  rows={pageRows}
                   loading={loading}
                   isFetching={isFetching}
                   error={error}
@@ -272,7 +287,7 @@ function PrincipalAdmReferralsAllPageInner() {
                 />
               ) : (
                 <AdmReferralsBoard
-                  rows={rows}
+                  rows={pageRows}
                   loading={loading}
                   isFetching={isFetching}
                   error={error}

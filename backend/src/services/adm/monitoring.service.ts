@@ -65,12 +65,46 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * the profile UUID, so shared links stay readable. Old UUID links still resolve.
  * Names collide only inside one advisory section, so the newest case wins.
  */
-async function resolveCaseId(userId: string, identifier: string): Promise<string> {
+async function resolveAdvisedCaseId(
+  userId: string,
+  identifier: string,
+  termId: string | null,
+): Promise<string> {
+  if (UUID_RE.test(identifier)) return identifier;
+  const slug = identifier.trim().toLowerCase();
+  if (!slug) throw new AppError(404, "NOT_FOUND", "ADM case not found");
+  // Cases are shared across the terms of a school year, so a slug resolves
+  // inside the selected year (names collide across years, never within one).
+  const schoolYearId = termId
+    ? (
+        await prisma.term.findUnique({
+          where: { id: termId },
+          select: { schoolYearId: true },
+        })
+      )?.schoolYearId ?? null
+    : null;
+  const candidates = await prisma.admLearnerProfile.findMany({
+    where: {
+      student: { section: { adviserId: userId } },
+      ...(schoolYearId ? { term: { schoolYearId } } : {}),
+    },
+    select: {
+      id: true,
+      student: { select: { user: { select: { fullName: true } } } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const match = candidates.find((c) => caseSlug(c.student.user.fullName) === slug);
+  if (!match) throw new AppError(404, "NOT_FOUND", "ADM case not found");
+  return match.id;
+}
+
+/** Coordinator / principal read-only resolver — any ADM case, newest wins. */
+async function resolveAnyCaseId(identifier: string): Promise<string> {
   if (UUID_RE.test(identifier)) return identifier;
   const slug = identifier.trim().toLowerCase();
   if (!slug) throw new AppError(404, "NOT_FOUND", "ADM case not found");
   const candidates = await prisma.admLearnerProfile.findMany({
-    where: { student: { section: { adviserId: userId } } },
     select: {
       id: true,
       student: { select: { user: { select: { fullName: true } } } },
@@ -88,9 +122,9 @@ const startOfToday = () => {
   return d;
 };
 
-async function loadAdvisedCase(userId: string, identifier: string) {
-  const profile = await prisma.admLearnerProfile.findUnique({
-    where: { id: await resolveCaseId(userId, identifier) },
+function loadCaseById(id: string) {
+  return prisma.admLearnerProfile.findUnique({
+    where: { id },
     select: {
       id: true,
       referralId: true,
@@ -98,6 +132,7 @@ async function loadAdvisedCase(userId: string, identifier: string) {
       eligibilityStatus: true,
       approvedAt: true,
       createdAt: true,
+      termId: true,
       certificationDetails: true,
       student: {
         select: {
@@ -111,6 +146,7 @@ async function loadAdvisedCase(userId: string, identifier: string) {
             select: {
               id: true,
               name: true,
+              gradeLevel: true,
               adviserId: true,
             },
           },
@@ -126,7 +162,28 @@ async function loadAdvisedCase(userId: string, identifier: string) {
       },
     },
   });
+}
+
+type LoadedCase = NonNullable<Awaited<ReturnType<typeof loadCaseById>>>;
+
+async function loadAdvisedCase(
+  userId: string,
+  identifier: string,
+  termId: string | null,
+): Promise<LoadedCase> {
+  const profile = await loadCaseById(await resolveAdvisedCaseId(userId, identifier, termId));
   if (!profile) throw new AppError(404, "NOT_FOUND", "ADM case not found");
+  // The desk shows every case filed in the selected school year: a case from
+  // an earlier term still opens (and is edited) from a later term's board.
+  if (termId && profile.termId !== termId) {
+    const [selected, caseTerm] = await Promise.all([
+      prisma.term.findUnique({ where: { id: termId }, select: { schoolYearId: true } }),
+      prisma.term.findUnique({ where: { id: profile.termId }, select: { schoolYearId: true } }),
+    ]);
+    if (!selected || !caseTerm || selected.schoolYearId !== caseTerm.schoolYearId) {
+      throw new AppError(404, "NOT_FOUND", "ADM case not found");
+    }
+  }
   const sectionId = profile.student.section?.id ?? null;
   const adviserId = profile.student.section?.adviserId ?? null;
   if (!sectionId || adviserId !== userId) {
@@ -162,9 +219,22 @@ function computeProgress(
   };
 }
 
-export async function getMonitoredCase(userId: string, caseId: string) {
-  const profile = await loadAdvisedCase(userId, caseId);
+export async function getMonitoredCase(
+  userId: string,
+  caseId: string,
+  termId: string | null = null,
+) {
+  return buildCasePayload(await loadAdvisedCase(userId, caseId, termId));
+}
 
+/** Read-only monitoring payload for the coordinator / principal desks. */
+export async function getCoordinatorMonitoredCase(identifier: string) {
+  const profile = await loadCaseById(await resolveAnyCaseId(identifier));
+  if (!profile) throw new AppError(404, "NOT_FOUND", "ADM case not found");
+  return buildCasePayload(profile);
+}
+
+async function buildCasePayload(profile: LoadedCase) {
   const sectionId = profile.student.section?.id ?? null;
   const [modules, sectionModules, devices, meetings, forms] = await Promise.all([
     prisma.admModule.findMany({
@@ -188,7 +258,12 @@ export async function getMonitoredCase(userId: string, caseId: string) {
     // here — the adviser edits them (and every other learner's row) there.
     sectionId
       ? prisma.advisoryModule.findMany({
-          where: { sectionId, kind: "adm" },
+          where: {
+            sectionId,
+            kind: "adm",
+            // The case desk follows the case's term — never another term's board.
+            ...(profile.termId ? { termId: profile.termId } : {}),
+          },
           select: {
             id: true,
             moduleName: true,
@@ -310,7 +385,7 @@ export async function getMonitoredCase(userId: string, caseId: string) {
     lrn: profile.student.lrn,
     mascot: profile.student.mascot ?? null,
     photoUrl: profile.student.photoUrl ?? null,
-    gradeLevel: profile.student.gradeLevel,
+    gradeLevel: profile.student.section?.gradeLevel ?? profile.student.gradeLevel,
     section: profile.student.section?.name ?? "",
     referralStatus: profile.referral.status,
     consultReviewer: profile.referral.consultReviewer ?? null,
@@ -372,9 +447,10 @@ export async function updateModule(
   userId: string,
   caseId: string,
   moduleId: string,
-  input: AdmModuleInput
+  input: AdmModuleInput,
+  termId: string | null = null,
 ) {
-  const profile = await loadAdvisedCase(userId, caseId);
+  const profile = await loadAdvisedCase(userId, caseId, termId);
   const module = await prisma.admModule.findFirst({
     where: { id: moduleId, admLearnerProfileId: profile.id },
     select: {

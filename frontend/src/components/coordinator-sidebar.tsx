@@ -3,18 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  Inbox,
-  GraduationCap,
-  Award,
-  Tablet,
-  Settings,
-  type LucideIcon,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import styles from "./coordinator-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { NAV_ICONS } from "./nav/sidebar-icons";
 import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { CoordinatorSidebarReminder } from "./coordinator-sidebar-reminder";
 import { CoordinatorSidebarDeviceReminder } from "./coordinator-sidebar-device-reminder";
@@ -35,26 +28,26 @@ const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { title: "Overview", href: "/coordinator/overview", icon: LayoutDashboard },
+      { title: "Overview", href: "/coordinator/overview", icon: NAV_ICONS.overview },
     ],
   },
   {
     label: "Intake",
     items: [
-      { title: "ADM Cases", href: "/coordinator/referrals", icon: Inbox },
+      { title: "ADM Cases", href: "/coordinator/referrals", icon: NAV_ICONS.admCases },
     ],
   },
   {
     label: "Monitoring",
     items: [
-      { title: "Enrolled", href: "/coordinator/enrolled", icon: GraduationCap },
+      { title: "Enrolled", href: "/coordinator/enrolled", icon: NAV_ICONS.enrolled },
     ],
   },
   {
     label: "Records",
     items: [
-      { title: "Certifications", href: "/coordinator/certifications", icon: Award },
-      { title: "Devices", href: "/coordinator/devices", icon: Tablet },
+      { title: "Certifications", href: "/coordinator/certifications", icon: NAV_ICONS.certifications },
+      { title: "Devices", href: "/coordinator/devices", icon: NAV_ICONS.devices },
     ],
   },
   {
@@ -63,7 +56,7 @@ const NAV: NavGroup[] = [
       {
         title: "General Settings",
         href: "/coordinator/settings",
-        icon: Settings,
+        icon: NAV_ICONS.settings,
       },
     ],
   },

@@ -37,12 +37,12 @@ function CoordinatorEnrolledPageInner() {
           : styles.page
       }
       aria-label="Enrolled students"
-      aria-busy={r.enrolledPending || undefined}
+      aria-busy={r.enrolledPending || r.enrolledPageLoading || undefined}
     >
       {!r.enrolledPending && !r.enrolledError && r.rows.length === 0 && !r.hasActiveFilters ? null : (
         <CoordinatorEnrolledBoard
           rows={r.rows}
-          isPending={r.enrolledPending}
+          isPending={r.enrolledPending || r.enrolledPageLoading}
           isError={r.enrolledError}
           isRefetching={r.enrolledRefetching}
           hasActiveFilters={r.hasActiveFilters}

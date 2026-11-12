@@ -14,8 +14,10 @@ export type DockTaskKind =
   | "adm-book"
   | "adm-complete"
   | "lock-grades"
+  | "term-context"
   | "sf10-upload"
   | "sf10-request"
+  | "sf10-autofill"
   | "score-save"
   | "weights-save"
   | "assessment-add"
@@ -23,6 +25,7 @@ export type DockTaskKind =
   | "attendance-save"
   | "timetable-save"
   | "unlink-code"
+  | "link-code"
   | "anecdotal-file"
   | "generic";
 

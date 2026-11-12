@@ -1,5 +1,6 @@
 "use client";
 import { AlertTriangle } from "lucide-react";
+import { Pill } from "@/components/ui/pill";
 import { WEEK_LABELS_SHORT } from "@/services/teacher/schedule";
 import { formatRange, type TimetableRow } from "./schedule-time";
 import { DropdownSelect } from "@/app/principal/academics/assign/components/DropdownSelect";
@@ -95,6 +96,10 @@ export function ScheduleTemplateGrid({
                   const conflicted =
                     effectiveTeacher !== "" && conflictedCells.has(conflictKey(day, row.periodIndex, effectiveTeacher));
                   const staged = stagedKeys?.has(key) ?? false;
+                  const subject = cell ? subjects.find((s) => s.id === cell.subjectId) : undefined;
+                  const teacherName =
+                    (effectiveTeacher ? teachers.find((t) => t.id === effectiveTeacher)?.name : null) ??
+                    "No teacher";
                   return (
                     <td key={day} className="border-t p-1 align-top">
                       <div
@@ -106,87 +111,137 @@ export function ScheduleTemplateGrid({
                               : "border-input bg-card"
                         }`}
                       >
-                        {staged ? (
-                          <span
-                            title="Unsaved changes — press Save"
-                            className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-amber-500"
-                            aria-hidden
-                          />
-                        ) : null}
-                        <DropdownSelect
-                          value={subjectId}
-                          onValueChange={(v) => {
-                            if (isLocked || saving) return;
-                            if (v === "") {
-                              onClear(day, row.periodIndex);
-                              return;
-                            }
-                            // One-subject-one-teacher: a newly picked subject
-                            // immediately takes its single owner, if any.
-                            const pickedOwners = Array.from(new Set(subjectTeacherMap[v] ?? []));
-                            const pickedOwner = pickedOwners.length === 1 ? pickedOwners[0] : null;
-                            const keepOwner = lockedOwner && v === subjectId ? lockedOwner : null;
-                            onChange(day, row.periodIndex, v, pickedOwner ?? keepOwner ?? effectiveTeacher);
-                          }}
-                          options={subjects.map((s) => ({
-                            value: s.id,
-                            label: (
-                              <span className={dropdownStyles.optionLabel}>
-                                <span className={dropdownStyles.optionName}>{s.code}</span>
-                                <span className={dropdownStyles.gradePill}>
-                                  {s.category === "ELECTIVE" ? "Elective" : "Core"}
+                        {isLocked ? (
+                          // Approved: read-only slot. No dropdown chrome — the
+                          // timetable is the official record until the user
+                          // presses Edit.
+                          cell ? (
+                            <div className="flex min-w-0 flex-col gap-1">
+                              <span className="flex min-w-0 items-center justify-between gap-1.5">
+                                <span
+                                  className="truncate text-[13px] font-semibold"
+                                  title={subject?.name ?? "Subject"}
+                                >
+                                  {subject?.code || subject?.name || "Subject"}
                                 </span>
+                                <Pill
+                                  tone={subject?.category === "ELECTIVE" ? "sky" : "amber"}
+                                  label="Subject type"
+                                >
+                                  {subject?.category === "ELECTIVE" ? "Elective" : "Core"}
+                                </Pill>
                               </span>
-                            ),
-                          }))}
-                          placeholder="Subject…"
-                          ariaLabel={`Subject ${WEEK_LABELS_SHORT[day - 1]} ${formatRange(row.startMin, row.endMin)}`}
-                          triggerClassName={dropdownStyles.dropdown32}
-                        />
-                        {lockedOwner ? (
-                          <p className="px-1 text-[11px] text-muted-foreground" aria-live="polite">
-                            <span className="font-semibold text-amber-600 dark:text-amber-400">
-                              {teachers.find((t) => t.id === lockedOwner)?.name ?? "Teacher"}
-                            </span>{" "}
-                            owns this subject here
-                          </p>
+                              <span
+                                className="truncate text-[11px] text-muted-foreground"
+                                title={teacherName}
+                              >
+                                {teacherName}
+                              </span>
+                            </div>
+                          ) : (
+                            <span
+                              className="flex min-h-9 items-center justify-center text-xs text-muted-foreground"
+                              aria-hidden
+                            >
+                              —
+                            </span>
+                          )
                         ) : (
-                          <DropdownSelect
-                            value={effectiveTeacher}
-                            onValueChange={(v) => {
-                              if (isLocked || saving || subjectId === "") return;
-                              onChange(day, row.periodIndex, subjectId, v);
-                            }}
-                            options={teachers.map((t) => ({
-                              value: t.id,
-                              label: (
-                                <span className={dropdownStyles.optionLabel}>
-                                  <span className={dropdownStyles.optionName}>{t.name}</span>
-                                  {t.code ? <span className={dropdownStyles.gradePill}>{t.code}</span> : null}
+                          <>
+                            {staged ? (
+                              <span
+                                title="Unsaved changes — press Save"
+                                className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-amber-500"
+                                aria-hidden
+                              />
+                            ) : null}
+                            <DropdownSelect
+                              value={subjectId}
+                              onValueChange={(v) => {
+                                if (saving) return;
+                                if (v === "") {
+                                  onClear(day, row.periodIndex);
+                                  return;
+                                }
+                                // One-subject-one-teacher: a newly picked subject
+                                // immediately takes its single owner, if any.
+                                const pickedOwners = Array.from(new Set(subjectTeacherMap[v] ?? []));
+                                const pickedOwner = pickedOwners.length === 1 ? pickedOwners[0] : null;
+                                const keepOwner = lockedOwner && v === subjectId ? lockedOwner : null;
+                                onChange(day, row.periodIndex, v, pickedOwner ?? keepOwner ?? effectiveTeacher);
+                              }}
+                              options={subjects.map((s) => ({
+                                value: s.id,
+                                label: (
+                                  <span className={dropdownStyles.optionLabel}>
+                                    <span className={dropdownStyles.optionName}>{s.code}</span>
+                                    <span className={dropdownStyles.gradePill}>
+                                      {s.category === "ELECTIVE" ? "Elective" : "Core"}
+                                    </span>
+                                  </span>
+                                ),
+                              }))}
+                              placeholder="Subject…"
+                              ariaLabel={`Subject ${WEEK_LABELS_SHORT[day - 1]} ${formatRange(row.startMin, row.endMin)}`}
+                              triggerClassName={dropdownStyles.dropdown32}
+                              disabled={saving}
+                            />
+                            {lockedOwner ? (
+                              <Pill
+                                tone="amber"
+                                label="Subject owner"
+                                aria-live="polite"
+                                className="max-w-full min-w-0 self-start"
+                              >
+                                <span className="truncate">
+                                  {teachers.find((t) => t.id === lockedOwner)?.name ?? "Teacher"} owns this subject
                                 </span>
-                              ),
-                            }))}
-                            placeholder="Teacher…"
-                            ariaLabel={`Teacher ${WEEK_LABELS_SHORT[day - 1]} ${formatRange(row.startMin, row.endMin)}`}
-                            triggerClassName={dropdownStyles.dropdown32}
-                          />
+                              </Pill>
+                            ) : (
+                              <DropdownSelect
+                                value={effectiveTeacher}
+                                onValueChange={(v) => {
+                                  if (saving || subjectId === "") return;
+                                  onChange(day, row.periodIndex, subjectId, v);
+                                }}
+                                options={teachers.map((t) => ({
+                                  value: t.id,
+                                  label: (
+                                    <span className={dropdownStyles.optionLabel}>
+                                      <span className={dropdownStyles.optionName}>{t.name}</span>
+                                      {t.code ? <span className={dropdownStyles.gradePill}>{t.code}</span> : null}
+                                    </span>
+                                  ),
+                                }))}
+                                placeholder="Teacher…"
+                                ariaLabel={`Teacher ${WEEK_LABELS_SHORT[day - 1]} ${formatRange(row.startMin, row.endMin)}`}
+                                triggerClassName={dropdownStyles.dropdown32}
+                                disabled={saving}
+                              />
+                            )}
+                            {conflicted ? (
+                              <Pill
+                                tone="amber"
+                                label="Double-booked — saved with warning"
+                                role="alert"
+                                className="max-w-full min-w-0 self-start"
+                              >
+                                <AlertTriangle size={12} aria-hidden />
+                                <span className="truncate">Double-booked</span>
+                              </Pill>
+                            ) : null}
+                            {cell ? (
+                              <button
+                                type="button"
+                                onClick={() => onClear(day, row.periodIndex)}
+                                disabled={saving}
+                                className="self-end text-[11px] text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
+                              >
+                                Clear
+                              </button>
+                            ) : null}
+                          </>
                         )}
-                        {conflicted ? (
-                          <p role="alert" className="flex items-center gap-1 px-1 text-[11px] text-amber-600 dark:text-amber-500">
-                            <AlertTriangle size={12} aria-hidden />
-                            Double-booked — saved with warning
-                          </p>
-                        ) : null}
-                        {cell ? (
-                          <button
-                            type="button"
-                            onClick={() => onClear(day, row.periodIndex)}
-                            disabled={isLocked || saving}
-                            className="self-end text-[11px] text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
-                          >
-                            Clear
-                          </button>
-                        ) : null}
                       </div>
                     </td>
                   );

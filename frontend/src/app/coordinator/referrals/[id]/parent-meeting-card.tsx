@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Pill } from "@/components/ui/pill";
 import { friendlyWords, venueLabel } from "@/services/coordinator/labels";
 import styles from "./case-page.module.css";
 import {
@@ -51,30 +52,32 @@ export function ParentMeetingCard({
       aria-hidden={active ? undefined : true}
     >
       <div className={styles.badgeRow} style={{ marginTop: 0 }}>
-        <span className={styles.meetingPill}>{venueLabel(m.venue)}</span>
+        <Pill tone="neutral" label="Venue">
+          {venueLabel(m.venue)}
+        </Pill>
         {m.attended ? (
-          <span className={`${styles.meetingPill} ${styles.meetingPillGreen}`}>
+          <Pill tone="green" label="Attendance">
             Attended
-          </span>
+          </Pill>
         ) : (
-          <span className={`${styles.meetingPill} ${styles.meetingPillBlue}`}>
+          <Pill tone="blue" label="Meeting status">
             Booked
-          </span>
+          </Pill>
         )}
         {showCountdown && timing.state === "upcoming" ? (
-          <span className={`${styles.meetingPill} ${styles.meetingPillAmber}`}>
+          <Pill tone="amber" label="Time until start">
             Starts in {formatCountdown(timing.msUntil)}
-          </span>
+          </Pill>
         ) : null}
         {timing.state === "live" ? (
-          <span className={`${styles.meetingPill} ${styles.meetingPillGreen}`}>
+          <Pill tone="green" label="Meeting status">
             Live now
-          </span>
+          </Pill>
         ) : null}
         {showCountdown && timing.state === "overdue" ? (
-          <span className={`${styles.meetingPill} ${styles.meetingPillRed}`}>
+          <Pill tone="red" label="Time overdue">
             Overdue by {formatCountdown(timing.msOverdue)}
-          </span>
+          </Pill>
         ) : null}
       </div>
       {m.invitees && m.invitees.length > 0 ? (

@@ -2,6 +2,8 @@ import { prisma } from "../lib/prisma.js";
 import { resolveActiveTermId as resolveActiveTermIdCore } from "../lib/term-resolve.js";
 import { sectionHeadcounts } from "./enrollment.js";
 import { notifyInterventionDetected } from "../lib/notify.js";
+import { invalidateTags } from "../lib/cache.js";
+import { bumpRiskCohortVersion } from "../lib/riskCohortCache.js";
 import { isAdmExempt } from "./adm/attendancePolicy.js";
 import type { RiskLevel } from "../generated/prisma/client.js";
 
@@ -40,6 +42,8 @@ function flagsFromParts(args: {
   // Denominator: the section's meetups for the whole term when supplied, so a
   // learner added mid-term is rated from the term's first meetup (their
   // pre-enrolment days count as missed) instead of from their first mark.
+  // Transferees are the exception — their roster entry in sectionAttendanceTotals
+  // counts only meetups after the enlistment day.
   const attTotal = Math.max(args.attendanceTotal ?? 0, args.attendance.length);
   // No attendance signal at all — never treat an empty record set as 0%.
   // Signed ADM cases are exempt: seat time is the wrong metric for them, so
@@ -64,21 +68,20 @@ function flagsFromParts(args: {
 }
 
 /**
- * Elapsed class meetups per section for a term, anchored at the TERM START
- * DATE — not at the date a learner was added. The risk engine and the
- * principal hover card share this denominator so classmates always read the
- * same /N.
+ * Elapsed class meetups per section for a term as actual calendar dates
+ * (ISO `YYYY-MM-DD`), anchored at the TERM START DATE. Meetups come from the
+ * published timetable (one date per scheduled subject/weekday from term start
+ * up to today or term end); sections without a published timetable fall back
+ * to the distinct attendance sheets actually recorded.
  *
- * Meetups come from the published timetable (one per scheduled subject/day
- * from term start up to today or term end). Sections without a published
- * timetable fall back to the distinct attendance sheets actually recorded,
- * and we never report fewer meetups than were recorded.
+ * Transferees are rated from their enlistment date, so callers that need a
+ * learner-specific denominator slice these dates at `countMeetupsSince`.
  */
-export async function sectionAttendanceTotals(
+export async function sectionMeetupDates(
   sectionIds: string[],
   termId: string,
-): Promise<Map<string, number>> {
-  const out = new Map<string, number>();
+): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
   const ids = Array.from(new Set(sectionIds.filter((id): id is string => !!id)));
   if (ids.length === 0) return out;
 
@@ -101,15 +104,17 @@ export async function sectionAttendanceTotals(
     }),
   ]);
 
-  // Recorded sheets per section act as a floor: one meetup is one
-  // subject-slot sheet, or a legacy AM/PM session.
-  const recordedBySection = new Map<string, Set<string>>();
+  // One meetup is one subject-slot sheet, or a legacy AM/PM session.
+  const recordedBySection = new Map<string, string[]>();
+  const seenSheets = new Set<string>();
   for (const s of sheets) {
     const day = s.date.toISOString().slice(0, 10);
     const key = s.subjectId ? `${day}|${s.subjectId}|${s.slot}` : `${day}|legacy|${s.session}`;
-    const set = recordedBySection.get(s.sectionId) ?? new Set<string>();
-    set.add(key);
-    recordedBySection.set(s.sectionId, set);
+    if (seenSheets.has(`${s.sectionId}|${key}`)) continue;
+    seenSheets.add(`${s.sectionId}|${key}`);
+    const arr = recordedBySection.get(s.sectionId) ?? [];
+    arr.push(day);
+    recordedBySection.set(s.sectionId, arr);
   }
 
   const daysBySectionSubject = new Map<string, Set<number>>();
@@ -129,7 +134,7 @@ export async function sectionAttendanceTotals(
   })();
 
   for (const sectionId of ids) {
-    let meetups = 0;
+    const timetableDates: string[] = [];
     if (startStr && startStr <= endStr) {
       for (const [key, days] of daysBySectionSubject) {
         if (!key.startsWith(`${sectionId}|`)) continue;
@@ -140,13 +145,80 @@ export async function sectionAttendanceTotals(
         ) {
           const dow = d.getUTCDay();
           const day = dow === 0 ? 7 : dow;
-          if (days.has(day)) meetups += 1;
+          if (days.has(day)) timetableDates.push(d.toISOString().slice(0, 10));
         }
       }
     }
-    out.set(sectionId, Math.max(meetups, recordedBySection.get(sectionId)?.size ?? 0));
+    // Recorded sheets act as a floor when the timetable is missing; the two
+    // sources overlap on purpose, so take the larger count, never the sum.
+    const recorded = recordedBySection.get(sectionId) ?? [];
+    const dates =
+      timetableDates.length >= recorded.length ? timetableDates : [...recorded];
+    out.set(sectionId, dates.sort());
   }
   return out;
+}
+
+/**
+ * Meetups elapsed AFTER a learner's start date (null = whole term). A
+ * transferee is enlisted at some point during the start day, and that day's
+ * meetups may already have been taken without them — so their window opens on
+ * the next calendar day instead of handing them a day-one absence.
+ */
+export function countMeetupsSince(dates: string[], startDate: Date | null): number {
+  if (!startDate) return dates.length;
+  const startStr = startDate.toISOString().slice(0, 10);
+  return dates.filter((d) => d > startStr).length;
+}
+
+/**
+ * Elapsed class meetups per section for a term, anchored at the TERM START
+ * DATE — not at the date a learner was added. The risk engine and the
+ * principal hover card share this denominator so classmates always read the
+ * same /N. The map ALSO carries a `roster:<id>` entry for every transferee in
+ * these sections, counting only meetups after the day they were enlisted; read
+ * it with `attendanceTotalFor` for learner-level calls.
+ */
+export async function sectionAttendanceTotals(
+  sectionIds: string[],
+  termId: string,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const ids = Array.from(new Set(sectionIds.filter((id): id is string => !!id)));
+  if (ids.length === 0) return out;
+
+  const [meetupDates, transferees] = await Promise.all([
+    sectionMeetupDates(ids, termId),
+    prisma.studentRoster.findMany({
+      where: { sectionId: { in: ids }, learnerType: "transferee" },
+      select: { id: true, sectionId: true, createdAt: true },
+    }),
+  ]);
+
+  for (const [sectionId, dates] of meetupDates) {
+    out.set(sectionId, dates.length);
+  }
+  for (const t of transferees) {
+    const dates = meetupDates.get(t.sectionId) ?? [];
+    out.set(`roster:${t.id}`, countMeetupsSince(dates, t.createdAt));
+  }
+  return out;
+}
+
+/**
+ * Learner-level lookup over a `sectionAttendanceTotals` map: transferee roster
+ * learners read their enlistment-date window, everyone else the section total.
+ */
+export function attendanceTotalFor(
+  totals: Map<string, number>,
+  sectionId: string | null | undefined,
+  rosterId?: string | null,
+): number | undefined {
+  if (rosterId) {
+    const override = totals.get(`roster:${rosterId}`);
+    if (override !== undefined) return override;
+  }
+  return sectionId ? totals.get(sectionId) : undefined;
 }
 
 export async function evaluateRisk(
@@ -163,7 +235,7 @@ export async function evaluateRisk(
       where: { studentId, termId },
       select: { status: true, subjectId: true },
     }),
-    prisma.anecdotalRecord.count({ where: { studentId, termId } }),
+    prisma.anecdotalRecord.count({ where: { studentId, termId, deletedAt: null } }),
     prisma.studentProfile.findUnique({
       where: { userId: studentId },
       select: {
@@ -208,7 +280,7 @@ export async function evaluateBothRisk(
       where: { studentId, termId },
       select: { status: true, subjectId: true },
     }),
-    prisma.anecdotalRecord.count({ where: { studentId, termId } }),
+    prisma.anecdotalRecord.count({ where: { studentId, termId, deletedAt: null } }),
     prisma.studentProfile.findUnique({
       where: { userId: studentId },
       select: {
@@ -356,7 +428,7 @@ export async function evaluateRosterRisk(
       where: { rosterId, termId },
       select: { status: true, subjectId: true },
     }),
-    prisma.anecdotalRecord.count({ where: { rosterId, termId } }),
+    prisma.anecdotalRecord.count({ where: { rosterId, termId, deletedAt: null } }),
     prisma.studentRoster.findUnique({
       where: { id: rosterId },
       select: { sectionId: true },
@@ -373,7 +445,7 @@ export async function evaluateRosterRisk(
   return flagsFromParts({
     grades: finalGrades,
     attendance,
-    attendanceTotal: roster ? totals.get(roster.sectionId) : undefined,
+    attendanceTotal: attendanceTotalFor(totals, roster?.sectionId, rosterId),
     anecdotalCount: anecdotals,
     enrolled,
   });
@@ -392,7 +464,7 @@ export async function evaluateBothRosterRisk(
       where: { rosterId, termId },
       select: { status: true, subjectId: true },
     }),
-    prisma.anecdotalRecord.count({ where: { rosterId, termId } }),
+    prisma.anecdotalRecord.count({ where: { rosterId, termId, deletedAt: null } }),
     prisma.studentRoster.findUnique({
       where: { id: rosterId },
       select: { sectionId: true },
@@ -407,7 +479,7 @@ export async function evaluateBothRosterRisk(
   const parts = {
     grades: finalGrades,
     attendance,
-    attendanceTotal: roster ? totals.get(roster.sectionId) : undefined,
+    attendanceTotal: attendanceTotalFor(totals, roster?.sectionId, rosterId),
     anecdotalCount: anecdotals,
     enrolled,
   };
@@ -460,7 +532,31 @@ export async function isAdviserDataConnected(args: {
   return row?.section?.adviser?.staffProfile?.shareStudentData ?? false;
 }
 
-export async function recomputeRisk(studentId: string, termId: string) {
+/**
+ * Bust every desk that mirrors the live risk cohort after a flag change: the
+ * guidance board/alerts memoize their scan, and the API caches hold the old
+ * counts until their TTL. The cohort version makes a refetch recompute instead
+ * of reusing a pre-detection memo.
+ */
+function refreshRiskCaches() {
+  bumpRiskCohortVersion();
+  void invalidateTags([
+    "risk",
+    "guidance",
+    "guidance-interventions",
+    "interventions",
+    "alerts",
+    "overview",
+    "nurse",
+    "nurse-risk",
+  ]);
+}
+
+export async function recomputeRisk(
+  studentId: string,
+  termId: string,
+  opts?: { forceSnapshot?: boolean },
+) {
   const dual = await evaluateBothRisk(studentId, termId);
   const result = dual.final;
 
@@ -487,7 +583,7 @@ export async function recomputeRisk(studentId: string, termId: string) {
     (dual.finalFlags.attendanceFlag && !current.attendanceFlag) ||
     (dual.finalFlags.behavioralFlag && !current.behavioralFlag);
 
-  if (!flagsChanged) return result;
+  if (!flagsChanged && !opts?.forceSnapshot) return result;
 
   await prisma.$transaction([
     prisma.studentProfile.update({
@@ -517,14 +613,20 @@ export async function recomputeRisk(studentId: string, termId: string) {
       },
     }),
   ]);
+  refreshRiskCaches();
 
   const atRisk = result.riskLevel === "High" || result.riskLevel === "Moderate";
-  if (atRisk && newFactor && (await isAdviserDataConnected({ studentId }))) {
+  if (atRisk && newFactor) {
     const open = await prisma.intervention.findFirst({
       where: { studentId, termId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
       select: { id: true },
     });
-    if (!open) {
+    let interventionId = open?.id ?? null;
+    // Auto-open the guidance case only when the section adviser has connected
+    // their student data (data-sharing policy), but the detection itself is
+    // still announced: the live cohort already shows this learner on the
+    // guidance desks, so the notification/sound must not lag behind the board.
+    if (!open && (await isAdviserDataConnected({ studentId }))) {
       const guidance = await prisma.user.findFirst({
         where: { role: "guidance_counselor", status: "active" },
         select: { id: true },
@@ -542,19 +644,24 @@ export async function recomputeRisk(studentId: string, termId: string) {
             outcomeStatus: "ongoing",
           },
         });
-
-        void notifyInterventionDetected({
-          level: result.riskLevel,
-          interventionId: created.id,
-          studentId,
-        });
+        interventionId = created.id;
       }
     }
+
+    void notifyInterventionDetected({
+      level: result.riskLevel,
+      interventionId,
+      studentId,
+    });
   }
   return result;
 }
 
-export async function recomputeRosterRisk(rosterId: string, termId: string) {
+export async function recomputeRosterRisk(
+  rosterId: string,
+  termId: string,
+  opts?: { forceSnapshot?: boolean },
+) {
   const dual = await evaluateBothRosterRisk(rosterId, termId);
   const result = dual.final;
 
@@ -579,7 +686,7 @@ export async function recomputeRosterRisk(rosterId: string, termId: string) {
     (dual.finalFlags.attendanceFlag && !current.attendanceFlag) ||
     (dual.finalFlags.behavioralFlag && !current.behavioralFlag);
 
-  if (!flagsChanged) return result;
+  if (!flagsChanged && !opts?.forceSnapshot) return result;
 
   await prisma.$transaction([
     prisma.studentRoster.update({
@@ -610,14 +717,16 @@ export async function recomputeRosterRisk(rosterId: string, termId: string) {
       },
     }),
   ]);
+  refreshRiskCaches();
 
   const atRisk = result.riskLevel === "High" || result.riskLevel === "Moderate";
-  if (atRisk && newFactor && (await isAdviserDataConnected({ rosterId }))) {
+  if (atRisk && newFactor) {
     const open = await prisma.intervention.findFirst({
       where: { rosterId, termId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
       select: { id: true },
     });
-    if (!open) {
+    let interventionId = open?.id ?? null;
+    if (!open && (await isAdviserDataConnected({ rosterId }))) {
       const guidance = await prisma.user.findFirst({
         where: { role: "guidance_counselor", status: "active" },
         select: { id: true },
@@ -636,14 +745,15 @@ export async function recomputeRosterRisk(rosterId: string, termId: string) {
             outcomeStatus: "ongoing",
           },
         });
-
-        void notifyInterventionDetected({
-          level: result.riskLevel,
-          interventionId: created.id,
-          rosterId,
-        });
+        interventionId = created.id;
       }
     }
+
+    void notifyInterventionDetected({
+      level: result.riskLevel,
+      interventionId,
+      rosterId,
+    });
   }
   return result;
 }

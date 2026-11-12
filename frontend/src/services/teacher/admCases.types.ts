@@ -17,6 +17,8 @@ export interface AdmCase {
   eligibilityStatus: "pending" | "eligible" | "ineligible";
   approved: boolean;
   approvedAt: string | null;
+  /** Term the case was filed in — the desk shows every term of the school year. */
+  termNumber: number;
   datePrepared: string | null;
   meetingAttended: boolean | null;
   lastMeetingAt?: string | null;

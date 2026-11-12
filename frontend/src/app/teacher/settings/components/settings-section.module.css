@@ -193,22 +193,21 @@
 }
 
 .codeOverlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 10;
+  z-index: 60;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: 0.75rem 0.5rem;
-  border-radius: 0.625rem;
-  background: color-mix(in oklch, var(--background) 72%, transparent);
-  backdrop-filter: blur(2px);
+  padding: 1rem;
+  overflow-y: auto;
+  background: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(3px);
 }
 
 .codeOverlayCard {
-  position: sticky;
-  top: 0.75rem;
-  width: min(100%, 22rem);
+  width: min(100%, 24rem);
+  margin: auto;
   animation: reveal-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -321,29 +320,6 @@
 
 :global(.dark) .formAlertSuccess {
   color: #86efac;
-}
-
-/* Status pills under the display name — amber rectangles. */
-.pills {
-  min-width: 0;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border: 1px solid color-mix(in oklch, #f59e0b 45%, transparent);
-  border-radius: 6px;
-  background: color-mix(in oklch, #f59e0b 12%, transparent);
-  color: #b45309;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
-:global(.dark) .pill {
-  color: #fbbf24;
 }
 
 /* Mascot picker — scrollable grid of every sprite. */

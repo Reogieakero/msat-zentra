@@ -3,6 +3,7 @@
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import {
   admStageTone,
@@ -21,8 +22,16 @@ const dateLabel = (iso: string | null) => {
 
 export function MonitoringHeader({
   header,
+  backHref = "/teacher/advisory/adm-cases",
+  backLabel = "Back to ADM cases",
+  backVariant = "link",
 }: {
   header: AdmMonitoringCase["header"];
+  /** Where the back link points — the coordinator desk reuses this view. */
+  backHref?: string;
+  backLabel?: string;
+  /** `primary` renders a filled button instead of the quiet text link. */
+  backVariant?: "link" | "primary";
 }) {
   // One board per stat — the identity card above only carries the learner.
   const stats: {
@@ -63,12 +72,20 @@ export function MonitoringHeader({
 
   return (
     <div className="flex flex-col gap-3">
-      <Link
-        href="/teacher/advisory/adm-cases"
-        className="inline-flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft size={14} aria-hidden /> Back to ADM cases
-      </Link>
+      {backVariant === "primary" ? (
+        <Button asChild className="h-7 w-fit px-2.5 text-xs">
+          <Link href={backHref}>
+            <ArrowLeft size={14} aria-hidden /> {backLabel}
+          </Link>
+        </Button>
+      ) : (
+        <Link
+          href={backHref}
+          className="inline-flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft size={14} aria-hidden /> {backLabel}
+        </Link>
+      )}
 
       <div className="flex flex-wrap items-stretch gap-2" aria-label="Case statistics">
         <div className="flex min-w-[10rem] flex-1 items-center gap-2 rounded-md border bg-card px-3 py-2">
@@ -88,18 +105,18 @@ export function MonitoringHeader({
             >
               {header.studentName}
             </p>
-            <p className="m-0 truncate text-[11px] tabular-nums text-muted-foreground" title="LRN">
-              LRN {header.lrn}
-            </p>
+            <Pill tone="neutral" label="LRN" className="self-start tabular-nums">
+              {header.lrn}
+            </Pill>
           </div>
         </div>
 
         {stats.map(({ label, value, icon: Icon, mono }) => (
           <div
             key={label}
-            className="flex min-w-[7.5rem] flex-1 flex-col justify-between gap-1 rounded-md border bg-card px-3 py-2"
+            className="flex min-w-[7.5rem] flex-1 flex-col items-center justify-between gap-1 rounded-md border bg-card px-3 py-2 text-center"
           >
-            <p className="m-0 flex min-w-0 items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="m-0 flex min-w-0 items-center justify-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               {Icon ? <Icon size={11} className="shrink-0" aria-hidden /> : null}
               <span className="truncate" title={label}>
                 {label}
@@ -108,8 +125,8 @@ export function MonitoringHeader({
             <div
               className={
                 mono
-                  ? "truncate text-sm font-bold tabular-nums text-foreground"
-                  : "truncate text-sm font-bold text-foreground"
+                  ? "max-w-full truncate text-sm font-bold tabular-nums text-foreground"
+                  : "max-w-full truncate text-sm font-bold text-foreground"
               }
               title={typeof value === "string" ? value : undefined}
             >

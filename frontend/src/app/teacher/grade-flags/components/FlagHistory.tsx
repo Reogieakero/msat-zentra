@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
+
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
@@ -72,20 +74,20 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
     invalidateTeacher.flags();
   };
 
-  const mineQuery = useQuery<GradeFlagRow[]>({
+  const mineQuery = useLiveQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "mine", termKey],
     queryFn: ({ signal }) => fetchFlags("mine", { pageSize: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,
     enabled: mode === "raised-by-me",
   });
-  const againstQuery = useQuery<GradeFlagRow[]>({
+  const againstQuery = useLiveQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "against-me", termKey],
     queryFn: ({ signal }) => fetchFlags("against-me", { pageSize: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,
     enabled: mode === "against-me",
   });
 
-  const sectionsQuery = useQuery<{ sections: { advisedByMe: boolean }[] }>({
+  const sectionsQuery = useLiveQuery<{ sections: { advisedByMe: boolean }[] }>({
     queryKey: ["teacher-settings-adviser-sections", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{
@@ -96,7 +98,7 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
     staleTime: 30_000,
     retry: false,
   });
-  const adviseeQuery = useQuery<GradeFlagRow[]>({
+  const adviseeQuery = useLiveQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "advisees", termKey],
     queryFn: ({ signal }) => fetchFlags("advisees", { pageSize: PAGE_SIZE, signal }),
     placeholderData: keepPreviousData,

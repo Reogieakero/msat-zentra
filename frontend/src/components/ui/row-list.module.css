@@ -41,6 +41,24 @@
   will-change: transform, opacity;
 }
 
+/* Opt-in entrance cascade (same curve as the principal schedule board):
+   rows lift in one after another. Callers set `animationDelay` inline so the
+   stagger replays on filter changes when the list is re-keyed. */
+.rowsIn > .row {
+  animation: row-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Lead-pill variant (e.g. a term chip before the status pill) gets an
    extra column. The @supports subgrid override below still wins in modern
    browsers so the shared list tracks keep every row aligned. */
@@ -142,5 +160,9 @@
 @media (prefers-reduced-motion: reduce) {
   .row {
     transition: none;
+  }
+
+  .rowsIn > .row {
+    animation: none;
   }
 }

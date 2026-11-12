@@ -1,13 +1,15 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
+import { liveQueryOptions } from "@/lib/api/live";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
 import { writeCachedAdviser, writeCachedMasterTeacher } from "./flagCache";
 import type {
   TeacherOverviewCritical,
   TeacherOverviewGradebook,
+  TeacherOverviewInsights,
   TeacherOverviewSecondary,
 } from "./overview.types";
 
@@ -56,12 +58,20 @@ export function teacherOverviewGradebookKey(
   return ["teacher-overview-gradebook", teacherId ?? "anon", termKey] as const;
 }
 
+export function teacherOverviewInsightsKey(
+  teacherId: string | null | undefined,
+  termKey = "",
+  days = 14,
+) {
+  return ["teacher-overview-insights", teacherId ?? "anon", termKey, days] as const;
+}
+
 export function useTeacherOverview() {
   const session = useSession();
   const { activeTerm } = useTerm();
   const teacherId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery<TeacherOverviewCritical>({
+  return useLiveQuery<TeacherOverviewCritical>({
     queryKey: teacherOverviewKey(teacherId, termKey),
     queryFn: async () => {
       const payload = await fetchTeacherOverview();
@@ -75,6 +85,7 @@ export function useTeacherOverview() {
     enabled: !!teacherId,
     staleTime: OVERVIEW_STALE_MS,
     gcTime: OVERVIEW_GC_MS,
+    ...liveQueryOptions,
   });
 }
 
@@ -83,13 +94,41 @@ export function useTeacherOverviewGradebook() {
   const { activeTerm } = useTerm();
   const teacherId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery({
+  return useLiveQuery({
     queryKey: teacherOverviewGradebookKey(teacherId, termKey),
     queryFn: fetchTeacherOverviewGradebook,
     enabled: !!teacherId,
     staleTime: OVERVIEW_STALE_MS,
     gcTime: OVERVIEW_GC_MS,
     placeholderData: (previous) => previous,
+    ...liveQueryOptions,
+  });
+}
+
+export async function fetchTeacherOverviewInsights(days = 14): Promise<TeacherOverviewInsights> {
+  const { data } = await apiClient.get<TeacherOverviewInsights>(
+    `/api/teacher/overview/insights?days=${days}`,
+  );
+  return data;
+}
+
+/**
+ * Day-by-day risk + attendance series for the overview charts. Same term
+ * scope as the overview itself (x-term-id headers ride on apiClient).
+ */
+export function useTeacherOverviewInsights(days = 14, enabled = true) {
+  const session = useSession();
+  const { activeTerm } = useTerm();
+  const teacherId = session?.sub ?? null;
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  return useLiveQuery<TeacherOverviewInsights>({
+    queryKey: teacherOverviewInsightsKey(teacherId, termKey, days),
+    queryFn: () => fetchTeacherOverviewInsights(days),
+    enabled: enabled && !!teacherId,
+    staleTime: OVERVIEW_STALE_MS,
+    gcTime: OVERVIEW_GC_MS,
+    placeholderData: (previous) => previous,
+    ...liveQueryOptions,
   });
 }
 
@@ -98,12 +137,13 @@ export function useTeacherOverviewSecondary(enabled: boolean) {
   const { activeTerm } = useTerm();
   const teacherId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery({
+  return useLiveQuery({
     queryKey: teacherOverviewSecondaryKey(teacherId, termKey),
     queryFn: fetchTeacherOverviewSecondary,
     enabled: enabled && !!teacherId,
     staleTime: OVERVIEW_STALE_MS,
     gcTime: OVERVIEW_GC_MS,
     placeholderData: (previous) => previous,
+    ...liveQueryOptions,
   });
 }

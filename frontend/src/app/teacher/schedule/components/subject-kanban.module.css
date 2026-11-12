@@ -143,6 +143,58 @@
   text-align: left;
 }
 
+/* Subject table board — same entrance + row cascade as the registry desks'
+   queue tables (board settles first, then each row slides up, 140ms stagger). */
+.boardIn {
+  animation: board-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  /* Clip the entrance motion so translated rows can't spurt past the board
+     edge and flash a page scrollbar while the animation runs. */
+  overflow: clip;
+}
+
+.table tbody tr {
+  animation: row-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardIn,
+  .table tbody tr {
+    animation: none;
+  }
+}
+
+/* The shared Table wrapper is `overflow-x-auto`. Hide its scrollbar chrome so
+   the motion and rounded card don't get a stray bar — it can still scroll. */
+.boardIn :global([data-slot="table-container"]) {
+  scrollbar-width: none;
+}
+
+.boardIn :global([data-slot="table-container"])::-webkit-scrollbar {
+  display: none;
+}
+
 /* Section picker vanish — grid-rows collapse so it animates instead of popping. */
 .sectionCollapse {
   display: grid;

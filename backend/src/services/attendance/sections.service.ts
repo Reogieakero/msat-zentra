@@ -1,12 +1,18 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
+import {
   buildDayAxis,
   countSchoolDays,
   isWeekendKey,
   studentDayOutcomes,
   sectionStrictDays,
   buildOfferedMap,
+  termHasStarted,
   type AttendanceStatus,
 } from "../attendance.js";
 import {
@@ -39,15 +45,16 @@ export interface SectionStudentsQuery {
   session: "AM" | "PM";
   termId?: string;
   startDate?: Date | null;
+  endDate?: Date | null;
 }
 
 export async function getSectionStudents(query: SectionStudentsQuery) {
-  const { sectionId, session, termId, startDate } = query;
+  const { sectionId, session, termId, startDate, endDate } = query;
   if (!termId) {
     return { sectionId, students: [] };
   }
 
-  const totalSchoolDays = countSchoolDays(buildDayAxis(startDate ?? null));
+  const totalSchoolDays = countSchoolDays(buildDayAxis(startDate ?? null, endDate ?? null));
   // Signed ADM cases: the sheet shows them as an exempt group, not absent.
   const admExempt = await admExemptStudentIds(termId);
 
@@ -72,9 +79,10 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
 
   if (subjectTakes.length === 0) {
 
+    const archivedLearners = await archivedAdvisoryLearnerIds();
     const [students, rosterEntries] = await Promise.all([
       prisma.studentProfile.findMany({
-        where: { sectionId },
+        where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
         select: {
           userId: true,
           lrn: true,
@@ -89,7 +97,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
       }),
 
       prisma.studentRoster.findMany({
-        where: { sectionId },
+        where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
         select: {
           id: true,
           lrn: true,
@@ -227,7 +235,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
     });
   }
 
-  const outcomeKeys = buildDayAxis(startDate ?? null).filter(
+  const outcomeKeys = buildDayAxis(startDate ?? null, endDate ?? null).filter(
     (k) => !isWeekendKey(k)
   );
   const outcomes = studentDayOutcomes(
@@ -278,9 +286,10 @@ export async function getSectionRoster(
     select: { id: true, name: true },
   });
   if (!section) throw new AppError(404, "SECTION_NOT_FOUND", "Section not found");
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosterRows] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         lrn: true,
@@ -291,7 +300,7 @@ export async function getSectionRoster(
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, lrn: true, fullName: true, mascot: true },
       orderBy: { fullName: "asc" },
     }),
@@ -358,14 +367,15 @@ export async function getSectionSummary(
     select: { id: true, name: true },
   });
   if (!section) throw new AppError(404, "SECTION_NOT_FOUND", "Section not found");
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosterRows, records] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
       select: { userId: true, lrn: true, mascot: true, user: { select: { fullName: true } } },
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, lrn: true, fullName: true, mascot: true },
       orderBy: { fullName: "asc" },
     }),
@@ -434,6 +444,135 @@ export interface MatrixQuery {
   allowed: boolean;
 }
 
+/**
+ * Per-subject meetup plan for a section/term — the single source of truth for
+ * the subject-attendance denominators used by the attendance desk and the
+ * advisee insight card. A meetup is one TIMETABLE SLOT: a subject that meets
+ * three periods on a Tuesday counts three meetups that day. Occurrences are
+ * expanded from the published timetable for every date from the term start to
+ * today (or the term end); a subject with no scheduling falls back to the
+ * (date, slot) sheets actually recorded. Callers slice these counts per learner
+ * (transferees count only meetups AFTER their enlistment day).
+ */
+export interface SubjectMeetupPlan {
+  /** False for a term that has not started yet — callers should report no marks. */
+  termStarted: boolean;
+  subjects: Map<string, { id: string; name: string; code: string }>;
+  /** Scheduled meetups per subject per date (double periods count separately). */
+  scheduledCountBySubjectDate: Map<string, Map<string, number>>;
+  /** Recorded meetups per subject per date (distinct slots) — fallback only. */
+  recordedCountBySubjectDate: Map<string, Map<string, number>>;
+}
+
+export async function loadSubjectMeetups(
+  sectionId: string,
+  termId: string,
+): Promise<SubjectMeetupPlan> {
+  const [timetabled, offered, sheets, term] = await Promise.all([
+    prisma.sectionTimetableEntry.findMany({
+      where: { sectionId, termId, status: { in: ["APPROVED", "SUBMITTED"] } },
+      select: {
+        subjectId: true,
+        day: true,
+        period: true,
+        subject: { select: { id: true, name: true, code: true } },
+      },
+    }),
+    prisma.teacherSubjectAssignment.findMany({
+      where: { sectionId, termId },
+      select: { subject: { select: { id: true, name: true, code: true } } },
+      distinct: ["subjectId"],
+    }),
+    prisma.attendanceRecord.findMany({
+      where: { sectionId, termId, NOT: { subjectId: null } },
+      select: { subjectId: true, date: true, slot: true, subject: { select: { id: true, name: true, code: true } } },
+    }),
+    prisma.term.findUnique({
+      where: { id: termId },
+      select: { startDate: true, endDate: true },
+    }),
+  ]);
+
+  const subjects = new Map<string, { id: string; name: string; code: string }>();
+  for (const o of offered) subjects.set(o.subject.id, o.subject);
+  for (const t of timetabled) subjects.set(t.subject.id, t.subject);
+  for (const s of sheets) if (s.subject) subjects.set(s.subject.id, s.subject);
+
+  // Subject → weekday → distinct periods. Every period is its own meetup, so a
+  // subject timetabled twice on Monday contributes two meetups per Monday.
+  const periodsBySubjectDay = new Map<string, Map<number, Set<number>>>();
+  for (const t of timetabled) {
+    let byDay = periodsBySubjectDay.get(t.subjectId);
+    if (!byDay) {
+      byDay = new Map();
+      periodsBySubjectDay.set(t.subjectId, byDay);
+    }
+    let periods = byDay.get(t.day);
+    if (!periods) {
+      periods = new Set();
+      byDay.set(t.day, periods);
+    }
+    periods.add(t.period);
+  }
+
+  const recordedSlotsBySubjectDate = new Map<string, Map<string, Set<number>>>();
+  for (const s of sheets) {
+    if (!s.subjectId) continue;
+    let byDate = recordedSlotsBySubjectDate.get(s.subjectId);
+    if (!byDate) {
+      byDate = new Map();
+      recordedSlotsBySubjectDate.set(s.subjectId, byDate);
+    }
+    const key = s.date.toISOString().slice(0, 10);
+    let slots = byDate.get(key);
+    if (!slots) {
+      slots = new Set();
+      byDate.set(key, slots);
+    }
+    slots.add(s.slot);
+  }
+  const recordedCountBySubjectDate = new Map<string, Map<string, number>>();
+  for (const [sid, byDate] of recordedSlotsBySubjectDate) {
+    recordedCountBySubjectDate.set(
+      sid,
+      new Map([...byDate].map(([date, slots]) => [date, slots.size])),
+    );
+  }
+
+  // A term that has not started yet is outside its scope period: do not derive
+  // rates from seeded/staged rows. `null` renders as "No marks yet" in the UI.
+  const termStarted = termHasStarted(term?.startDate);
+  const startStr = term?.startDate?.toISOString().slice(0, 10) ?? null;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const endStr = (() => {
+    if (!term?.endDate) return todayStr;
+    const termEnd = term.endDate.toISOString().slice(0, 10);
+    return termEnd < todayStr ? termEnd : todayStr;
+  })();
+  const scheduledCountBySubjectDate = new Map<string, Map<string, number>>();
+  if (startStr && startStr <= endStr) {
+    for (const sid of subjects.keys()) {
+      const byDay = periodsBySubjectDay.get(sid);
+      const byDate = new Map<string, number>();
+      for (
+        let d = new Date(`${startStr}T00:00:00Z`);
+        d.toISOString().slice(0, 10) <= endStr;
+        d = new Date(d.getTime() + 86_400_000)
+      ) {
+        const dow = d.getUTCDay();
+        const day = dow === 0 ? 7 : dow;
+        // No timetable for this subject → assume one weekday meetup, matching
+        // the pre-slot behaviour (recorded sheets remain the better fallback).
+        const count = byDay ? (byDay.get(day)?.size ?? 0) : day <= 5 ? 1 : 0;
+        if (count > 0) byDate.set(d.toISOString().slice(0, 10), count);
+      }
+      scheduledCountBySubjectDate.set(sid, byDate);
+    }
+  }
+
+  return { termStarted, subjects, scheduledCountBySubjectDate, recordedCountBySubjectDate };
+}
+
 export async function getSectionSubjectMatrix(query: MatrixQuery) {
   const { sectionId, termId, allowed } = query;
   if (!allowed) {
@@ -444,129 +583,114 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
     select: { id: true, name: true },
   });
   if (!section) throw new AppError(404, "SECTION_NOT_FOUND", "Section not found");
-  const [profiles, rosterRows, records, timetabled, offered] = await Promise.all([
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const [profiles, rosterRows, records, plan] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
       select: { userId: true, lrn: true, mascot: true, user: { select: { fullName: true } } },
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId },
-      select: { id: true, lrn: true, fullName: true, mascot: true },
+      where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
+      select: {
+        id: true,
+        lrn: true,
+        fullName: true,
+        mascot: true,
+        learnerType: true,
+        createdAt: true,
+      },
       orderBy: { fullName: "asc" },
     }),
     prisma.attendanceRecord.findMany({
       where: { sectionId, termId, NOT: { subjectId: null } },
       select: { studentId: true, rosterId: true, subjectId: true, status: true, date: true, slot: true },
     }),
-    prisma.sectionTimetableEntry.findMany({
-      where: { sectionId, termId, status: { in: ["APPROVED", "SUBMITTED"] } },
-      select: {
-        subjectId: true,
-        day: true,
-        subject: { select: { id: true, name: true, code: true } },
-        teacherName: { select: { userId: true } },
-      },
-    }),
-
-    prisma.teacherSubjectAssignment.findMany({
-      where: { sectionId, termId },
-      select: { subject: { select: { id: true, name: true, code: true } } },
-      distinct: ["subjectId"],
-    }),
+    loadSubjectMeetups(sectionId, termId),
   ]);
   const registeredLrns = new Set(profiles.map((p) => p.lrn));
-  const subjects = new Map<string, { id: string; name: string; code: string }>();
-  for (const o of offered) subjects.set(o.subject.id, o.subject);
-  for (const t of timetabled) subjects.set(t.subject.id, t.subject);
-
-  const subjectIds = await prisma.subject.findMany({
-    where: { id: { in: [...new Set(records.map((r) => r.subjectId as string))] } },
-    select: { id: true, name: true, code: true },
-  });
-  for (const s of subjectIds) {
-    if (!subjects.has(s.id)) subjects.set(s.id, s);
-  }
-
-  const meetupBySubject = new Map<string, number[]>();
-  for (const t of timetabled) {
-    const arr = meetupBySubject.get(t.subjectId) ?? [];
-    if (!arr.includes(t.day)) arr.push(t.day);
-    meetupBySubject.set(t.subjectId, arr);
-  }
-  const term = await prisma.term.findUnique({
-    where: { id: termId },
-    select: { startDate: true, endDate: true },
-  });
-  const startStr = term?.startDate?.toISOString().slice(0, 10) ?? null;
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const endStr = (() => {
-    if (!term?.endDate) return todayStr;
-    const termEnd = term.endDate.toISOString().slice(0, 10);
-    return termEnd < todayStr ? termEnd : todayStr;
-  })();
-  const elapsedDatesBySubject = new Map<string, Set<string>>();
-  if (startStr && startStr <= endStr) {
-    for (const sid of subjects.keys()) {
-      const days = meetupBySubject.get(sid) ?? [1, 2, 3, 4, 5];
-      const set = new Set<string>();
-      for (
-        let d = new Date(`${startStr}T00:00:00Z`);
-        d.toISOString().slice(0, 10) <= endStr;
-        d = new Date(d.getTime() + 86_400_000)
-      ) {
-        const dow = d.getUTCDay();
-        const day = dow === 0 ? 7 : dow;
-        if (days.includes(day)) set.add(d.toISOString().slice(0, 10));
-      }
-      elapsedDatesBySubject.set(sid, set);
-    }
-  }
-  const presentDatesByStudentSubject = new Map<string, Set<string>>();
-  const recordedDatesBySubject = new Map<string, Set<string>>();
+  const subjects = plan.subjects;
+  const { termStarted, scheduledCountBySubjectDate, recordedCountBySubjectDate } = plan;
+  const presentSlotsByStudentSubjectDate = new Map<string, Map<string, Set<number>>>();
   for (const r of records) {
+    if (r.status !== "present") continue;
     const subjectId = r.subjectId as string;
     const dateStr = r.date.toISOString().slice(0, 10);
-
     const studentKey = r.rosterId ? `roster:${r.rosterId}` : (r.studentId as string);
-    let recorded = recordedDatesBySubject.get(subjectId);
-    if (!recorded) {
-      recorded = new Set();
-      recordedDatesBySubject.set(subjectId, recorded);
+    const key = `${studentKey}|${subjectId}`;
+    let byDate = presentSlotsByStudentSubjectDate.get(key);
+    if (!byDate) {
+      byDate = new Map();
+      presentSlotsByStudentSubjectDate.set(key, byDate);
     }
-    recorded.add(dateStr);
-    if (r.status === "present") {
-      const key = `${studentKey}|${subjectId}`;
-      let present = presentDatesByStudentSubject.get(key);
-      if (!present) {
-        present = new Set();
-        presentDatesByStudentSubject.set(key, present);
-      }
-      present.add(dateStr);
+    let slots = byDate.get(dateStr);
+    if (!slots) {
+      slots = new Set();
+      byDate.set(dateStr, slots);
+    }
+    slots.add(r.slot);
+  }
+  const rosterOnly = rosterRows.filter((r) => !registeredLrns.has(r.lrn));
+  // Transferees are rated from the day AFTER their enlistment date, not from
+  // the term start — the same window the risk engine, the auto-absent sweep
+  // and the advisory-list insight use. Without this a learner enlisted today
+  // would read every earlier meetup as an absence.
+  const transfereeStart = new Map<string, string>();
+  for (const r of rosterOnly) {
+    if (r.learnerType === "transferee") {
+      transfereeStart.set(`roster:${r.id}`, r.createdAt.toISOString().slice(0, 10));
     }
   }
-  const rateOf = (studentKey: string, subjectId: string) => {
-    const elapsed = elapsedDatesBySubject.get(subjectId);
-    const present = presentDatesByStudentSubject.get(`${studentKey}|${subjectId}`);
-    if (elapsed && elapsed.size > 0) {
-      let n = 0;
-      for (const d of present ?? []) if (elapsed.has(d)) n += 1;
-      return n / elapsed.size;
+  interface SubjectProgress {
+    /** Present rate inside this learner's own meetup window. */
+    rate: number | null;
+    /** Elapsed meetups in that window (transferees count from day after enlistment). */
+    meetups: number;
+    /** Present meetups out of `meetups`. */
+    present: number;
+  }
+  const progressOf = (studentKey: string, subjectId: string): SubjectProgress => {
+    if (!termStarted) return { rate: null, meetups: 0, present: 0 };
+    const scheduled = scheduledCountBySubjectDate.get(subjectId);
+    const counts =
+      scheduled && scheduled.size > 0
+        ? scheduled
+        : recordedCountBySubjectDate.get(subjectId);
+    if (!counts || counts.size === 0) return { rate: null, meetups: 0, present: 0 };
+    const presentByDate = presentSlotsByStudentSubjectDate.get(
+      `${studentKey}|${subjectId}`,
+    );
+    // A transferee's window opens the day AFTER enlistment; everyone else is
+    // rated from the term start.
+    const enlistStr = transfereeStart.get(studentKey);
+    let meetups = 0;
+    let attended = 0;
+    for (const [date, count] of counts) {
+      if (enlistStr && date <= enlistStr) continue;
+      meetups += count;
+      const presentSlots = presentByDate?.get(date)?.size ?? 0;
+      attended += Math.min(count, presentSlots);
     }
-
-    const recorded = recordedDatesBySubject.get(subjectId)?.size ?? 0;
-    if (recorded === 0) return 0;
-    let n = 0;
-    for (const d of present ?? []) {
-      if (recordedDatesBySubject.get(subjectId)?.has(d)) n += 1;
-    }
-    return n / recorded;
+    // No meetup has happened since they joined yet → no attendance signal
+    // (never a fabricated 0%).
+    if (meetups === 0) return { rate: null, meetups: 0, present: 0 };
+    return { rate: attended / meetups, meetups, present: attended };
   };
   const students = [
-    ...profiles.map((p) => ({ studentId: p.userId, name: p.user.fullName, lrn: p.lrn, mascot: p.mascot ?? null })),
-    ...rosterRows
-      .filter((r) => !registeredLrns.has(r.lrn))
-      .map((r) => ({ studentId: `roster:${r.id}`, name: r.fullName, lrn: r.lrn, mascot: r.mascot ?? null })),
+    ...profiles.map((p) => ({
+      studentId: p.userId,
+      name: p.user.fullName,
+      lrn: p.lrn,
+      mascot: p.mascot ?? null,
+      learnerType: "regular" as const,
+    })),
+    ...rosterOnly.map((r) => ({
+      studentId: `roster:${r.id}`,
+      name: r.fullName,
+      lrn: r.lrn,
+      mascot: r.mascot ?? null,
+      learnerType: r.learnerType,
+    })),
   ];
   const surnameOf = (name: string) => {
     const parts = name.trim().split(/\s+/);
@@ -580,14 +704,26 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
     sectionName: section.name,
     termId,
     subjects: [...subjects.values()].sort((a, b) => a.name.localeCompare(b.name)),
-    students: students.map((s) => ({
-      studentId: s.studentId,
-      name: s.name,
-      lrn: s.lrn,
-      mascot: s.mascot,
-      rates: Object.fromEntries(
-        [...subjects.keys()].map((sid) => [sid, rateOf(s.studentId, sid)]),
-      ) as Record<string, number | null>,
-    })),
+    students: students.map((s) => {
+      const progress = Object.fromEntries(
+        [...subjects.keys()].map((sid) => [sid, progressOf(s.studentId, sid)]),
+      ) as Record<string, SubjectProgress>;
+      return {
+        studentId: s.studentId,
+        name: s.name,
+        lrn: s.lrn,
+        mascot: s.mascot,
+        learnerType: s.learnerType,
+        rates: Object.fromEntries(
+          Object.entries(progress).map(([sid, p]) => [sid, p.rate]),
+        ) as Record<string, number | null>,
+        meetups: Object.fromEntries(
+          Object.entries(progress).map(([sid, p]) => [sid, p.meetups]),
+        ) as Record<string, number>,
+        presentMeetups: Object.fromEntries(
+          Object.entries(progress).map(([sid, p]) => [sid, p.present]),
+        ) as Record<string, number>,
+      };
+    }),
   };
 }

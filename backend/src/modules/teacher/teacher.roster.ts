@@ -1,15 +1,21 @@
 import { prisma } from "../../lib/prisma.js";
-import { subjectAverageAttendance } from "../../services/attendance.js";
+import { subjectAverageAttendance, termHasStarted } from "../../services/attendance.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 
 export async function advisoryRoster(termId: string, sectionId: string) {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosterEntries, assignSubs, entrySubs] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
       select: { userId: true, lrn: true, mascot: true, user: { select: { fullName: true } } },
       orderBy: { user: { fullName: "asc" } },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, lrn: true, fullName: true, mascot: true },
       orderBy: { fullName: "asc" },
     }),
@@ -61,6 +67,7 @@ export async function advisoryRoster(termId: string, sectionId: string) {
       ? prisma.anecdotalRecord.findMany({
           where: {
             termId,
+            deletedAt: null,
             OR: [
               ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
               ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
@@ -70,6 +77,10 @@ export async function advisoryRoster(termId: string, sectionId: string) {
         })
       : Promise.resolve([] as { studentId: string | null; rosterId: string | null }[]),
   ]);
+
+  // A term that has not started yet is outside its scope period: any staged or
+  // seeded finals/attendance/anecdotes are not Term N data yet.
+  const started = termHasStarted(term?.startDate);
 
   const anecdoteCountByKey = new Map<string, number>();
   for (const a of anecdoteRows) {
@@ -167,12 +178,13 @@ export async function advisoryRoster(termId: string, sectionId: string) {
       const finals = finalsByKey.get(s.studentId) ?? [];
       return {
         ...s,
-        attendancePresent: presentByKey.get(s.studentId) ?? 0,
-        attendanceTotal: sectionMeetups,
-        attendancePercentage: avg === null ? null : Math.round(avg * 1000) / 10,
-        computedAverage: mean(finals.map((f) => f.computedAverage)),
-        academicGrade: mean(finals.map((f) => f.transmutedGrade)),
-        anecdotalCount: anecdoteCountByKey.get(s.studentId) ?? 0,
+        attendancePresent: started ? (presentByKey.get(s.studentId) ?? 0) : 0,
+        attendanceTotal: started ? sectionMeetups : 0,
+        attendancePercentage:
+          !started || avg === null ? null : Math.round(avg * 1000) / 10,
+        computedAverage: started ? mean(finals.map((f) => f.computedAverage)) : null,
+        academicGrade: started ? mean(finals.map((f) => f.transmutedGrade)) : null,
+        anecdotalCount: started ? (anecdoteCountByKey.get(s.studentId) ?? 0) : 0,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

@@ -1,9 +1,11 @@
 import { Router } from "express";
 import multer from "multer";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
-import { invalidateTags } from "../../lib/cache.js";
+import {
+  invalidateInterventionCaches,
+  INTERVENTION_WRITE_TAGS,
+} from "./interventions.repository.js";
 import { validate } from "../../middleware/validate.js";
-import { INTERVENTION_WRITE_TAGS } from "./interventions.repository.js";
 import {
   cancelInterventionSessionSchema,
   completeInterventionSessionSchema,
@@ -57,7 +59,7 @@ router.post(
         sessionType: body.sessionType,
         venue: body.venue,
       });
-      await invalidateTags(INTERVENTION_WRITE_TAGS);
+      await invalidateInterventionCaches();
       res.status(201).json(created);
     } catch (e) {
       next(e);
@@ -87,7 +89,7 @@ router.post(
           followUpSession: body.followUpSession,
         },
       );
-      await invalidateTags(INTERVENTION_WRITE_TAGS);
+      await invalidateInterventionCaches();
       res.json(updated);
     } catch (e) {
       next(e);
@@ -108,7 +110,7 @@ router.post(
         String(req.params.sessionId),
         req.body.scheduledAt as string,
       );
-      await invalidateTags(INTERVENTION_WRITE_TAGS);
+      await invalidateInterventionCaches();
       res.json(updated);
     } catch (e) {
       next(e);
@@ -129,7 +131,7 @@ router.post(
         String(req.params.sessionId),
         (req.body as { cancelReason?: string }).cancelReason,
       );
-      await invalidateTags(INTERVENTION_WRITE_TAGS);
+      await invalidateInterventionCaches();
       res.json(updated);
     } catch (e) {
       next(e);
@@ -166,7 +168,7 @@ router.post(
         String(req.params.sessionId),
         files as SessionFile[],
       );
-      await invalidateTags(INTERVENTION_WRITE_TAGS);
+      await invalidateInterventionCaches();
       res.status(201).json(created);
     } catch (e) {
       next(e);
@@ -199,7 +201,7 @@ router.delete(
         String(req.params.sessionId),
         String(req.params.attachmentId),
       );
-      await invalidateTags(INTERVENTION_WRITE_TAGS);
+      await invalidateInterventionCaches();
       res.json(result);
     } catch (e) {
       next(e);

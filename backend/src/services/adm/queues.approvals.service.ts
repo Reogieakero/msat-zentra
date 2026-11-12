@@ -38,6 +38,7 @@ export async function listApprovals(ctx: AdmContext, query: ApprovalsQuery) {
           select: {
             lrn: true,
             gradeLevel: true,
+            mascot: true,
             sectionId: true,
             user: { select: { fullName: true } },
             section: { select: { name: true } },
@@ -84,6 +85,7 @@ export async function listApprovals(ctx: AdmContext, query: ApprovalsQuery) {
       lrn: p.student.lrn,
       student: p.student.user.fullName,
       grade: GRADE_LABEL[p.student.gradeLevel] ?? p.student.gradeLevel,
+      mascot: p.student.mascot ?? null,
       section: p.student.sectionId ?? "",
       sectionName: p.student.section?.name ?? "",
       modulesSubmitted: p.modules.filter((m) => m.submitted).length,

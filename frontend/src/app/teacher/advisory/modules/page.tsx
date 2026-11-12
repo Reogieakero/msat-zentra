@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { useDock } from "@/components/dock/dock-store";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Pill } from "@/components/ui/pill";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -16,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
+import { AdvisoryModulesSkeleton } from "./components/modules-skeleton";
+import { ModulesEmptyKanban } from "./components/modules-empty-kanban";
 import { ModulesPanel } from "./components/modules-panel";
 import { ModuleDetailsOverlay } from "./components/module-details-overlay";
 import { ModuleFormDialog } from "./components/module-form-dialog";
@@ -30,6 +31,7 @@ import {
   useUpdateAdvisoryModule,
   type AdvisoryModulePayload,
   type AdvisoryModuleRow,
+  type AdvisoryModuleKind,
   type ModuleStatusCounts,
 } from "@/services/teacher/advisoryModules.service";
 
@@ -55,6 +57,7 @@ export default function TeacherAdvisoryModulesPage() {
   const [submissionPage, setSubmissionPage] = React.useState(1);
 
   const [formOpen, setFormOpen] = React.useState(false);
+  const [formKind, setFormKind] = React.useState<AdvisoryModuleKind>("general");
   const [editing, setEditing] = React.useState<AdvisoryModuleRow | null>(null);
   const [deleting, setDeleting] = React.useState<AdvisoryModuleRow | null>(null);
   const [viewing, setViewing] = React.useState<AdvisoryModuleRow | null>(null);
@@ -161,13 +164,7 @@ export default function TeacherAdvisoryModulesPage() {
   };
 
   if (modulesQuery.isPending && !modulesQuery.data) {
-    return (
-      <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading modules">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-64 w-full rounded-lg" />
-        <Skeleton className="h-64 w-full rounded-lg" />
-      </div>
-    );
+    return <AdvisoryModulesSkeleton />;
   }
 
   if (modulesQuery.isError && !modulesQuery.data) {
@@ -182,86 +179,103 @@ export default function TeacherAdvisoryModulesPage() {
     );
   }
 
-  return (
-    <div className="flex flex-col gap-10">
-      <ModulesPanel
-        rows={rows}
-        counts={counts}
-        total={modulesQuery.data?.total ?? 0}
-        page={modulePage}
-        selectedId={activeModuleId}
-        filter={moduleFilter}
-        headerActions={
-          sections.length > 1 ? (
-            <Select
-              value={sectionId ?? sections[0]?.id ?? ""}
-              onValueChange={(value) => {
-                setSectionId(value);
-                setModulePage(1);
-                setSelectedModuleId(null);
-                setSubmissionPage(1);
-              }}
-            >
-              <SelectTrigger className="h-7 w-40 text-xs" aria-label="Advisory section">
-                <SelectValue placeholder="Section" />
-              </SelectTrigger>
-              <SelectContent>
-                {sections.map((section) => (
-                  <SelectItem key={section.id} value={section.id}>
-                    {section.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null
-        }
-        onFilterChange={(next) => {
-          setModuleFilter(next);
+  // Shared by the filled board header and the empty starter board, so the
+  // adviser can switch advisory sections either way.
+  const sectionPicker =
+    sections.length > 1 ? (
+      <Select
+        value={sectionId ?? sections[0]?.id ?? ""}
+        onValueChange={(value) => {
+          setSectionId(value);
           setModulePage(1);
-        }}
-        onPageChange={setModulePage}
-        onAdd={() => {
-          setEditing(null);
-          setFormOpen(true);
-        }}
-        onEdit={(module) => {
-          setEditing(module);
-          setFormOpen(true);
-        }}
-        onDelete={setDeleting}
-        onSelect={(module) => {
-          setSelectedModuleId(module.id);
+          setSelectedModuleId(null);
           setSubmissionPage(1);
         }}
-        onOpen={setViewing}
-      />
+      >
+        <SelectTrigger className="h-7 w-40 text-xs" aria-label="Advisory section">
+          <SelectValue placeholder="Section" />
+        </SelectTrigger>
+        <SelectContent>
+          {sections.map((section) => (
+            <SelectItem key={section.id} value={section.id}>
+              {section.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ) : null;
 
-      {activeModule?.kind === "general" ? (
-        <section className="flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-4" aria-label="General module">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="m-0 text-sm font-bold tracking-[-0.01em] text-foreground">General module</h2>
-            <Pill tone="neutral" label="Module type">General</Pill>
+  const startModule = (kind: AdvisoryModuleKind) => {
+    setEditing(null);
+    setFormKind(kind);
+    setFormOpen(true);
+  };
+
+  return (
+    <div className="flex flex-col gap-10">
+      {counts.all === 0 ? (
+        <div className="flex min-h-[calc(100dvh-10rem)] w-full items-center justify-center">
+          <div className="w-full">
+            <ModulesEmptyKanban onAdd={startModule} sectionPicker={sectionPicker} />
           </div>
-          <p className="m-0 text-xs text-muted-foreground">
-            &ldquo;{activeModule.moduleName}&rdquo; is a post-only module — it carries no
-            submission tracking. Switch to an ADM module to track learners&apos; answers.
-          </p>
-        </section>
+        </div>
       ) : (
-        <SubmissionsTable
-          moduleName={activeModule?.moduleName ?? submissionsExtrasData?.module.moduleName ?? "Select a module"}
-          rows={submissionRows}
-          counts={submissionCounts}
-          total={submissionsQuery.data?.total ?? 0}
-          page={submissionPage}
-          onPageChange={setSubmissionPage}
-        />
+        <>
+          <ModulesPanel
+            rows={rows}
+            counts={counts}
+            total={modulesQuery.data?.total ?? 0}
+            page={modulePage}
+            selectedId={activeModuleId}
+            filter={moduleFilter}
+            headerActions={sectionPicker}
+            onFilterChange={(next) => {
+              setModuleFilter(next);
+              setModulePage(1);
+            }}
+            onPageChange={setModulePage}
+            onAdd={() => startModule("general")}
+            onEdit={(module) => {
+              setEditing(module);
+              setFormOpen(true);
+            }}
+            onDelete={setDeleting}
+            onSelect={(module) => {
+              setSelectedModuleId(module.id);
+              setSubmissionPage(1);
+            }}
+            onOpen={setViewing}
+          />
+
+          {activeModule?.kind === "general" ? (
+            <section className="flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-4" aria-label="General module">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="m-0 text-sm font-bold tracking-[-0.01em] text-foreground">General module</h2>
+                <Pill tone="neutral" label="Module type">General</Pill>
+              </div>
+              <p className="m-0 text-xs text-muted-foreground">
+                &ldquo;{activeModule.moduleName}&rdquo; is a post-only module — it carries no
+                submission tracking. Switch to an ADM module to track learners&apos; answers.
+              </p>
+            </section>
+          ) : (
+            <SubmissionsTable
+              moduleName={activeModule?.moduleName ?? submissionsExtrasData?.module.moduleName ?? "Select a module"}
+              rows={submissionRows}
+              counts={submissionCounts}
+              total={submissionsQuery.data?.total ?? 0}
+              page={submissionPage}
+              onPageChange={setSubmissionPage}
+            />
+          )}
+        </>
       )}
 
       {formOpen ? (
         <ModuleFormDialog
           key={editing?.id ?? "new"}
           module={editing}
+          initialKind={editing ? undefined : formKind}
           pending={saving}
           onClose={() => {
             setFormOpen(false);

@@ -9,6 +9,7 @@ import {
   Check,
   ClipboardCheck,
   Clock,
+  FileSpreadsheet,
   FileText,
   FolderOpen,
   Loader2,
@@ -20,6 +21,7 @@ import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { FolderCard } from "@/components/ui/FolderCard";
+import { Pill } from "@/components/ui/pill";
 import {
   Popover,
   PopoverContent,
@@ -31,6 +33,7 @@ import { CATEGORY_COLORS } from "../../anecdotal/components/AnecdotalSideRail";
 import { CATEGORIES, CATEGORY_TONES, TIERS } from "./bama-flow";
 import type { AnecdotalFlow } from "./useAnecdotalFlow";
 import type { Sf10AccessFlow } from "./useSf10AccessFlow";
+import type { Sf10AutofillFlow } from "./useSf10AutofillFlow";
 import { TimePickers } from "./TimePickers";
 import styles from "./bama-thread.module.css";
 import dialogStyles from "./bama-flow-dialogs.module.css";
@@ -40,6 +43,7 @@ interface BamaThreadProps {
   sending: boolean;
   flow: AnecdotalFlow;
   sf10Flow: Sf10AccessFlow;
+  autofillFlow: Sf10AutofillFlow;
   typeLabel: string;
   threadRef: RefObject<HTMLDivElement | null>;
   onStartChat: (type: BamaChatType) => void;
@@ -69,6 +73,14 @@ const STARTERS: {
     path: "chat/sf10-access",
     icon: FolderOpen,
     accent: "text-blue-500",
+  },
+  {
+    key: "sf10-autofill",
+    title: "SF10 Auto-fill",
+    description: "Fill SF10 from approved grades",
+    path: "chat/sf10-autofill",
+    icon: FileSpreadsheet,
+    accent: "text-emerald-500",
   },
 ];
 
@@ -137,6 +149,7 @@ export function BamaThread({
   sending,
   flow,
   sf10Flow,
+  autofillFlow,
   typeLabel,
   threadRef,
   onStartChat,
@@ -160,6 +173,10 @@ export function BamaThread({
   const sf10Open = !!active && active.type === "sf10-access" && !active.filed;
   const showSf10SectionPicker = sf10Open && sf10Flow.phase === "section";
   const showSf10StudentPicker = sf10Open && sf10Flow.phase === "students";
+  const autofillOpen = !!active && active.type === "sf10-autofill" && !active.filed;
+  const showAutofillSectionPicker = autofillOpen && autofillFlow.phase === "section";
+  const showAutofillStudentPicker = autofillOpen && autofillFlow.phase === "students";
+  const showAutofillPreview = autofillOpen && autofillFlow.phase === "preview";
 
   if (!active) {
     return (
@@ -231,9 +248,9 @@ export function BamaThread({
     <>
       <div className={styles.threadHead}>
         <p className={styles.threadTitle}>{active.title}</p>
-        <span className="inline-flex shrink-0 items-center rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-amber-700 dark:text-amber-300">
+        <Pill tone="amber" label="Chat type">
           {typeLabel}
-        </span>
+        </Pill>
       </div>
       <div ref={threadRef} className={styles.thread} aria-live="polite" aria-label="Messages">
         {active.messages.map((m) =>
@@ -251,11 +268,11 @@ export function BamaThread({
                   >
                     <PickColumnHead
                       icon={<ClipboardCheck size={14} aria-hidden className="text-amber-500" />}
-                      title="Review before filing"
+                      title={m.preview.editing ? "Review changes before saving" : "Review before filing"}
                       action={
-                        <span className="inline-flex shrink-0 items-center rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-amber-700 dark:text-amber-300">
+                        <Pill tone="amber" label="Section">
                           {m.preview.section}
-                        </span>
+                        </Pill>
                       }
                     />
                     <div className={`${PICK_CARD} cursor-default`}>
@@ -266,9 +283,7 @@ export function BamaThread({
                         <span className="text-sm font-medium text-foreground">
                           {m.preview.studentName}
                         </span>
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                          {m.preview.lrn}
-                        </span>
+                        <Pill label="LRN">{m.preview.lrn}</Pill>
                       </span>
                     </div>
                     <div className={`${PICK_CARD} cursor-default`}>
@@ -276,18 +291,10 @@ export function BamaThread({
                         Details
                       </span>
                       <span className="flex flex-wrap gap-1.5">
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                          {m.preview.category}
-                        </span>
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                          {m.preview.tier}
-                        </span>
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                          {m.preview.observationDateTime}
-                        </span>
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                          {m.preview.location}
-                        </span>
+                        <Pill label="Category">{m.preview.category}</Pill>
+                        <Pill label="Confidentiality tier">{m.preview.tier}</Pill>
+                        <Pill label="Observation date & time">{m.preview.observationDateTime}</Pill>
+                        <Pill label="Location">{m.preview.location}</Pill>
                       </span>
                     </div>
                     <div className={`${PICK_CARD} cursor-default`}>
@@ -314,7 +321,13 @@ export function BamaThread({
                         {flow.filing ? (
                           <Loader2 size={16} className="animate-spin" aria-hidden />
                         ) : null}
-                        {flow.filing ? "Filing…" : "File record"}
+                        {flow.filing
+                          ? m.preview.editing
+                            ? "Saving…"
+                            : "Filing…"
+                          : m.preview.editing
+                            ? "Save changes"
+                            : "File record"}
                       </Button>
                     </div>
                   </div>
@@ -356,9 +369,9 @@ export function BamaThread({
                               icon={<ClipboardCheck size={14} aria-hidden className="text-amber-500" />}
                               title="Review before submitting"
                               action={
-                                <span className="inline-flex shrink-0 items-center rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-amber-700 dark:text-amber-300">
+                                <Pill tone="amber" label="Section">
                                   {m.sf10Preview.section} · {m.sf10Preview.gradeLevel}
-                                </span>
+                                </Pill>
                               }
                             />
                             <div className={`${PICK_CARD} cursor-default`}>
@@ -375,17 +388,14 @@ export function BamaThread({
                               </span>
                               <span className="flex flex-wrap gap-1.5">
                                 {m.sf10Preview.studentNames.slice(0, 8).map((n, i) => (
-                                  <span
-                                    key={`${n}-${i}`}
-                                    className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
-                                  >
+                                  <Pill key={`${n}-${i}`} label="Student name">
                                     {n}
-                                  </span>
+                                  </Pill>
                                 ))}
                                 {m.sf10Preview.studentNames.length > 8 ? (
-                                  <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                  <Pill label="More students">
                                     +{m.sf10Preview.studentNames.length - 8} more
-                                  </span>
+                                  </Pill>
                                 ) : null}
                               </span>
                             </div>
@@ -430,6 +440,52 @@ export function BamaThread({
                             <Button type="button" variant="outline" size="sm" asChild>
                               <Link href="/teacher/advisory/sf10-access">
                                 Track in SF10 Access
+                              </Link>
+                            </Button>
+                          </div>
+                        ) : null}
+                        {m.sf10AutofillDetail ? (
+                          <div className={styles.filedCard}>
+                            <p className={styles.filedHead}>
+                              <Check aria-hidden /> SF10 auto-fill · {m.sf10AutofillDetail.section}
+                            </p>
+                            <p className={styles.filedText}>
+                              {m.sf10AutofillDetail.schoolYear} · {m.sf10AutofillDetail.updated} updated ·{" "}
+                              {m.sf10AutofillDetail.skipped} skipped
+                              {m.sf10AutofillDetail.failed > 0
+                                ? ` · ${m.sf10AutofillDetail.failed} failed`
+                                : ""}
+                            </p>
+                            <ul className="m-0 flex list-none flex-col gap-1 p-0">
+                              {m.sf10AutofillDetail.results.slice(0, 12).map((r, i) => (
+                                <li
+                                  key={`${r.name}-${i}`}
+                                  className="flex min-w-0 items-center gap-2 text-xs"
+                                >
+                                  <span
+                                    aria-hidden
+                                    className={
+                                      r.status === "updated"
+                                        ? "text-emerald-600 dark:text-emerald-400"
+                                        : r.status === "failed"
+                                          ? "text-rose-600 dark:text-rose-400"
+                                          : "text-muted-foreground"
+                                    }
+                                  >
+                                    {r.status === "updated" ? "✓" : r.status === "failed" ? "✕" : "–"}
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate text-foreground" title={r.name}>
+                                    {r.name}
+                                  </span>
+                                  <span className="min-w-0 max-w-[14rem] truncate text-muted-foreground" title={r.message}>
+                                    {r.message}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <Button type="button" variant="outline" size="sm" asChild>
+                              <Link href="/teacher/advisory/sf10-access">
+                                Open SF10 Access
                               </Link>
                             </Button>
                           </div>
@@ -804,8 +860,251 @@ export function BamaThread({
             </Button>
           </div>
         ) : null}
+        {showAutofillSectionPicker ? (
+          <div className={PICK_COLUMN} aria-label="Pick an advisory section">
+            <PickColumnHead
+              icon={<FileSpreadsheet size={14} aria-hidden className="text-emerald-500" />}
+              title="Pick a section"
+              count={autofillFlow.rosterPending ? undefined : autofillFlow.sections.length}
+            />
+            <p className="m-0 px-1 text-xs leading-snug text-muted-foreground">
+              Which advisory section should I fill SF10 for?
+            </p>
+            {autofillFlow.rosterPending ? (
+              <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading sections">
+                {[0, 1].map((i) => (
+                  <Skeleton key={i} className="h-9 w-full" />
+                ))}
+              </div>
+            ) : autofillFlow.sections.length === 0 ? (
+              <p className={dialogStyles.pickerEmpty}>
+                No advisory section assigned, or it could not be loaded. Contact the school office.
+              </p>
+            ) : (
+              <div className={dialogStyles.kanbanOptions} role="listbox" aria-label="Advisory sections">
+                {autofillFlow.sections.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    className={PICK_CARD}
+                    onClick={() => autofillFlow.handleSectionPick(s.id)}
+                  >
+                    <span className={dialogStyles.pickerName}>{s.name}</span>
+                    <span className={dialogStyles.pickerMeta}>{s.gradeLevel}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+        {showAutofillStudentPicker ? (
+          <div className={PICK_COLUMN} aria-label="Pick advisees to fill">
+            <PickColumnHead
+              icon={<Users size={14} aria-hidden className="text-emerald-500" />}
+              title={`Pick students (${autofillFlow.pickedCount} selected)`}
+              count={autofillFlow.candidatesPending ? undefined : autofillFlow.candidateCount}
+            />
+            <p className="m-0 px-1 text-xs leading-snug text-muted-foreground">
+              Only advisees with an SF10 record and approved access can be filled.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-6 px-2 text-[11px]"
+                onClick={autofillFlow.selectAllReady}
+              >
+                Select ready
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-6 px-2 text-[11px]"
+                onClick={autofillFlow.clearPicks}
+              >
+                Clear
+              </Button>
+            </div>
+            <input
+              type="search"
+              value={autofillFlow.studentQ}
+              onChange={(e) => autofillFlow.setStudentQ(e.target.value)}
+              placeholder="Search name or LRN…"
+              aria-label="Search students"
+              className={dialogStyles.pickerSearch}
+            />
+            <div
+              className={dialogStyles.kanbanList}
+              role="listbox"
+              aria-label="Advisees"
+              aria-multiselectable="true"
+            >
+              {autofillFlow.candidatesPending ? (
+                <div aria-busy="true" aria-label="Loading students" className="flex flex-col gap-2">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="flex min-w-0 flex-col gap-1.5 rounded-lg border bg-white p-3 shadow-sm dark:bg-card"
+                      aria-hidden="true"
+                    >
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
+                  ))}
+                </div>
+              ) : autofillFlow.candidatesError ? (
+                <p className={dialogStyles.pickerEmpty}>Could not load advisees. Try again.</p>
+              ) : autofillFlow.candidateRows.length === 0 ? (
+                <p className={dialogStyles.pickerEmpty}>No students match.</p>
+              ) : (
+                autofillFlow.candidateRows.map((s) => {
+                  const picked = autofillFlow.pickedLrns.includes(s.lrn);
+                  return (
+                    <button
+                      key={s.lrn}
+                      type="button"
+                      role="option"
+                      aria-selected={picked}
+                      disabled={!s.ready}
+                      onClick={() => autofillFlow.toggleLrn(s.lrn)}
+                      className={`flex w-full items-center gap-2.5 rounded-lg border bg-white p-3 text-left shadow-sm transition-colors dark:bg-card ${
+                        s.ready
+                          ? "cursor-pointer hover:border-primary/60 hover:shadow"
+                          : "cursor-not-allowed opacity-60"
+                      }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`flex size-4 shrink-0 items-center justify-center rounded border ${picked ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}
+                      >
+                        {picked ? <Check size={12} aria-hidden /> : null}
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className={dialogStyles.pickerName}>{s.name}</span>
+                        <span className={dialogStyles.pickerMeta}>
+                          {s.ready
+                            ? `${s.lrn} · ${s.subjectsReady} subject${s.subjectsReady === 1 ? "" : "s"} ready`
+                            : `${s.lrn} · ${s.reason ?? "Not ready"}`}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <Button
+              type="button"
+              disabled={autofillFlow.pickedCount === 0}
+              onClick={autofillFlow.handleStudentsDone}
+            >
+              Done — {autofillFlow.pickedCount} selected
+            </Button>
+          </div>
+        ) : null}
+        {showAutofillPreview ? (
+          <div className={PICK_COLUMN} aria-label="Review SF10 auto-fill">
+            <PickColumnHead
+              icon={<FileSpreadsheet size={14} aria-hidden className="text-emerald-500" />}
+              title="Review before filling"
+              count={autofillFlow.preview?.students.length}
+              action={
+                autofillFlow.preview?.schoolYear.name ? (
+                  <Pill tone="green" label="School year">
+                    {autofillFlow.preview.schoolYear.name}
+                  </Pill>
+                ) : null
+              }
+            />
+            <p className="m-0 px-1 text-xs leading-snug text-muted-foreground">
+              Q1–Q3 come from terms 1–3; Q4 stays blank. Only subjects approved for every term are written.
+            </p>
+            {autofillFlow.previewPending ? (
+              <div aria-busy="true" aria-label="Loading preview" className="flex flex-col gap-2">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="flex min-w-0 flex-col gap-1.5 rounded-lg border bg-white p-3 shadow-sm dark:bg-card"
+                    aria-hidden="true"
+                  >
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-3 w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : autofillFlow.previewError ? (
+              <p className={dialogStyles.pickerEmpty}>Could not build the preview. Try again.</p>
+            ) : autofillFlow.preview ? (
+              <div className={dialogStyles.kanbanList}>
+                {autofillFlow.preview.students.map((s) => (
+                  <div key={s.lrn} className={`${PICK_CARD} cursor-default`}>
+                    <span className="flex min-w-0 items-center justify-between gap-2">
+                      <span className={dialogStyles.pickerName}>{s.name}</span>
+                      <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
+                        {s.ready
+                          ? `${s.rows.length} subject${s.rows.length === 1 ? "" : "s"}`
+                          : s.reason}
+                      </span>
+                    </span>
+                    {s.rows.length > 0 ? (
+                      <span className="flex flex-col gap-0.5">
+                        {s.rows.map((r) => (
+                          <span
+                            key={r.subject}
+                            className="flex min-w-0 items-center justify-between gap-2 text-xs"
+                          >
+                            <span className="min-w-0 flex-1 truncate text-foreground" title={r.subject}>
+                              {r.subject}
+                            </span>
+                            <span className="shrink-0 font-mono text-muted-foreground tabular-nums">
+                              {(r.quarters.slice(0, 3) as Array<number | null>)
+                                .map((q) => q ?? "—")
+                                .join(" · ")}{" "}
+                              → {r.rating}
+                            </span>
+                          </span>
+                        ))}
+                      </span>
+                    ) : null}
+                    {s.skipped.length > 0 ? (
+                      <span className="text-[11px] text-muted-foreground">
+                        Skipped: {s.skipped.map((k) => `${k.subject} (${k.reason})`).join("; ")}
+                      </span>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-6 px-3 text-[11px]"
+                disabled={autofillFlow.submitting}
+                onClick={autofillFlow.backToStudents}
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                className="h-6 px-3 text-[11px]"
+                disabled={!autofillFlow.canSubmit}
+                onClick={() => void autofillFlow.submit()}
+              >
+                {autofillFlow.submitting ? (
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                ) : null}
+                {autofillFlow.submitting ? "Filling…" : "Fill SF10"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {flow.flowError ? <p className={styles.flowError}>{flow.flowError}</p> : null}
         {sf10Open && sf10Flow.flowError ? <p className={styles.flowError}>{sf10Flow.flowError}</p> : null}
+        {autofillOpen && autofillFlow.flowError ? (
+          <p className={styles.flowError}>{autofillFlow.flowError}</p>
+        ) : null}
       </div>
     </>
   );

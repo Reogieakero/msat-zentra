@@ -3,10 +3,9 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import { FileBarChart2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { NurseEmptyCard } from "../components/NurseEmptyCard";
 import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
 import { fetchNurseRiskLevels } from "@/services/nurse/risk.service";
@@ -25,6 +24,7 @@ import {
 import { NurseAdmReports } from "./components/NurseAdmReports";
 import { NurseAdmRisk } from "./components/NurseAdmRisk";
 import { NurseAdmHotspotStat } from "./components/NurseAdmHotspotStat";
+import { NurseAdmSkeleton } from "./components/NurseAdmSkeleton";
 import styles from "./components/nurse-adm.module.css";
 import pageStyles from "../pages.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
@@ -35,11 +35,11 @@ export default function NurseAdmPage() {
 
   const { data: alertsData, isPending, isError, refetch, isFetching } =
     useQuery<NurseAlertsPage>({
+      ...liveQueryOptions,
       queryKey: ["nurse-alerts", "preview", termKey],
       queryFn: ({ signal }) =>
         fetchNurseAlerts({ page: 1, pageSize: PAGE_SIZE, signal }),
       placeholderData: keepPreviousData,
-      staleTime: 60_000,
       enabled: termReady,
     });
 
@@ -65,9 +65,9 @@ export default function NurseAdmPage() {
     isError: riskError,
     refetch: refetchRisk,
   } = useQuery<Record<string, NurseRiskLevel>>({
+    ...liveQueryOptions,
     queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
-    staleTime: 300_000,
     enabled: termReady && studentIds.length > 0,
   });
 
@@ -81,36 +81,7 @@ export default function NurseAdmPage() {
 
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading referrals report">
-        <div className={styles.skelFindings} aria-hidden="true">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className={styles.skelFinding} />
-          ))}
-        </div>
-        <div className={styles.skelGrid} aria-hidden="true">
-          <Card className={styles.card}>
-            <CardContent className={styles.skelCardBody}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelPanelDesc} />
-              <div className={styles.skelSplit}>
-                <Skeleton className={styles.skelDonut} />
-                <div className={styles.skelLegend}>
-                  {[0, 1, 2, 3, 4].map((j) => (
-                    <Skeleton key={j} className={styles.skelLegendRow} />
-                  ))}
-                </div>
-              </div>
-              <Skeleton className={styles.skelInterp} />
-            </CardContent>
-          </Card>
-          <Card className={styles.card}>
-            <CardContent className={styles.skelCardBody}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelPanelDesc} />
-              <Skeleton className={styles.skelLine} />
-              <Skeleton className={styles.skelInterp} />
-            </CardContent>
-          </Card>
-        </div>
+        <NurseAdmSkeleton />
       </section>
     );
   }

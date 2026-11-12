@@ -42,6 +42,7 @@ router.get(
           session,
           termId: activeTerm?.id,
           startDate: activeTerm?.startDate ?? undefined,
+          endDate: activeTerm?.endDate ?? undefined,
         }),
       );
     } catch (e) {

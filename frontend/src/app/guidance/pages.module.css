@@ -120,7 +120,8 @@
   display: grid;
   grid-template-columns: 7fr 5fr;
   gap: 0.75rem;
-  align-items: start;
+  /* Stretch both cards to the tallest board so the row reads as one band. */
+  align-items: stretch;
 }
 
 @media (max-width: 1100px) {
@@ -293,4 +294,10 @@
   font-size: 0.75rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+}
+
+/* Dark mode: let the aurora canvas painted by the shell show through the
+   page surface instead of a flat --background fill. */
+:global(.dark) .page {
+  background-color: transparent;
 }

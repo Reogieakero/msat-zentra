@@ -1,14 +1,17 @@
 "use client";
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { GraduationCap } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
+import { useTerm } from "@/lib/term/TermContext";
 import { toast } from "@/components/ui/sonner";
 import sectionStyles from "./settings-section.module.css";
 import { useCachedMasterTeacher, writeCachedMasterTeacher } from "@/services/teacher/flagCache";
-import { useTeacherOverview } from "@/services/teacher/overview.service";
+import { teacherOverviewKey, useTeacherOverview } from "@/services/teacher/overview.service";
+import type { TeacherOverviewCritical } from "@/services/teacher/overview.types";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { useSettingsDockAction } from "./use-settings-dock";
 
@@ -35,6 +38,8 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 export function MasterTeacherCard() {
   const session = useSession();
+  const queryClient = useQueryClient();
+  const { activeTerm } = useTerm();
   const overview = useTeacherOverview();
   const invalidateTeacher = useTeacherInvalidate();
   const runDockAction = useSettingsDockAction();
@@ -117,6 +122,23 @@ export function MasterTeacherCard() {
         seat.band === "11-12" ? next : (overview.data?.isMasterTeacherSenior ?? false);
       writeCachedMasterTeacher(session?.sub, nextJunior || nextSenior);
       setOptimistic((prev) => ({ ...prev, [seat.band]: next }));
+      // Write the new seat flags straight into the overview cache so the
+      // sidebar, card and every overview consumer flip instantly — no full
+      // page refresh, no waiting on the refetch/Redis TTL.
+      queryClient.setQueryData<TeacherOverviewCritical>(
+        teacherOverviewKey(
+          session?.sub,
+          `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`,
+        ),
+        (prev) =>
+          prev
+            ? {
+                ...prev,
+                isMasterTeacher: nextJunior,
+                isMasterTeacherSenior: nextSenior,
+              }
+            : prev,
+      );
       // settings() alone only refreshes adviser-sections — overview holds
       // the seat flags (card + sidebar Timeslot link) and schedule-me/my-slots
       // gate the timetable, so all three must refresh.

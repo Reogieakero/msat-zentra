@@ -111,7 +111,7 @@ export async function sweepAutoAbsent(
         select: { userId: true, sectionId: true },
       }),
       prisma.studentRoster.findMany({
-        select: { id: true, sectionId: true },
+        select: { id: true, sectionId: true, learnerType: true, createdAt: true },
       }),
     ]);
 
@@ -145,12 +145,23 @@ export async function sweepAutoAbsent(
       profilesBySection.set(p.sectionId, arr);
     }
     const rostersBySection = new Map<string, string[]>();
+    // A transferee's attendance window opens the day AFTER they were enlisted —
+    // the sweep never synthesizes absences for the day they joined (its sheets
+    // may already have been taken before they existed in the system).
+    const attendanceStartByRoster = new Map<string, string>();
     for (const r of rosters) {
       if (!r.sectionId) continue;
       const arr = rostersBySection.get(r.sectionId) ?? [];
       arr.push(r.id);
       rostersBySection.set(r.sectionId, arr);
+      if (r.learnerType === "transferee") {
+        attendanceStartByRoster.set(r.id, dayKey(r.createdAt));
+      }
     }
+    const rosterStarted = (rosterId: string, date: Date): boolean => {
+      const start = attendanceStartByRoster.get(rosterId);
+      return !start || dayKey(date) > start;
+    };
 
     const missing: {
       sectionId: string;
@@ -224,6 +235,7 @@ export async function sweepAutoAbsent(
         if (!touchedProfiles.has(studentId)) touchedProfiles.set(studentId, term.id);
       }
       for (const rosterId of rostersBySection.get(m.sectionId) ?? []) {
+        if (!rosterStarted(rosterId, m.date)) continue;
         inputs.push({
           studentId: null,
           rosterId,
@@ -260,6 +272,7 @@ export async function sweepAutoAbsent(
       }
       for (const rosterId of rostersBySection.get(b.sectionId) ?? []) {
         if (b.have.has(`roster:${rosterId}`)) continue;
+        if (!rosterStarted(rosterId, b.date)) continue;
         inputs.push({
           studentId: null,
           rosterId,

@@ -9,6 +9,21 @@
   gap: 1.25rem;
 }
 
+/* No search/filter hits — amber insight callout, same as the interventions
+   and records desks. */
+.noMatch {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding: 1.5rem 0.25rem;
+}
+
+.noMatchCallout {
+  width: 100%;
+  max-width: 36rem;
+  text-align: left;
+}
+
 /* ---- Lanes: one horizontal row, scroll sideways when they do not fit ---- */
 .lanes {
   display: flex;
@@ -27,11 +42,34 @@
 
 .cardGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 0.75rem;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Single-lane views (any explicit lane tab) always lay out 5 cards per row. */
+.cardGridFive {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .cardGridFive {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .cardGridFive {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 440px) {
+  .cardGridFive {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ---- Card ---- */

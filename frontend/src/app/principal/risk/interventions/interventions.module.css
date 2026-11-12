@@ -5,3 +5,15 @@
   flex-direction: column;
   gap: 1.25rem;
 }
+
+/* No page scrollbar on this board — the document stays scrollable (wheel,
+   touch, keyboard) but the chrome is hidden while this page is mounted.
+   `:has` scopes it to this route so other pages keep their scrollbar. */
+:global(html):has(.page) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+:global(html):has(.page)::-webkit-scrollbar {
+  display: none;
+}

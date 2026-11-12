@@ -3,6 +3,12 @@ import type { GradeLevel } from "../../generated/prisma/client.js";
 import { gradeLabel, gradeToNumber as gradeNum } from "../../lib/grades.js";
 import { pickCurrentTerm } from "../../lib/termScope.js";
 import { getLiveHonorRoll } from "../academics/honor-roll-live.service.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
@@ -158,6 +164,15 @@ export async function getReports(params: {
     termId,
     schoolYearId,
   });
+  // Learners the adviser removed from the advisory list never reach any desk.
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  Object.assign(studentWhere, excludeArchivedProfiles(archivedLearners));
+  const rosterWhere = {
+    ...(typeof studentWhere.gradeLevel === "string"
+      ? { gradeLevel: studentWhere.gradeLevel as GradeLevel }
+      : {}),
+    ...excludeArchivedRosters(archivedLearners),
+  };
 
   const trends = await buildTrends(params.scope, {
     gradeLevel: params.gradeLevel,
@@ -183,15 +198,15 @@ export async function getReports(params: {
                 select: { transmutedGrade: true, computedAverage: true, lockStatus: true, finalizedAt: true },
               },
               attendanceRecords: { where: termId ? { termId } : undefined, select: { status: true } },
-              anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
+              anecdotalRecords: {
+                where: { deletedAt: null, ...(termId ? { termId } : {}) },
+                select: { id: true },
+              },
             },
           },
 
           rosterEntries: {
-            where:
-              typeof studentWhere.gradeLevel === "string"
-                ? { gradeLevel: studentWhere.gradeLevel as GradeLevel }
-                : undefined,
+            where: rosterWhere,
             select: {
               lrn: true,
               finalGrades: {
@@ -199,7 +214,10 @@ export async function getReports(params: {
                 select: { transmutedGrade: true, computedAverage: true, lockStatus: true, finalizedAt: true },
               },
               attendanceRecords: { where: termId ? { termId } : undefined, select: { status: true } },
-              anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
+              anecdotalRecords: {
+                where: { deletedAt: null, ...(termId ? { termId } : {}) },
+                select: { id: true },
+              },
             },
           },
         },
@@ -230,7 +248,11 @@ export async function getReports(params: {
         select: { actionType: true },
       }),
       prisma.anecdotalRecord.findMany({
-        where: { ...(termId ? { termId } : {}), ...anecdotalScopeWhere(params, sectionWhere) },
+        where: {
+          deletedAt: null,
+          ...(termId ? { termId } : {}),
+          ...anecdotalScopeWhere(params, sectionWhere),
+        },
         select: { category: true },
       }),
     ]);
@@ -433,7 +455,12 @@ async function buildTrends(
     termIds.length > 0
       ? await prisma.finalGrade.groupBy({
           by: ["termId"],
-          where: { termId: { in: termIds }, transmutedGrade: { not: null }, ...gradeWhere },
+          where: {
+            termId: { in: termIds },
+            transmutedGrade: { not: null },
+            ...gradeWhere,
+            ...excludeArchivedLearnerRows(await archivedAdvisoryLearnerIds()),
+          },
           _avg: { transmutedGrade: true },
         })
       : [];

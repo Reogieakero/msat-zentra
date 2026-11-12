@@ -20,12 +20,24 @@ const TONE_CLASSES = [
   styles.bamaToneViolet,
 ] as const;
 
+export { TONE_CLASSES };
+
 export function TeacherBamaPill() {
   const pathname = usePathname();
   const session = useSession();
   const overview = useTeacherOverview();
   const cachedAdviser = useCachedAdviser(session?.sub);
   const [toneIndex, setToneIndex] = React.useState(0);
+  // The adviser flag is only known in the browser (localStorage cache + a query
+  // that resolves after hydration), so the server never renders this pill. Gate
+  // the first client render on this flag to match the server HTML exactly —
+  // otherwise the cached flag inserts an anchor mid-hydration and React throws
+  // a hydration mismatch.
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -37,7 +49,7 @@ export function TeacherBamaPill() {
 
   const isAdviser = overview.data?.isAdviser ?? cachedAdviser ?? false;
 
-  if (!isAdviser) return null;
+  if (!mounted || !isAdviser) return null;
 
   const active =
     pathname === "/teacher/chat" || pathname?.startsWith("/teacher/chat/") === true;

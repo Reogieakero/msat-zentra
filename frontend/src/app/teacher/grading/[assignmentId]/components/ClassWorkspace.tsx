@@ -3,7 +3,7 @@
 import * as React from "react";
 import { ArrowLeft, Scale, SearchIcon } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
-import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Input } from "@/components/ui/input";
 import { Pill } from "@/components/ui/pill";
 import { gradeLabel } from "@/services/teacher/grading.compute";
 import { compareSurnameFirst } from "@/lib/names";
@@ -62,32 +62,54 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
 
   return (
     <section className={styles.page}>
-      <div
-        className={styles.layout}
-        style={weightsConfigured ? undefined : { gridTemplateColumns: "minmax(0, 1fr)" }}
-      >
-        <div className={styles.main}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <SubjectRail currentId={queryKeyId} />
-            </div>
+      <div className={styles.layout}>
+        <aside className={styles.subjectsPanel} aria-label="Subject gradebooks">
+          <div className={styles.subjects}>
             {weightsConfigured && !selectedAssessment ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <AudienceTabs value={audience} onChange={setAudience} />
-                <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
-                  <InputGroupInput
-                    placeholder="Search assessments..."
-                    value={assessmentQuery}
-                    onChange={(event) => setAssessmentQuery(event.target.value)}
-                    aria-label="Search assessments"
-                  />
-                  <InputGroupAddon>
-                    <SearchIcon />
-                  </InputGroupAddon>
-                </InputGroup>
+              <div className="relative w-full shrink-0">
+                <SearchIcon
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  className="h-8 w-full rounded-[16px] pl-8 text-xs"
+                  placeholder="Search assessments..."
+                  value={assessmentQuery}
+                  onChange={(event) => setAssessmentQuery(event.target.value)}
+                  aria-label="Search assessments"
+                />
               </div>
             ) : null}
+            <p className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Subjects
+            </p>
+            <SubjectRail currentId={queryKeyId} />
           </div>
+        </aside>
+        <div className={styles.main}>
+          {weightsConfigured ? (
+            <div className="flex justify-end">
+              <WorkspaceGutter
+                assignment={assignment}
+                detail={detail}
+                studentCount={students.length}
+                assignmentId={assignment.id}
+                components={detail.components}
+                unlockCount={unlockCount}
+                subjectLabel={subjectLabel}
+                termLabel={`Term ${assignment.termNumber}, ${assignment.schoolYear}`}
+                onWeightsSaved={() => {
+                  onMutated();
+                  refreshAcademic();
+                }}
+              />
+            </div>
+          ) : null}
+          {weightsConfigured && !selectedAssessment ? (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <AudienceTabs value={audience} onChange={setAudience} />
+            </div>
+          ) : null}
           {!weightsConfigured ? (
             <div className={emptyStyles.emptyWrap}>
               <div
@@ -185,25 +207,6 @@ export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
           </>
           )}
         </div>
-
-        {weightsConfigured ? (
-        <aside className="self-start lg:sticky lg:top-16" aria-label="Class tools">
-          <WorkspaceGutter
-            assignment={assignment}
-            detail={detail}
-            studentCount={students.length}
-            assignmentId={assignment.id}
-            components={detail.components}
-            unlockCount={unlockCount}
-            subjectLabel={subjectLabel}
-            termLabel={`Term ${assignment.termNumber}, ${assignment.schoolYear}`}
-            onWeightsSaved={() => {
-              onMutated();
-              refreshAcademic();
-            }}
-          />
-        </aside>
-        ) : null}
       </div>
 
     </section>

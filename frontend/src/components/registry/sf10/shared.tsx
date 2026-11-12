@@ -1,5 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import type { Sf10Status } from "@/services/registry/sf10.types";
 
 export function formatRelativeTime(iso: string | null): string {
@@ -18,14 +17,36 @@ export function formatRelativeTime(iso: string | null): string {
 }
 
 /** Status color coding, same as the desk KPI accents: attached is amber
- * (in flight), released is green (archived). */
-export function StatusBadge({ status, className }: { status: Sf10Status; className?: string }) {
-  const variant = status === "released" ? "green" : "amber";
-  const label = status === "released" ? "Released" : "Attached";
+ * (in flight), available is blue, released is green (archived). Rendered with
+ * the shared pill so it matches every other desk badge. */
+export function StatusBadge({
+  status,
+  className,
+}: {
+  status: Sf10Status;
+  className?: string;
+}) {
+  const tone: PillTone =
+    status === "released" ? "green" : status === "available" ? "blue" : "amber";
+  const label =
+    status === "released" ? "Released" : status === "available" ? "Available" : "Attached";
   return (
-    <Badge variant={variant} className={cn("font-normal", className)}>
+    <Pill tone={tone} label="Record status" className={className}>
       {label}
-    </Badge>
+    </Pill>
+  );
+}
+
+/**
+ * Adviser read-access grant (adviser-access desk). Deliberately separate
+ * from {@link StatusBadge}: releasing an SF10 means issuing it to another
+ * school, while an adviser grant only opens read access — never a release.
+ */
+export function AdviserAccessBadge({ className }: { className?: string }) {
+  return (
+    <Pill tone="violet" label="Adviser access granted" className={className}>
+      Adviser access
+    </Pill>
   );
 }
 

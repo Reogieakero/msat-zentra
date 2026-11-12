@@ -2,7 +2,6 @@
 import * as React from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { BookOpen, CalendarClock, ClipboardList, SearchIcon, Users } from "lucide-react";
-import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
 import { InsightCallout } from "@/components/ui/insight-callout";
 import { Pill, type PillTone } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
@@ -40,18 +39,20 @@ function StudentCard({ row, showAnecdotal }: { row: StudentListRow; showAnecdota
           character={row.mascot ?? undefined}
           size={32}
         />
-        <p className={styles.studentCardName} title={row.name}>
-          {row.name}
-        </p>
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+          <p className={styles.studentCardName} title={row.name}>
+            {row.name}
+          </p>
+          <Pill
+            tone="neutral"
+            label="LRN"
+            className={`${styles.studentCardLrn} tabular-nums`}
+          >
+            {row.lrn}
+          </Pill>
+        </div>
       </header>
       <div className={styles.studentCardBody}>
-        <Pill
-          tone="neutral"
-          label="LRN"
-          className={`${styles.studentCardLrn} tabular-nums`}
-        >
-          {row.lrn}
-        </Pill>
         <div
           className={`${styles.studentCardStats}${showAnecdotal ? "" : ` ${styles.studentCardStatsTwo}`}`}
         >
@@ -97,14 +98,12 @@ function StudentCard({ row, showAnecdotal }: { row: StudentListRow; showAnecdota
               </span>
               <Pill
                 tone={row.anecdotalCount > 0 ? "amber" : "neutral"}
-                label="Anecdotal records"
+                label="Anecdotal"
                 className="tabular-nums"
               >
                 {row.anecdotalCount}
               </Pill>
-              <span className={styles.studentCardStatLabel}>
-                Anecdotal record{row.anecdotalCount === 1 ? "" : "s"}
-              </span>
+              <span className={styles.studentCardStatLabel}>Anecdotal</span>
             </div>
           ) : null}
         </div>
@@ -147,11 +146,13 @@ export function StudentTable({
       transition={{ duration: 0.45, ease: "easeOut" }}
       style={{ willChange: "transform, opacity" }}
     >
-    <KanbanBoard
-      title={headerTitle}
-      icon={<Users size={14} aria-hidden className="text-blue-500" />}
-      actions={
-        <InputGroup className="w-36 rounded-[16px] sm:w-44">
+    <section aria-label="Student list" className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <p className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground">
+          <Users size={14} aria-hidden className="shrink-0 text-blue-500" />
+          <span className="min-w-0">{headerTitle}</span>
+        </p>
+        <InputGroup className="w-36 shrink-0 rounded-[16px] sm:w-44">
           <InputGroupInput
             placeholder="Filter students..."
             value={query}
@@ -164,22 +165,24 @@ export function StudentTable({
             <SearchIcon />
           </InputGroupAddon>
         </InputGroup>
-      }
-      ariaLabel="Student list"
-      boardLabel="Student list"
-    >
+      </div>
       {rosterPending ? (
-        <KanbanBoardEmpty>Loading students…</KanbanBoardEmpty>
+        <p className="flex min-h-24 items-center justify-center px-1 py-8 text-center text-xs text-muted-foreground">
+          Loading students…
+        </p>
       ) : rosterError ? (
-        <p role="alert" className="flex min-h-24 flex-1 items-center justify-center px-1 py-8 text-center text-xs text-destructive">
+        <p role="alert" className="flex min-h-24 items-center justify-center px-1 py-8 text-center text-xs text-destructive">
           Could not load students for this class.
         </p>
       ) : rows.length === 0 ? (
-        <KanbanBoardEmpty>
-          {emptySectionName
-            ? `No students in ${emptySectionName} yet.`
-            : "No students in this section yet."}
-        </KanbanBoardEmpty>
+        <div className="flex w-full justify-center px-1 py-6">
+          <InsightCallout role="status" className="w-full max-w-xl text-left">
+            <strong>No students in this section yet.</strong>{" "}
+            {emptySectionName
+              ? `${emptySectionName} has no enrolled learners this term.`
+              : "Enrolled learners will appear here once the roster is finalized."}
+          </InsightCallout>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="flex w-full justify-center px-1 py-6">
           <InsightCallout role="status" className="w-full max-w-xl text-left">
@@ -194,7 +197,7 @@ export function StudentTable({
           ))}
         </div>
       )}
-    </KanbanBoard>
+    </section>
     </motion.div>
   );
 }

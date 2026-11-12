@@ -58,6 +58,7 @@ function CoordinatorReferralsPageInner() {
           <CoordinatorReferralsBoard
             rows={r.rows}
             isInitialLoading={r.isInitialLoading}
+            isPageLoading={r.isPageLoading}
             isSyncing={r.isSyncing}
             isError={r.referralsError}
             isRefetching={r.referralsRefetching}
@@ -65,7 +66,6 @@ function CoordinatorReferralsPageInner() {
             query={r.query}
             onQueryChange={r.setQuery}
             hasActiveFilters={r.hasActiveFilters}
-            onClear={r.clearFilters}
             bookPendingId={r.bookPendingId}
             now={r.now}
             onRetry={r.refetchReferrals}

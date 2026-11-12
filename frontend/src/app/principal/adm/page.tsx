@@ -1,10 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { FileBarChart2 } from "lucide-react";
 import { useTerm } from "@/lib/term/TermContext";
 import { fetchAdmDashboard } from "@/services/principal/adm.service";
-import { PrincipalEmptyCard } from "../components/PrincipalEmptyCard";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { AdmPageSkeleton } from "./components/AdmPageSkeleton";
 import { AdmStats } from "./components/AdmStats";
 import { AdmReports } from "./components/AdmReports";
@@ -33,14 +32,10 @@ export default function PrincipalAdmPage() {
   return (
     <section className={styles.page} aria-label="ADM report">
       {!data || total === 0 ? (
-        <PrincipalEmptyCard
-          icon={FileBarChart2}
-          title="No ADM cases school-wide"
-          hint="ADM trends, stage mix, and risk signals will appear here once cases are filed."
-          label="ADM report"
-          centered
-          layout="fit"
-        />
+        <PageEmptyCallout>
+          No ADM cases school-wide yet. ADM trends, stage mix, and risk signals
+          will appear here once cases are filed.
+        </PageEmptyCallout>
       ) : (
         <div className={layoutStyles.layout}>
           <div className={layoutStyles.stack}>

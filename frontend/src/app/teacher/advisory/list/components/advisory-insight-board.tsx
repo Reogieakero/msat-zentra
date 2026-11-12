@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import {
   BookOpen,
   CalendarClock,
@@ -13,7 +13,7 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
-import { riskDotColor } from "@/lib/risk/status";
+import { riskBadgeVariant, riskDotColor } from "@/lib/risk/status";
 import type {
   AdviseeRow,
   AdviseeRiskFlag,
@@ -29,6 +29,9 @@ const FACTOR_BADGE: Record<AdviseeRiskFlag, { label: string; variant: "amber" | 
   attendance: { label: "Attendance", variant: "green" },
   behavioral: { label: "Behavioral", variant: "blue" },
 };
+
+/* Loading placeholders — one per lane of the loaded board. */
+const LANE_PLACEHOLDERS = ["risk", "attendance", "academics", "anecdotal"] as const;
 
 interface AnecdotalRecordItem {
   id: string;
@@ -69,7 +72,7 @@ export function AdvisoryInsightBoard({
   const studentId = student?.studentId ?? null;
   const isRoster = studentId?.startsWith("roster:") ?? false;
 
-  const attendanceQuery = useQuery<StudentAttendance>({
+  const attendanceQuery = useLiveQuery<StudentAttendance>({
     queryKey: ["advisee-attendance", studentId],
     queryFn: () => fetchStudentAttendance(studentId as string),
     enabled: !!studentId,
@@ -78,7 +81,7 @@ export function AdvisoryInsightBoard({
     refetchInterval: 30_000,
   });
 
-  const academicQuery = useQuery<StudentAcademic>({
+  const academicQuery = useLiveQuery<StudentAcademic>({
     queryKey: ["advisee-academic", studentId],
     queryFn: () => fetchStudentAcademic(studentId as string),
     enabled: !!studentId,
@@ -87,7 +90,7 @@ export function AdvisoryInsightBoard({
     refetchInterval: 30_000,
   });
 
-  const anecdotalQuery = useQuery<AnecdotalResponse>({
+  const anecdotalQuery = useLiveQuery<AnecdotalResponse>({
     queryKey: ["advisee-anecdotal", studentId],
     queryFn: () => fetchAdviseeAnecdotal(studentId as string),
     enabled: !!studentId && !isRoster,
@@ -162,6 +165,11 @@ export function AdvisoryInsightBoard({
   const attendancePct = subjectSummary
     ? Math.round(subjectSummary.rate * 100)
     : Math.round(liveAttendanceRate * 100);
+  // A not-yet-started term (or a term with no sessions on the axis) has no
+  // attendance to report — never render a fabricated 0%/100%.
+  const hasAttendanceData = subjectSummary
+    ? subjectSummary.total > 0
+    : (attendanceQuery.data?.summary.total ?? 0) > 0;
   const attRisk = subjectSummary
     ? subjectSummary.isRisk
     : (attendanceQuery.data?.summary.isRisk ?? false);
@@ -187,14 +195,45 @@ export function AdvisoryInsightBoard({
             </Pill>
           </span>
         </div>
+        {/* Risk level lives at the panel's top-right (moved out of the list
+            table so the left lane stays a pure name/LRN roster). */}
+        <Pill tone={riskBadgeVariant(student.riskLevel)} label="Risk level">
+          {student.riskLevel}
+        </Pill>
       </header>
 
       {loading ? (
-        <div className={styles.skel} aria-busy="true" aria-label="Loading insight">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-md" />
-          ))}
-        </div>
+        <section
+          className={styles.plainSection}
+          aria-busy="true"
+          aria-label="Loading insight"
+        >
+          <header className={styles.laneHead}>
+            <span className={styles.laneDot} style={{ background: "var(--border)" }} aria-hidden />
+            <h3 className={styles.laneTitle}>Risk &amp; records</h3>
+          </header>
+          {/* Same four lanes as the loaded board: head + one card each. */}
+          <ul className={styles.cardGrid} aria-hidden>
+            {LANE_PLACEHOLDERS.map((lane) => (
+              <li key={lane} className="min-w-0">
+                <section className={styles.lane}>
+                  <header className={styles.colHead}>
+                    <Skeleton className="size-4 shrink-0 rounded-sm" />
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="ml-auto h-5 w-16 rounded-full" />
+                  </header>
+                  <div className={styles.kCard}>
+                    <Skeleton className="h-3 w-20" />
+                    <div className="flex items-center justify-between gap-2">
+                      <Skeleton className="h-3.5 w-24" />
+                      <Skeleton className="h-6 w-10" />
+                    </div>
+                  </div>
+                </section>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : (
         <section className={styles.plainSection} aria-label="Risk and records">
           <header className={styles.laneHead}>
@@ -213,18 +252,6 @@ export function AdvisoryInsightBoard({
                     <ShieldAlert size={18} />
                   </span>
                   <h4 className={styles.colTitle}>Risk factors</h4>
-                  <Pill
-                    tone={
-                      student.riskLevel === "High"
-                        ? "red"
-                        : student.riskLevel === "Low"
-                          ? "green"
-                          : "neutral"
-                    }
-                    label="Risk level"
-                  >
-                    {student.riskLevel}
-                  </Pill>
                 </header>
                 {activeFlags.length === 0 ? (
                   <p className={styles.empty}>All clear — no active factors.</p>
@@ -256,10 +283,14 @@ export function AdvisoryInsightBoard({
                   </span>
                   <h4 className={styles.colTitle}>Attendance</h4>
                   <Pill
-                    tone={attRisk ? "red" : "neutral"}
+                    tone={attRisk && hasAttendanceData ? "red" : "neutral"}
                     label="Attendance status"
                   >
-                    {attRisk ? "At risk" : "On track"}
+                    {!hasAttendanceData
+                      ? "No sessions"
+                      : attRisk
+                        ? "At risk"
+                        : "On track"}
                   </Pill>
                   {attendanceQuery.isFetching ? (
                     <Pill tone="neutral" label="Live update" aria-live="polite">
@@ -281,15 +312,23 @@ export function AdvisoryInsightBoard({
                     </p>
                     <div className={styles.kBottom}>
                       <p className={styles.kTitle}>
-                        {subjectSummary
-                          ? `${subjectSummary.present} of ${subjectSummary.total} subject marks · ${subjectSummary.bySubject.length} subjects`
-                          : attendanceQuery.data
-                            ? `${attendanceQuery.data.summary.present} of ${attendanceQuery.data.summary.total} sessions`
-                            : "Snapshot from roster"}
+                        {!hasAttendanceData
+                          ? "No sessions in this term"
+                          : subjectSummary
+                            ? `${subjectSummary.present} of ${subjectSummary.total} meetups`
+                            : attendanceQuery.data
+                              ? `${attendanceQuery.data.summary.present} of ${attendanceQuery.data.summary.total} sessions`
+                              : "Snapshot from roster"}
                       </p>
                       <p className={styles.kBig}>
-                        {attendancePct}
-                        <span className={styles.kUnit}>%</span>
+                        {hasAttendanceData ? (
+                          <>
+                            {attendancePct}
+                            <span className={styles.kUnit}>%</span>
+                          </>
+                        ) : (
+                          "—"
+                        )}
                       </p>
                     </div>
                   </li>
@@ -372,15 +411,18 @@ export function AdvisoryInsightBoard({
                         const count = anecdotalRecords.filter(
                           (r) => String(r.category) === c,
                         ).length;
+                        // Categories come from the DB lowercase ("attendance");
+                        // display them sentence-cased.
+                        const label = c.charAt(0).toUpperCase() + c.slice(1);
                         return (
                           <li
                             key={c}
                             className={styles.kCard}
-                            aria-label={`${c} anecdotal records for ${student.name}`}
+                            aria-label={`${label} anecdotal records for ${student.name}`}
                           >
                             <div className={styles.kTop}>
                               <Pill tone="amber" label="Anecdotal category">
-                                {c}
+                                {label}
                               </Pill>
                               <span className={styles.kCircle} aria-hidden>
                                 <FilePenLine size={14} />
@@ -388,7 +430,7 @@ export function AdvisoryInsightBoard({
                             </div>
                             <p className={styles.kLabel}>Records filed</p>
                             <div className={styles.kBottom}>
-                              <p className={styles.kTitle}>{c}</p>
+                              <p className={styles.kTitle}>{label}</p>
                               <p className={styles.kBig}>
                                 {count}
                                 <span className={styles.kUnit}>filed</span>

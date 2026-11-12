@@ -1,15 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pill } from "@/components/ui/pill";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { FolderCard, type FolderFile } from "@/components/ui/FolderCard";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import {
@@ -29,7 +22,7 @@ import {
   MessageSquareText,
   Send,
 } from "lucide-react";
-import { fetchOcForm01Detail, type OcForm01Detail } from "@/components/ocform01/ocform01";
+import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
 import {
   buildGcForm03Data,
   consultRecommendation,
@@ -44,7 +37,9 @@ import {
   anecdotalCategoryColor,
   formatActionTime,
   formatDate,
+  formatTime,
   hasScheduledSession,
+  isCaseDone,
   isEndorsed,
   isWithdrawn,
   latestActionOf,
@@ -56,21 +51,20 @@ import {
 import { latestActionDay } from "./use-guidance-entry-meta";
 import { GuidanceEntryDocsHost } from "./guidance-entry-docs-host";
 
-/* Pill recipe (shape/palette) now comes from the shared ui/Pill; the board
-   still pins the header stage badge to its per-stage border colour. */
-const STAGE_BORDER: Record<string, string> = {
-  amber: "border-amber-500/40",
-  blue: "border-blue-500/40",
-  green: "border-green-500/40",
-  violet: "border-violet-500/40",
-  red: "border-red-500/40",
-  outline: "border-border",
-};
-
+/* Pill recipe (shape/palette) comes from the shared ui/Pill. */
 const ICON_BTN =
   "inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted hover:text-foreground";
 
 type StageVariant = "amber" | "blue" | "green" | "violet" | "red" | "outline";
+
+const STAGE_TONE: Record<StageVariant, PillTone> = {
+  amber: "amber",
+  blue: "blue",
+  green: "green",
+  violet: "violet",
+  red: "red",
+  outline: "neutral",
+};
 
 function caseStage(row: GuidanceReferralItem): {
   label: string;
@@ -151,9 +145,10 @@ function DetailHover({
  * Guidance case card — the same folder-card anatomy as the nurse ADM /
  * clinic boards (muted shell, header stage badge, white inner surface,
  * student pills, folder and hover detail boards). ADM cases review from
- * the card; pending counseling cases review through the accept dialog and
- * accepted ones book their next session. Sessions and the GCForm-03
- * referral form open from the card.
+ * the card; counseling cases review through the accept dialog while open —
+ * read-only once a session is booked — and accepted cases book their next
+ * session from the card. Sessions and the GCForm-03 referral form open from
+ * the card.
  */
 export function GuidanceCaseKanbanCard({
   row,
@@ -187,19 +182,26 @@ export function GuidanceCaseKanbanCard({
   const isAdm = row.type === "ADM";
   const isPending = row.status === "pending";
   const isClosed = row.status === "resolved" || row.status === "dismissed";
+  /* Rejected / cancelled cases drop their session trail from the card: a booked
+     session on a case the desk rejected (or the teacher withdrew) is history the
+     board does not surface — the same for both dismissal flavours. */
+  const hidesSessionInfo = row.status === "dismissed";
   const isEndorsedRow = isEndorsed(row.type, row.status);
   /* ADM cases stay reviewable until they are cancelled or rejected. */
   const canReview = isAdm && !isWithdrawn(row) && row.status !== "dismissed";
-  /* Pending counseling cases review through the accept dialog, mirroring the
-     nurse clinic board; accepted cases then book their next session here. */
-  const canReviewCounseling = !isAdm && isPending;
+  /* Counseling cases stay reviewable until they close — a booked session does
+     not hide the review board (the overlay turns read-only once one exists),
+     mirroring how ADM cards keep "Review ADM case" after a booking. */
+  const canReviewCounseling = !isAdm && !isClosed && !isWithdrawn(row);
   const canBook =
     !isAdm &&
     !isPending &&
     !isClosed &&
+    !isCaseDone(row) &&
     !hasScheduledSession(row.sessions);
   const canManageSessions = !isAdm || isPending;
   const booked = hasScheduledSession(row.sessions);
+  const scheduledSession = row.sessions.find((s) => s.status === "scheduled");
   const cancelled = !booked && latestSessionOf(row.sessions)?.status === "cancelled";
   const latest = latestActionOf(row);
   const category =
@@ -224,27 +226,32 @@ export function GuidanceCaseKanbanCard({
   const [gcLoading, setGcLoading] = React.useState(false);
 
   async function openGcForm() {
-    if (gcLoading) return;
-    if (gcData) {
-      setGcOpen(true);
-      return;
-    }
-    setGcLoading(true);
-    try {
-      let report: OcForm01Detail | null = null;
-      try {
-        if (row.anecdotalId) report = await fetchOcForm01Detail(row.anecdotalId);
-      } catch {
-        report = null;
-      }
-      const data = buildGcForm03Data(row, report, consultRecommendation(row.notes));
+    if (gcLoading || gcOpen) return;
+    const stamped = (data: GcForm03Data): GcForm03Data => {
       const day = latestActionDay(latest.time);
       if (day) {
         data.receivedDate = day;
         data.counselorDate = day;
       }
-      setGcData(data);
+      return data;
+    };
+    // Show the form immediately from the case card, then refine it once the
+    // full OCForm-01 report arrives.
+    if (gcData) {
       setGcOpen(true);
+      return;
+    }
+    setGcData(stamped(buildGcForm03Data(row, null, consultRecommendation(row.notes))));
+    setGcOpen(true);
+    if (!row.anecdotalId) return;
+    setGcLoading(true);
+    try {
+      const report = await fetchOcForm01Detail(row.anecdotalId).catch(() => null);
+      if (report) {
+        setGcData(
+          stamped(buildGcForm03Data(row, report, consultRecommendation(row.notes))),
+        );
+      }
     } finally {
       setGcLoading(false);
     }
@@ -303,21 +310,13 @@ export function GuidanceCaseKanbanCard({
           />
           <span className="truncate capitalize">{category}</span>
         </span>
-        <TooltipProvider delayDuration={100}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge
-                variant={stage.variant}
-                className={`shrink-0 rounded-md ${STAGE_BORDER[stage.variant]}`}
-              >
-                {stage.label}
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={6}>
-              Case status
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Pill
+          tone={STAGE_TONE[stage.variant]}
+          label="Case status"
+          className="shrink-0"
+        >
+          {stage.label}
+        </Pill>
       </header>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border bg-white p-2.5 shadow-sm dark:bg-card">
@@ -374,23 +373,19 @@ export function GuidanceCaseKanbanCard({
             {row.type}
           </Pill>
           {row.date && row.date !== "—" ? (
-            <Pill label="Date referred">{formatDate(row.date)}</Pill>
+            <Pill>{formatDate(row.date)}</Pill>
           ) : null}
+          {row.referredAt ? <Pill>{formatTime(row.referredAt)}</Pill> : null}
         </span>
 
-        {row.followUpDate || booked || cancelled ? (
+        {row.followUpDate || (!hidesSessionInfo && cancelled) ? (
           <span className="flex min-w-0 flex-wrap items-center gap-1.5">
             {row.followUpDate ? (
               <Pill label="Follow-up date">
                 Follow-up {formatDate(row.followUpDate)}
               </Pill>
             ) : null}
-            {booked ? (
-              <Pill tone="blue" label="Session status">
-                Session booked
-              </Pill>
-            ) : null}
-            {cancelled ? (
+            {!hidesSessionInfo && cancelled ? (
               <Pill tone="red" label="Session status">
                 Session cancelled
               </Pill>
@@ -398,7 +393,8 @@ export function GuidanceCaseKanbanCard({
           </span>
         ) : null}
 
-        <span className="flex min-w-0 items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="flex shrink-0 items-center gap-1.5">
           <DetailHover
             icon={<MessageSquareText size={14} aria-hidden />}
             ariaLabel={`Show the reason ${row.student} was referred`}
@@ -441,41 +437,54 @@ export function GuidanceCaseKanbanCard({
               {row.escalationReason}
             </DetailHover>
           ) : null}
-        </span>
+          </span>
 
-        {row.sessions.length > 0 ? (
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-left transition-colors hover:border-primary/60 hover:bg-muted"
-            aria-haspopup="dialog"
-            aria-label={`Counseling sessions for ${row.student}, ${row.sessions.length} ${row.sessions.length === 1 ? "session" : "sessions"} — click to view`}
-            onClick={() => setSessOpen(true)}
-          >
-            <CalendarClock
-              size={14}
-              className="shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">
-              Counseling sessions
-            </span>
-            <span className="shrink-0 rounded-full bg-secondary px-1.5 text-[10px] font-semibold text-secondary-foreground">
-              {row.sessions.length}
-            </span>
-            <ChevronRight
-              size={13}
-              className="shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-          </button>
-        ) : null}
+          {row.sessions.length > 0 && !hidesSessionInfo ? (
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-left transition-colors hover:border-primary/60 hover:bg-muted"
+              aria-haspopup="dialog"
+              aria-label={`Counseling sessions for ${row.student}, ${row.sessions.length} ${row.sessions.length === 1 ? "session" : "sessions"} — click to view`}
+              onClick={() => setSessOpen(true)}
+            >
+              <CalendarClock
+                size={14}
+                className="shrink-0 text-muted-foreground"
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">
+                Counseling sessions
+              </span>
+              <span className="shrink-0 rounded-full bg-secondary px-1.5 text-[10px] font-semibold text-secondary-foreground">
+                {row.sessions.length}
+              </span>
+              <ChevronRight
+                size={13}
+                className="shrink-0 text-muted-foreground"
+                aria-hidden
+              />
+            </button>
+          ) : null}
+        </div>
 
-        <div className="mt-auto flex flex-wrap items-center justify-end gap-1.5 pt-0.5">
+        <div className="mt-auto flex flex-wrap items-center justify-end gap-1.5 pt-1">
+          {scheduledSession && !isClosed && !isWithdrawn(row) ? (
+            <Button
+              type="button"
+              size="xs"
+              variant="secondary"
+              className="h-6 px-2 text-[11px]"
+              disabled={actionPending}
+              onClick={() => onOpenSession(row.id, scheduledSession, "move")}
+            >
+              Reschedule session
+            </Button>
+          ) : null}
           {canReview ? (
             <Button
               type="button"
               size="xs"
-              variant="outline"
+              variant="default"
               className="h-6 px-2 text-[11px]"
               disabled={actionPending}
               onClick={() => onReviewAdm(row)}
@@ -487,7 +496,7 @@ export function GuidanceCaseKanbanCard({
             <Button
               type="button"
               size="xs"
-              variant="outline"
+              variant="default"
               className="h-6 px-2 text-[11px]"
               disabled={actionPending}
               onClick={() => onReviewCounseling(row)}
@@ -496,15 +505,17 @@ export function GuidanceCaseKanbanCard({
             </Button>
           ) : null}
           {canBook ? (
-            <button
+            <Button
               type="button"
-              className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-blue-500/15 px-2 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-blue-400"
+              size="xs"
+              variant="default"
+              className="h-6 px-2 text-[11px]"
               disabled={actionPending}
               onClick={() => onBookSession(row)}
             >
               <CalendarPlus size={12} aria-hidden />
               Book session
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>

@@ -85,6 +85,9 @@ function isInterventionsData(v: unknown): v is { students: AtRiskStudentItem[] }
 
 const nowIso = () => new Date().toISOString();
 
+/** Server `date` fields are the UTC `YYYY-MM-DD` slice of `scheduledAt`. */
+const dateOnly = (scheduledAt: string) => scheduledAt.slice(0, 10);
+
 function tempSession(
   scheduledAt: string,
   sessionType: CounselingSessionType,
@@ -94,7 +97,7 @@ function tempSession(
     id: `temp-${Date.now()}`,
     sessionType,
     scheduledAt,
-    date: scheduledAt,
+    date: dateOnly(scheduledAt),
     venue: venue ?? "",
     status: "scheduled",
     sessionNotes: "",
@@ -197,7 +200,11 @@ function applyInterventionAction(
           ...iv,
           sessions: iv.sessions.map((s) =>
             s.id === sp.sessionId
-              ? { ...s, scheduledAt: (sp.scheduledAt as string) ?? s.scheduledAt, date: (sp.scheduledAt as string) ?? s.date }
+              ? {
+                  ...s,
+                  scheduledAt: (sp.scheduledAt as string) ?? s.scheduledAt,
+                  date: sp.scheduledAt ? dateOnly(sp.scheduledAt) : s.date,
+                }
               : s
           ),
         },

@@ -5,6 +5,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { useNowTick } from "@/lib/clock";
+import { toSlug } from "@/lib/slug";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { toast } from "@/components/ui/sonner";
 import { useDock } from "@/components/dock/dock-store";
@@ -69,7 +70,7 @@ export function useCoordinatorCaseView(caseId: string) {
         description: "Opening the case file to continue toward certification.",
       });
       router.push(
-        `/coordinator/referrals/${encodeURIComponent(profile.id)}?certify=1`,
+        `/coordinator/referrals/${encodeURIComponent(toSlug(vars.target.student))}?certify=1`,
       );
     },
     onError: (err, vars) => {

@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { ClipboardList, KeyRound } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { liveQueryOptions } from "@/lib/api/live";
 import { useTerm } from "@/lib/term/TermContext";
 import { TeacherEmptyCard } from "../components/TeacherEmptyCard";
-import { AmberRectPill } from "../classes/components/UnlinkCodeDialog";
+import { Pill } from "@/components/ui/pill";
 import { useTeacherOverviewGradebook } from "@/services/teacher/overview.service";
 import { GradebookCards } from "./components/GradebookCards";
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
@@ -17,15 +18,21 @@ import kanbanStyles from "@/app/teacher/schedule/components/subject-kanban.modul
 import styles from "./components/gradebook.module.css";
 
 function TermPills({ termLabel }: { termLabel: string }) {
+  const parts = termLabel
+    .split("·")
+    .map((part) => part.trim())
+    .filter(Boolean);
   return (
     <span className="flex items-center gap-1.5">
-      {termLabel
-        .split("·")
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .map((part) => (
-          <AmberRectPill key={part}>{part}</AmberRectPill>
-        ))}
+      {parts.map((part, index) => (
+        <Pill
+          key={part}
+          tone="amber"
+          label={index === 0 ? "School year" : "Active term"}
+        >
+          {part}
+        </Pill>
+      ))}
     </span>
   );
 }
@@ -79,7 +86,7 @@ export default function TeacherGradebookPage() {
 
   // Same shared-code source as the classes page: subjects only display
   // when this login is linked AND this term is entered there.
-  const meQuery = useQuery({
+  const meQuery = useLiveQuery({
     queryKey: ["teacher-schedule-me", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{
@@ -88,6 +95,7 @@ export default function TeacherGradebookPage() {
       }>("/api/teacher/schedule/teachers/me");
       return data;
     },
+    ...liveQueryOptions,
   });
 
   const linked = meQuery.data?.teacherName ?? null;

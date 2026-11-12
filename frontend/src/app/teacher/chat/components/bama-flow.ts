@@ -81,6 +81,8 @@ export interface FlowSnapshot {
   askedTier: boolean;
   askedDatetime: boolean;
   previewShown: boolean;
+  /** Set when the chat is editing an already-filed record's observation context. */
+  editingRecordId?: string | null;
 }
 
 export const EMPTY_FLOW: FlowSnapshot = {
@@ -100,6 +102,7 @@ export const EMPTY_FLOW: FlowSnapshot = {
   askedTier: false,
   askedDatetime: false,
   previewShown: false,
+  editingRecordId: null,
 };
 
 const FLOW_KEY = "zentra.bama.flow.v1";

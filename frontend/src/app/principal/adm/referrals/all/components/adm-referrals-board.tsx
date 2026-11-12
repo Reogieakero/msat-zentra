@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeftRight, PenLine, SearchX, ShieldCheck } from "lucide-react";
+import { ArrowLeftRight, PenLine, ShieldCheck } from "lucide-react";
 import { KanbanBoard, KanbanBoardEmpty } from "@/components/ui/kanban-board";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import type { AdmReferralRow } from "@/services/principal/adm.types";
 import {
   ADM_FOLDER_COLORS,
@@ -126,15 +126,22 @@ export function AdmReferralsBoard({
 
   if (rows.length === 0) {
     return (
-      <PrincipalEmptyState
-        icon={SearchX}
-        title="No matches"
-        hint={
-          search.trim()
-            ? `No endorsed cases match "${search}".`
-            : "No cases match the selected filters."
-        }
-      />
+      <div className={styles.noMatch}>
+        <InsightCallout role="status" className={styles.noMatchCallout}>
+          {search.trim() ? (
+            <>
+              <strong>No ADM cases match “{search.trim()}”.</strong> Try a
+              different name, LRN, or ID — or clear the search to see every
+              endorsed case.
+            </>
+          ) : (
+            <>
+              <strong>No cases match the selected filter.</strong> Try a
+              different approval lane.
+            </>
+          )}
+        </InsightCallout>
+      </div>
     );
   }
 
@@ -157,7 +164,11 @@ export function AdmReferralsBoard({
           {lane.rows.length === 0 ? (
             <KanbanBoardEmpty>{lane.hint}</KanbanBoardEmpty>
           ) : (
-            <ul className={styles.cardGrid}>
+            <ul
+              className={`${styles.cardGrid} ${
+                laneFilter !== "all" ? styles.cardGridFive : ""
+              }`}
+            >
               {lane.rows.map((row) => (
                 <li key={row.id} className="flex min-w-0">
                   <AdmReferralKanbanCard

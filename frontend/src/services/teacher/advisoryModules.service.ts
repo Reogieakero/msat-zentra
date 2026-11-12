@@ -6,6 +6,7 @@ import {
   usePaginatedQuery,
   type PaginatedEnvelope,
 } from "@/lib/api/usePaginatedQuery";
+import { liveQueryOptions } from "@/lib/api/live";
 
 export type AdvisoryModuleKind = "general" | "adm";
 export type AdvisoryModuleStatus = "submitted" | "pending" | "overdue" | "posted";
@@ -178,6 +179,9 @@ export function useAdvisoryModules(options: {
     filters: { sectionId: sectionId ?? "", status: status ?? "" },
     preset: "live",
     enabled,
+    // The adviser desk keeps this board open while learners submit — poll so
+    // the aggregate status and per-learner table move without a reload.
+    ...liveQueryOptions,
     fetcher: (signal) => fetchAdvisoryModules({ page, sectionId, status, signal }),
   });
 }
@@ -222,6 +226,7 @@ export function useModuleSubmissions(options: {
     filters: { moduleId: moduleId ?? "", status: status ?? "" },
     preset: "live",
     enabled: enabled && !!moduleId && !moduleId.startsWith("optimistic-"),
+    ...liveQueryOptions,
     fetcher: (signal) =>
       fetchModuleSubmissions({ moduleId: moduleId as string, page, status, signal }),
   });

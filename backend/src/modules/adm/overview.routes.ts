@@ -67,9 +67,11 @@ router.get(
           ? highlightRaw.trim()
           : "";
       const termId = req.termScope?.termId ?? (await scopedTermRow(req))?.id ?? null;
+      const schoolYearId =
+        req.termScope?.schoolYearId ?? (await scopedTermRow(req))?.schoolYearId ?? null;
       res.json(
         await getMyCases(
-          { userId: req.user!.id, role: req.user!.role, termId },
+          { userId: req.user!.id, role: req.user!.role, termId, schoolYearId },
           { q, page, pageSize, highlight, hasPaginationParams },
         ),
       );

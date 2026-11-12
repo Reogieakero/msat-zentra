@@ -73,6 +73,8 @@ interface KanbanOverlayProps {
   scrollBody?: boolean;
   busy?: boolean;
   className?: string;
+  /** Drop the raised drop-shadow (e.g. session overlays that sit flush). */
+  elevated?: boolean;
 }
 
 /**
@@ -96,6 +98,7 @@ export function KanbanOverlay({
   scrollBody = true,
   busy,
   className,
+  elevated = true,
 }: KanbanOverlayProps) {
   const [mounted, setMounted] = React.useState(false);
 
@@ -133,7 +136,7 @@ export function KanbanOverlay({
       />
       <div className={`relative w-full ${WIDTHS[width]}`}>
         <KanbanBoard
-          className={`bg-card shadow-2xl ${className ?? ""}`}
+          className={`bg-card ${elevated ? "shadow-2xl" : ""} ${className ?? ""}`}
           title={title}
           icon={icon}
           description={description}

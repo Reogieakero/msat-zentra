@@ -12,6 +12,8 @@ import { fetchNurseOverview } from "@/services/nurse/overview.service";
 import type { NurseOverviewData } from "@/services/nurse/nurse.types";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import styles from "./components/nurse-overview.module.css";
 
 export default function NurseOverviewPage() {
@@ -19,10 +21,10 @@ export default function NurseOverviewPage() {
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<NurseOverviewData>({
+      ...liveQueryOptions,
       queryKey: ["nurse-overview", "preview", termKey],
       queryFn: ({ signal }) => fetchNurseOverview(signal),
       placeholderData: keepPreviousData,
-      staleTime: 60_000,
       enabled: termReady,
     });
 
@@ -43,10 +45,14 @@ export default function NurseOverviewPage() {
                   <li key={i} className={styles.caseRow} aria-hidden="true">
                     <div className={styles.caseInfo}>
                       <Skeleton className="size-8 shrink-0 rounded-full" />
-                      <Skeleton className="h-4 w-40 min-w-0" />
-                      <Skeleton className="h-5 w-20 shrink-0 rounded-md" />
-                      <Skeleton className="h-5 w-10 shrink-0 rounded-md" />
-                      <Skeleton className="h-5 w-16 shrink-0 rounded-md" />
+                      <div className={styles.caseNameBlock}>
+                        <Skeleton className="h-4 w-40 min-w-0" />
+                        <div className={styles.caseMeta}>
+                          <Skeleton className="h-5 w-24 shrink-0 rounded-md" />
+                          <Skeleton className="h-5 w-10 shrink-0 rounded-md" />
+                          <Skeleton className="h-5 w-20 shrink-0 rounded-md" />
+                        </div>
+                      </div>
                     </div>
                     <div className={styles.cellActions}>
                       <Skeleton className="h-5 w-16 shrink-0 rounded-md" />
@@ -143,6 +149,23 @@ export default function NurseOverviewPage() {
   }
 
   const refreshing = isFetching && !isPending;
+
+  // No clinic cases at all → one centered callout instead of empty boards.
+  const isEmpty =
+    data.kpis.total === 0 &&
+    (data.latestReferrals ?? []).length === 0 &&
+    (data.dailyTrend ?? []).length === 0;
+
+  if (isEmpty) {
+    return (
+      <section className={styles.page} aria-label="Clinic overview">
+        <PageEmptyCallout>
+          No clinic activity for the selected term yet. Referrals, follow-ups,
+          and health records will appear here once cases are filed.
+        </PageEmptyCallout>
+      </section>
+    );
+  }
 
   return (
     <section className={styles.page} aria-busy={refreshing} aria-label="Clinic overview">

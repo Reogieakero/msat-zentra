@@ -37,6 +37,8 @@ export interface CoordinatorEnrolledModel {
   start: number;
   end: number;
   enrolledPending: boolean;
+  /** True while a page change is fetching (previous rows are placeholders). */
+  enrolledPageLoading: boolean;
   enrolledError: boolean;
   enrolledRefetching: boolean;
 
@@ -85,6 +87,11 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
   const [completeTarget, setCompleteTarget] =
     React.useState<AdmCaseRow | null>(null);
   const [completingId, setCompletingId] = React.useState<string | null>(null);
+  // Page transitions get a deliberate skeleton beat before the row cascade —
+  // even when the next page was prefetched and resolves instantly.
+  const [pageLoading, setPageLoading] = React.useState(false);
+  const [minSkeletonElapsed, setMinSkeletonElapsed] = React.useState(true);
+  const lastPageRef = React.useRef(page);
   const setQuery = React.useCallback((v: string) => {
     setQueryInput(v);
   }, []);
@@ -253,6 +260,31 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     });
   }, [queryClient, page, debounced, elig, totalPages]);
 
+  // Skeleton on every pager move: open the gate immediately, hold it for at
+  // least ~300ms so the animation reads, then release once the page is ready.
+  React.useEffect(() => {
+    if (lastPageRef.current === page) return;
+    lastPageRef.current = page;
+    setPageLoading(true);
+    setMinSkeletonElapsed(false);
+    const timer = setTimeout(() => setMinSkeletonElapsed(true), 300);
+    return () => clearTimeout(timer);
+  }, [page]);
+
+  React.useEffect(() => {
+    if (!pageLoading || !minSkeletonElapsed) return;
+    if (enrolledQuery.isFetching || enrolledQuery.isPlaceholderData) return;
+    // The query flags are the external signal; releasing the skeleton is the
+    // sync point, and the guard above stops it from cascading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPageLoading(false);
+  }, [
+    pageLoading,
+    minSkeletonElapsed,
+    enrolledQuery.isFetching,
+    enrolledQuery.isPlaceholderData,
+  ]);
+
   return {
     now,
     rows,
@@ -264,6 +296,7 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     start,
     end,
     enrolledPending: enrolledQuery.isPending || completedQuery.isPending,
+    enrolledPageLoading: pageLoading,
     enrolledError: enrolledQuery.isError || completedQuery.isError,
     enrolledRefetching: enrolledQuery.isRefetching || completedQuery.isRefetching,
     enrolledBackground:

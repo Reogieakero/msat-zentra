@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  MoreHorizontal,
   UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,26 +16,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiClient } from "@/lib/api/client";
+import { toast } from "@/components/ui/sonner";
+import { useDock } from "@/components/dock/dock-store";
+import { markSelfNotified } from "@/lib/realtime/registrarChannel";
+import { formatGrade, formatSection } from "@/lib/utils";
+import { LrnVerifyDialog } from "../../accounts/components/LrnVerifyDialog";
 import { RegistrarEmptyState } from "../../components/RegistrarEmptyCard";
-import { fetchRegistrarOverview } from "@/services/registry/overview.service";
+import type { PendingStudentsResponse } from "../../accounts/components/types";
+import { formatRelativeTime } from "../../accounts/components/types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/components/registry/overview/OverviewApprovals.module.css";
-import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+
+async function fetchPendingStudents(signal?: AbortSignal) {
+  return apiClient
+    .get<PendingStudentsResponse>("/api/auth/pending", {
+      params: { role: "student", page: 1, pageSize: PAGE_SIZE },
+      signal,
+    })
+    .then((res) => res.data);
+}
 
 export function OverviewApprovals() {
   const router = useRouter();
-  const [page, setPage] = React.useState(1);
+  const qc = useQueryClient();
+  const dock = useDock();
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["registrar-overview"],
-    queryFn: fetchRegistrarOverview,
+    // Shares the accounts page's query prefix so approving here refreshes
+    // both surfaces.
+    queryKey: ["pending-students", "overview-preview"],
+    queryFn: ({ signal }) => fetchPendingStudents(signal),
     staleTime: 30_000,
   });
 
@@ -44,18 +56,72 @@ export function OverviewApprovals() {
     router.push("/registrar/accounts");
   }, [router]);
 
-  const pendingStudents = React.useMemo(() => {
-    return [...(data?.pendingStudents ?? [])].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-  }, [data]);
-
-  const total = pendingStudents.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageRows = pendingStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const hasRecords = (data?.pendingStudents ?? []).length > 0;
+  const pendingStudents = data?.students ?? [];
+  const total = data?.total ?? pendingStudents.length;
+  const pageRows = pendingStudents;
+  const start = total === 0 ? 0 : 1;
+  const end = Math.min(PAGE_SIZE, total);
+  const hasRecords = total > 0;
   const isEmpty = !isPending && !isError && !hasRecords;
+
+  const act = useMutation({
+    mutationFn: ({ id, approve, reason }: { id: string; approve: boolean; reason?: string }) =>
+      apiClient.post(
+        approve ? `/api/auth/approve/${id}` : `/api/auth/reject/${id}`,
+        approve ? {} : { reason: reason ?? "" }
+      ),
+    onMutate: async ({ id, approve }) => {
+      // Optimistic removal with rollback on error.
+      await qc.cancelQueries({ queryKey: ["pending-students"] });
+      const previous = qc.getQueriesData({ queryKey: ["pending-students"] });
+      qc.setQueriesData<PendingStudentsResponse>(
+        { queryKey: ["pending-students"] },
+        (old) =>
+          old && Array.isArray(old.students)
+            ? { ...old, students: old.students.filter((s) => s.id !== id) }
+            : old,
+      );
+      let taskId: string | null = null;
+      try {
+        taskId = dock.startTask({
+          kind: "generic",
+          title: approve ? "Approving account" : "Rejecting account",
+          description: "Pending student",
+        });
+      } catch {
+        taskId = null;
+      }
+      return { previous, taskId };
+    },
+    onSuccess: (_data, { id, approve }, context) => {
+
+      markSelfNotified(id);
+      if (context?.taskId) {
+        dock.completeTask(context.taskId, approve ? "Account approved." : "Account rejected.");
+      }
+      toast.success({
+        title: approve ? "Approved" : "Rejected",
+        description: approve ? "The student account is now active." : "The account request was rejected.",
+      });
+    },
+    onError: (err, _vars, context) => {
+      void err;
+      for (const [key, data] of context?.previous ?? []) {
+        qc.setQueryData(key, data);
+      }
+      if (context?.taskId) {
+        dock.failTask(context.taskId, "Could not process this account. Changes were rolled back.");
+      }
+      toast.error({ title: "Action failed", description: "Could not process this account. Changes were rolled back." });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["pending-students"] });
+      qc.invalidateQueries({ queryKey: ["accounts-audit"] });
+      qc.invalidateQueries({ queryKey: ["account-breakdown"] });
+      qc.invalidateQueries({ queryKey: ["registrar-overview"] });
+      qc.invalidateQueries({ queryKey: ["registrar-notifications"] });
+    },
+  });
 
   return (
     <section className={assign.card} aria-labelledby={isEmpty ? undefined : "overview-pending-approvals"}>
@@ -94,50 +160,47 @@ export function OverviewApprovals() {
           />
         ) : (
           <div className={styles.tableWrap}>
-            <Table>
+            <Table aria-label="Pending student accounts">
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
+                  <TableHead>Section</TableHead>
                   <TableHead>Grade</TableHead>
-                  <TableHead>Parent / Guardian</TableHead>
+                  <TableHead>Requested</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead />
+                  <TableHead>Verification</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pageRows.map((s) => (
-                    <TableRow key={s.lrn} className={styles.clickableRow} onClick={goAccounts}>
+                    <TableRow key={s.id} className={styles.clickableRow} onClick={goAccounts}>
                       <TableCell>
                         <div className={styles.studentCell}>
                           <span className={styles.studentName}>{s.name}</span>
                           <span className={styles.studentLrn}>{s.lrn}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <span className={styles.gradeTag}>{s.grade}</span>
+                      <TableCell className={styles.parentCell}>
+                        {formatSection(s.section)}
                       </TableCell>
-                      <TableCell className={styles.parentCell}>{s.parent}</TableCell>
+                      <TableCell className={styles.parentCell}>{formatGrade(s.gradeLevel)}</TableCell>
+                      <TableCell className={styles.parentCell}>
+                        {formatRelativeTime(s.requestedAt)}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="amber" className={styles.statusBadge}>
                           Pending
                         </Badge>
                       </TableCell>
-                      <TableCell className={styles.menuCell}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8"
-                              aria-label={`Actions for ${s.name}`}
-                            >
-                              <MoreHorizontal aria-hidden />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={goAccounts}>View details</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <LrnVerifyDialog
+                          student={s}
+                          onApprove={() => act.mutateAsync({ id: s.id, approve: true }).then(() => undefined)}
+                          onReject={(reason) =>
+                            act.mutateAsync({ id: s.id, approve: false, reason }).then(() => undefined)
+                          }
+                          approving={act.isPending}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -146,12 +209,15 @@ export function OverviewApprovals() {
           </div>
         )}
       </div>
-      {hasRecords && (
-        <Pagination
-          currentPage={safePage}
-          totalItems={total}
-          onPageChange={setPage}
-        />
+      {hasRecords && total > PAGE_SIZE && (
+        <div className={`${styles.footer} relative`}>
+          <span className={styles.footerInfo}>
+            {`Showing ${start}–${end} of ${total}`} —{" "}
+            <button type="button" className={styles.viewAll} onClick={goAccounts}>
+              View all
+            </button>
+          </span>
+        </div>
       )}
     </section>
   );

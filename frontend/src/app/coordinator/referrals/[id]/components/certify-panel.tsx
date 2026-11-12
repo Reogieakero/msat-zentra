@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import type { CoordinatorCaseDetail } from "@/services/coordinator/coordinator.types";
 import styles from "../case-page.module.css";
 export function CertifyPanel({
@@ -26,20 +27,17 @@ export function CertifyPanel({
     <div className={styles.panel}>
       <h2 className={styles.cardTitle}>Recommendation &amp; certification</h2>
       {hasCertification ? (
-        <p className={styles.cardText} style={{ marginBottom: 0 }}>
+        <InsightCallout>
           Certification is verified on this case — see the Evidence chain for
           its details. Endorsing passes it to the Principal for signature.
-        </p>
+        </InsightCallout>
       ) : d.kind === "referral" ? (
         <>
-          <p className={styles.muted}>
+          <InsightCallout>
             This is still an early referral with no learner profile — create
             one first so the certification can be filed against it.
-          </p>
-          <div
-            className={styles.attendBtns}
-            style={{ justifyContent: "flex-start" }}
-          >
+          </InsightCallout>
+          <div className={styles.meetingActions}>
             <Button
               disabled={createPending || preparingProfile}
               aria-busy={createPending || preparingProfile || undefined}
@@ -69,10 +67,7 @@ export function CertifyPanel({
             Everything is gathered — write the ADM recommendation to certify
             the case.
           </p>
-          <div
-            className={styles.attendBtns}
-            style={{ justifyContent: "flex-start" }}
-          >
+          <div className={styles.meetingActions}>
             <Button onClick={onOpenCert}>Continue to certification</Button>
           </div>
         </>

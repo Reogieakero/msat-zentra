@@ -15,6 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { ClinicDatePicker } from "@/app/nurse/overview/components/ClinicDateTimePicker";
 import { SESSION_KIND_OPTIONS } from "@/lib/labels/sessions";
+import {
+  findOverlappingBooking,
+  formatClockLabel,
+  sessionConflictNote,
+} from "@/lib/sessions/conflicts";
 import { fetchDaySchedule } from "@/services/guidance/sessions.service";
 import { Busy } from "./busy";
 import {
@@ -377,20 +382,21 @@ export function InterventionStartDialog({
                     Time
                   </span>
                   <span className="text-xs text-slate-500 dark:text-[#a1a1aa]">
-                    {taken.length > 0 ? "Crossed-out times are already taken" : ""}
+                    {taken.length > 0 ? "Crossed-out times overlap a booked session" : ""}
                   </span>
                 </div>
                 <div className="mt-1.5 grid grid-cols-4 gap-2" role="group" aria-labelledby="start-time-label">
                   {TIME_SLOTS.map((slot) => {
                     const selected = sessTime === slot.key;
-                    const isTaken = taken.includes(slot.key);
+                    const clash = findOverlappingBooking(slot.key, taken);
+                    const isTaken = clash !== null;
                     return (
                       <button
                         key={slot.key}
                         type="button"
                         aria-pressed={selected}
                         disabled={isTaken || isActionPending}
-                        title={isTaken ? "Already taken" : slot.label}
+                        title={isTaken ? `Overlaps the ${formatClockLabel(clash)} session` : slot.label}
                         onClick={() => onSessTime(slot.key)}
                         className={cn(
                           "h-[38px] whitespace-nowrap rounded-[10px] border border-slate-200 px-1 text-[13px] font-medium text-slate-900 dark:border-[#2f2f35] dark:text-[#f4f4f5]",

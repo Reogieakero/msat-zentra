@@ -23,6 +23,12 @@ export * from './enums.js';
  */
 export type User = Prisma.UserModel
 /**
+ * Model LoginEvent
+ * A sign-in or sign-out event, used by the administrator overview's
+ * login-activity chart.
+ */
+export type LoginEvent = Prisma.LoginEventModel
+/**
  * Model StudentProfile
  * 
  */
@@ -62,6 +68,11 @@ export type Section = Prisma.SectionModel
  * 
  */
 export type StudentRoster = Prisma.StudentRosterModel
+/**
+ * Model TermRosterConfirmation
+ * 
+ */
+export type TermRosterConfirmation = Prisma.TermRosterConfirmationModel
 /**
  * Model Subject
  * 

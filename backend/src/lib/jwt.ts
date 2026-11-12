@@ -33,10 +33,19 @@ export function signRefresh(payload: Omit<JwtRefreshPayload, "type">): string {
 // Supabase project's JWT secret is set to match JWT_ACCESS_SECRET.
 export const REALTIME_TOKEN_TTL_SECONDS = 15 * 60;
 
-export function signRealtimeToken(userId: string): string {
+export function signRealtimeToken(userId: string, appRole?: string): string {
   const env = getEnv();
   return jwt.sign(
-    { sub: userId, role: "authenticated", aud: "authenticated", type: "realtime" },
+    {
+      sub: userId,
+      role: "authenticated",
+      aud: "authenticated",
+      type: "realtime",
+      // `role` has to stay "authenticated" for Supabase Realtime, so the Zentra
+      // role rides a separate claim that zentra_role() prefers (RLS policies on
+      // Section / Intervention / CounselingSession key off it).
+      ...(appRole ? { app_role: appRole } : {}),
+    },
     env.JWT_ACCESS_SECRET,
     { expiresIn: REALTIME_TOKEN_TTL_SECONDS },
   );

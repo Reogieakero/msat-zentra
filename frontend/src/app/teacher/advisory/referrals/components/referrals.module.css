@@ -233,6 +233,13 @@
   min-height: 0;
 }
 
+/* The referral table blends into the page — no card tint behind the rows
+   (same background-free treatment as the overview chart kanban boards).
+   Doubled class keeps this ahead of the shared `.tableWrap` card fill. */
+.flatTable.flatTable {
+  background-color: transparent;
+}
+
 .workspace {
   display: flex;
   flex-direction: column;

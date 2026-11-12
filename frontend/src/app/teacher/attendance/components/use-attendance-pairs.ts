@@ -1,7 +1,8 @@
 "use client";
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
+import { liveQueryOptions } from "@/lib/api/live";
 import type { DayConfig } from "@/app/teacher/schedule/components/schedule-time";
 export interface LinkedName {
   id: string;
@@ -22,7 +23,7 @@ export interface AttendancePair {
   slots: { day: number; period: number; status: "DRAFT" | "SUBMITTED" | "APPROVED" }[];
 }
 export function useAttendancePairs(termKey: string, linked: LinkedName | null) {
-  const mySlotsQuery = useQuery<{ slots: MySlot[] }>({
+  const mySlotsQuery = useLiveQuery<{ slots: MySlot[] }>({
     queryKey: ["teacher-my-slots", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ slots: MySlot[] }>(
@@ -34,8 +35,9 @@ export function useAttendancePairs(termKey: string, linked: LinkedName | null) {
     retry: false,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
+    ...liveQueryOptions,
   });
-  const configQuery = useQuery<{ config: DayConfig }>({
+  const configQuery = useLiveQuery<{ config: DayConfig }>({
     queryKey: ["teacher-schedule-config", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ config: DayConfig }>(
@@ -46,6 +48,7 @@ export function useAttendancePairs(termKey: string, linked: LinkedName | null) {
     retry: false,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
+    ...liveQueryOptions,
   });
   const pairs = useMemo<AttendancePair[]>(() => {
     const list: AttendancePair[] = [];

@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
-import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../risk.js";
-import { ATTENDANCE_RISK_CUTOFF, subjectAverageAttendance } from "../attendance.js";
+import { attendanceTotalFor, computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../risk.js";
+import { ATTENDANCE_RISK_CUTOFF, subjectAverageAttendance, termHasStarted } from "../attendance.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import { admExemptStudentIds } from "../adm/attendancePolicy.js";
 import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
@@ -15,7 +15,7 @@ export async function getStudents(ctx: AdvisoryContext) {
   }
 
   const sectionIds = sections.map((s) => s.id);
-  const [counts, advisees, rosterEntries, assignSubjects, entrySubjects, subjectAvgs, sectionTotals] =
+  const [counts, advisees, rosterEntries, assignSubjects, entrySubjects, subjectAvgs, sectionTotals, term, archived] =
     await Promise.all([
       prisma.studentProfile.groupBy({
         by: ["sectionId"],
@@ -37,7 +37,7 @@ export async function getStudents(ctx: AdvisoryContext) {
           },
           attendanceRecords: { where: { termId }, select: { status: true } },
           anecdotalRecords: {
-            where: { termId },
+            where: { termId, deletedAt: null },
             select: { confidentialityLevel: true, category: true },
           },
           gradeFlags: { where: { termId }, select: { status: true } },
@@ -52,6 +52,8 @@ export async function getStudents(ctx: AdvisoryContext) {
           fullName: true,
           mascot: true,
           sectionId: true,
+          learnerType: true,
+          createdAt: true,
           section: { select: { name: true } },
         },
         orderBy: { fullName: "asc" },
@@ -68,11 +70,29 @@ export async function getStudents(ctx: AdvisoryContext) {
       }),
       subjectAverageAttendance(sectionIds, termId),
       sectionAttendanceTotals(sectionIds, termId),
+      prisma.term.findUnique({
+        where: { id: termId },
+        select: { startDate: true },
+      }),
+      // Adviser-scoped soft delete: hidden learners keep every record and can
+      // be restored from the same page.
+      prisma.adviserArchivedStudent.findMany({
+        where: { teacherId },
+        select: { studentId: true, rosterId: true },
+      }),
     ]);
-  const registeredLrns = new Set(advisees.map((s) => s.lrn));
-  const rosterOnly = rosterEntries.filter((r) => !registeredLrns.has(r.lrn));
+  const archivedStudentIds = new Set(
+    archived.map((a) => a.studentId).filter((id): id is string => !!id),
+  );
+  const archivedRosterIds = new Set(
+    archived.map((a) => a.rosterId).filter((id): id is string => !!id),
+  );
+  const visibleAdvisees = advisees.filter((s) => !archivedStudentIds.has(s.userId));
+  const visibleRosterEntries = rosterEntries.filter((r) => !archivedRosterIds.has(r.id));
+  const registeredLrns = new Set(visibleAdvisees.map((s) => s.lrn));
+  const rosterOnly = visibleRosterEntries.filter((r) => !registeredLrns.has(r.lrn));
   const rosterIds = rosterOnly.map((r) => r.id);
-  const profileIds = advisees.map((s) => s.userId);
+  const profileIds = visibleAdvisees.map((s) => s.userId);
 
   const [rosterFinals, rosterAttendance, rosterAnecdotal, rawRows, enrolledBySection] =
     await Promise.all([
@@ -95,7 +115,7 @@ export async function getStudents(ctx: AdvisoryContext) {
       : Promise.resolve([]),
     rosterIds.length > 0
       ? prisma.anecdotalRecord.findMany({
-          where: { rosterId: { in: rosterIds }, termId },
+          where: { rosterId: { in: rosterIds }, termId, deletedAt: null },
           select: { rosterId: true, confidentialityLevel: true },
         })
       : Promise.resolve([]),
@@ -211,14 +231,22 @@ export async function getStudents(ctx: AdvisoryContext) {
     flags: T,
   ): T => {
     const subjAvg = subjectAvgs.get(key);
-    if (subjAvg) {
+    // Only override when the learner actually has subject attendance marks —
+    // a roster transferee enlisted a day ago has no signal yet, and their
+    // empty record set must not be read as 0%.
+    if (subjAvg && subjAvg.hasSubjectData) {
       flags.attendanceFlag = subjAvg.average < ATTENDANCE_RISK_CUTOFF;
     }
     return flags;
   };
 
+  // A term that has not started yet is outside its scope period: staged or
+  // seeded finals/attendance/anecdotes are not this term's records yet. Keep
+  // the learner identity but report no metrics or grades.
+  const started = termHasStarted(term?.startDate);
+
   const students = [
-    ...advisees.map((s) => {
+    ...visibleAdvisees.map((s) => {
       const enrolled = enrolledBySection.get(s.sectionId!) ?? 0;
       const factors = withSubjectAverage(
         s.userId,
@@ -244,24 +272,27 @@ export async function getStudents(ctx: AdvisoryContext) {
         birthdate: s.birthdate,
         gender: s.gender,
         section: s.section?.name ?? "",
-        riskLevel: levelFromFlags(factors),
-        flags: activeFlags,
-        attendanceRate: total === 0 ? 1 : present / total,
-        anecdotalCount: s.anecdotalRecords.length,
-        confidentialityTiers: Array.from(
-          new Set(s.anecdotalRecords.map((a) => a.confidentialityLevel))
-        ),
-        hasOpenFlag: openFlags > 0,
-        openFlagCount: openFlags,
+        riskLevel: started ? levelFromFlags(factors) : "Low",
+        flags: started ? activeFlags : [],
+        attendanceRate: started ? (total === 0 ? 1 : present / total) : 0,
+        anecdotalCount: started ? s.anecdotalRecords.length : 0,
+        confidentialityTiers: started
+          ? Array.from(new Set(s.anecdotalRecords.map((a) => a.confidentialityLevel)))
+          : [],
+        hasOpenFlag: started && openFlags > 0,
+        openFlagCount: started ? openFlags : 0,
         hasAccount: true,
+        learnerType: "regular" as const,
         admExempt: admExempt.has(s.userId),
-        grades: s.finalGrades.map((f) => ({
-          subject: f.subject.name,
-          code: f.subject.code,
-          computedAverage: f.computedAverage,
-          transmutedGrade: f.transmutedGrade,
-        })),
-        liveGrades: liveGradesFor(s.userId),
+        grades: started
+          ? s.finalGrades.map((f) => ({
+              subject: f.subject.name,
+              code: f.subject.code,
+              computedAverage: f.computedAverage,
+              transmutedGrade: f.transmutedGrade,
+            }))
+          : [],
+        liveGrades: started ? liveGradesFor(s.userId) : [],
       };
     }),
     ...rosterOnly.map((r) => {
@@ -270,20 +301,21 @@ export async function getStudents(ctx: AdvisoryContext) {
       const att = attendanceByRoster.get(r.id) ?? [];
       const anec = anecdotalByRoster.get(r.id) ?? [];
       const enrolled = enrolledBySection.get(r.sectionId) ?? 0;
+      const attTotal = attendanceTotalFor(sectionTotals, r.sectionId, r.id);
       const factors = withSubjectAverage(
         key,
         computeRiskFactors({
           finalGrades: finals,
           rawAverages: rawAveragesFor(key),
           attendance: att,
-          attendanceTotal: sectionTotals.get(r.sectionId ?? ""),
+          attendanceTotal: attTotal,
           anecdotalCount: anec.length,
           enrolled,
         }),
       );
       const activeFlags = toActiveFlags(factors);
       const present = att.filter((a) => a.status === "present").length;
-      const ratedTotal = Math.max(sectionTotals.get(r.sectionId ?? "") ?? 0, att.length);
+      const ratedTotal = Math.max(attTotal ?? 0, att.length);
       return {
         studentId: key,
         name: r.fullName,
@@ -292,22 +324,27 @@ export async function getStudents(ctx: AdvisoryContext) {
         birthdate: null,
         gender: null,
         section: r.section.name,
-        riskLevel: levelFromFlags(factors),
-        flags: activeFlags,
-        attendanceRate: ratedTotal === 0 ? 1 : present / ratedTotal,
-        anecdotalCount: anec.length,
-        confidentialityTiers: Array.from(new Set(anec.map((a) => a.confidentialityLevel))),
+        riskLevel: started ? levelFromFlags(factors) : "Low",
+        flags: started ? activeFlags : [],
+        attendanceRate: started ? (ratedTotal === 0 ? 1 : present / ratedTotal) : 0,
+        anecdotalCount: started ? anec.length : 0,
+        confidentialityTiers: started
+          ? Array.from(new Set(anec.map((a) => a.confidentialityLevel)))
+          : [],
         hasOpenFlag: false,
         openFlagCount: 0,
         hasAccount: false,
+        learnerType: r.learnerType,
         admExempt: false,
-        grades: finals.map((f) => ({
-          subject: f.subject.name,
-          code: f.subject.code,
-          computedAverage: f.computedAverage,
-          transmutedGrade: f.transmutedGrade,
-        })),
-        liveGrades: liveGradesFor(key),
+        grades: started
+          ? finals.map((f) => ({
+              subject: f.subject.name,
+              code: f.subject.code,
+              computedAverage: f.computedAverage,
+              transmutedGrade: f.transmutedGrade,
+            }))
+          : [],
+        liveGrades: started ? liveGradesFor(key) : [],
       };
     }),
   ];

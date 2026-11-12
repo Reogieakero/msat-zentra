@@ -6,7 +6,7 @@ import { CalendarClock, ClipboardCheck, Clock, Inbox, Send, Stethoscope } from "
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
-import { Badge } from "@/components/ui/badge";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -23,22 +23,24 @@ import { NurseForwardAdmConfirm } from "./NurseForwardAdmConfirm";
 import { NurseSessionScheduleBoard } from "./NurseSessionScheduleBoard";
 import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
 import { NurseAdmReferralFormSheet } from "../../referrals/components/NurseAdmReferralFormSheet";
-import { activeSessionOf, anecdotalCategoryPillClass } from "../../referrals/components/nurse-referrals-format";
+import { activeSessionOf } from "../../referrals/components/nurse-referrals-format";
 import { useNurseInvalidate } from "./use-nurse-mutation";
 import styles from "./nurse-overview.module.css";
 
-/* Single shared pill metric for the case rows — rectangle pills (rounded-md)
-   matching row-list.tsx, one step larger (12px) for LRN/category/waiting. */
-const PILL_BASE =
-  "inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-xs font-medium whitespace-nowrap";
-const PILL_SECONDARY = "border-border bg-secondary text-secondary-foreground";
-const PILL_MUTED = "border-border bg-muted text-muted-foreground";
+/* Category colour coding shared with the referrals / anecdotal pages. */
+const CATEGORY_TONE: Record<string, PillTone> = {
+  behavioral: "amber",
+  bullying: "red",
+  academic: "blue",
+  attendance: "green",
+  health: "violet",
+};
 
 /**
  * Latest referrals board — the KanbanBoard shell (icon + title + count +
  * description) over one flat row per case: the latest five students referred
  * to the desk, newest referral first. Each row: roster mascot + name,
- * LRN/grade/category pills, then the type + status badges, waiting pill, and
+ * LRN/grade/category pills, then the type + status pills, waiting pill, and
  * a single kebab menu (all row buttons folded in). Filter behaves as before;
  * pagination auto-hides at five rows.
  */
@@ -118,48 +120,47 @@ export function NurseLatestReferralsPanel({
                       character={item.mascot ?? undefined}
                       size={32}
                     />
-                    <p className={styles.cellMain}>{item.student}</p>
-                    <span
-                      className={`${PILL_BASE} ${PILL_SECONDARY} tabular-nums`}
-                      title={item.lrn}
-                    >
-                      {item.lrn}
-                    </span>
-                    {item.grade !== "—" && (
-                      <span className={`${PILL_BASE} ${PILL_MUTED}`}>
-                        {item.grade}
-                      </span>
-                    )}
-                    {item.category !== "—" && (
-                      <span
-                        className={`${PILL_BASE} ${
-                          anecdotalCategoryPillClass(item.category) ??
-                          PILL_SECONDARY
-                        }`}
-                      >
-                        {item.category}
-                      </span>
-                    )}
+                    <div className={styles.caseNameBlock}>
+                      <p className={styles.cellMain}>{item.student}</p>
+                      <div className={styles.caseMeta}>
+                        <Pill label="LRN" className="tabular-nums">
+                          {item.lrn}
+                        </Pill>
+                        {item.grade !== "—" && (
+                          <Pill label="Grade level">{item.grade}</Pill>
+                        )}
+                        {item.category !== "—" && (
+                          <Pill
+                            tone={
+                              CATEGORY_TONE[
+                                item.category.trim().toLowerCase()
+                              ] ?? "neutral"
+                            }
+                            label="Category"
+                          >
+                            {item.category}
+                          </Pill>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className={styles.cellActions}>
                     {item.type === "ADM" ? (
-                      <Badge variant="blue" className="rounded-md">
+                      <Pill tone="blue" label="Referral type">
                         ADM case
-                      </Badge>
+                      </Pill>
                     ) : (
-                      <Badge variant="secondary" className="rounded-md">
-                        Clinic
-                      </Badge>
+                      <Pill label="Referral type">Clinic</Pill>
                     )}
-                    <NurseActionBadge row={item} className="rounded-md" />
+                    <NurseActionBadge row={item} />
                     {wait !== "—" && (
-                      <span
-                        className={`${PILL_BASE} ${PILL_MUTED} gap-1 tabular-nums`}
-                        title={`Waiting since ${item.date}`}
+                      <Pill
+                        label={`Waiting since ${item.date}`}
+                        className="gap-1 tabular-nums"
                       >
                         <Clock size={11} aria-hidden />
                         {wait}
-                      </span>
+                      </Pill>
                     )}
                     <NurseQueueRowActions
                       row={item}

@@ -7,6 +7,7 @@ import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import {
   AnecdotalRecordKanbanCard,
@@ -14,6 +15,7 @@ import {
 } from "@/components/anecdotal/anecdotal-record-kanban-card";
 import styles from "./RecordsHeatblocks.module.css";
 import { CATEGORY_META, fetchRecords } from "@/services/principal/records.service";
+import { liveQueryOptions } from "@/lib/api/live";
 import { Pagination } from "@/components/shared/pagination";
 
 const RECORDS_PAGE_SIZE = 16;
@@ -25,6 +27,7 @@ export function RecordsHeatblocks() {
   const [privacyFor, setPrivacyFor] = React.useState<string | null>(null);
 
   const { data, isPending, isError } = useQuery({
+    ...liveQueryOptions,
     queryKey: ["records-heatmap"],
     queryFn: fetchRecords,
   });
@@ -94,15 +97,21 @@ export function RecordsHeatblocks() {
             <p>Could not load student records.</p>
           </div>
         ) : shownReports.length === 0 ? (
-          <PrincipalEmptyState
-            icon={FileText}
-            title="No reports found"
-            hint={
-              query.trim()
-                ? `No reports match “${query.trim()}”.`
-                : "No reports match the current filters."
-            }
-          />
+          query.trim() ? (
+            <div className={styles.noMatch}>
+              <InsightCallout role="status" className={styles.noMatchCallout}>
+                <strong>No reports match “{query.trim()}”.</strong> Try a
+                different name or LRN — or clear the search to see every
+                anecdotal record.
+              </InsightCallout>
+            </div>
+          ) : (
+            <PrincipalEmptyState
+              icon={FileText}
+              title="No reports found"
+              hint="No anecdotal records match the current filters."
+            />
+          )
         ) : (
           <>
             <div className={styles.grid} role="list" aria-label="Anecdotal records">

@@ -1,5 +1,9 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+} from "../../lib/learnerVisibility.js";
 import { ADM_STAGE_FLOW } from "../adm.js";
 import { TIMELINE_DESK_LABELS, buildCaseTimeline } from "../../modules/referrals/timeline.js";
 import type { ReferralContext } from "./referral.types.js";
@@ -25,6 +29,10 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
   const sectionIds = sections.map((s) => s.id);
 
   const scopeTermId = ctx.termId;
+  /* The adviser's own referrals board must also honour learners the adviser
+     removed from the advisory list (same archive the roster reads use). */
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const archivedClause = excludeArchivedLearnerRows(archivedLearners);
   const referralWhere = {
     referredBy: teacherId,
     ...(scopeTermId ? { termId: scopeTermId } : {}),
@@ -36,6 +44,7 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
           ],
         }
       : {}),
+    ...(Object.keys(archivedClause).length > 0 ? archivedClause : {}),
   };
   const referrals = await prisma.referral.findMany({
     where: referralWhere,
@@ -70,8 +79,18 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
       homeVisitations: { select: { id: true } },
       // Completed clinic sessions mark the case done on the nurse board
       // (derived), so the adviser's list must agree for older rows whose
-      // referral status was left at in_progress.
-      counselingSessions: { select: { status: true, completedAt: true } },
+      // referral status was left at in_progress. The scheduledAt/venue fields
+      // feed the "session booked" pill the adviser sees on ADM cases.
+      counselingSessions: {
+        select: {
+          status: true,
+          completedAt: true,
+          scheduledAt: true,
+          sessionType: true,
+          venue: true,
+        },
+        orderBy: { scheduledAt: "asc" },
+      },
       admProfiles: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -170,6 +189,11 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
       r.status !== "follow_up"
         ? "resolved"
         : r.status;
+    /* Booked-but-not-yet-held session (guidance/nurse schedules it on the
+       referral). ADM cases surface it to the adviser so they know the slot
+       without opening the case: earliest scheduled one wins. */
+    const bookedSession =
+      r.counselingSessions.find((s) => s.status === "scheduled") ?? null;
     if (timeline.length === 0) {
       timeline.push({
         label: `Submitted to the ${TIMELINE_DESK_LABELS[r.referredToRole] ?? "receiving desk"}.`,
@@ -250,6 +274,14 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
         return dates.length > 0 ? dates.sort().slice(-1)[0] : null;
       })(),
       devicesReturned: (profile?.devices ?? []).filter((d) => d.returnedDate !== null).length,
+      bookedSession:
+        isAdm && bookedSession && displayStatus !== "dismissed"
+          ? {
+              scheduledAt: bookedSession.scheduledAt.toISOString(),
+              sessionType: bookedSession.sessionType,
+              venue: bookedSession.venue ?? null,
+            }
+          : null,
       certificationAt: (() => {
         const cert = (profile?.forms ?? []).find(
           (f) => f.formType === "CERTIFICATION" && f.status === "verified" && f.uploadedAt

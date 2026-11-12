@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Loader2 } from "lucide-react";
+import { CalendarDays, Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Pill } from "@/components/ui/pill";
@@ -71,14 +71,16 @@ export function ReviewDialog({
             <Button
               variant="destructive"
               size="sm"
-              className="h-6 px-2 text-xs"
+              className="h-6 border-transparent bg-red-600 px-2 text-xs text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
               onClick={() => onReview("reject")}
               disabled={reviewPending || submitted === 0}
               aria-busy={rejecting || undefined}
             >
               {rejecting ? (
                 <Loader2 size={12} className="animate-spin" aria-hidden />
-              ) : null}
+              ) : (
+                <X size={12} aria-hidden />
+              )}
               <span aria-live="polite">Reject</span>
             </Button>
             <Button
@@ -90,7 +92,9 @@ export function ReviewDialog({
             >
               {approving ? (
                 <Loader2 size={12} className="animate-spin" aria-hidden />
-              ) : null}
+              ) : (
+                <Check size={12} aria-hidden />
+              )}
               <span aria-live="polite">Approve</span>
             </Button>
           </div>

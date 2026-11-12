@@ -9,7 +9,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CATEGORY_COLORS } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
+import { Pill, type PillTone } from "@/components/ui/pill";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import type { GuidanceAnecdotalTopStudent } from "@/services/guidance/anecdotal.types";
 
@@ -32,17 +33,19 @@ export function TopReferredCard({ items }: { items: GuidanceAnecdotalTopStudent[
         <p className="relative text-sm text-muted-foreground">No referrals yet.</p>
       ) : (
         <ol className="relative flex flex-col gap-2">
-          {top.map((s, i) => (
+          {top.map((s) => (
             <li key={s.lrn || s.student} className="flex items-center gap-2 text-sm">
-              <span
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
-                aria-hidden="true"
-              >
-                {i + 1}
-              </span>
+              <StudentMascot
+                name={s.student}
+                seed={s.lrn}
+                character={s.mascot ?? undefined}
+                size={28}
+              />
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{s.student}</span>
-                <span className="block truncate text-xs text-muted-foreground">{s.lrn}</span>
+                <Pill label="LRN" className="mt-0.5 tabular-nums">
+                  {s.lrn}
+                </Pill>
               </span>
               <span
                 className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary tabular-nums"
@@ -107,12 +110,12 @@ export function SessionFilesLegendCard() {
 const MENU_PANEL =
   "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
 
-const CATEGORY_LEGEND = [
-  { label: "Behavioral", hint: "Conduct and classroom behavior", color: CATEGORY_COLORS.behavioral },
-  { label: "Bullying", hint: "Peer conflict and bullying", color: CATEGORY_COLORS.bullying },
-  { label: "Academic", hint: "Learning and performance", color: CATEGORY_COLORS.academic },
-  { label: "Attendance", hint: "Absences and tardiness", color: CATEGORY_COLORS.attendance },
-  { label: "Health", hint: "Wellness and clinic notes", color: CATEGORY_COLORS.health },
+const CATEGORY_LEGEND: { label: string; hint: string; tone: PillTone }[] = [
+  { label: "Behavioral", hint: "Conduct and classroom behavior", tone: "amber" },
+  { label: "Bullying", hint: "Peer conflict and bullying", tone: "red" },
+  { label: "Academic", hint: "Learning and performance", tone: "blue" },
+  { label: "Attendance", hint: "Absences and tardiness", tone: "green" },
+  { label: "Health", hint: "Wellness and clinic notes", tone: "violet" },
 ];
 
 function GutterIconButton({
@@ -253,22 +256,22 @@ export function GuidanceAnecdotalSidebar({
                   </p>
                 ) : (
                   <ol className="m-0 flex list-none flex-col gap-2 p-0">
-                    {top.map((s, i) => (
+                    {top.map((s) => (
                       <li
                         key={s.lrn || s.student}
                         className="flex items-center gap-2 text-sm"
                       >
-                        <span
-                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
-                          aria-hidden="true"
-                        >
-                          {i + 1}
-                        </span>
+                        <StudentMascot
+                          name={s.student}
+                          seed={s.lrn}
+                          character={s.mascot ?? undefined}
+                          size={28}
+                        />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium">{s.student}</span>
-                          <span className="block truncate text-xs text-muted-foreground">
+                          <Pill label="LRN" className="mt-0.5 tabular-nums">
                             {s.lrn}
-                          </span>
+                          </Pill>
                         </span>
                         <span
                           className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary tabular-nums"
@@ -325,17 +328,9 @@ export function GuidanceAnecdotalSidebar({
                 >
                   {CATEGORY_LEGEND.map((e) => (
                     <li key={e.label} className="flex">
-                      <span
-                        className="inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold leading-tight"
-                        style={{
-                          color: e.color,
-                          borderColor: `color-mix(in srgb, ${e.color} 40%, transparent)`,
-                          backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
-                        }}
-                        title={`${e.label} — ${e.hint}`}
-                      >
+                      <Pill tone={e.tone} label={e.hint}>
                         {e.label}
-                      </span>
+                      </Pill>
                     </li>
                   ))}
                 </ul>

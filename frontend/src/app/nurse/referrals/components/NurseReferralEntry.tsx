@@ -27,6 +27,7 @@ import {
   formatTime,
   hasScheduledSession,
   initials,
+  isCaseDone,
   isEndorsed,
   latestActionOf,
   rowStatusHelp,
@@ -114,6 +115,7 @@ export function NurseReferralEntry({
   const canManageSessions = !isAdm || (isAdm && row.status === "pending");
 
   const booked = hasScheduledSession(row.sessions);
+  const done = isCaseDone(row);
   const incident = row.anecdotal?.incident?.trim() || "";
   const latest = latestActionOf(row, alert);
 
@@ -250,7 +252,7 @@ export function NurseReferralEntry({
                   View referral form
                 </Button>
               )}
-              {!isClosed && (
+              {!isClosed && !done && (
                 <Button
                   type="button"
                   size="xs"
@@ -340,11 +342,8 @@ export function NurseReferralEntry({
                 <Dialog open={boardOpen} onOpenChange={onBoardChange}>
                   <DialogContent
                     showCloseButton={false}
-                    className={`${styles.modalCard} max-h-[85vh] overflow-y-auto ${sessionBoardDialogWidth(row.sessions.length)}`}
+                    className={`${styles.modalCard} max-h-[85vh] overflow-y-auto shadow-none ${sessionBoardDialogWidth(row.sessions.length)}`}
                   >
-                    <span className={assign.glowClip} aria-hidden="true">
-                      <span className={assign.cardGlow} />
-                    </span>
                     {/* Title/description live on the kanban board below (the
                         sr-only pair keeps the dialog labelled for screen
                         readers). */}

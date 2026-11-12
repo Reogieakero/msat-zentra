@@ -1,8 +1,14 @@
 import { prisma } from "../../lib/prisma.js";
 import { sectionHeadcounts } from "../enrollment.js";
-import { ATTENDANCE_RISK_CUTOFF } from "../attendance.js";
+import { ATTENDANCE_RISK_CUTOFF, termHasStarted } from "../attendance.js";
 import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals } from "../risk.js";
 import { COMPONENT_TYPE_LABEL, GRADE_LABELS } from "../../modules/teacher/teacher.repository.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 export interface TeacherReportClass {
@@ -86,6 +92,10 @@ export interface TeacherReportsPayload {
     attendanceRate: number | null;
     atRisk: number;
     highRisk: number;
+    /** High-risk learners in the teacher's advisory section. */
+    highRiskAdvisees: number;
+    /** High-risk learners who are only in the teacher's subject classes. */
+    highRiskSubjectStudents: number;
     openFlags: number;
     anecdotal: number;
     referrals: number;
@@ -125,6 +135,8 @@ const EMPTY: TeacherReportsPayload = {
     attendanceRate: null,
     atRisk: 0,
     highRisk: 0,
+    highRiskAdvisees: 0,
+    highRiskSubjectStudents: 0,
     openFlags: 0,
     anecdotal: 0,
     referrals: 0,
@@ -262,6 +274,7 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
 
   const sectionIds = [...new Set(pairs.map((p) => p.sectionId))];
   const subjectIds = [...new Set(pairs.map((p) => p.subjectId))];
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const sectionMeta = new Map(
     pairs.map((p) => [
       p.sectionId,
@@ -281,7 +294,7 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
   ] = await Promise.all([
     sectionHeadcounts(sectionIds),
     prisma.studentProfile.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         lrn: true,
@@ -290,7 +303,7 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
       },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, lrn: true, fullName: true, sectionId: true },
     }),
     prisma.assessment.findMany({
@@ -307,9 +320,14 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
         studentGrades: { select: { studentId: true, rosterId: true } },
       },
     }),
-    prisma.anecdotalRecord.count({ where: { termId, observerId: teacherId } }),
+    prisma.anecdotalRecord.count({ where: { termId, observerId: teacherId, deletedAt: null } }),
     prisma.anecdotalRecord.findMany({
-      where: { termId, sectionId: { in: sectionIds } },
+      where: {
+        termId,
+        sectionId: { in: sectionIds },
+        deletedAt: null,
+        ...excludeArchivedLearnerRows(archivedLearners),
+      },
       select: { studentId: true, rosterId: true },
     }),
     prisma.referral.findMany({
@@ -411,7 +429,7 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
           assessment: { gradeComponent: { subjectId: string } };
         }[]),
     prisma.attendanceRecord.findMany({
-      where: { termId, sectionId: { in: sectionIds } },
+      where: { termId, sectionId: { in: sectionIds }, ...excludeArchivedLearnerRows(archivedLearners) },
       select: { studentId: true, rosterId: true, sectionId: true, subjectId: true, status: true },
     }),
     sectionAttendanceTotals(sectionIds, termId),
@@ -615,6 +633,8 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
 
   const atRisk: TeacherReportAtRisk[] = [];
   let highRisk = 0;
+  let highRiskAdvisees = 0;
+  let highRiskSubjectStudents = 0;
   for (const learner of learners) {
     const attendanceRows = attendanceByLearner.get(learner.key) ?? [];
     const rawAverages = [...(rawByLearner.get(learner.key)?.values() ?? [])].map(
@@ -630,7 +650,13 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
     });
     const riskLevel = levelFromFlags(flags);
     if (riskLevel === "Low") continue;
-    if (riskLevel === "High") highRisk += 1;
+    if (riskLevel === "High") {
+      highRisk += 1;
+      // An advisee stays an advisee even when the teacher also handles a
+      // subject in that section — the two pills never double-count.
+      if (advisedSectionIds.has(learner.sectionId)) highRiskAdvisees += 1;
+      else highRiskSubjectStudents += 1;
+    }
     const activeFlags: ("academic" | "attendance" | "behavioral")[] = [];
     if (flags.academicFlag) activeFlags.push("academic");
     if (flags.attendanceFlag) activeFlags.push("attendance");
@@ -677,7 +703,7 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
     referralCounts.set(r.status, (referralCounts.get(r.status) ?? 0) + 1);
   }
 
-  return {
+  const payload: TeacherReportsPayload = {
     term: term
       ? {
           id: term.id,
@@ -717,6 +743,8 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
       attendanceRate: rate(attendancePresent, attendanceTotal),
       atRisk: atRisk.length,
       highRisk,
+      highRiskAdvisees,
+      highRiskSubjectStudents,
       openFlags,
       anecdotal: anecdotalMine,
       referrals: referrals.length,
@@ -736,4 +764,47 @@ export async function getTeacherReports(ctx: TeacherContext): Promise<TeacherRep
     },
     generatedAt: new Date().toISOString(),
   };
+
+  // A term that has not started yet is outside its scope period. Keep the
+  // structural context (term, teacher, classes, headcount) but report no
+  // grades, assessments, attendance, risk or activity — staged/seeded rows for
+  // the future term must not surface as if the term were in session.
+  if (!termHasStarted(term?.startDate)) {
+    return {
+      term: payload.term,
+      teacher: payload.teacher,
+      summary: {
+        ...EMPTY.summary,
+        classes: payload.summary.classes,
+        learners: payload.summary.learners,
+      },
+      classes: payload.classes.map((c) => ({
+        ...c,
+        assessments: 0,
+        gradedAssessments: 0,
+        completionRate: null,
+        average: null,
+        transmutedAverage: null,
+        graded: 0,
+        passing: 0,
+        failing: 0,
+        passRate: null,
+        attendancePresent: 0,
+        attendanceAbsent: 0,
+        attendanceLate: 0,
+        attendanceExcused: 0,
+        attendanceTotal: 0,
+        attendanceRate: null,
+        belowAttendance: 0,
+        lockStatus: null,
+      })),
+      distribution: payload.distribution.map((d) => ({ ...d, count: 0, percent: 0 })),
+      atRisk: [],
+      pending: [],
+      activity: { anecdotal: 0, referrals: { total: 0, byStatus: [] } },
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  return payload;
 }

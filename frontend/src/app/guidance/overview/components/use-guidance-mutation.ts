@@ -5,12 +5,14 @@ import { toast } from "@/components/ui/sonner";
 import { useDock } from "@/components/dock/dock-store";
 import type { DockTaskKind } from "@/components/dock/dock-types";
 import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
+import { markRealtimeUpdate } from "@/lib/api/fresh";
 import { apiErrorMessage } from "@/lib/api/errors";
 
 export const GUIDANCE_QUERY_KEYS = [
   ["guidance-referrals"],
   ["guidance-referrals-highlight"],
   ["guidance-interventions"],
+  ["guidance-intervention-insights"],
   ["guidance-overview"],
 
   ["guidance-alerts"],
@@ -24,6 +26,8 @@ export const GUIDANCE_QUERY_KEYS = [
   ["guidance-risk-alert-factors"],
   ["guidance-session-documents"],
   ["guidance-notifications"],
+  ["guidance-nav-counts"],
+  ["guidance-calendar"],
   ["adm-consultation-sessions"],
 ] as const;
 
@@ -39,11 +43,27 @@ export type GuidanceScope =
   | "notifications";
 
 const GUIDANCE_SCOPE_KEYS: Record<GuidanceScope, readonly (readonly string[])[]> = {
-  referrals: [["guidance-referrals"], ["guidance-referrals-highlight"], ["adm-consultation-sessions"]],
-  interventions: [["guidance-interventions"]],
+  referrals: [
+    ["guidance-referrals"],
+    ["guidance-referrals-highlight"],
+    ["guidance-nav-counts"],
+    ["guidance-calendar"],
+    ["adm-consultation-sessions"],
+  ],
+  interventions: [
+    ["guidance-interventions"],
+    ["guidance-intervention-insights"],
+    ["guidance-nav-counts"],
+    ["guidance-calendar"],
+  ],
   overview: [["guidance-overview"]],
-  alerts: [["guidance-alerts"]],
-  adm: [["guidance-adm"], ["guidance-adm-report"]],
+  alerts: [["guidance-alerts"], ["guidance-nav-counts"]],
+  adm: [
+    ["guidance-adm"],
+    ["guidance-adm-report"],
+    ["guidance-nav-counts"],
+    ["guidance-calendar"],
+  ],
   anecdotal: [["guidance-anecdotal"], ["guidance-risk-behavioral"]],
   risk: [
     ["guidance-risk"],
@@ -53,7 +73,7 @@ const GUIDANCE_SCOPE_KEYS: Record<GuidanceScope, readonly (readonly string[])[]>
     ["guidance-risk-alert-factors"],
   ],
   documents: [["guidance-session-documents"]],
-  notifications: [["guidance-notifications"]],
+  notifications: [["guidance-notifications"], ["guidance-nav-counts"]],
 };
 
 export function invalidateGuidanceQueries(
@@ -129,6 +149,14 @@ export function useGuidanceMutation<TData = unknown, TVariables = void>(
     onMutate: async (variables) => {
       // Instant UI update — runs before the network request resolves.
       await queryClient.cancelQueries();
+      // Mark the case as the counselor's own *before* the write lands: the
+      // realtime frame can reach the desk before this mutation's response, and
+      // it must not ring the risk alarm for the user's own save.
+      const selfId =
+        typeof options.sourceId === "function"
+          ? options.sourceId(variables)
+          : options.sourceId;
+      if (typeof selfId === "string" && selfId) markSelfNotified(selfId);
       const rollback = options.optimisticUpdate?.(queryClient, variables);
 
       let dockTaskId: string | undefined;
@@ -196,6 +224,11 @@ export function useGuidanceMutation<TData = unknown, TVariables = void>(
             : null;
       if (sourceId) markSelfNotified(sourceId);
       options.onSuccessExtra?.(data, variables);
+      // The write just landed, so the refetch below must not read a Redis entry
+      // that an in-flight GET wrote after the server-side tag invalidation
+      // (`x-zentra-fresh` skips the cache read once). Without this the board
+      // could repaint the pre-write plan for the entry's remaining TTL.
+      markRealtimeUpdate();
       void invalidate().catch(() => {
         // Stale lists retry on focus; success must not be swallowed.
       });

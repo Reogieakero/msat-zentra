@@ -52,30 +52,15 @@
   flex-direction: column;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklch, var(--muted-foreground), transparent 40%) transparent;
-  padding-right: 0.25rem;
+  /* Still scrollable, just no visible bar (Firefox + WebKit/Blink below). */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .scrollArea::-webkit-scrollbar {
-  width: 8px;
-}
-
-.scrollArea::-webkit-scrollbar-button {
   display: none;
   width: 0;
   height: 0;
-}
-
-.scrollArea::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollArea::-webkit-scrollbar-thumb {
-  background: color-mix(in oklch, var(--muted-foreground), transparent 55%);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: content-box;
 }
 
 @media (max-width: 900px) {
@@ -121,7 +106,11 @@
 
 .folderGrid {
   margin: 0;
-  padding: 0;
+  /* Keep the last row clear of the scroll/panel clip edge: the entrance
+     animation starts the cards 12px lower and the folder's hover 3D/shadow
+     also extends past the card box, so a flush grid let the bottom border
+     and folder get sliced. */
+  padding: 0 0 1rem;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 0.875rem;

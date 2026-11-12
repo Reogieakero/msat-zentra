@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useDock } from "@/components/dock/dock-store";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,8 +27,12 @@ interface TeacherCodeClaimProps {
 
 export function TeacherCodeClaim({ title, description }: TeacherCodeClaimProps) {
   const queryClient = useQueryClient();
+  const dock = useDock();
   const [code, setCode] = useState("");
   const [claimError, setClaimError] = useState<string | null>(null);
+  // Linking progress lives in the single shared Dock (bottom-right), like the
+  // unlink-code action on the same page.
+  const dockTaskRef = useRef<string | null>(null);
 
   const claim = useMutation({
     mutationFn: async (teacherCode: string) => {
@@ -39,6 +44,13 @@ export function TeacherCodeClaim({ title, description }: TeacherCodeClaimProps) 
     onSuccess: (data) => {
       setCode("");
       setClaimError(null);
+      const id = dockTaskRef.current;
+      dockTaskRef.current = null;
+      try {
+        if (id) dock.completeTask(id, `Linked to ${data.teacherName.name}`);
+      } catch {
+        /* dock is best-effort */
+      }
       void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-me"] });
       void queryClient.invalidateQueries({ queryKey: ["teacher-my-slots"] });
       // Merged entry: linking also entered the term, so refresh the
@@ -57,6 +69,13 @@ export function TeacherCodeClaim({ title, description }: TeacherCodeClaimProps) 
     onError: (err: unknown) => {
       const message = getErrorMessage(err, "Failed to link teacher code.");
       setClaimError(message);
+      const id = dockTaskRef.current;
+      dockTaskRef.current = null;
+      try {
+        if (id) dock.failTask(id, message);
+      } catch {
+        /* dock is best-effort */
+      }
       toast.error({ title: "Could not link code", description: message });
     },
   });
@@ -68,6 +87,15 @@ export function TeacherCodeClaim({ title, description }: TeacherCodeClaimProps) 
       return;
     }
     setClaimError(null);
+    try {
+      dockTaskRef.current = dock.startTask({
+        kind: "link-code",
+        title: "Linking teacher code",
+        description: `Matching ${code.trim().toUpperCase()} to your teacher list entry`,
+      });
+    } catch {
+      dockTaskRef.current = null;
+    }
     claim.mutate(code.trim());
   };
 

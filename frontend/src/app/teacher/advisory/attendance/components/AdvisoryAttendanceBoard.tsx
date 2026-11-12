@@ -16,19 +16,25 @@ export interface AttendanceMatrixStudent {
   lrn: string;
   /** Persisted sprite mascot (StudentMascot pool); null falls back to the derived one. */
   mascot: string | null;
+  /** Transferees are rated from their enlistment date, not the term start. */
+  learnerType?: "regular" | "transferee" | null;
   rates: Record<string, number | null>;
+  /** Elapsed meetups in this learner's own window, per subject. */
+  meetups?: Record<string, number>;
+  /** Meetups attended out of `meetups`, per subject. */
+  presentMeetups?: Record<string, number>;
 }
 
 /** Mean present rate across subjects that actually have marks. */
 export function attendanceOverall(
   rates: Record<string, number | null>,
   subjectCount: number,
-): number {
-  if (subjectCount === 0) return 0;
+): number | null {
+  if (subjectCount === 0) return null;
   const values = Object.values(rates).filter(
     (r): r is number => typeof r === "number" && Number.isFinite(r),
   );
-  if (values.length === 0) return 0;
+  if (values.length === 0) return null;
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
@@ -86,11 +92,13 @@ export function AdvisoryAttendanceBoard({
   }
 
   const overall = attendanceOverall(student.rates, subjects.length);
-  const overallPct = Math.round(overall * 100);
-  const hasMarks = subjects.some(
-    (s) => typeof student.rates[s.id] === "number",
-  );
-  const atRisk = hasMarks && overall < 0.75;
+  const overallPct = overall === null ? null : Math.round(overall * 100);
+  const hasMarks = overall !== null;
+  const atRisk = overall !== null && overall < 0.75;
+  // Same total the advisory-list card reports: every subject's elapsed meetups
+  // in this learner's window (transferees start the day after enlistment).
+  const totalMeetups = Object.values(student.meetups ?? {}).reduce((a, b) => a + b, 0);
+  const totalPresent = Object.values(student.presentMeetups ?? {}).reduce((a, b) => a + b, 0);
 
   return (
     <div
@@ -105,16 +113,27 @@ export function AdvisoryAttendanceBoard({
           <h2 className={boardStyles.boardTitle}>Student attendance</h2>
           <span className="mt-1 flex max-w-full flex-wrap items-center gap-1">
             <Pill tone="amber" label="Overall present rate">
-              {hasMarks ? `${overallPct}% overall` : "No marks yet"}
+              {overallPct !== null ? `${overallPct}% overall` : "No marks yet"}
             </Pill>
             <Pill tone="amber" label="Subjects measured">
               {`${subjects.length} subject${subjects.length === 1 ? "" : "s"}`}
+            </Pill>
+            <Pill tone="neutral" label="Meetups">
+              {`${totalPresent} of ${totalMeetups} meetups`}
             </Pill>
             <Pill
               tone={!hasMarks ? "neutral" : atRisk ? "red" : "green"}
               label="Attendance status"
             >
               {!hasMarks ? "No data" : atRisk ? "At risk" : "On track"}
+            </Pill>
+            <Pill
+              tone={student.learnerType === "transferee" ? "amber" : "neutral"}
+              label="Meetup window"
+            >
+              {student.learnerType === "transferee"
+                ? "Transferee · counted since enlistment"
+                : "Regular · counted from term start"}
             </Pill>
           </span>
         </div>
@@ -124,7 +143,7 @@ export function AdvisoryAttendanceBoard({
         <header className={boardStyles.laneHead}>
           <span
             className={boardStyles.laneDot}
-            style={{ background: hasMarks ? attendanceDot(overall) : "#f59e0b" }}
+            style={{ background: overall !== null ? attendanceDot(overall) : "#f59e0b" }}
             aria-hidden
           />
           <h3 className={boardStyles.laneTitle}>Present rate per subject</h3>
@@ -136,6 +155,8 @@ export function AdvisoryAttendanceBoard({
             {subjects.map((subject) => {
               const rate = student.rates[subject.id] ?? null;
               const pct = rate === null ? null : Math.round(rate * 100);
+              const meetups = student.meetups?.[subject.id] ?? 0;
+              const attended = student.presentMeetups?.[subject.id] ?? 0;
               return (
                 <li key={subject.id} className="min-w-0">
                   <section
@@ -204,6 +225,11 @@ export function AdvisoryAttendanceBoard({
                             />
                           </div>
                         )}
+                        <p className="m-0 text-[11px] tabular-nums text-muted-foreground">
+                          {meetups === 0
+                            ? "No meetups elapsed yet"
+                            : `${attended} of ${meetups} meetup${meetups === 1 ? "" : "s"} present`}
+                        </p>
                       </li>
                     </ul>
                   </section>

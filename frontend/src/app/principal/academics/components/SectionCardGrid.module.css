@@ -192,17 +192,81 @@
   white-space: nowrap;
 }
 
-.skeletonCard {
-  min-height: 7.25rem;
+/* Loading shell mirrors .cardBtn so the board keeps its exact size/shape. */
+.cardSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.625rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background-color: var(--card);
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent);
+}
+
+.skeletonName {
+  height: 1rem;
+  width: 7rem;
+  max-width: 60%;
+}
+
+.skeletonGrade {
+  height: 1rem;
+  width: 3.5rem;
+  border-radius: 9999px;
+}
+
+.skeletonSource {
+  height: 1rem;
+  width: 5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+
+.skeletonStatIcon {
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+}
+
+.skeletonStatPill {
+  height: 1.125rem;
+  width: 2.25rem;
+  border-radius: 9999px;
+}
+
+.skeletonStatLabel {
+  height: 0.5rem;
+  width: 2.75rem;
 }
 
 .empty {
   padding: 2rem;
   text-align: center;
   color: var(--muted-foreground);
+}
+
+/* Empty board — the shared insight callout centered in the page, not pinned to
+   the top. The shell's content area is only as tall as its children, so the
+   centering height comes from the viewport minus the topbar (3rem on desktop,
+   6rem mobile tab bar) and the main padding (1rem top + bottom). */
+.emptyCallout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 5rem);
+  padding: 1.5rem 0;
+}
+
+@media (max-width: 1023px) {
+  .emptyCallout {
+    min-height: calc(100vh - 8rem);
+  }
+}
+
+.emptyCallout > p {
+  text-align: center;
 }
 
 /* ---- Board entrance ------------------------------------------------------ */

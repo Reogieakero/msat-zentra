@@ -3,19 +3,11 @@
 import Link from "next/link";
 import { FileText, Info, Route, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { stageColor } from "@/services/teacher/admCases.labels";
+import { Pill } from "@/components/ui/pill";
+import { ADM_STAGE_LEGEND } from "@/services/teacher/admCases.labels";
 import refStyles from "../../referrals/components/referrals.module.css";
 
-const ADM_STAGE_ENTRIES: { key: string; label: string; color: string; title: string }[] = [
-  { key: "anecdotal", label: "Anecdotal", color: stageColor("anecdotal"), title: "Stage 1 · Anecdotal Report Filed" },
-  { key: "consultation", label: "Consultation", color: stageColor("consultation"), title: "Stage 2 · Consultation & Referral" },
-  { key: "meeting_parents", label: "Meeting", color: stageColor("meeting_parents"), title: "Stage 3 · Meeting with Parents/Guardians" },
-  { key: "home_visitation", label: "Home Visit", color: stageColor("home_visitation"), title: "Stage 4 · Home Visitation (if no meeting)" },
-  { key: "certification", label: "Certification", color: stageColor("certification"), title: "Stage 5 · Recommendation & Certification" },
-  { key: "principal_approval", label: "Approval", color: stageColor("principal_approval"), title: "Stage 6 · School Head (Principal) Approval" },
-  { key: "enrollment_monitoring", label: "Modules", color: stageColor("enrollment_monitoring"), title: "Stage 7 · Modules Completed & Returned" },
-  { key: "completion", label: "Closed", color: stageColor("completion"), title: "Stage 8 · Case Closed" },
-];
+const ADM_STAGE_ENTRIES = ADM_STAGE_LEGEND;
 
 function ColumnHead({
   icon,
@@ -192,7 +184,7 @@ export function AdmStarterKanban({
       </div>
 
       <div
-        className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
+        className="flex h-full min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
         aria-label={`ADM Pipeline, ${ADM_STAGE_ENTRIES.length}`}
       >
         <ColumnHead
@@ -206,17 +198,9 @@ export function AdmStarterKanban({
         >
           {ADM_STAGE_ENTRIES.map((e) => (
             <li key={e.key} className="flex">
-              <span
-                className="inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold leading-tight"
-                style={{
-                  color: e.color,
-                  borderColor: `color-mix(in srgb, ${e.color} 40%, transparent)`,
-                  backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
-                }}
-                title={e.title}
-              >
+              <Pill tone={e.tone} label={e.hint}>
                 {e.label}
-              </span>
+              </Pill>
             </li>
           ))}
         </ul>

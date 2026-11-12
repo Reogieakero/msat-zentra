@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import {
+  attendanceTotalFor,
   computeRiskFactors,
   levelFromFlags,
   resolveActiveTermId,
@@ -8,6 +9,11 @@ import {
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import { gradeLabel } from "../../lib/grades.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
@@ -51,6 +57,25 @@ export async function getRiskStudents(
 ): Promise<RiskStudentsResult> {
   const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
   return getRiskStudentsLive(page, effPageSize, section, scope, q, extra);
+}
+
+// Internal-only: the principal desk's instant-search tables load the whole
+// at-risk roster once (one live computation) and filter/paginate in memory,
+// so typing never round-trips. Mirrors the DB take limit below.
+const RISK_ROSTER_MAX = 5000;
+
+export async function getAllRiskStudents(
+  scope?: TermScopeInput,
+): Promise<RiskStudentRow[]> {
+  const { students } = await getRiskStudentsLive(
+    1,
+    RISK_ROSTER_MAX,
+    undefined,
+    scope,
+    undefined,
+    undefined,
+  );
+  return students;
 }
 
 async function getRiskStudentsLive(
@@ -99,6 +124,7 @@ async function getRiskStudentsLive(
     adviser: { staffProfile: { shareStudentData: true } },
   };
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosterEntries] = await Promise.all([
     prisma.studentProfile.findMany({
       where: {
@@ -106,6 +132,7 @@ async function getRiskStudentsLive(
           { section: sectionMatch },
           ...(profileSearch ? [profileSearch] : []),
         ],
+        ...excludeArchivedProfiles(archivedLearners),
       },
       orderBy: { lrn: "asc" },
       take: 5000,
@@ -125,7 +152,10 @@ async function getRiskStudentsLive(
 
           select: { status: true, subjectId: true },
         },
-        anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
+        anecdotalRecords: {
+          where: { deletedAt: null, ...(termId ? { termId } : {}) },
+          select: { id: true },
+        },
       },
     }),
     prisma.studentRoster.findMany({
@@ -143,6 +173,7 @@ async function getRiskStudentsLive(
           },
           ...(rosterSearch ? [rosterSearch] : []),
         ],
+        ...excludeArchivedRosters(archivedLearners),
       },
       orderBy: { lrn: "asc" },
       take: 5000,
@@ -162,7 +193,10 @@ async function getRiskStudentsLive(
           where: termId ? { termId } : undefined,
           select: { status: true, subjectId: true },
         },
-        anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
+        anecdotalRecords: {
+          where: { deletedAt: null, ...(termId ? { termId } : {}) },
+          select: { id: true },
+        },
       },
     }),
   ]);
@@ -174,13 +208,16 @@ async function getRiskStudentsLive(
       ...rosterEntries.map((r) => r.sectionId),
     ]),
   ) as string[];
-  const headcounts = await sectionHeadcounts(sectionIds);
-  const sectionTotals = termId
-    ? await sectionAttendanceTotals(sectionIds, termId)
-    : new Map<string, number>();
+  const [headcounts, sectionTotals] = await Promise.all([
+    sectionHeadcounts(sectionIds),
+    termId
+      ? sectionAttendanceTotals(sectionIds, termId)
+      : Promise.resolve(new Map<string, number>()),
+  ]);
 
   type Candidate = {
     studentId: string;
+    rosterId: string | null;
     lrn: string;
     name: string;
     section: string;
@@ -195,6 +232,7 @@ async function getRiskStudentsLive(
   const candidates: Candidate[] = [
     ...profiles.map((s) => ({
       studentId: s.userId,
+      rosterId: null,
       lrn: s.lrn,
       name: s.user.fullName,
       section: s.section?.name ?? "—",
@@ -210,6 +248,7 @@ async function getRiskStudentsLive(
       .filter((r) => !registeredLrns.has(r.lrn))
       .map((r) => ({
         studentId: `roster:${r.id}`,
+        rosterId: r.id,
         lrn: r.lrn,
         name: r.fullName,
         section: r.section?.name ?? "—",
@@ -228,7 +267,7 @@ async function getRiskStudentsLive(
     const flags = computeRiskFactors({
       finalGrades: s.finalGrades,
       attendance: s.attendanceRecords,
-      attendanceTotal: sectionTotals.get(s.sectionId),
+      attendanceTotal: attendanceTotalFor(sectionTotals, s.sectionId, s.rosterId),
       anecdotalCount: s.anecdotalCount,
       enrolled: s.enrolled,
     });

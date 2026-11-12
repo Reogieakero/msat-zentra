@@ -8,6 +8,13 @@ import {
   sectionAttendanceTotals,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+  excludeArchivedRostersSql,
+} from "../../lib/learnerVisibility.js";
+import { riskCohortVersion } from "../../lib/riskCohortCache.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
 export type ApprovalStatusValue = "pending" | "approved" | "rejected" | "modified";
@@ -269,7 +276,7 @@ export async function getInterventionStudents(
             userId: true,
             lrn: true,
             gradeLevel: true,
-            section: { select: { id: true, name: true, _count: { select: { students: true } } } },
+            section: { select: { id: true, name: true, gradeLevel: true, _count: { select: { students: true } } } },
             mascot: true,
             user: { select: { fullName: true } },
             finalGrades: {
@@ -281,7 +288,7 @@ export async function getInterventionStudents(
               },
             },
             attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
-            anecdotalRecords: { where: { termId }, select: { id: true } },
+            anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true } },
             interventions: {
               orderBy: { id: "desc" },
               take: 1,
@@ -333,7 +340,7 @@ export async function getInterventionStudents(
             lrn: true,
             fullName: true,
             gradeLevel: true,
-            section: { select: { id: true, name: true } },
+            section: { select: { id: true, name: true, gradeLevel: true } },
             mascot: true,
             finalGrades: {
               where: { termId },
@@ -344,7 +351,7 @@ export async function getInterventionStudents(
               },
             },
             attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
-            anecdotalRecords: { where: { termId }, select: { id: true } },
+            anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true } },
             interventions: {
               orderBy: { id: "desc" },
               take: 1,
@@ -419,7 +426,7 @@ export async function getInterventionStudents(
       section: st.section?.name ?? "—",
       sectionId: st.section?.id ?? "",
       enrolledFallback: st.section?._count.students ?? 0,
-      gradeLevel: st.gradeLevel,
+      gradeLevel: st.section?.gradeLevel ?? st.gradeLevel,
       finalGrades: st.finalGrades,
       attendanceRecords: st.attendanceRecords,
       anecdotalCount: st.anecdotalRecords.length,
@@ -438,7 +445,7 @@ export async function getInterventionStudents(
       section: r.section?.name ?? "—",
       sectionId: r.section?.id ?? "",
       enrolledFallback: 0,
-      gradeLevel: r.gradeLevel,
+      gradeLevel: r.section?.gradeLevel ?? r.gradeLevel,
       finalGrades: r.finalGrades,
       attendanceRecords: r.attendanceRecords,
       anecdotalCount: r.anecdotalRecords.length,
@@ -555,6 +562,7 @@ export async function getColumnCohortStudents(
   const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
   const needle = (filters.q ?? "").trim();
   const includeRecovered = filters.includeRecovered === true && !filters.riskLevel;
+  const archivedLearners = await archivedAdvisoryLearnerIds();
 
   const hasIntClause = filters.hasIntervention === true
     ? { interventions: { some: {} } }
@@ -586,6 +594,7 @@ export async function getColumnCohortStudents(
   const profileWhere: any = {
     AND: [
       ...(schoolYearId ? [{ section: { schoolYearId } }] : []),
+      excludeArchivedProfiles(archivedLearners),
       ...(filters.section ? [{ section: { name: filters.section } }] : []),
       profileLevelClause,
       ...(hasIntClause ? [hasIntClause] : []),
@@ -600,6 +609,8 @@ export async function getColumnCohortStudents(
   const ivRoster = (extra: Prisma.Sql) => Prisma.sql`EXISTS (SELECT 1 FROM "Intervention" iv WHERE iv."rosterId" = r."id" AND ${extra})`;
   const rosterConds: Prisma.Sql[] = [];
   if (schoolYearId) rosterConds.push(Prisma.sql`r."schoolYearId" = ${schoolYearId}`);
+  if (archivedLearners.rosterIds.length > 0)
+    rosterConds.push(Prisma.sql`r."id" NOT IN (${Prisma.join(archivedLearners.rosterIds)})`);
   if (filters.section) rosterConds.push(Prisma.sql`s."name" = ${filters.section}`);
   if (filters.riskLevel) {
     rosterConds.push(Prisma.sql`r."riskLevel" = ${filters.riskLevel}`);
@@ -667,12 +678,13 @@ export async function getColumnCohortStudents(
       where: {
         AND: [
           ...(schoolYearId ? [{ section: { schoolYearId } }] : []),
+          excludeArchivedProfiles(archivedLearners),
           { riskLevel: { in: ["High", "Moderate"] } },
         ],
       },
     }),
     prisma.$queryRaw<{ count: bigint }[]>(
-      Prisma.sql`SELECT COUNT(*) AS count FROM "StudentRoster" r WHERE ${schoolYearId ? Prisma.sql`r."schoolYearId" = ${schoolYearId} AND ` : Prisma.sql``}r."riskLevel" IN ('High', 'Moderate') AND NOT EXISTS (SELECT 1 FROM "StudentProfile" p WHERE p."lrn" = r."lrn")`
+      Prisma.sql`SELECT COUNT(*) AS count FROM "StudentRoster" r WHERE ${schoolYearId ? Prisma.sql`r."schoolYearId" = ${schoolYearId} AND ` : Prisma.sql``}r."riskLevel" IN ('High', 'Moderate') ${excludeArchivedRostersSql(archivedLearners)} AND NOT EXISTS (SELECT 1 FROM "StudentProfile" p WHERE p."lrn" = r."lrn")`
     ),
   ]);
   const total = profileTotal + Number(rosterTotalRows[0]?.count ?? 0);
@@ -696,7 +708,7 @@ export async function getColumnCohortStudents(
         attendanceFlag: true,
         behavioralFlag: true,
         user: { select: { fullName: true } },
-        section: { select: { name: true } },
+        section: { select: { name: true, gradeLevel: true } },
         interventions: interventionSelect,
       },
       take: windowTake,
@@ -727,7 +739,7 @@ export async function getColumnCohortStudents(
       lrn: s.lrn,
       studentName: s.user.fullName,
       section: s.section?.name ?? "—",
-      gradeLevel: String(s.gradeLevel),
+      gradeLevel: String(s.section?.gradeLevel ?? s.gradeLevel),
       riskLevel: String(s.riskLevel),
       riskCount: s.riskCount,
       academicFlag: s.academicFlag,
@@ -764,7 +776,7 @@ export async function getColumnCohortStudents(
           academicFlag: true,
           attendanceFlag: true,
           behavioralFlag: true,
-          section: { select: { name: true } },
+          section: { select: { name: true, gradeLevel: true } },
           interventions: interventionSelect,
         },
       })
@@ -780,7 +792,7 @@ export async function getColumnCohortStudents(
         lrn: full.lrn,
         studentName: full.fullName,
         section: full.section?.name ?? "—",
-        gradeLevel: String(full.gradeLevel),
+        gradeLevel: String(full.section?.gradeLevel ?? full.gradeLevel),
         riskLevel: String(full.riskLevel),
         riskCount: full.riskCount,
         academicFlag: full.academicFlag,
@@ -873,6 +885,9 @@ function liveCohort(
   sharedOnly: boolean,
 ): Promise<LiveCohort> {
   const key = [
+    // Bumped by the risk engine on every flag change, so a detection is never
+    // served from a cohort memoized before it.
+    `v${riskCohortVersion()}`,
     termId,
     schoolYearId ?? "-",
     includeRecovered ? 1 : 0,
@@ -915,23 +930,28 @@ async function loadLiveCohort(
   const advisorSharing = sharedOnly
     ? { adviser: { staffProfile: { shareStudentData: true } } }
     : {};
-  const profileWhere =
-    schoolYearId || sharedOnly
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const profileWhere = {
+    ...(schoolYearId || sharedOnly
       ? {
           section: {
             ...(schoolYearId ? { schoolYearId } : {}),
             ...advisorSharing,
           },
         }
-      : undefined;
+      : {}),
+    ...excludeArchivedProfiles(archivedLearners),
+  };
   // Rosters carry their own school year plus the section relation.
-  const rosterWhere =
-    schoolYearId || sharedOnly
+  const rosterWhere = {
+    ...(schoolYearId || sharedOnly
       ? {
           ...(schoolYearId ? { schoolYearId } : {}),
           ...(sharedOnly ? { section: advisorSharing } : {}),
         }
-      : undefined;
+      : {}),
+    ...excludeArchivedRosters(archivedLearners),
+  };
   const [profiles, rosters, profileSnapDates, rosterSnapDates] = await Promise.all([
     prisma.studentProfile.findMany({
       where: profileWhere,
@@ -939,7 +959,8 @@ async function loadLiveCohort(
         userId: true,
         lrn: true,
         gradeLevel: true,
-        section: { select: { id: true, name: true, _count: { select: { students: true } } } },
+        createdAt: true,
+        section: { select: { id: true, name: true, gradeLevel: true, _count: { select: { students: true } } } },
         mascot: true,
         user: { select: { fullName: true } },
         finalGrades: {
@@ -951,7 +972,7 @@ async function loadLiveCohort(
           },
         },
         attendanceRecords: { where: { termId }, select: { status: true, date: true, subjectId: true } },
-        anecdotalRecords: { where: { termId }, select: { id: true, observationDatetime: true } },
+        anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true, observationDatetime: true } },
         interventions: {
           orderBy: { id: "desc" },
           take: 1,
@@ -993,8 +1014,9 @@ async function loadLiveCohort(
         lrn: true,
         fullName: true,
         gradeLevel: true,
+        createdAt: true,
         sectionId: true,
-        section: { select: { id: true, name: true } },
+        section: { select: { id: true, name: true, gradeLevel: true } },
         mascot: true,
         finalGrades: {
           where: { termId },
@@ -1005,7 +1027,7 @@ async function loadLiveCohort(
           },
         },
         attendanceRecords: { where: { termId }, select: { status: true, date: true, subjectId: true } },
-        anecdotalRecords: { where: { termId }, select: { id: true, observationDatetime: true } },
+        anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true, observationDatetime: true } },
         interventions: {
           orderBy: { id: "desc" },
           take: 1,
@@ -1082,6 +1104,8 @@ async function loadLiveCohort(
     anecdotalCount: number;
     intervention: InterventionRow | undefined;
     snapshotDate: Date | null;
+    /** Enrolment date — fallback "detected" timestamp when no evidence exists. */
+    enrolledAt: Date;
     mascot: string | null;
   };
 
@@ -1130,7 +1154,12 @@ async function loadLiveCohort(
             ? new Date(Math.min(...sessionTimes)).toISOString()
             : evidenceTimes.length > 0
               ? new Date(Math.max(...evidenceTimes)).toISOString()
-              : null));
+              // Last resort: the day the learner joined the roster. A learner
+              // enlisted today is flagged from the term's already-elapsed
+              // meetups with no marks, so "when they became monitorable" is
+              // the honest detection time (and keeps the board from printing a
+              // fabricated "just now").
+              : st.enrolledAt.toISOString()));
 
     return {
       studentId: st.studentId,
@@ -1165,13 +1194,14 @@ async function loadLiveCohort(
       section: p.section?.name ?? "—",
       sectionId: p.section?.id ?? "",
       enrolledFallback: p.section?._count.students ?? 0,
-      gradeLevel: p.gradeLevel,
+      gradeLevel: p.section?.gradeLevel ?? p.gradeLevel,
       finalGrades: p.finalGrades,
       attendanceRecords: p.attendanceRecords,
       anecdotalRecords: p.anecdotalRecords,
       anecdotalCount: p.anecdotalRecords.length,
       intervention: p.interventions[0],
       snapshotDate: snapByStudent.get(p.userId) ?? null,
+      enrolledAt: p.createdAt,
       mascot: p.mascot ?? null,
     });
     if (row) kept.push(row);
@@ -1185,13 +1215,14 @@ async function loadLiveCohort(
       section: r.section?.name ?? "—",
       sectionId: r.sectionId ?? r.section?.id ?? "",
       enrolledFallback: 0,
-      gradeLevel: r.gradeLevel,
+      gradeLevel: r.section?.gradeLevel ?? r.gradeLevel,
       finalGrades: r.finalGrades,
       attendanceRecords: r.attendanceRecords,
       anecdotalRecords: r.anecdotalRecords,
       anecdotalCount: r.anecdotalRecords.length,
       intervention: r.interventions[0],
       snapshotDate: snapByRoster.get(r.id) ?? null,
+      enrolledAt: r.createdAt,
       mascot: r.mascot ?? null,
     });
     if (row) kept.push(row);

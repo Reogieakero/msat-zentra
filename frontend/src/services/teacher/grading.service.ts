@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
+import { liveQueryOptions } from "@/lib/api/live";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
 import type {
@@ -42,7 +44,7 @@ export function useClassDetail(assignmentId: string) {
   const teacherId = session?.sub ?? null;
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  return useQuery({
+  return useLiveQuery({
     queryKey: classDetailKey(teacherId, assignmentId, termKey),
     queryFn: () => fetchClassDetail(assignmentId),
     enabled: !!teacherId && !!assignmentId,
@@ -51,6 +53,7 @@ export function useClassDetail(assignmentId: string) {
 
     placeholderData: (previous) => previous,
     staleTime: 15_000,
+    ...liveQueryOptions,
   });
 }
 

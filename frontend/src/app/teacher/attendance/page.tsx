@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { liveQueryOptions, useLiveQuery } from "@/lib/api/live";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
 import { useTeacherInvalidate } from "../components/use-teacher-invalidate";
 import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { toast } from "@/components/ui/sonner";
-import { AttendanceRosterTable } from "./components/AttendanceRosterTable";
-import { KanbanBoardSkeleton, RowListSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { AttendanceRosterSkeleton, AttendanceRosterTable } from "./components/AttendanceRosterTable";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AttendanceTermGate, AttendanceLinkGate } from "./components/AttendanceTermGate";
 import { SheetDatePicker } from "./components/sheet-date-picker";
@@ -68,7 +68,7 @@ export default function TeacherAdvisoryAttendancePage() {
     ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
     : "this term";
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const meQuery = useQuery<{ teacherName: LinkedName | null; termGrant: TermGrant | null }>({
+  const meQuery = useLiveQuery<{ teacherName: LinkedName | null; termGrant: TermGrant | null }>({
     queryKey: ["teacher-schedule-me", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{
@@ -79,6 +79,7 @@ export default function TeacherAdvisoryAttendancePage() {
     },
     retry: false,
     staleTime: 30_000,
+    ...liveQueryOptions,
   });
   const linked = meQuery.data?.teacherName ?? null;
   const termGrant = meQuery.data?.termGrant ?? null;
@@ -363,9 +364,7 @@ export default function TeacherAdvisoryAttendancePage() {
               </div>
             </div>
             <div className={styles.body}>
-              <KanbanBoardSkeleton rows={0}>
-                <RowListSkeleton rows={8} gutter="0.625rem" withIdPill withDatePill={false} />
-              </KanbanBoardSkeleton>
+              <AttendanceRosterSkeleton />
             </div>
           </div>
         </div>

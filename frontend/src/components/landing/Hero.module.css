@@ -140,7 +140,7 @@
 
 .title {
   margin: 0 0 1.25rem;
-  font-family: var(--font-geist), var(--font-inter), sans-serif;
+  font-family: var(--font-inter), var(--font-inter), sans-serif;
   font-size: clamp(3.2rem, 7.6vw, 6.9rem);
   font-weight: 200;
   line-height: 0.94;

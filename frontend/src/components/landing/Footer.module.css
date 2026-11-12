@@ -20,7 +20,7 @@
   gap: 0.45rem;
   color: rgba(228, 241, 236, 0.75);
   text-decoration: none;
-  font-family: var(--font-geist), var(--font-inter), sans-serif;
+  font-family: var(--font-inter), var(--font-inter), sans-serif;
   font-size: 0.9rem;
   font-weight: 500;
 }

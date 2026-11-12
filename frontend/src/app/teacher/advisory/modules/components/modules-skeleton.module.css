@@ -1,0 +1,42 @@
+/* Adviser Modules loading state — one shared pulse so every placeholder bar
+   breathes on the same timeline (no per-element phase drift) and the whole
+   board fades in instead of snapping. Opacity only, so the compositor keeps
+   it smooth even with ~100 placeholder nodes on screen. */
+
+.root {
+  animation: modules-skeleton-in 160ms ease-out both;
+}
+
+/* Beat Tailwind's animate-pulse: same gentle fade, slower easing, and a hint
+   that only opacity is animated. */
+.root [data-slot="skeleton"] {
+  animation: modules-skeleton-pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity;
+}
+
+@keyframes modules-skeleton-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modules-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .root [data-slot="skeleton"] {
+    animation: none;
+    will-change: auto;
+  }
+}

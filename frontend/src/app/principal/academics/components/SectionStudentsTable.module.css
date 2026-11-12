@@ -103,12 +103,38 @@
   color: var(--primary);
 }
 
-.empty {
-  margin: 0;
-  padding: 2rem 1rem;
+/* Empty roster — the shared insight callout centered in the page, not a card
+   shell (mirrors the empty section board). */
+.emptyCallout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 11rem);
+  padding: 1.5rem 0;
+}
+
+.emptyCallout > p {
   text-align: center;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
+}
+
+@media (max-width: 1023px) {
+  .emptyCallout {
+    min-height: calc(100vh - 14rem);
+  }
+}
+
+/* No search hits — amber insight callout, same as the teacher roster. */
+.noMatch {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding: 1.5rem 0.25rem;
+}
+
+.noMatchCallout {
+  width: 100%;
+  max-width: 36rem;
+  text-align: left;
 }
 
 /* Boards cascade in on mount — same entrance as the nurse/registry boards. */

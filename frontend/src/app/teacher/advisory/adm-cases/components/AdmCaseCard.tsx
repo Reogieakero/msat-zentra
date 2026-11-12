@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
+import { SharedTermPill } from "@/components/shared/shared-term-pill";
 import type { AdmCase } from "@/services/teacher/admCases.types";
 import { StudentMascot } from "../../referrals/components/StudentMascot";
 
@@ -34,6 +35,7 @@ export function AdmCaseCard({ caseData, onDetails }: AdmCaseCardProps) {
       <Pill tone="neutral" label="LRN" className="max-w-full whitespace-normal text-center leading-tight">
         {caseData.lrn}
       </Pill>
+      <SharedTermPill termNumber={caseData.termNumber} action="Added" />
       <div className="flex w-full justify-end">
         <Button
           type="button"

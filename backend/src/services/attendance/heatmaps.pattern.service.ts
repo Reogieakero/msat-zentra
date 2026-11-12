@@ -8,30 +8,23 @@ import {
   isWeekendKey,
 } from "../attendance.js";
 import { sectionHeadcounts } from "../enrollment.js";
-import { phTodayKey } from "../attendance.js";
+import { buildDayAxis } from "../attendance.js";
 import { GRADE_NUMERIC, schoolYearClause, type DisplayTerm } from "../../modules/attendance/attendance.repository.js";
 
 export interface SessionPatternQuery {
   termId?: string;
   schoolYearId: string | null;
   startDate?: Date | null;
+  endDate?: Date | null;
 }
 
 export async function getSessionPattern(query: SessionPatternQuery) {
-  const { termId, schoolYearId, startDate } = query;
+  const { termId, schoolYearId, startDate, endDate } = query;
   if (!termId) {
     return { amRate: 0, pmRate: 0, byDay: [] };
   }
 
-  const start = startDate
-    ? new Date(startDate.toISOString().slice(0, 10) + "T00:00:00Z")
-    : null;
-  const today = new Date(phTodayKey() + "T00:00:00Z");
-  const axisStart = start ?? today;
-  const dayKeys: string[] = [];
-  for (let d = new Date(axisStart); d <= today; d.setUTCDate(d.getUTCDate() + 1)) {
-    dayKeys.push(d.toISOString().slice(0, 10));
-  }
+  const dayKeys = buildDayAxis(startDate ?? null, endDate ?? null);
 
   const sections = await prisma.section.findMany({
     where: schoolYearClause(schoolYearId),
@@ -158,12 +151,12 @@ export async function getSectionSubjectHeatmap(query: SectionSubjectHeatmapQuery
     orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
   });
   const sectionIds = sections.map((s) => s.id);
-  const headcounts = await sectionHeadcounts(sectionIds);
-
-  const dayKeys = buildSchoolDayAxis(displayTerm.startDate);
+  const dayKeys = buildSchoolDayAxis(displayTerm.startDate, displayTerm.endDate);
   const schoolDays = countSchoolDays(dayKeys);
 
-  const [records, offerings] = await Promise.all([
+  // Headcounts (3–4 serial round-trips) runs alongside the records/offerings
+  // reads instead of ahead of them — see heatmaps.section-stats.service.ts.
+  const [records, offerings, headcounts] = await Promise.all([
     prisma.attendanceRecord.findMany({
       where: {
         termId,
@@ -185,6 +178,7 @@ export async function getSectionSubjectHeatmap(query: SectionSubjectHeatmapQuery
         subject: { select: { id: true, name: true, code: true } },
       },
     }),
+    sectionHeadcounts(sectionIds),
   ]);
 
   const subjectMeta = new Map<string, { subjectId: string; code: string; name: string }>();
@@ -195,6 +189,22 @@ export async function getSectionSubjectHeatmap(query: SectionSubjectHeatmapQuery
         code: o.subject.code,
         name: o.subject.name,
       });
+    }
+  }
+
+  // Subjects taken from records but missing a term assignment (e.g. the
+  // assignment was removed, or the section was shared later) still need their
+  // real code/name — never render a raw subject id in the chart legend.
+  const missingSubjectIds = [
+    ...new Set(records.map((r) => r.subjectId as string)),
+  ].filter((sid) => !subjectMeta.has(sid));
+  if (missingSubjectIds.length > 0) {
+    const found = await prisma.subject.findMany({
+      where: { id: { in: missingSubjectIds } },
+      select: { id: true, name: true, code: true },
+    });
+    for (const s of found) {
+      subjectMeta.set(s.id, { subjectId: s.id, code: s.code, name: s.name });
     }
   }
 

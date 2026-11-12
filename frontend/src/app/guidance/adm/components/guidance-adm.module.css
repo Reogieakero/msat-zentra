@@ -947,13 +947,3 @@ a.recRow:hover {
   background: var(--primary);
 }
 
-.skelFindings {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 1rem;
-}
-
-.skelFinding {
-  height: 6.5rem;
-  border-radius: 1rem;
-}

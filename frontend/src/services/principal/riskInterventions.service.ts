@@ -40,6 +40,18 @@ export async function fetchInterventionStats(): Promise<InterventionStats> {
   return data;
 }
 
+export async function fetchInterventionCohort(
+  signal?: AbortSignal
+): Promise<InterventionStudentsResult> {
+  // Whole queue in one call so the principal desk can filter it in memory
+  // (instant search, no debounce and no stale-result stacking).
+  const { data } = await apiClient.get<InterventionStudentsResult>(
+    "/api/risk/interventions",
+    { params: { all: "1", sort: "detected" }, signal }
+  );
+  return data;
+}
+
 export async function alertGuidance(studentId: string, note?: string): Promise<void> {
   await apiClient.post(
     `/api/risk/interventions/${encodeURIComponent(studentId)}/alert`,

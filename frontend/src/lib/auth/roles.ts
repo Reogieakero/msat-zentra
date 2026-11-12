@@ -9,6 +9,7 @@ export const ROLES = [
   "record_keeper",
   "registrar",
   "principal",
+  "admin",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
@@ -24,6 +25,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   record_keeper: "Record Keeper",
   registrar: "Registrar",
   principal: "Principal",
+  admin: "Administrator",
 };
 
 export function roleLabel(role: string): string {

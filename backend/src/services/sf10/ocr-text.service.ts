@@ -510,7 +510,7 @@ interface QuarterColumns {
  * followed by a FINAL RATING cell. Returns column ranges so merged-cell
  * repetition cannot misalign quarterlies.
  */
-function detectQuarterHeader(row: string[]): QuarterColumns | null {
+export function detectQuarterHeader(row: string[]): QuarterColumns | null {
   const at = (i: number) => (row[i] ?? "").trim();
   const ones: number[] = [];
   for (let i = 0; i < row.length && ones.length < 4; i++) {

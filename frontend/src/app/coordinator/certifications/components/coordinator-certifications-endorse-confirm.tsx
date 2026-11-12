@@ -4,14 +4,17 @@ import * as React from "react";
 import { Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { CERT_STATUS_META } from "@/services/coordinator/certifications.service";
 import type { CertRecord } from "@/services/coordinator/certifications.types";
 
-/* Same rectangle pill metric as the board rows. */
-const PILL_BASE =
-  "inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-xs font-medium whitespace-nowrap";
-const PILL_SECONDARY = "border-border bg-secondary text-secondary-foreground";
+const STATUS_TONE = {
+  prepared: "amber",
+  awaiting: "blue",
+  revision: "red",
+  approved: "green",
+} as const;
 
 /**
  * Kanban-style confirmation overlay for "Endorse to Principal" (same pattern
@@ -93,21 +96,19 @@ export function CoordinatorCertificationsEndorseConfirm({
             <span className="min-w-0 truncate text-sm font-semibold text-primary">
               {record.student}
             </span>
-            <span className={`${PILL_BASE} ${PILL_SECONDARY} tabular-nums`} title={record.lrn}>
+            <Pill tone="neutral" label="LRN" className="tabular-nums text-xs">
               {record.lrn}
-            </span>
-            <span className={`${PILL_BASE} ${PILL_SECONDARY}`}>{record.grade || "—"}</span>
-            <span
-              className={PILL_BASE}
-              title={meta.label}
-              style={{
-                color: `color-mix(in srgb, ${meta.color} 70%, var(--foreground))`,
-                borderColor: `color-mix(in srgb, ${meta.color} 45%, transparent)`,
-                backgroundColor: `color-mix(in srgb, ${meta.color} 16%, transparent)`,
-              }}
+            </Pill>
+            <Pill tone="neutral" label="Grade level" className="text-xs">
+              {record.grade || "—"}
+            </Pill>
+            <Pill
+              tone={STATUS_TONE[record.status]}
+              label="Certification status"
+              className="text-xs"
             >
               {meta.label}
-            </span>
+            </Pill>
           </div>
           <p className="px-1 text-xs text-muted-foreground">
             The folder locks and moves to Awaiting signature while the request

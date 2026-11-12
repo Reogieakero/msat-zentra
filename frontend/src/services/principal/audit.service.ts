@@ -24,15 +24,18 @@ export async function fetchAuditEntries(
   return res.data;
 }
 
-export async function exportAuditCsv(query: AuditQuery): Promise<void> {
+export async function exportAuditExcel(query: AuditQuery): Promise<void> {
   const res = await apiClient.get<Blob>("/api/audit/export", {
     params: buildParams(query),
     responseType: "blob",
   });
+  const disposition = res.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^";]+)"?/i);
+  const filename = match?.[1] ?? "MSAT-audit-log.xlsx";
   const url = URL.createObjectURL(res.data);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "audit-log.csv";
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }

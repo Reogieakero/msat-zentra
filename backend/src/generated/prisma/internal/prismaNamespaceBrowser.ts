@@ -52,6 +52,7 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
+  LoginEvent: 'LoginEvent',
   StudentProfile: 'StudentProfile',
   ParentProfile: 'ParentProfile',
   ParentStudentLink: 'ParentStudentLink',
@@ -60,6 +61,7 @@ export const ModelName = {
   Term: 'Term',
   Section: 'Section',
   StudentRoster: 'StudentRoster',
+  TermRosterConfirmation: 'TermRosterConfirmation',
   Subject: 'Subject',
   TeacherSubjectAssignment: 'TeacherSubjectAssignment',
   ScheduleConfig: 'ScheduleConfig',
@@ -129,10 +131,27 @@ export const UserScalarFieldEnum = {
   status: 'status',
   approvedBy: 'approvedBy',
   approvedAt: 'approvedAt',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  lastActiveAt: 'lastActiveAt',
+  lastIp: 'lastIp',
+  lastCity: 'lastCity',
+  lastCountry: 'lastCountry',
+  lastLat: 'lastLat',
+  lastLng: 'lastLng'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const LoginEventScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  ip: 'ip',
+  kind: 'kind',
+  occurredAt: 'occurredAt'
+} as const
+
+export type LoginEventScalarFieldEnum = (typeof LoginEventScalarFieldEnum)[keyof typeof LoginEventScalarFieldEnum]
 
 
 export const StudentProfileScalarFieldEnum = {
@@ -242,14 +261,30 @@ export const StudentRosterScalarFieldEnum = {
   sectionId: 'sectionId',
   schoolYearId: 'schoolYearId',
   mascot: 'mascot',
+  learnerType: 'learnerType',
   riskCount: 'riskCount',
   riskLevel: 'riskLevel',
   academicFlag: 'academicFlag',
   attendanceFlag: 'attendanceFlag',
-  behavioralFlag: 'behavioralFlag'
+  behavioralFlag: 'behavioralFlag',
+  createdAt: 'createdAt',
+  enlistedTermId: 'enlistedTermId'
 } as const
 
 export type StudentRosterScalarFieldEnum = (typeof StudentRosterScalarFieldEnum)[keyof typeof StudentRosterScalarFieldEnum]
+
+
+export const TermRosterConfirmationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  termId: 'termId',
+  kind: 'kind',
+  rosterFingerprint: 'rosterFingerprint',
+  sameAsPrevious: 'sameAsPrevious',
+  acknowledgedAt: 'acknowledgedAt'
+} as const
+
+export type TermRosterConfirmationScalarFieldEnum = (typeof TermRosterConfirmationScalarFieldEnum)[keyof typeof TermRosterConfirmationScalarFieldEnum]
 
 
 export const SubjectScalarFieldEnum = {
@@ -480,7 +515,9 @@ export const AnecdotalRecordScalarFieldEnum = {
   folderId: 'folderId',
   signedBy: 'signedBy',
   signedAt: 'signedAt',
-  signatureImageUrl: 'signatureImageUrl'
+  signatureImageUrl: 'signatureImageUrl',
+  deletedAt: 'deletedAt',
+  deletedBy: 'deletedBy'
 } as const
 
 export type AnecdotalRecordScalarFieldEnum = (typeof AnecdotalRecordScalarFieldEnum)[keyof typeof AnecdotalRecordScalarFieldEnum]
@@ -732,6 +769,7 @@ export type AdmFormScalarFieldEnum = (typeof AdmFormScalarFieldEnum)[keyof typeo
 export const AdvisoryModuleScalarFieldEnum = {
   id: 'id',
   sectionId: 'sectionId',
+  termId: 'termId',
   kind: 'kind',
   moduleName: 'moduleName',
   moduleUrl: 'moduleUrl',

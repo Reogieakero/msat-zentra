@@ -1,12 +1,27 @@
 "use client";
 
 import { useState, type ComponentType } from "react";
-import { Clock, Coffee, CupSoda, Gauge, Loader2, Settings2, Timer, UtensilsCrossed } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Coffee,
+  CupSoda,
+  Gauge,
+  Loader2,
+  RotateCcw,
+  Settings2,
+  SlidersHorizontal,
+  Timer,
+  UtensilsCrossed,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { ScrollList } from "@/components/ui/scroll-list";
-import { Pill } from "@/components/ui/pill";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import {
   AfterSelect,
   TimePicker,
@@ -22,6 +37,9 @@ import kanbanStyles from "./subject-kanban.module.css";
 
 const CONFIG_SAVE_STEPS = ["Validating shape", "Saving to server", "Confirming timetables"];
 
+/** Wizard steps — one board, three screens, apply lands on the last one. */
+const CONFIG_STEPS = ["Day shape", "Breaks", "Workload caps"] as const;
+
 export type ConfigSaveStatus = "saving" | "saved" | "failed";
 
 export type ConfigIcon = "clock" | "timer" | "lunch" | "recess-am" | "recess-pm" | "caps";
@@ -33,6 +51,35 @@ const CONFIG_ICONS: Record<ConfigIcon, ComponentType<{ size?: number | string; c
   "recess-am": Coffee,
   "recess-pm": CupSoda,
   caps: Gauge,
+};
+
+/** One shared pill family per data type (no all-amber wall). */
+const CONFIG_TONES: Record<ConfigIcon, PillTone> = {
+  clock: "blue",
+  timer: "violet",
+  lunch: "amber",
+  "recess-am": "teal",
+  "recess-pm": "sky",
+  caps: "indigo",
+};
+
+const CONFIG_ICON_TINT: Record<ConfigIcon, string> = {
+  clock: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
+  timer: "bg-violet-500/15 text-violet-600 dark:text-violet-400",
+  lunch: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  "recess-am": "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+  "recess-pm": "bg-sky-500/15 text-sky-600 dark:text-sky-400",
+  caps: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400",
+};
+
+/** Field name each value bit names on hover (Pill's tooltip). */
+const CONFIG_PART_LABELS: Record<ConfigIcon, string[]> = {
+  clock: ["Start of classes"],
+  timer: ["Subject duration"],
+  lunch: ["Lunch length", "Lunch after"],
+  "recess-am": ["Morning recess", "After period", "Duration"],
+  "recess-pm": ["Afternoon recess", "After period", "Duration"],
+  caps: ["Max periods per day", "Max periods per week"],
 };
 
 export interface ConfigSaveItem {
@@ -93,6 +140,9 @@ export function describeConfig(next: DayConfig): { items: ConfigSaveItem[]; summ
 }
 
 const inputClass = "rounded-md border border-input bg-transparent px-2 py-1 font-sans text-sm";
+const FOOTER_BUTTON = "h-6 gap-1 px-2 font-sans text-[11px]";
+const APPLY_BUTTON =
+  "border-input bg-white text-black hover:bg-neutral-100 hover:text-black dark:border-transparent dark:bg-white dark:text-black dark:hover:bg-neutral-200 dark:hover:text-black";
 
 interface Props {
   config: DayConfig;
@@ -103,6 +153,7 @@ interface Props {
 
 export function ScheduleConfigKanban({ config, onClose, onApply, saving }: Props) {
   const [draft, setDraft] = useState<DayConfig>(config);
+  const [step, setStep] = useState(0);
   // Dropdown triggers are native buttons (centered text by default) — force left.
   const left = kanbanStyles.triggerLeft;
 
@@ -200,6 +251,42 @@ export function ScheduleConfigKanban({ config, onClose, onApply, saving }: Props
     );
   };
 
+  const stepHeader = (
+    <ol className="flex flex-wrap items-center gap-1.5 px-1" aria-label="Configuration steps">
+      {CONFIG_STEPS.map((label, i) => {
+        const active = i === step;
+        const done = i < step;
+        return (
+          <li key={label} className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setStep(i)}
+              aria-current={active ? "step" : undefined}
+              className={`flex items-center gap-1.5 rounded-md border px-2 py-1 font-sans text-[11px] transition-colors duration-150 ${
+                active
+                  ? "border-amber-500/60 bg-amber-500/10 text-foreground"
+                  : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+              }`}
+            >
+              <span
+                className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-semibold ${
+                  active || done ? "bg-amber-500 text-black" : "bg-muted text-muted-foreground"
+                }`}
+                aria-hidden
+              >
+                {done ? <Check size={10} /> : i + 1}
+              </span>
+              {label}
+            </button>
+            {i < CONFIG_STEPS.length - 1 ? (
+              <span className="h-px w-3 bg-border" aria-hidden />
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+
   return (
     <div className={kanbanStyles.view} aria-label="Configure school day">
       <div className={`${kanbanStyles.column} mx-auto w-full max-w-3xl`}>
@@ -211,160 +298,288 @@ export function ScheduleConfigKanban({ config, onClose, onApply, saving }: Props
             </span>
           }
           description="General shape for the whole term — saving applies to all sections. Breaks, lunch, start time and period length reshape every timetable on Apply."
-          className="h-full"
+          className="h-full bg-card shadow-xl"
+          actions={
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              aria-label="Close configure school day"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          }
           footer={
-            <div className="flex justify-end gap-1.5 px-1 pb-1">
+            <div className="flex flex-wrap items-center justify-end gap-1.5 px-1 pb-1">
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setDraft(DEFAULT_DAY_CONFIG)}
+                onClick={() => {
+                  setDraft(DEFAULT_DAY_CONFIG);
+                  setStep(0);
+                }}
                 disabled={saving}
-                className="h-6 font-sans"
+                className={FOOTER_BUTTON}
               >
+                <RotateCcw size={12} aria-hidden />
                 Reset
               </Button>
-              <Button
-                size="sm"
-                onClick={onClose}
-                disabled={saving}
-                className="h-6 border-transparent bg-red-600 px-3 font-sans text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleApply}
-                disabled={saving}
-                aria-busy={saving || undefined}
-                className="h-6 border-input bg-white font-sans text-black hover:bg-neutral-100 hover:text-black dark:border-transparent dark:bg-white dark:text-black dark:hover:bg-neutral-200 dark:hover:text-black"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
-                    <span aria-live="polite">Saving…</span>
-                  </>
-                ) : (
-                  "Apply"
-                )}
-              </Button>
+              {step > 0 ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setStep((s) => Math.max(0, s - 1))}
+                  disabled={saving}
+                  className={FOOTER_BUTTON}
+                >
+                  <ChevronLeft size={12} aria-hidden />
+                  Back
+                </Button>
+              ) : null}
+              {step < CONFIG_STEPS.length - 1 ? (
+                <Button
+                  size="sm"
+                  onClick={() => setStep((s) => Math.min(CONFIG_STEPS.length - 1, s + 1))}
+                  disabled={saving}
+                  className={FOOTER_BUTTON}
+                >
+                  Next
+                  <ChevronRight size={12} aria-hidden />
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={handleApply}
+                  disabled={saving}
+                  aria-busy={saving || undefined}
+                  className={`${FOOTER_BUTTON} ${APPLY_BUTTON}`}
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" aria-hidden />
+                      <span aria-live="polite">Saving…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={12} aria-hidden />
+                      Apply
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           }
         >
           <div className="flex flex-col gap-3 px-1">
-            <div className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
-              <span>Start of classes</span>
-              <TimePicker
-                value={draft.startTime}
-                onChange={(v) => setDraft({ ...draft, startTime: v })}
-                label="Start of classes"
-                triggerClassName={left}
-              />
-            </div>
+            {stepHeader}
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
-                Subject duration (min)
-                <input
-                  type="number"
-                  min={15}
-                  max={120}
-                  step={5}
-                  value={draft.periodMins}
-                  onChange={(e) => {
-                    const v = e.target.valueAsNumber;
-                    if (Number.isFinite(v)) setDraft({ ...draft, periodMins: v });
-                  }}
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
-                Lunch length (min)
-                <input
-                  type="number"
-                  min={15}
-                  max={180}
-                  step={5}
-                  value={draft.lunch.mins}
-                  onChange={(e) => {
-                    const v = e.target.valueAsNumber;
-                    if (Number.isFinite(v))
-                      setDraft({ ...draft, lunch: { ...draft.lunch, mins: v } });
-                  }}
-                  className={inputClass}
-                />
-              </label>
-            </div>
-
-            <div className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
-              <span>Lunch after</span>
-              <AfterSelect
-                value={draft.lunch.afterPeriod}
-                options={[1, 2, 3, 4, 5, 6, 7, 8]}
-                onChange={(v) => setDraft({ ...draft, lunch: { ...draft.lunch, afterPeriod: v } })}
-                label="Lunch after period"
-                triggerClassName={left}
-              />
-            </div>
-
-            {recessField("morningRecess", "Morning recess", [1, 2, 3, 4])}
-            {recessField("afternoonRecess", "Afternoon recess", [5, 6, 7, 8])}
-
-            <div className="rounded-lg border border-input p-3">
-              <span className="font-sans text-sm font-medium">Teacher workload caps</span>
-              <p className="mt-0.5 font-sans text-xs text-muted-foreground">
-                Warn-allow limits for the conflict detector. Saving still goes through.
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
-                  Max periods / day
-                  <input
-                    type="number"
-                    min={1}
-                    max={8}
-                    step={1}
-                    value={draft.workload?.maxDailyPeriods ?? 6}
-                    onChange={(e) => {
-                      const v = e.target.valueAsNumber;
-                      if (Number.isFinite(v))
-                        setDraft({
-                          ...draft,
-                          workload: {
-                            maxDailyPeriods: v,
-                            maxWeeklyPeriods: draft.workload?.maxWeeklyPeriods ?? 30,
-                          },
-                        });
-                    }}
-                    className={inputClass}
+            {step === 0 ? (
+              <>
+                <div className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
+                  <span>Start of classes</span>
+                  <TimePicker
+                    value={draft.startTime}
+                    onChange={(v) => setDraft({ ...draft, startTime: v })}
+                    label="Start of classes"
+                    triggerClassName={left}
                   />
-                </label>
-                <label className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
-                  Max periods / week
-                  <input
-                    type="number"
-                    min={1}
-                    max={40}
-                    step={1}
-                    value={draft.workload?.maxWeeklyPeriods ?? 30}
-                    onChange={(e) => {
-                      const v = e.target.valueAsNumber;
-                      if (Number.isFinite(v))
-                        setDraft({
-                          ...draft,
-                          workload: {
-                            maxDailyPeriods: draft.workload?.maxDailyPeriods ?? 6,
-                            maxWeeklyPeriods: v,
-                          },
-                        });
-                    }}
-                    className={inputClass}
-                  />
-                </label>
-              </div>
-            </div>
+                </div>
 
-            <p className="font-sans text-xs text-muted-foreground">
-              School day ends {lastRow ? formatClock(lastRow.endMin) : "—"}.
-            </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
+                    Subject duration (min)
+                    <input
+                      type="number"
+                      min={15}
+                      max={120}
+                      step={5}
+                      value={draft.periodMins}
+                      onChange={(e) => {
+                        const v = e.target.valueAsNumber;
+                        if (Number.isFinite(v)) setDraft({ ...draft, periodMins: v });
+                      }}
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
+                    Lunch length (min)
+                    <input
+                      type="number"
+                      min={15}
+                      max={180}
+                      step={5}
+                      value={draft.lunch.mins}
+                      onChange={(e) => {
+                        const v = e.target.valueAsNumber;
+                        if (Number.isFinite(v))
+                          setDraft({ ...draft, lunch: { ...draft.lunch, mins: v } });
+                      }}
+                      className={inputClass}
+                    />
+                  </label>
+                </div>
+
+                <div className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
+                  <span>Lunch after</span>
+                  <AfterSelect
+                    value={draft.lunch.afterPeriod}
+                    options={[1, 2, 3, 4, 5, 6, 7, 8]}
+                    onChange={(v) => setDraft({ ...draft, lunch: { ...draft.lunch, afterPeriod: v } })}
+                    label="Lunch after period"
+                    triggerClassName={left}
+                  />
+                </div>
+              </>
+            ) : null}
+
+            {step === 1 ? (
+              <>
+                {recessField("morningRecess", "Morning recess", [1, 2, 3, 4])}
+                {recessField("afternoonRecess", "Afternoon recess", [5, 6, 7, 8])}
+              </>
+            ) : null}
+
+            {step === 2 ? (
+              <>
+                <div className="rounded-lg border border-input p-3">
+                  <span className="font-sans text-sm font-medium">Teacher workload caps</span>
+                  <p className="mt-0.5 font-sans text-xs text-muted-foreground">
+                    Warn-allow limits for the conflict detector. Saving still goes through.
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <label className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
+                      Max periods / day
+                      <input
+                        type="number"
+                        min={1}
+                        max={8}
+                        step={1}
+                        value={draft.workload?.maxDailyPeriods ?? 6}
+                        onChange={(e) => {
+                          const v = e.target.valueAsNumber;
+                          if (Number.isFinite(v))
+                            setDraft({
+                              ...draft,
+                              workload: {
+                                maxDailyPeriods: v,
+                                maxWeeklyPeriods: draft.workload?.maxWeeklyPeriods ?? 30,
+                              },
+                            });
+                        }}
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 font-sans text-xs text-muted-foreground">
+                      Max periods / week
+                      <input
+                        type="number"
+                        min={1}
+                        max={40}
+                        step={1}
+                        value={draft.workload?.maxWeeklyPeriods ?? 30}
+                        onChange={(e) => {
+                          const v = e.target.valueAsNumber;
+                          if (Number.isFinite(v))
+                            setDraft({
+                              ...draft,
+                              workload: {
+                                maxDailyPeriods: draft.workload?.maxDailyPeriods ?? 6,
+                                maxWeeklyPeriods: v,
+                              },
+                            });
+                        }}
+                        className={inputClass}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <p className="font-sans text-xs text-muted-foreground">
+                  School day ends {lastRow ? formatClock(lastRow.endMin) : "—"}.
+                </p>
+              </>
+            ) : null}
+          </div>
+        </KanbanBoard>
+      </div>
+    </div>
+  );
+}
+
+export function ScheduleConfigBoard({
+  config,
+  onEdit,
+  saving,
+}: {
+  config: DayConfig;
+  onEdit: () => void;
+  saving?: boolean;
+}) {
+  const { items, summary } = describeConfig(config);
+  return (
+    <div className={kanbanStyles.view} aria-label="Day configuration">
+      <div className={`${kanbanStyles.column} mx-auto w-full max-w-3xl`}>
+        <KanbanBoard
+          title="Configure school day"
+          icon={
+            <span className="text-amber-500" aria-hidden>
+              <Settings2 size={14} />
+            </span>
+          }
+          description="General shape for the whole term — saving applies to all sections."
+          className="h-full bg-card"
+          actions={
+            <Button
+              size="sm"
+              onClick={onEdit}
+              disabled={saving}
+              className={FOOTER_BUTTON}
+            >
+              <SlidersHorizontal size={12} aria-hidden />
+              Edit
+            </Button>
+          }
+          footer={
+            <p className="px-1 pb-1 font-sans text-xs text-muted-foreground">{summary}.</p>
+          }
+        >
+          <div
+            className="grid grid-cols-1 gap-2 px-1 sm:grid-cols-2 lg:grid-cols-3"
+            aria-label="Applied school-day settings"
+          >
+            {items.map((it) => {
+              const Icon = CONFIG_ICONS[it.icon] ?? Settings2;
+              const tone = CONFIG_TONES[it.icon] ?? "neutral";
+              const labels = CONFIG_PART_LABELS[it.icon] ?? [];
+              return (
+                <div
+                  key={it.label}
+                  className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-card/60 p-3 transition-colors duration-150 hover:border-amber-500/40"
+                >
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
+                        CONFIG_ICON_TINT[it.icon] ?? "bg-muted text-muted-foreground"
+                      }`}
+                      aria-hidden
+                    >
+                      <Icon size={13} />
+                    </span>
+                    <span className="truncate font-sans text-xs font-medium" title={it.label}>
+                      {it.label}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {it.parts.map((part, i) => (
+                      <Pill key={`${part}-${i}`} tone={tone} label={labels[i] ?? it.label}>
+                        {part}
+                      </Pill>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </KanbanBoard>
       </div>

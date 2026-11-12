@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Pill } from "@/components/ui/pill";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { StudentMascot, MASCOT_CHARACTERS } from "@/components/student-mascot/StudentMascot";
 import { apiClient } from "@/lib/api/client";
@@ -193,16 +194,18 @@ export function ProfileCard() {
                       <Skeleton className="h-5 w-16 rounded-md" />
                     </div>
                   ) : (
-                    <div className={`mt-1.5 flex flex-wrap gap-1.5 ${sectionStyles.pills}`}>
-                      <span className={sectionStyles.pill}>{roleLabel(session?.role)}</span>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <Pill tone="amber" label="Role">
+                        {roleLabel(session?.role)}
+                      </Pill>
                       {advisoryName ? (
-                        <span className={sectionStyles.pill}>Adviser of {advisoryName}</span>
+                        <Pill tone="amber" label="Advisory section">Adviser of {advisoryName}</Pill>
                       ) : (
-                        <span className={sectionStyles.pill}>No advisory section</span>
+                        <Pill tone="amber" label="Advisory section">No advisory section</Pill>
                       )}
-                      <span className={sectionStyles.pill}>
+                      <Pill tone="amber" label="Handled classes">
                         {classCount} class{classCount === 1 ? "" : "es"}
-                      </span>
+                      </Pill>
                     </div>
                   )}
                 </div>

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import { fetchGuidanceRiskLevels } from "@/services/guidance/risk.service";
 import type { GuidanceRiskLevel } from "@/services/guidance/guidance.types";
 import {
@@ -34,10 +35,10 @@ export function useGuidanceAdmRiskData(): GuidanceAdmRiskData {
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
   const riskQuery = useQuery({
+    ...liveQueryOptions,
     queryKey: ["guidance-risk", termKey],
     queryFn: () => fetchGuidanceRisk(),
     placeholderData: keepPreviousData,
-    staleTime: 60_000,
     enabled: termReady,
   });
 
@@ -54,18 +55,18 @@ export function useGuidanceAdmRiskData(): GuidanceAdmRiskData {
   );
 
   const levelsQuery = useQuery<Record<string, GuidanceRiskLevel>>({
+    ...liveQueryOptions,
     queryKey: ["guidance-risk-levels", studentIds, termKey],
     queryFn: () => fetchGuidanceRiskLevels(studentIds),
     placeholderData: keepPreviousData,
-    staleTime: 300_000,
     enabled: termReady && studentIds.length > 0,
   });
 
   const factorsQuery = useQuery({
+    ...liveQueryOptions,
     queryKey: ["guidance-risk-alert-factors", termKey],
     queryFn: fetchAllGuidanceAlertFactors,
     placeholderData: keepPreviousData,
-    staleTime: 300_000,
     enabled: termReady,
   });
 

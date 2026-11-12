@@ -1,8 +1,10 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
+import { CACHE_TTLS } from "../../lib/cacheTags.js";
 import { etag } from "../../lib/etag.js";
 import { prisma } from "../../lib/prisma.js";
+import { INTERNAL_AGGREGATE_ROW_CAP } from "../../lib/pagination.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { getRiskBoard, getRiskTrend, getSchoolsForRisk } from "./riskBoard.service.js";
 import { getLowRiskStudents } from "./lowRiskStudents.service.js";
@@ -11,7 +13,7 @@ import {
   getSectionFactorStudents,
   type RiskFactor,
 } from "./riskHeatmap.service.js";
-import { getRiskStudents } from "./riskStudents.service.js";
+import { getAllRiskStudents, getRiskStudents } from "./riskStudents.service.js";
 import { getInterventionStudents } from "./interventions.service.js";
 import {
   getBatchLevels,
@@ -46,7 +48,7 @@ router.get(
   "/board",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"], ttl: 15 }),
+  cache({ tags: ["risk", "principal"], ttl: CACHE_TTLS.semiStatic }),
   etag(),
   async (req, res, next) => {
     try {
@@ -80,7 +82,7 @@ router.get(
   "/trend",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"], ttl: 15 }),
+  cache({ tags: ["risk", "principal"], ttl: CACHE_TTLS.semiStatic }),
   etag(),
   async (req, res, next) => {
     try {
@@ -116,7 +118,7 @@ router.get(
   "/students",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"], ttl: 60 }),
+  cache({ tags: ["risk", "principal"], ttl: CACHE_TTLS.semiStatic }),
   etag(),
   async (req, res, next) => {
     try {
@@ -139,6 +141,12 @@ router.get(
         req.query.factor === "Behavioral"
           ? (req.query.factor as "Academic" | "Attendance" | "Behavioral")
           : undefined;
+      // Internal aggregate for the instant-search desks: one full roster load
+      // (High + Moderate), then the client filters and pages in memory.
+      if (req.query.all === "1") {
+        const students = await getAllRiskStudents(req.termScope ?? undefined);
+        return res.json({ students, total: students.length });
+      }
       // Real-time unified: ?gradeMode accepted but ignored.
       const result = await getRiskStudents(page, pageSize, section, undefined, req.termScope ?? undefined, q, {
         riskLevel,
@@ -265,9 +273,18 @@ router.get(
   etag(),
   async (req, res, next) => {
     try {
-      const page = Math.max(1, Number(req.query.page) || 1);
-      // Strict 15-record ceiling for normal lists.
-      const pageSize = Math.min(15, Math.max(1, Number(req.query.pageSize) || 15));
+      // The principal interventions desk filters and pages in memory (instant
+      // search, like the records desk), so it opens the queue once with
+      // `?all=1`. Every other caller keeps the strict 15-record ceiling.
+      const wantsFullCohort = req.query.all === "1";
+      const page = wantsFullCohort
+        ? 1
+        : Math.max(1, Number(req.query.page) || 1);
+      // Strict 15-record ceiling for normal lists; the full-cohort mode is an
+      // internal desk aggregate capped at the shared aggregate row limit.
+      const pageSize = wantsFullCohort
+        ? INTERNAL_AGGREGATE_ROW_CAP
+        : Math.min(15, Math.max(1, Number(req.query.pageSize) || 15));
       const riskLevel =
         typeof req.query.riskLevel === "string"
           ? (req.query.riskLevel as "Low" | "Moderate" | "High")

@@ -15,13 +15,13 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
-import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import { riskTone } from "@/lib/labels/status-tone";
 import { Input } from "@/components/ui/input";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import {
   Table,
   TableBody,
@@ -29,7 +29,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import type { BackendStudent, RiskFactor } from "@/services/principal/riskStudents.types";
-import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { fetchAllRiskStudents } from "@/services/principal/riskStudents.service";
 import styles from "./HighRiskStudentsTable.module.css";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
@@ -58,47 +58,53 @@ export function HighRiskStudentsTable() {
   );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [page, setPage] = React.useState(1);
-  const debouncedQuery = useDebouncedValue(query, 300);
 
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
   const schoolYearId = activeTerm?.schoolYearId ?? null;
+  // Whole at-risk roster, loaded once per term. Search, filtering and paging
+  // then run entirely in memory — typing never fires a request.
   const { data, isPending, isError, refetch } = useQuery({
-    queryKey: ["risk-students", "high", termId, schoolYearId, page, debouncedQuery],
-    queryFn: async ({ signal }) => {
-      const params: Record<string, string | number> = {
-        page,
-        pageSize: PAGE_SIZE,
-        riskLevel: "High",
-      };
-      if (debouncedQuery.trim()) params.q = debouncedQuery.trim();
-      const res = await apiClient.get<{
-        students: BackendStudent[];
-        total: number;
-        page: number;
-      }>("/api/risk/students", { params, signal });
-      return res.data;
-    },
+    queryKey: ["risk-students-all", termId, schoolYearId],
+    queryFn: fetchAllRiskStudents,
     // Keep visited pages cached: back/forward navigation within the
     // stale window serves instantly with no skeleton or refetch.
-    staleTime: 120_000,
+    staleTime: 5 * 60_000,
     gcTime: 600_000,
     refetchOnWindowFocus: false,
   });
 
-  const rows = React.useMemo(() => data?.students ?? [], [data]);
-  const total = data?.total ?? 0;
+  const highRisk = React.useMemo(
+    () => (data ?? []).filter((student) => student.riskLevel === "High"),
+    [data],
+  );
+
+  const needle = query.trim().toLowerCase();
+  const filtered = React.useMemo(() => {
+    if (!needle) return highRisk;
+    return highRisk.filter(
+      (student) =>
+        student.name.toLowerCase().includes(needle) ||
+        student.lrn.toLowerCase().includes(needle),
+    );
+  }, [highRisk, needle]);
+
+  const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
 
-  // If the result set shrinks under the current page (e.g. on page 3 of 45,
-  // then search to 10), step back to the last valid page so the requested
-  // page, the footer label, and the rows always agree.
+  // Rows are a client-side slice of the filtered roster — no fetch, no
+  // stale page of results left behind while a request settles.
+  const rows = React.useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, safePage]);
+
+  // If the result set shrinks under the current page, step back to the last
+  // valid page so the requested page, footer label and rows always agree.
   React.useEffect(() => {
-    if (!isPending && totalPages >= 1 && page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [isPending, totalPages, page]);
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const applySearch = (value: string) => {
     setQuery(value);
@@ -207,7 +213,7 @@ export function HighRiskStudentsTable() {
       description={
         <>
           Students flagged as high risk that need priority review —{" "}
-          {total} student{total === 1 ? "" : "s"}.
+          {highRisk.length} student{highRisk.length === 1 ? "" : "s"}.
         </>
       }
       actions={
@@ -240,19 +246,26 @@ export function HighRiskStudentsTable() {
       <div className={`${styles.content} relative`}>
         {isError && !isPending && rows.length === 0 ? (
           <div className={styles.empty} role="alert">
-            <p>Couldn&apos;t load this page of high-risk students.</p>
+            <p>Couldn&apos;t load the high-risk students.</p>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               Retry
             </Button>
           </div>
-        ) : !isPending && total === 0 && !debouncedQuery.trim() ? (
+        ) : !isPending && highRisk.length === 0 ? (
           <PrincipalEmptyState
             icon={ShieldCheck}
             title="No high-risk students"
             hint="No high-risk students in the active term. Flagged students will appear here once detected."
           />
+        ) : !isPending && filtered.length === 0 ? (
+          <div className={styles.noMatch}>
+            <InsightCallout role="status" className={styles.noMatchCallout}>
+              <strong>No students match “{query.trim()}”.</strong> Try a different
+              name or LRN — or clear the search to see every high-risk student.
+            </InsightCallout>
+          </div>
         ) : (
-        <div className="overflow-x-auto rounded-md border">
+        <div className={`${styles.tableWrap} rounded-md border`}>
           <Table className="w-full table-fixed">
             <TableBody>
               {isPending ? (
@@ -260,9 +273,7 @@ export function HighRiskStudentsTable() {
               ) : tableRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className={styles.empty}>
-                    {debouncedQuery.trim()
-                      ? `No high-risk students match “${debouncedQuery}”.`
-                      : "No high-risk students."}
+                    No high-risk students.
                   </TableCell>
                 </TableRow>
               ) : (

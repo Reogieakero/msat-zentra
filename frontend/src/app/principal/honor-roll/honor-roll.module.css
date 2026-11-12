@@ -104,33 +104,3 @@
   border-radius: var(--radius-md);
   background-color: var(--card);
 }
-
-.skeletonHero,
-.skeletonBar,
-.skeletonTable {
-  border-radius: var(--radius-md);
-  background-color: color-mix(in oklch, var(--muted), transparent 60%);
-  animation: hrPulse 1.5s ease-in-out infinite;
-}
-
-.skeletonHero {
-  height: 5rem;
-}
-
-.skeletonBar {
-  height: 2.5rem;
-}
-
-.skeletonTable {
-  height: 18rem;
-}
-
-@keyframes hrPulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
-}

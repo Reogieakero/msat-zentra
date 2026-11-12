@@ -370,7 +370,8 @@ export function InterventionDetailSheet({
               disabled={locked || isActionPending}
               onClick={onStart}
               title="Start the follow-up and book the first session"
-              className="h-8 rounded-[8px] bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
+              variant="default"
+              className="h-8 rounded-[8px] px-4 text-sm font-semibold"
             >
               <Busy busy={isBusy("start")} />
               Book session
@@ -381,7 +382,8 @@ export function InterventionDetailSheet({
               type="button"
               disabled={locked || isActionPending}
               onClick={onSchedule}
-              className="h-8 rounded-[8px] bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
+              variant="default"
+              className="h-8 rounded-[8px] px-4 text-sm font-semibold"
             >
               Book session
             </Button>
@@ -411,7 +413,8 @@ export function InterventionDetailSheet({
                 type="button"
                 disabled={locked || isActionPending}
                 onClick={() => onReview("approved")}
-                className="h-8 rounded-[8px] bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
+                variant="default"
+                className="h-8 rounded-[8px] px-4 text-sm font-semibold"
               >
                 <Busy busy={isBusy("review")} />
                 Approve
@@ -421,38 +424,26 @@ export function InterventionDetailSheet({
           {followUp && !closed && status.label !== "No action yet" && (
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               disabled={locked || isActionPending || hasUpcoming}
               title={hasUpcoming ? upcomingHint : undefined}
               onClick={onOutcome}
-              className="h-8 rounded-[8px] border-slate-300 px-4 text-sm font-medium text-slate-700 dark:border-white/15 dark:text-slate-200"
+              className="h-8 rounded-[8px] px-4 text-sm font-semibold"
             >
               Record outcome…
             </Button>
           )}
           {followUp && closed && (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={locked || isActionPending}
-                onClick={onOutcome}
-                title="Update the closing notes on this finished follow-up"
-                className="h-8 rounded-[8px] border-slate-300 px-4 text-sm font-medium text-slate-700 dark:border-white/15 dark:text-slate-200"
-              >
-                Add note
-              </Button>
-              <Button
-                type="button"
-                disabled={locked || isActionPending}
-                onClick={onStart}
-                title="This student is still at risk — open a new follow-up"
-                className="h-8 rounded-[8px] bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
-              >
-                <Busy busy={isBusy("start")} />
-                Start new follow-up
-              </Button>
-            </>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={locked || isActionPending}
+              onClick={onOutcome}
+              title="Update the closing notes on this finished follow-up"
+              className="h-8 rounded-[8px] border-slate-300 px-4 text-sm font-medium text-slate-700 dark:border-white/15 dark:text-slate-200"
+            >
+              Add note
+            </Button>
           )}
         </div>
       </div>

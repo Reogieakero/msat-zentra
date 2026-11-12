@@ -22,15 +22,27 @@ export function NeedsAttentionList({
 
   if (isPending) {
     return (
-      <div className={styles.attentionGrid} aria-hidden>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className={styles.attentionCard}>
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-3 w-32" />
-            <Skeleton className="h-5 w-20 rounded-md" />
-          </div>
-        ))}
-      </div>
+      <section className={styles.attentionSection} aria-hidden>
+        <div className={styles.attentionSectionHead}>
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-3 w-72" />
+        </div>
+        <div className={styles.attentionGrid}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className={styles.attentionCard}>
+              <div className={styles.attentionHead}>
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-5 w-14 rounded-md" />
+              </div>
+              <Skeleton className="h-3 w-32" />
+              <div className={styles.attentionMeta}>
+                <Skeleton className="h-5 w-24 rounded-md" />
+                <Skeleton className="h-5 w-20 rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     );
   }
 

@@ -3,17 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  GraduationCap,
-  ShieldAlert,
-  FileSignature,
-  Award,
-  ShieldCheck,
-} from "lucide-react";
-
 import { useSidebar } from "@/components/ui/sidebar";
 import styles from "./staff-sidebar.module.css";
+import { NAV_ICONS } from "./nav/sidebar-icons";
 
 type NavSubItem = {
   title: string;
@@ -38,7 +30,7 @@ const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { title: "Overview", href: "/principal/overview", icon: LayoutDashboard },
+      { title: "Overview", href: "/principal/overview", icon: NAV_ICONS.overview },
     ],
   },
   {
@@ -47,7 +39,7 @@ const NAV: NavGroup[] = [
       {
         title: "Academics",
         href: "/principal/academics",
-        icon: GraduationCap,
+        icon: NAV_ICONS.academics,
         subItems: [
           { title: "Assigning", href: "/principal/academics/assign" },
           { title: "Schedule Approval", href: "/principal/academics/schedule" },
@@ -56,7 +48,7 @@ const NAV: NavGroup[] = [
       {
         title: "Risk Board",
         href: "/principal/risk",
-        icon: ShieldAlert,
+        icon: NAV_ICONS.riskBoard,
         subItems: [
           { title: "Students", href: "/principal/risk/students" },
           { title: "Attendance Heatmap", href: "/principal/risk/heatmaps/attendance" },
@@ -66,9 +58,9 @@ const NAV: NavGroup[] = [
         ],
       },
       {
-        title: "ADM Cases",
+        title: "ADM Report",
         href: "/principal/adm",
-        icon: FileSignature,
+        icon: NAV_ICONS.admReport,
         subItems: [
           { title: "Referrals", href: "/principal/adm/referrals/all" },
         ],
@@ -76,14 +68,14 @@ const NAV: NavGroup[] = [
       {
         title: "Honor Roll",
         href: "/principal/honor-roll",
-        icon: Award,
+        icon: NAV_ICONS.honorRoll,
       },
     ],
   },
   {
     label: "Reports & Admin",
     items: [
-      { title: "Audit Log", href: "/principal/audit", icon: ShieldCheck },
+      { title: "Audit Log", href: "/principal/audit", icon: NAV_ICONS.auditLog },
     ],
   },
 ];

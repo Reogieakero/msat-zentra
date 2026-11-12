@@ -18,6 +18,8 @@ interface KanbanModalProps {
   size?: KanbanModalSize;
   dismissable?: boolean;
   initialFocusRef?: React.RefObject<HTMLElement | null>;
+  /** Paint above the dialog that opened it (nested modal). */
+  raised?: boolean;
 }
 
 /**
@@ -37,6 +39,7 @@ export function KanbanModal({
   size = "lg",
   dismissable = true,
   initialFocusRef,
+  raised = false,
 }: KanbanModalProps) {
   const cardRef = React.useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = React.useState(false);
@@ -69,7 +72,7 @@ export function KanbanModal({
 
   return createPortal(
     <div
-      className={styles.overlay}
+      className={`${styles.overlay}${raised ? ` ${styles.raised}` : ""}`}
       onMouseDown={(e) => {
         if (dismissable && e.target === e.currentTarget) onClose();
       }}

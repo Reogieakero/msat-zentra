@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Info, Send } from "lucide-react";
+import { FileText, Info, Plus, Send } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { Button } from "@/components/ui/button";
+import { Pill } from "@/components/ui/pill";
+import { REFERRAL_STATUS_LEGEND } from "@/lib/labels/referral-status";
 import refStyles from "./referrals.module.css";
 
 function BamaMascot({ size = 14 }: { size?: number }) {
@@ -14,15 +16,7 @@ function BamaMascot({ size = 14 }: { size?: number }) {
   );
 }
 
-const STATUS_ENTRIES: { key: string; label: string; color: string }[] = [
-  { key: "pending", label: "Pending", color: "#f59e0b" },
-  { key: "in_progress", label: "In progress", color: "#3b82f6" },
-  { key: "info_requested", label: "Info requested", color: "#3b82f6" },
-  { key: "follow_up", label: "Follow up", color: "#f59e0b" },
-  { key: "resolved", label: "Resolved", color: "#22c55e" },
-  { key: "dismissed", label: "Cancelled", color: "#ef4444" },
-  { key: "rejected", label: "Rejected", color: "#ef4444" },
-];
+const STATUS_ENTRIES = REFERRAL_STATUS_LEGEND;
 
 function ColumnHead({
   icon,
@@ -38,7 +32,7 @@ function ColumnHead({
   return (
     <div
       className="-mx-2.5 flex items-center justify-between gap-2 border-b border-border px-3.5 pb-2"
-      aria-label={action ? title : `${title}, ${count}`}
+      aria-label={count !== undefined && !action ? `${title}, ${count}` : title}
     >
       <span className="inline-flex min-w-0 items-center gap-1.5 text-[13px] font-semibold">
         {icon} <span className="truncate">{title}</span>
@@ -110,7 +104,7 @@ export function ReferralStarterKanban({
       aria-label="Referral starter actions"
     >
           <div
-            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
+            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5 [font-family:var(--font-inter)]"
             aria-label="New Referral"
           >
             <ColumnHead
@@ -119,11 +113,11 @@ export function ReferralStarterKanban({
               action={
                 <Button
                   type="button"
-                  variant="outline"
-                  className="h-6 px-2 text-[11px]"
+                  className="h-6 w-6 px-0"
+                  aria-label="New referral"
                   onClick={onNewReferral}
                 >
-                  Refer now
+                  <Plus aria-hidden />
                 </Button>
               }
             />
@@ -154,7 +148,7 @@ export function ReferralStarterKanban({
           </div>
 
           <div
-            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
+            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5 [font-family:var(--font-inter)]"
             aria-label="Anecdotal Records"
           >
             <ColumnHead
@@ -179,15 +173,19 @@ export function ReferralStarterKanban({
           </div>
 
           <div
-            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
+            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5 [font-family:var(--font-inter)]"
             aria-label="Chat with Bama"
           >
             <ColumnHead
               icon={<BamaMascot size={16} />}
               title="Chat with Bama"
               action={
-                <Button asChild variant="outline" className="h-6 px-2 text-[11px]">
-                  <Link href="/teacher/chat?standalone=1" target="_blank" rel="noopener noreferrer">
+                <Button asChild className="h-6 px-2 text-[11px]">
+                  <Link
+                    href="/teacher/chat?standalone=1"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     Chat now
                   </Link>
                 </Button>
@@ -208,7 +206,7 @@ export function ReferralStarterKanban({
           </div>
 
           <div
-            className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20"
+            className="flex h-full min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5 [font-family:var(--font-inter)]"
             aria-label={`Status Legend, ${STATUS_ENTRIES.length}`}
           >
             <ColumnHead
@@ -222,17 +220,9 @@ export function ReferralStarterKanban({
             >
               {STATUS_ENTRIES.map((e) => (
                 <li key={e.key} className="flex">
-                  <span
-                    className="inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold leading-tight"
-                    style={{
-                      color: e.color,
-                      borderColor: `color-mix(in srgb, ${e.color} 40%, transparent)`,
-                      backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
-                    }}
-                    title={e.label}
-                  >
+                  <Pill tone={e.tone} label={e.hint}>
                     {e.label}
-                  </span>
+                  </Pill>
                 </li>
               ))}
             </ul>

@@ -2,6 +2,10 @@ import { prisma } from "../../lib/prisma.js";
 import { writeAudit } from "../../lib/audit.js";
 import { buildOcForm01Buffer, CATEGORY_KEYS, CATEGORY_META, loadOcForm01Data } from "../../modules/anecdotal/anecdotal.repository.js";
 import { gradeLabel } from "../../lib/grades.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+} from "../../lib/learnerVisibility.js";
 import type { AnecdotalContext } from "./anecdotal.types.js";
 
 export interface RecordsSummaryQuery {
@@ -10,7 +14,12 @@ export interface RecordsSummaryQuery {
 
 export async function getRecordsSummary(query: RecordsSummaryQuery) {
   const { termId } = query;
-  const where = termId ? { termId } : {};
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const where = {
+    deletedAt: null,
+    ...(termId ? { termId } : {}),
+    ...excludeArchivedLearnerRows(archivedLearners),
+  };
 
   const [counts, recent] = await Promise.all([
     prisma.anecdotalRecord.groupBy({
@@ -89,11 +98,14 @@ export async function getReferable(query: ReferableQuery) {
   // An `adviser` with no advisory section has no advisees to refer.
   if (sectionIds.length === 0 && isAdviser) return [];
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   let where: {
     observerId?: string;
     OR?: object[];
     termId?: string;
-  } = {};
+    deletedAt: null;
+    NOT?: object;
+  } = { deletedAt: null, ...excludeArchivedLearnerRows(archivedLearners) };
 
   if (scopeTermId) where.termId = scopeTermId;
 
@@ -160,6 +172,7 @@ export async function getReferable(query: ReferableQuery) {
         select: {
           userId: true,
           lrn: true,
+          mascot: true,
           user: { select: { fullName: true } },
           section: { select: { name: true } },
         },
@@ -169,6 +182,7 @@ export async function getReferable(query: ReferableQuery) {
           id: true,
           lrn: true,
           fullName: true,
+          mascot: true,
           section: { select: { name: true } },
         },
       },
@@ -185,6 +199,7 @@ export async function getReferable(query: ReferableQuery) {
     studentId: r.student?.userId ?? (r.roster ? `roster:${r.roster.id}` : ""),
     studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
     lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+    mascot: r.student?.mascot ?? r.roster?.mascot ?? null,
     section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
     excerpt: r.descriptionOfIncident?.slice(0, 120) ?? "",
     // A record stays referable while it has no OPEN referral: cancelled or
@@ -196,14 +211,27 @@ export async function getReferable(query: ReferableQuery) {
 }
 
 export async function getRecordDetail(ctx: AnecdotalContext, recordId: string) {
-  const { data, canSign, signature } = await loadOcForm01Data(
-    recordId,
-    ctx.userId,
-    ctx.role,
-  );
+  const {
+    data,
+    canEdit,
+    category,
+    confidentialityLevel,
+    observationDatetime,
+    canSign,
+    signature,
+  } = await loadOcForm01Data(recordId, ctx.userId, ctx.role, { signatureBytes: false });
   const { signatureImage: _omitted, ...sheet } = data;
   void _omitted;
-  return { ...sheet, canSign, signature };
+  return {
+    ...sheet,
+    id: recordId,
+    canEdit,
+    category,
+    confidentialityLevel,
+    observationDatetime,
+    canSign,
+    signature,
+  };
 }
 
 export async function exportRecord(ctx: AnecdotalContext, recordId: string) {

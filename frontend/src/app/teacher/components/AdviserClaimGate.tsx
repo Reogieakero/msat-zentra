@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
@@ -73,7 +74,7 @@ export function AdviserClaimGate() {
   const gateOn =
     !!isTeacher && !!session && !!schoolYearId && !promptRequired && dismissedYear !== schoolYearId;
 
-  const statusQuery = useQuery({
+  const statusQuery = useLiveQuery({
     queryKey: ["teacher", "advisory", "claim-status", schoolYearId],
     queryFn: fetchClaimStatus,
     enabled: gateOn && !isDismissed(session?.sub ?? "", schoolYearId),

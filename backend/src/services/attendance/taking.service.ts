@@ -1,9 +1,11 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
+import { findTeacherTermGrant } from "../../lib/teacherGrant.js";
 import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
 import { recomputeRisk, recomputeRosterRisk } from "../risk.js";
 import { admExemptStudentIds } from "../adm/attendancePolicy.js";
+import { archivedAdvisoryLearnerIds } from "../../lib/learnerVisibility.js";
 import {
   mondayOf,
   phDayKey,
@@ -39,10 +41,7 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
     throw new AppError(403, "FORBIDDEN", "Section is not in your advisory");
   }
 
-  const legacyGrant = await prisma.teacherTermGrant.findUnique({
-    where: { userId_termId: { userId: teacherId, termId } },
-    select: { id: true },
-  });
+  const legacyGrant = await findTeacherTermGrant(teacherId, termId);
   if (!legacyGrant) {
     throw new AppError(
       403,
@@ -85,6 +84,17 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
   ]);
   if (enrolledProfiles !== profileIds.length || rosterEntries.length !== rosterIds.length) {
     throw new AppError(422, "STUDENT_NOT_IN_SECTION", "One or more students are not in this section");
+  }
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  if (
+    profileIds.some((id) => archivedLearners.studentIds.includes(id)) ||
+    rosterIds.some((id) => archivedLearners.rosterIds.includes(id))
+  ) {
+    throw new AppError(
+      409,
+      "ARCHIVED_LEARNER",
+      "Attendance cannot be recorded for a learner the adviser removed from the advisory list",
+    );
   }
   // Signed ADM cases are measured by module work, not seat time. The sheet
   // hides them, and the API refuses them too so a stale client cannot mark one.
@@ -265,10 +275,7 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
 
   // Every teacher — master included — must enter the term and link a code:
   // no automatic access. The subject/section checks after this still apply.
-  const grant = await prisma.teacherTermGrant.findUnique({
-    where: { userId_termId: { userId: teacherId, termId } },
-    select: { via: true, attendanceVerifiedAt: true },
-  });
+  const grant = await findTeacherTermGrant(teacherId, termId);
   if (!grant) {
     throw new AppError(
       403,
@@ -439,6 +446,17 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
   ]);
   if (enrolledProfiles !== profileIds.length || rosterEntries.length !== rosterIds.length) {
     throw new AppError(422, "STUDENT_NOT_IN_SECTION", "One or more students are not in this section");
+  }
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  if (
+    profileIds.some((id) => archivedLearners.studentIds.includes(id)) ||
+    rosterIds.some((id) => archivedLearners.rosterIds.includes(id))
+  ) {
+    throw new AppError(
+      409,
+      "ARCHIVED_LEARNER",
+      "Attendance cannot be recorded for a learner the adviser removed from the advisory list",
+    );
   }
   const admExempt = await admExemptStudentIds(termId);
   if (profileIds.some((id) => admExempt.has(id))) {

@@ -1,5 +1,5 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import type { DayConfig } from "./schedule-time";
@@ -7,7 +7,7 @@ import type { ScheduleSubject } from "../page";
 export type CatalogTeacher = { id: string; name: string; code: string | null; linked: boolean };
 export function useScheduleCatalog(termKey: string) {
   void useTerm;
-  const subjectsQuery = useQuery<{ subjects: ScheduleSubject[] }>({
+  const subjectsQuery = useLiveQuery<{ subjects: ScheduleSubject[] }>({
     queryKey: ["teacher-schedule-subjects", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ subjects: ScheduleSubject[] }>(
@@ -16,7 +16,7 @@ export function useScheduleCatalog(termKey: string) {
       return data;
     },
   });
-  const teachersQuery = useQuery<{ teachers: CatalogTeacher[] }>({
+  const teachersQuery = useLiveQuery<{ teachers: CatalogTeacher[] }>({
     queryKey: ["teacher-schedule-teachers", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ teachers: CatalogTeacher[] }>(
@@ -25,7 +25,7 @@ export function useScheduleCatalog(termKey: string) {
       return data;
     },
   });
-  const configQuery = useQuery<{ config: DayConfig }>({
+  const configQuery = useLiveQuery<{ config: DayConfig }>({
     queryKey: ["teacher-schedule-config", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ config: DayConfig }>("/api/teacher/schedule/config");

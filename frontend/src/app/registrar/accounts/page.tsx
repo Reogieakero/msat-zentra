@@ -5,17 +5,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
 import {
   Search,
-  X,
   UserPlus,
-  SearchX,
   Clock,
   UserCheck,
   Layers,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { toast } from "@/components/ui/sonner";
 import { useDock } from "@/components/dock/dock-store";
 import { KanbanBoard, KanbanBoardHeader } from "@/components/ui/kanban-board";
@@ -28,13 +26,14 @@ import { RegistrarEmptyCard, RegistrarEmptyState } from "../components/Registrar
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { markSelfNotified } from "@/lib/realtime/registrarChannel";
 import type { AccountBreakdown } from "./components/AccountsBreakdown";
-import { AccountsBreakdownRail } from "./components/AccountsBreakdownRail";
 import { formatGrade, formatSection } from "@/lib/utils";
 import type { PendingStudent, PendingStudentsResponse } from "./components/types";
 import { formatRelativeTime } from "./components/types";
 import styles from "./accounts.module.css";
+import cascade from "@/components/shared/desk-cascade.module.css";
 import { PAGE_SIZE, Pagination } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
+import { PendingStaffQueue, usePendingStaffTotal } from "@/components/registry/pending-staff-queue";
 import { useSearchParams } from "next/navigation";
 
 
@@ -82,18 +81,9 @@ function AccountApprovalsPageInner() {
     setQueryInput(value);
   }, []);
 
-  // Queue anchor for the section rail's "Review accounts" jump.
-  const queueRef = React.useRef<HTMLDivElement | null>(null);
   // One verification dock at a time — row buttons only set the target;
   // the dock is keyed by student id so switching rows re-runs the match.
   const [verifyTarget, setVerifyTarget] = React.useState<PendingStudent | null>(null);
-  const handleReviewSection = React.useCallback(
-    (section: string) => {
-      setQuery(section);
-      queueRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    },
-    [setQuery],
-  );
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["pending-students", page, debouncedQuery],
@@ -188,6 +178,7 @@ function AccountApprovalsPageInner() {
     },
   });
 
+  const staffPending = usePendingStaffTotal("registrar");
   const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
 
   const safePage = Math.min(page, totalPages);
@@ -197,10 +188,19 @@ function AccountApprovalsPageInner() {
     : undefined;
   const pageRows = React.useMemo(() => data?.students ?? [], [data]);
   const hasRecords = unfilteredTotal > 0;
-  const searching = debouncedQuery.length > 0;
+  const searching = queryInput.trim().length > 0;
 
-  const sideStats = React.useMemo(() => {
-    const rows = breakdownData ?? [];
+  // Instant local filter of the loaded page while the debounced server query
+  // catches up — matches the record keeper / nurse alerts typing feel.
+  const visibleRows = React.useMemo(() => {
+    const q = queryInput.trim().toLowerCase();
+    if (!q) return pageRows;
+    return pageRows.filter((s) =>
+      `${s.name} ${s.lrn} ${s.section} ${s.gradeLevel}`.toLowerCase().includes(q),
+    );
+  }, [pageRows, queryInput]);
+
+  const sideStats = React.useMemo(() => {    const rows = breakdownData ?? [];
     return {
       withAccount: rows.reduce((s, r) => s + r.withAccount, 0),
       pendingSignup: rows.reduce((s, r) => s + r.pending, 0),
@@ -259,7 +259,7 @@ function AccountApprovalsPageInner() {
   // grade / requested meta pills and the icon-only LRN verification action.
   const rowItems = React.useMemo<RowListItem[]>(
     () =>
-      pageRows.map((s) => ({
+      visibleRows.map((s) => ({
         key: s.id,
         status: { label: "Pending", tone: "amber" as const },
         title: s.name,
@@ -279,14 +279,14 @@ function AccountApprovalsPageInner() {
         avatarMascot: { name: s.name, seed: s.lrn },
         actions: <LrnVerifyButton student={s} onOpen={() => setVerifyTarget(s)} />,
       })),
-    [pageRows]
+    [visibleRows]
   );
 
   // True empty (no records at all, not a search with no matches):
   // hide the KPI board and queue/breakdown cards entirely and
   // render a single centered card instead.
   const isTrueEmpty =
-    !isPending && !isError && !breakdownPending && !hasRecords && !searching;
+    !isPending && !isError && !breakdownPending && !hasRecords && !searching && staffPending === 0;
 
   if (isTrueEmpty) {
     return (
@@ -357,9 +357,10 @@ function AccountApprovalsPageInner() {
           </div>
         </section>
 
-        <div ref={queueRef} className={styles.queueAnchor}>
+        <div className={styles.queueAnchor}>
           <KanbanBoard
             title="Pending Students"
+            className={cascade.boardIn}
             icon={<UserPlus size={14} className="text-primary" aria-hidden />}
             description="Review student account requests for grades 11–12."
             ariaLabel="Pending student accounts"
@@ -377,19 +378,6 @@ function AccountApprovalsPageInner() {
                     aria-label="Search pending students"
                   />
                 </div>
-                {queryInput && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={styles.clearBtn}
-                    onClick={() => {
-                      setQuery("");
-                    }}
-                  >
-                    <X aria-hidden />
-                    Clear
-                  </Button>
-                )}
               </div>
             }
             footer={
@@ -416,17 +404,19 @@ function AccountApprovalsPageInner() {
                 title="No pending student accounts"
                 hint="New G11–12 sign-ups awaiting registrar sign-off will appear here."
               />
-            ) : searching && pageRows.length === 0 ? (
-              <RegistrarEmptyState
-                icon={SearchX}
-                title="No matching students"
-                hint={`No students match "${query}".`}
-              />
+            ) : searching && visibleRows.length === 0 ? (
+              <div className="flex w-full justify-center py-6">
+                <InsightCallout role="status" className="w-full max-w-xl text-left">
+                  <strong>No students match &ldquo;{queryInput.trim()}&rdquo;.</strong>{" "}
+                  Try a different name, LRN, or section.
+                </InsightCallout>
+              </div>
             ) : (
               <RowList
                 bleed
                 gutter="0.625rem"
                 animateOnMount
+                motionPreset="desk"
                 items={rowItems}
                 emptyText="No pending student accounts."
                 ariaLabel="Pending student accounts"
@@ -434,12 +424,9 @@ function AccountApprovalsPageInner() {
             )}
           </KanbanBoard>
         </div>
+
+        <PendingStaffQueue desk="registrar" />
       </div>
-      <AccountsBreakdownRail
-        data={breakdownData ?? []}
-        loading={breakdownPending}
-        onReview={handleReviewSection}
-      />
 
       {verifyTarget ? (
         <LrnVerifyDock

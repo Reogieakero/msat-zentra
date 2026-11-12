@@ -22,9 +22,11 @@ export async function fetchGuidanceInterventions(
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
   if (params.level) search.set("level", params.level);
+  if (params.grade) search.set("grade", params.grade);
   if (params.factor) search.set("factor", params.factor);
   if (params.outcome) search.set("outcome", params.outcome);
   if (params.mine) search.set("mine", "true");
+  if (params.sort) search.set("sort", params.sort);
   if (params.page) search.set("page", String(params.page));
   if (params.pageSize) search.set("pageSize", String(params.pageSize));
   const query = search.toString();
@@ -39,35 +41,45 @@ export async function fetchGuidanceInterventions(
   return { ...(data as GuidanceInterventionsData), students };
 }
 
-// Bounded preview fan-out at the shared page size: the full live cohort is
-// covered page by page (server caps list pages at 15). Cap stays at 150 rows.
+// The interventions board filters locally, so it loads the whole queue once
+// (same approach as the alerts desk) instead of refetching on every keystroke.
 const FETCH_ALL_PAGE_SIZE = PAGE_SIZE;
-const FETCH_ALL_MAX_PAGES = 10;
 
-export async function fetchAllGuidanceInterventions(): Promise<AtRiskStudentItem[]> {
-  const first = await fetchGuidanceInterventions({
-    page: 1,
-    pageSize: FETCH_ALL_PAGE_SIZE,
-    level: "All",
-    outcome: "all",
-  });
-  const all = [...first.students];
-  const pages = Math.min(first.totalPages, FETCH_ALL_MAX_PAGES);
-  if (pages > 1) {
-    // Pages are independent — fetch in parallel instead of sequentially.
-    const rest = await Promise.all(
-      Array.from({ length: pages - 1 }, (_, i) =>
-        fetchGuidanceInterventions({
+export async function fetchAllGuidanceInterventions(
+  opts: { signal?: AbortSignal } = {}
+): Promise<GuidanceInterventionsData> {
+  const first = await fetchGuidanceInterventions(
+    {
+      page: 1,
+      pageSize: FETCH_ALL_PAGE_SIZE,
+      level: "All",
+      outcome: "all",
+      // Board reads newest detection first (ties keep risk order).
+      sort: "detected",
+    },
+    opts
+  );
+  if (first.totalPages <= 1) return first;
+  // Pages are independent — fetch in parallel instead of sequentially.
+  const rest = await Promise.all(
+    Array.from({ length: first.totalPages - 1 }, (_, i) =>
+      fetchGuidanceInterventions(
+        {
           page: i + 2,
           pageSize: FETCH_ALL_PAGE_SIZE,
           level: "All",
           outcome: "all",
-        })
+          sort: "detected",
+        },
+        opts
       )
-    );
-    for (const res of rest) all.push(...res.students);
-  }
-  return all;
+    )
+  );
+  return {
+    ...first,
+    students: [first.students, ...rest.map((r) => r.students)].flat(),
+    page: 1,
+  };
 }
 
 export async function listInterventionSessionDocs(

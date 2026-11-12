@@ -38,7 +38,7 @@ export async function getSectionHeatmap(query: SectionHeatmapQuery) {
   const enrolledBySection: Record<string, number> = {};
   for (const s of sections) enrolledBySection[s.id] = headcounts.get(s.id) ?? 0;
 
-  const dayKeys = buildSchoolDayAxis(displayTerm.startDate);
+  const dayKeys = buildSchoolDayAxis(displayTerm.startDate, displayTerm.endDate);
   const schoolDays = countSchoolDays(dayKeys);
 
   const sectionIds = sections.map((s) => s.id);

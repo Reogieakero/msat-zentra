@@ -3,27 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  GraduationCap,
-  UserPlus,
-  CalendarDays,
-  ShieldAlert,
-  Users,
-  CalendarClock,
-  BookOpen,
-  FileText,
-  ClipboardList,
-  Inbox,
-  FileSignature,
-  Award,
-  ShieldCheck,
-  Settings,
-  type LucideIcon,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import styles from "./principal-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { NAV_ICONS } from "./nav/sidebar-icons";
 import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
@@ -39,72 +23,72 @@ type NavGroup = {
   items: NavItem[];
 };
 
-const NAV: NavGroup[] = [
+export const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { title: "Overview", href: "/principal/overview", icon: LayoutDashboard },
+      { title: "Overview", href: "/principal/overview", icon: NAV_ICONS.overview },
     ],
   },
   {
     label: "Academics",
     items: [
-      { title: "Academics", href: "/principal/academics", icon: GraduationCap },
+      { title: "Academics", href: "/principal/academics", icon: NAV_ICONS.academics },
       {
         title: "Assigning",
         href: "/principal/academics/assign",
-        icon: UserPlus,
+        icon: NAV_ICONS.assigning,
       },
       {
         title: "Schedule Approval",
         href: "/principal/academics/schedule",
-        icon: CalendarDays,
+        icon: NAV_ICONS.scheduleApproval,
       },
     ],
   },
   {
     label: "Risk",
     items: [
-      { title: "Risk Board", href: "/principal/risk", icon: ShieldAlert },
-      { title: "Students", href: "/principal/risk/students", icon: Users },
+      { title: "Risk Board", href: "/principal/risk", icon: NAV_ICONS.riskBoard },
+      { title: "Students", href: "/principal/risk/students", icon: NAV_ICONS.students },
       {
         title: "Attendance Heatmap",
         href: "/principal/risk/heatmaps/attendance",
-        icon: CalendarClock,
+        icon: NAV_ICONS.attendance,
       },
       {
         title: "Academic Heatmap",
         href: "/principal/risk/heatmaps/academics",
-        icon: BookOpen,
+        icon: NAV_ICONS.academicHeatmap,
       },
       {
         title: "Behavioral Records",
         href: "/principal/risk/heatmaps/records",
-        icon: FileText,
+        icon: NAV_ICONS.behavioralRecords,
       },
       {
         title: "Interventions",
         href: "/principal/risk/interventions",
-        icon: ClipboardList,
+        icon: NAV_ICONS.interventions,
       },
     ],
   },
   {
     label: "ADM Cases",
     items: [
-      { title: "ADM Cases", href: "/principal/adm", icon: Inbox },
       {
         title: "Referrals",
         href: "/principal/adm/referrals/all",
-        icon: FileSignature,
+        icon: NAV_ICONS.referrals,
       },
     ],
   },
   {
     label: "Insights",
     items: [
-      { title: "Honor Roll", href: "/principal/honor-roll", icon: Award },
-      { title: "Audit Log", href: "/principal/audit", icon: ShieldCheck },
+      { title: "ADM Report", href: "/principal/adm", icon: NAV_ICONS.admReport },
+      { title: "Honor Roll", href: "/principal/honor-roll", icon: NAV_ICONS.honorRoll },
+      { title: "Audit Log", href: "/principal/audit", icon: NAV_ICONS.auditLog },
     ],
   },
   {
@@ -113,7 +97,7 @@ const NAV: NavGroup[] = [
       {
         title: "General Settings",
         href: "/principal/settings",
-        icon: Settings,
+        icon: NAV_ICONS.settings,
       },
     ],
   },

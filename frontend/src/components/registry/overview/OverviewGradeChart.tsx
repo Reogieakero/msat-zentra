@@ -12,6 +12,10 @@ import {
 } from "recharts";
 import { BarChart3 } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import {
+  ChartTooltip,
+  CHART_TOOLTIP_WRAPPER,
+} from "@/components/ui/chart-tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
 import {
@@ -21,15 +25,6 @@ import {
 } from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewGradeChart.module.css";
-
-const TOOLTIP_STYLE: React.CSSProperties = {
-  borderRadius: 8,
-  border: "1px solid var(--border)",
-  background: "var(--card)",
-  color: "var(--foreground)",
-  fontSize: 12,
-  boxShadow: "0 4px 12px -6px rgb(0 0 0 / 0.25)",
-};
 
 const TOTAL_COLOR = "var(--primary)";
 // Amber — the record-keeper chart accent (bars + legend dot), matching the
@@ -178,7 +173,8 @@ export function OverviewGradeChart({
                 cursor={{
                   fill: "color-mix(in oklch, var(--foreground), transparent 95%)",
                 }}
-                contentStyle={TOOLTIP_STYLE}
+                content={<ChartTooltip />}
+                wrapperStyle={CHART_TOOLTIP_WRAPPER}
               />
               <Bar
                 dataKey="total"
@@ -214,7 +210,8 @@ export function OverviewGradeChart({
                 cursor={{
                   fill: "color-mix(in oklch, var(--foreground), transparent 95%)",
                 }}
-                contentStyle={TOOLTIP_STYLE}
+                content={<ChartTooltip />}
+                wrapperStyle={CHART_TOOLTIP_WRAPPER}
               />
               <Bar
                 dataKey="total"

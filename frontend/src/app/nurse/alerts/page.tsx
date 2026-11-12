@@ -3,8 +3,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { BellRing, Loader2 } from "lucide-react";
-import { NurseEmptyCard } from "../components/NurseEmptyCard";
+import { Loader2 } from "lucide-react";
 import {
   NurseAlertsBoard,
   NurseAlertsBoardSkeleton,
@@ -19,8 +18,8 @@ import type {
 import { useNurseInvalidate } from "../overview/components/use-nurse-mutation";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import styles from "./components/nurse-alerts.module.css";
-import pageStyles from "../pages.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 import { useSearchParams } from "next/navigation";
@@ -46,8 +45,9 @@ function NurseAlertsPageInner() {
   const page = pager.page;
   const setPage = pager.setPage;
   const trackRaw = pager.extras.track;
-  const track: TypeTrack =
-    trackRaw === "adm" || trackRaw === "clinic" ? trackRaw : "";
+  // ADM is the desk default — the tab strip opens on it; picking Clinic is the
+  // only other state (the filter is never "both").
+  const track: TypeTrack = trackRaw === "clinic" ? "clinic" : "adm";
 
   const query = useDebouncedValue(queryInput.trim(), 300);
   const debounced = query;
@@ -65,11 +65,12 @@ function NurseAlertsPageInner() {
 
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<NurseAlertsPage>({
+      ...liveQueryOptions,
       queryKey: ["nurse-alerts", page, debounced, track, termKey],
       queryFn: ({ signal }) =>
         fetchNurseAlerts({
           q: debounced || undefined,
-          track: track || undefined,
+          track,
           page,
           pageSize: NURSE_ALERTS_PAGE_SIZE,
           signal,
@@ -99,7 +100,7 @@ function NurseAlertsPageInner() {
       queryFn: ({ signal }) =>
         fetchNurseAlerts({
           q: debounced || undefined,
-          track: track || undefined,
+          track,
           page: next,
           pageSize: NURSE_ALERTS_PAGE_SIZE,
           signal,
@@ -128,6 +129,7 @@ function NurseAlertsPageInner() {
     isError: riskError,
     refetch: refetchRisk,
   } = useQuery<Record<string, NurseRiskLevel>>({
+    ...liveQueryOptions,
     queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     staleTime: 300_000,
@@ -168,18 +170,10 @@ function NurseAlertsPageInner() {
   }
 
   const refreshing = isFetching && !isPending;
-  // unfilteredTotal already carries the track filter, so a type filter that
-  // matches nothing must NOT collapse to the centered empty card — the board
-  // (with its filter icons) has to stay on screen to be clearable.
-  const isTrueEmpty =
-    (data.unfilteredTotal ?? data.total) === 0 &&
-    data.total === 0 &&
-    debounced === "" &&
-    track === "";
 
   return (
     <section
-      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      className={styles.page}
       aria-busy={refreshing}
       aria-label="Referred cases"
     >
@@ -196,38 +190,27 @@ function NurseAlertsPageInner() {
           </button>
         </p>
       ) : null}
-      {isTrueEmpty ? (
-        <NurseEmptyCard
-          icon={BellRing}
-          title="No referred cases"
-          hint="New ADM and clinic cases will appear here."
-          label="Referred cases"
-          centered
-          layout="fit"
-        />
-      ) : (
-        <NurseAlertsBoard
-          alerts={Array.isArray(data.alerts) ? data.alerts : []}
-          riskByStudent={riskByStudent ?? {}}
-          riskLoading={riskLoading}
-          query={queryInput}
-          onQueryChange={(v) => {
-            setQueryInput(v);
-          }}
-          track={track}
-          onTrackChange={(next) => {
-            pager.setFilters({ track: next || undefined });
-          }}
-          page={safePage}
-          total={data.total}
-          unfilteredTotal={data.unfilteredTotal}
-          onPageChange={setPage}
-          serverPaged
-          onChanged={() => {
-            invalidateNurse();
-          }}
-        />
-      )}
+      <NurseAlertsBoard
+        alerts={Array.isArray(data.alerts) ? data.alerts : []}
+        riskByStudent={riskByStudent ?? {}}
+        riskLoading={riskLoading}
+        query={queryInput}
+        onQueryChange={(v) => {
+          setQueryInput(v);
+        }}
+        track={track}
+        onTrackChange={(next) => {
+          pager.setFilters({ track: next });
+        }}
+        page={safePage}
+        total={data.total}
+        unfilteredTotal={data.unfilteredTotal}
+        onPageChange={setPage}
+        serverPaged
+        onChanged={() => {
+          invalidateNurse();
+        }}
+      />
     </section>
   );
 }

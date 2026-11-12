@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Trophy } from "lucide-react";
-import { PrincipalEmptyCard } from "../components/PrincipalEmptyCard";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { CandidateTable } from "./components/CandidateTable";
+import { HonorRollSkeleton } from "./components/HonorRollSkeleton";
 import {
   deriveHonorRoll,
   fetchLiveHonorRoll,
@@ -17,7 +17,7 @@ import { useTerm } from "@/lib/term/TermContext";
 import styles from "./honor-roll.module.css";
 
 export default function PrincipalHonorRollPage() {
-  const [grade, setGrade] = React.useState<string>("7");
+  const [grade, setGrade] = React.useState<string>("all");
 
   const { activeTerm, termReady } = useTerm();
   const termId = activeTerm?.termId ?? null;
@@ -67,8 +67,7 @@ export default function PrincipalHonorRollPage() {
   if (loading) {
     return (
       <section className={styles.page} aria-label="Loading honor roll" aria-busy="true">
-        <div className={styles.skeletonBar} />
-        <div className={styles.skeletonTable} />
+        <HonorRollSkeleton />
       </section>
     );
   }
@@ -77,13 +76,11 @@ export default function PrincipalHonorRollPage() {
   if (isEmpty) {
     return (
       <section className={styles.page}>
-        <PrincipalEmptyCard
-          icon={Trophy}
-          title="No awardees this term"
-          hint="Students from adviser-shared sections with a live general average of 90+ and no subject below 80 will appear here as scores are recorded."
-          label="Honor Roll & Awards"
-          centered
-        />
+        <PageEmptyCallout>
+          No awardees this term yet. Students from adviser-shared sections with
+          a live general average of 90+ and no subject below 80 will appear here
+          as scores are recorded.
+        </PageEmptyCallout>
       </section>
     );
   }

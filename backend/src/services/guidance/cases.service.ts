@@ -1,4 +1,8 @@
 import { prisma } from "../../lib/prisma.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+} from "../../lib/learnerVisibility.js";
 import { sessionCancelledByRole } from "../../lib/sessionActors.js";
 import { GRADE_LABELS } from "../../modules/guidance/guidance.repository.js";
 import type { GuidanceContext } from "./guidance.types.js";
@@ -25,6 +29,32 @@ export interface CasesQuery {
   /** Internal-only: lets an aggregate desk load a whole source in one pass.
       Never wired to a client query param — routes keep the 15/page ceiling. */
   internalPageCap?: number;
+}
+
+/**
+ * Newest-referred-first ordering for the guidance boards. `Referral` has no
+ * `createdAt`, so a referral's filing time is its first audit row (the same
+ * source `referredAt` uses). Loads the matching ids, resolves each one's
+ * earliest audit timestamp, and returns the ids sorted newest first. Both the
+ * ADM and counseling boards are term-scoped and small, so the in-memory sort
+ * keeps pagination correct without a schema change.
+ */
+async function filingOrderedIds(where: any): Promise<string[]> {
+  const rows = await prisma.referral.findMany({ where, select: { id: true } });
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
+  const logs = await prisma.auditLog.findMany({
+    where: { sourceTable: "referrals", sourceId: { in: ids } },
+    select: { sourceId: true, createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const filedAt = new Map<string, number>();
+  for (const log of logs) {
+    if (!filedAt.has(log.sourceId)) filedAt.set(log.sourceId, log.createdAt.getTime());
+  }
+  return ids.sort(
+    (a, b) => (filedAt.get(b) ?? 0) - (filedAt.get(a) ?? 0) || b.localeCompare(a),
+  );
 }
 
 export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
@@ -75,7 +105,13 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
       },
     ],
   };
+  /* Advisers can remove a learner from their advisory list. That learner's
+     referral must leave the desk board everywhere, matching the other desks
+     (roster + attendance + anecdotal reads all honour this archive). */
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const archivedClause = excludeArchivedLearnerRows(archivedLearners);
   const scopeClauses: any[] = [deskScope];
+  if (Object.keys(archivedClause).length > 0) scopeClauses.push(archivedClause);
   if (scopeTermId) scopeClauses.push({ termId: scopeTermId });
   if (dbClauses.length) scopeClauses.push(...dbClauses);
   const baseWhere: any = { AND: scopeClauses };
@@ -108,12 +144,17 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
 
   const effPageSize = Math.min(
     Math.max(1, Math.floor(pageSize) || 15),
-    Math.max(15, Math.floor(query.internalPageCap ?? 15)),
+    Math.max(16, Math.floor(query.internalPageCap ?? 16)),
   );
   const orderBy = [
     { anecdotalRecord: { observationDatetime: "desc" as const } },
     { id: "desc" as const },
   ];
+
+  // Both guidance boards are "newest referred first" queues. Referral has no
+  // createdAt column, so the filing time is the referral's first audit row
+  // (same source as the card's `referredAt`).
+  const filingOrder = await filingOrderedIds(pagedWhere);
 
   const [unfilteredTotal, total] = await Promise.all([
     prisma.referral.count({ where: baseWhere }),
@@ -122,37 +163,11 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
   const totalPages = Math.max(1, Math.ceil(total / effPageSize));
   let safePage = Math.min(Math.max(1, page), totalPages);
   if (highlight) {
-    const hl = await prisma.referral.findFirst({
-      where: { ...pagedWhere, id: highlight },
-      select: { id: true, anecdotalRecord: { select: { observationDatetime: true } } },
-    });
-    const hlDt = hl?.anecdotalRecord?.observationDatetime;
-    if (hl && hlDt) {
-      const rank = await prisma.referral.count({
-        where: {
-          AND: [
-            pagedWhere,
-            {
-              OR: [
-                { anecdotalRecord: { observationDatetime: { gt: hlDt } } },
-                { anecdotalRecord: { observationDatetime: hlDt }, id: { gt: highlight } },
-              ],
-            },
-          ],
-        },
-      });
-      safePage = Math.floor(rank / effPageSize) + 1;
-    }
+    const rank = filingOrder.indexOf(highlight);
+    if (rank >= 0) safePage = Math.floor(rank / effPageSize) + 1;
   }
-  const pageIds = (
-    await prisma.referral.findMany({
-      where: pagedWhere,
-      select: { id: true },
-      orderBy,
-      skip: (safePage - 1) * effPageSize,
-      take: effPageSize,
-    })
-  ).map((r) => r.id);
+  const pageWindow = (safePage - 1) * effPageSize;
+  const pageIds = filingOrder.slice(pageWindow, pageWindow + effPageSize);
 
   const pageRows = await prisma.referral.findMany({
     where: { id: { in: pageIds } },
@@ -215,8 +230,9 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
           lrn: true,
           gradeLevel: true,
           userId: true,
+          mascot: true,
           user: { select: { fullName: true } },
-          section: { select: { name: true } },
+          section: { select: { name: true, gradeLevel: true } },
         },
       },
       roster: {
@@ -225,20 +241,37 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
           lrn: true,
           fullName: true,
           gradeLevel: true,
-          section: { select: { name: true } },
+          mascot: true,
+          section: { select: { name: true, gradeLevel: true } },
         },
       },
     },
   });
+
+  // `findMany({ id: { in: pageIds } })` returns its own order; keep the
+  // filing-time order so the newest referrals stay first on the page.
+  {
+    const rank = new Map(pageIds.map((id, i) => [id, i] as const));
+    pageRows.sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+  }
 
   const mapped = pageRows.map((r) => ({
     id: r.id,
     student: r.student?.user.fullName ?? r.roster?.fullName ?? "Unknown student",
     lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
     section: r.student?.section?.name ?? r.roster?.section?.name ?? "—",
-    grade: GRADE_LABELS[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
+    grade:
+      GRADE_LABELS[
+        r.student?.section?.gradeLevel ??
+          r.student?.gradeLevel ??
+          r.roster?.section?.gradeLevel ??
+          r.roster?.gradeLevel ??
+          ""
+      ] ?? "",
 
     studentId: r.student?.userId ?? r.roster?.id ?? null,
+    // The learner's own profile mascot — the same one the adviser's roster shows.
+    mascot: r.student?.mascot ?? r.roster?.mascot ?? null,
 
     type:
       r.escalatedTo === "adm_coordinator" || r.referredToRole === "adm_coordinator"
@@ -314,6 +347,11 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     }
   }
   const lastActionById = new Map<string, { type: string; at: string }>();
+  // When the case actually entered the desk. Referral has no createdAt column,
+  // so the first audit row (written in the same call as the create) is the
+  // filing time. Logs come back newest-first, so the last write per referral
+  // wins. The anecdote's observationDatetime is the incident date, not this.
+  const referredAtById = new Map<string, string>();
   if (refIds.length > 0 || sessIds.length > 0) {
     const latestLogs = await prisma.auditLog.findMany({
       where: {
@@ -334,7 +372,11 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
         log.sourceTable === "referrals"
           ? log.sourceId
           : (sessionToReferral.get(log.sourceId) ?? null);
-      if (!referralId || lastActionById.has(referralId)) continue;
+      if (!referralId) continue;
+      if (log.sourceTable === "referrals") {
+        referredAtById.set(referralId, log.createdAt.toISOString());
+      }
+      if (lastActionById.has(referralId)) continue;
       lastActionById.set(referralId, {
         type: String(log.actionType),
         at: log.createdAt.toISOString(),
@@ -343,6 +385,7 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
   }
   const withAction = mapped.map((r) => ({
     ...r,
+    referredAt: referredAtById.get(r.id) ?? null,
     lastActionAt: lastActionById.get(r.id)?.at ?? null,
     lastActionType: lastActionById.get(r.id)?.type ?? null,
     dismissedByRole: dismissedByRole.get(r.id) ?? null,

@@ -47,6 +47,7 @@ export async function applySignature(ctx: AnecdotalContext, recordId: string) {
       select: {
         id: true,
         observerId: true,
+        deletedAt: true,
         section: { select: { adviserId: true } },
       },
     }),
@@ -55,7 +56,9 @@ export async function applySignature(ctx: AnecdotalContext, recordId: string) {
       select: { signatureImageUrl: true },
     }),
   ]);
-  if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+  if (!record || record.deletedAt) {
+    throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+  }
   const maySign =
     ctx.role !== "guidance_counselor" &&
     ctx.role !== "nurse" &&
@@ -92,10 +95,13 @@ export async function signRecord(ctx: AnecdotalContext, recordId: string, signat
     select: {
       id: true,
       observerId: true,
+      deletedAt: true,
       section: { select: { adviserId: true } },
     },
   });
-  if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+  if (!record || record.deletedAt) {
+    throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+  }
   const maySign =
     ctx.role !== "guidance_counselor" &&
     ctx.role !== "nurse" &&
@@ -133,10 +139,13 @@ export async function removeSignature(ctx: AnecdotalContext, recordId: string) {
     select: {
       id: true,
       observerId: true,
+      deletedAt: true,
       section: { select: { adviserId: true } },
     },
   });
-  if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+  if (!record || record.deletedAt) {
+    throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+  }
   const maySign =
     ctx.role !== "guidance_counselor" &&
     ctx.role !== "nurse" &&

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
 import {
@@ -20,6 +21,8 @@ import {
   createAnecdotalRecord,
   fetchAnecdotalOptions,
 } from "@/services/anecdotal/records.service";
+import { updateAnecdotalRecord } from "@/components/ocform01/folders";
+import { invalidateOcForm01Detail } from "@/components/ocform01/ocform01";
 import {
   nextMessageId,
   type BamaConversation,
@@ -82,6 +85,27 @@ export interface AnecdotalFlow {
   fileRecord: () => Promise<void>;
   resetFlowStates: () => void;
   removeFlowSnapshot: (id: string) => void;
+  /** Record being edited via chat (its observation context only). */
+  editingRecordId: string | null;
+  /** Current values of the text questions, used to prefill the composer in edit mode. */
+  editPrefill: Record<TextQuestion, string> | null;
+  startEdit: (input: AnecdotalEditInput) => void;
+}
+
+export interface AnecdotalEditInput {
+  recordId: string;
+  studentId: string;
+  studentName: string;
+  lrn: string;
+  section: string;
+  category: AnecdotalCategory;
+  tier: AnecdotalTier;
+  observationDatetime: string;
+  incident: string;
+  location: string;
+  notes: string;
+  classPerformance: string;
+  attendanceSummary: string;
 }
 
 function filingStageFor(progress: number): string {
@@ -127,6 +151,9 @@ export function useAnecdotalFlow({
   const [flowError, setFlowError] = useState<string | null>(null);
   const [studentQ, setStudentQ] = useState("");
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const [editPrefill, setEditPrefill] = useState<Record<TextQuestion, string> | null>(null);
+  const editIdentityRef = useRef({ studentName: "", lrn: "", section: "" });
 
   const progressTimer = useRef<number | null>(null);
   const progressValue = useRef(0);
@@ -170,6 +197,8 @@ export function useAnecdotalFlow({
     setStudentQ("");
     setDatePopoverOpen(false);
     setFlowError(null);
+    setEditingRecordId(null);
+    setEditPrefill(null);
   }
 
   function removeFlowSnapshot(id: string) {
@@ -206,6 +235,7 @@ export function useAnecdotalFlow({
     setAskedTier(snap.askedTier);
     setAskedDatetime(snap.askedDatetime);
     setPreviewShown(snap.previewShown);
+    setEditingRecordId(snap.editingRecordId ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, hydrated]);
 
@@ -214,25 +244,25 @@ export function useAnecdotalFlow({
     const snap = {
       studentId, classKey, category, tier, observationDate, observationTime,
       incident, location, notes, classPerf, attendance, textQuestion,
-      askedCategory, askedTier, askedDatetime, previewShown,
+      askedCategory, askedTier, askedDatetime, previewShown, editingRecordId,
     };
     setFlows((prev) => {
       const next = { ...prev, [activeId]: snap };
       saveFlowStore(next);
       return next;
     });
-  }, [hydrated, activeId, active?.type, studentId, classKey, category, tier, observationDate, observationTime, incident, location, notes, classPerf, attendance, textQuestion, askedCategory, askedTier, askedDatetime, previewShown]);
+  }, [hydrated, activeId, active?.type, studentId, classKey, category, tier, observationDate, observationTime, incident, location, notes, classPerf, attendance, textQuestion, askedCategory, askedTier, askedDatetime, previewShown, editingRecordId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const optionsQuery = useQuery({
+  const optionsQuery = useLiveQuery({
     queryKey: ["grade-flags", "options", termKey],
     queryFn: fetchAnecdotalOptions,
   });
 
   const session = useSession();
-  const advisoryQuery = useQuery({
+  const advisoryQuery = useLiveQuery({
     queryKey: advisoryRosterKey(session?.sub ?? null, termKey),
     queryFn: fetchAdvisoryRoster,
     enabled: !!session?.sub,
@@ -431,8 +461,8 @@ export function useAnecdotalFlow({
 
   const canFile =
     incident.trim().length > 0 &&
-    student !== null &&
-    selectedClass !== null &&
+    (student !== null || editingRecordId !== null) &&
+    (selectedClass !== null || editingRecordId !== null) &&
     category !== null &&
     tier !== null &&
     observationDate !== null &&
@@ -440,7 +470,7 @@ export function useAnecdotalFlow({
 
   useEffect(() => {
     if (!hydrated || !active || active.type !== "anecdotal" || active.filed) return;
-    if (previewShown || textQuestion !== null || !student || !category || !tier || !observationDate) return;
+    if (previewShown || textQuestion !== null || (!student && !editingRecordId) || !category || !tier || !observationDate) return;
     if (incident.trim() === "" || location.trim() === "") return;
     if (!active.messages.some((m) => m.from === "user" && m.text === incident)) return;
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
@@ -449,12 +479,13 @@ export function useAnecdotalFlow({
       {
         id: nextMessageId(),
         from: "assistant",
-        text: "Review the complete record before filing:",
+        text: editingRecordId ? "Review the updated record before saving:" : "Review the complete record before filing:",
         at: Date.now(),
         preview: {
-          studentName: student.name,
-          lrn: student.lrn,
-          section: sectionNameById.get(student.sectionId ?? "") ?? "—",
+          studentName: student?.name ?? editIdentityRef.current.studentName,
+          lrn: student?.lrn ?? editIdentityRef.current.lrn,
+          section:
+            (student ? sectionNameById.get(student.sectionId ?? "") : editIdentityRef.current.section) ?? "—",
           category: ANEC_CATEGORY_LABELS[category],
           tier: ANEC_TIER_LABELS[tier],
           location: location || "Classroom",
@@ -465,16 +496,17 @@ export function useAnecdotalFlow({
           observationDateTime:
             observationTime.length >= 5 ? `${observationDate} ${observationTime}` : `${observationDate}`,
           filedOn: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          editing: editingRecordId !== null,
         },
       },
     ]);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [hydrated, activeId, active?.type, previewShown, textQuestion, student, category, tier, observationDate, incident, location]);
+  }, [hydrated, activeId, active?.type, previewShown, textQuestion, student, category, tier, observationDate, incident, location, editingRecordId]);
 
   async function fileRecord() {
     if (filing || active?.filed) return;
 
-    if (!student) {
+    if (!student && !editingRecordId) {
       setFlowError("Pick a student first.");
       return;
     }
@@ -482,7 +514,7 @@ export function useAnecdotalFlow({
       setFlowError("Answer the category and confidentiality questions above.");
       return;
     }
-    if (!selectedClass) {
+    if (!selectedClass && !editingRecordId) {
       setFlowError("Pick a class for this report.");
       return;
     }
@@ -494,13 +526,15 @@ export function useAnecdotalFlow({
       setFlowError("Describe the incident first.");
       return;
     }
+    const displayName = student?.name ?? editIdentityRef.current.studentName;
+    const editing = editingRecordId !== null;
     setFiling(true);
     setFlowError(null);
     try {
       fileTaskRef.current = dockRef.current.startTask({
         kind: "anecdotal-file",
-        title: "Filing record",
-        description: `${student.name} · ${category}`,
+        title: editing ? "Updating record" : "Filing record",
+        description: `${displayName} · ${category}`,
       });
     } catch {
       fileTaskRef.current = null;
@@ -524,24 +558,41 @@ export function useAnecdotalFlow({
           : new Date(`${observationDate}T00:00:00`).toISOString();
       const observationLabel =
         observationTime.length >= 5 ? `${observationDate} ${observationTime}` : `${observationDate}`;
-      const created = await createAnecdotalRecord({
-        studentId: student.id,
-        sectionId: selectedClass.sectionId,
-        observationDatetime: obsDateTime,
-        descriptionOfIncident: note,
-        descriptionOfLocation: location || "Classroom",
-        notesRecommendationsActions: notes.trim() || (tier === "confidential" ? note : undefined),
-        classPerformance: classPerf.trim() || undefined,
-        attendanceSummary: attendance.trim() || undefined,
-        category,
-        confidentialityLevel: tier ?? "restricted",
-      });
+      let recordId: string;
+      if (editing && editingRecordId) {
+        await updateAnecdotalRecord(editingRecordId, {
+          observationDatetime: obsDateTime,
+          descriptionOfIncident: note,
+          descriptionOfLocation: location || "Classroom",
+          notesRecommendationsActions: notes.trim() || null,
+          classPerformance: classPerf.trim() || null,
+          attendanceSummary: attendance.trim() || null,
+          category,
+          confidentialityLevel: tier ?? "restricted",
+        });
+        recordId = editingRecordId;
+      } else {
+        const created = await createAnecdotalRecord({
+          studentId: student!.id,
+          sectionId: selectedClass!.sectionId,
+          observationDatetime: obsDateTime,
+          descriptionOfIncident: note,
+          descriptionOfLocation: location || "Classroom",
+          notesRecommendationsActions: notes.trim() || (tier === "confidential" ? note : undefined),
+          classPerformance: classPerf.trim() || undefined,
+          attendanceSummary: attendance.trim() || undefined,
+          category,
+          confidentialityLevel: tier ?? "restricted",
+        });
+        recordId = created.id;
+      }
       const categoryLabel = ANEC_CATEGORY_LABELS[category];
       const detail = {
-        recordId: created.id,
-        studentName: student.name,
-        lrn: student.lrn,
-        section: sectionNameById.get(student.sectionId ?? "") ?? "—",
+        recordId,
+        studentName: displayName,
+        lrn: student?.lrn ?? editIdentityRef.current.lrn,
+        section:
+          (student ? sectionNameById.get(student.sectionId ?? "") : editIdentityRef.current.section) ?? "—",
         category: categoryLabel,
         tier: ANEC_TIER_LABELS[tier],
         location: location || "Classroom",
@@ -552,19 +603,29 @@ export function useAnecdotalFlow({
         observationDateTime: observationLabel,
         filedOn: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       };
-      const name = student.name;
+      const name = displayName;
       if (progressTimer.current !== null) {
         window.clearInterval(progressTimer.current);
         progressTimer.current = null;
       }
       setFileProgress(100);
-      setFileStage("Done — GCForm-01 ready.");
+      setFileStage(editing ? "Done — GCForm-01 updated." : "Done — GCForm-01 ready.");
       pushToActive([
         { id: nextMessageId(), from: "user", text: `${categoryLabel} — ${note}`, at: Date.now(), detail },
-        { id: nextMessageId(), from: "assistant", text: "Anecdotal record filed.", at: Date.now(), detail },
+        {
+          id: nextMessageId(),
+          from: "assistant",
+          text: editing ? "Anecdotal record updated." : "Anecdotal record filed.",
+          at: Date.now(),
+          detail,
+        },
       ]);
       setConversations((prev) =>
-        prev.map((c) => (c.id === activeId ? { ...c, title: `${name} · ${categoryLabel} · Filed`, filed: true } : c))
+        prev.map((c) =>
+          c.id === activeId
+            ? { ...c, title: `${name} · ${categoryLabel} · ${editing ? "Updated" : "Filed"}`, filed: true }
+            : c
+        )
       );
       resetFlowStates();
       if (activeId) {
@@ -579,6 +640,7 @@ export function useAnecdotalFlow({
       queryClient.invalidateQueries({ queryKey: ["anecdotal"] });
       queryClient.invalidateQueries({ queryKey: ["anecdotal-mine"] });
       queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
+      invalidateOcForm01Detail(recordId);
       try {
         const taskId = fileTaskRef.current;
         fileTaskRef.current = null;
@@ -586,7 +648,10 @@ export function useAnecdotalFlow({
       } catch {
         /* ignore */
       }
-      sileo.success({ title: "Anecdotal record filed", description: `${name} · ${categoryLabel}.` });
+      sileo.success({
+        title: editing ? "Anecdotal record updated" : "Anecdotal record filed",
+        description: `${name} · ${categoryLabel}.`,
+      });
     } catch (err) {
       const message =
         typeof err === "object" && err !== null && "response" in err
@@ -613,12 +678,59 @@ export function useAnecdotalFlow({
     }
   }
 
+  function startEdit(input: AnecdotalEditInput) {
+    const parsed = new Date(input.observationDatetime);
+    const valid = !Number.isNaN(parsed.getTime());
+    const date = valid ? parsed.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+    const time = valid ? parsed.toISOString().slice(11, 16) : "";
+    editIdentityRef.current = {
+      studentName: input.studentName,
+      lrn: input.lrn,
+      section: input.section,
+    };
+    setEditingRecordId(input.recordId);
+    setStudentId(input.studentId);
+    setClassKey("");
+    setCategory(input.category);
+    setTier(input.tier);
+    setObservationDate(date);
+    setObservationTime(time);
+    setDateInput(date);
+    setTimeInput(time);
+    setIncident("");
+    setLocation("");
+    setNotes("");
+    setClassPerf("");
+    setAttendance("");
+    setTextQuestion("incident");
+    setAskedCategory(true);
+    setAskedTier(true);
+    setAskedDatetime(true);
+    setPreviewShown(false);
+    setFlowError(null);
+    setEditPrefill({
+      incident: input.incident,
+      location: input.location,
+      notes: input.notes,
+      classPerformance: input.classPerformance,
+      attendance: input.attendanceSummary,
+    });
+    pushToActive([
+      {
+        id: nextMessageId(),
+        from: "assistant",
+        text: `Editing ${input.studentName}'s anecdotal record. Only the observation details change — student info stays as filed. ${TEXT_QUESTION_LABELS.incident}:`,
+        at: Date.now(),
+      },
+    ]);
+  }
+
   function handleAnecSend() {
     if (filing || !active || active.filed) return;
 
     if (textQuestion !== null) {
       const value = draft.trim();
-      if (!value || !student) return;
+      if (!value || (!student && !editingRecordId)) return;
       if (textQuestion === "incident") setIncident(value);
       else if (textQuestion === "location") setLocation(value);
       else if (textQuestion === "notes") setNotes(value);
@@ -684,5 +796,8 @@ export function useAnecdotalFlow({
     fileRecord,
     resetFlowStates,
     removeFlowSnapshot,
+    editingRecordId,
+    editPrefill,
+    startEdit,
   };
 }

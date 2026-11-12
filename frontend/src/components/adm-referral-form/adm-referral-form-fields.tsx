@@ -2,13 +2,21 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Check, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { SessionDatePicker } from "@/app/guidance/referrals/components/session-datetime-picker";
 import { ClinicDatePicker, ClinicTimePicker } from "@/app/nurse/overview/components/ClinicDateTimePicker";
 import { CONCERN_OPTIONS, type GcForm03Data } from "@/services/guidance/gcform03.types";
 import { todayKey } from "./today-key";
+import { useGcFormSigners } from "./use-gcform03-signers";
 import type { AdmReferralFormPageCase } from "./AdmReferralFormPage";
 import pageStyles from "@/app/guidance/pages.module.css";
 import styles from "@/app/guidance/adm/components/guidance-adm.module.css";
@@ -43,6 +51,8 @@ export function AdmReferralFormFields({
   onPreview: () => void;
   onReset: () => void;
 }) {
+  const signersQuery = useGcFormSigners();
+  const signers = signersQuery.data ?? [];
   return (
         <Card className={pageStyles.card}>
             <CardContent>
@@ -300,12 +310,54 @@ export function AdmReferralFormFields({
                   <div className={formStyles.grid2}>
                     <div>
                       <Label htmlFor="rf-counselor">{signerLabel}</Label>
-                      <Input
-                        id="rf-counselor"
-                        value={form.counselorName}
-                        onChange={(e) => patch({ counselorName: e.target.value })}
-                        placeholder="Printed name"
-                      />
+                      {signers.length > 0 ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              id="rf-counselor"
+                              type="button"
+                              variant="outline"
+                              className="w-full justify-between font-normal"
+                            >
+                              <span
+                                className={
+                                  form.counselorName
+                                    ? undefined
+                                    : "text-muted-foreground"
+                                }
+                              >
+                                {form.counselorName || "Printed name"}
+                              </span>
+                              <ChevronDown className="size-4 opacity-50" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="start"
+                            className="w-[var(--radix-dropdown-menu-trigger-width)]"
+                          >
+                            {signers.map((s) => (
+                              <DropdownMenuItem
+                                key={s.id}
+                                onSelect={() =>
+                                  patch({ counselorName: s.fullName })
+                                }
+                              >
+                                <span className="flex-1">{s.fullName}</span>
+                                {form.counselorName === s.fullName ? (
+                                  <Check className="size-4" />
+                                ) : null}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <Input
+                          id="rf-counselor"
+                          value={form.counselorName}
+                          onChange={(e) => patch({ counselorName: e.target.value })}
+                          placeholder="Printed name"
+                        />
+                      )}
                     </div>
                     <SessionDatePicker
                       id="rf-cdate"
@@ -349,10 +401,11 @@ export function AdmReferralFormFields({
                   className={styles.actions}
                   style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}
                 >
-                <Button disabled={!form} onClick={onPreview}>
+                <Button className="h-6" disabled={!form} onClick={onPreview}>
                   Preview filled form
                 </Button>
                 <Button
+                  className="h-6"
                   type="button"
                   variant="outline"
                   disabled={!form}

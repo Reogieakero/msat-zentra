@@ -12,6 +12,15 @@ function RowIcon({ status }: { status: DockTask["status"] }) {
   return <Loader2 size={size} aria-hidden className="animate-spin text-muted-foreground" />;
 }
 
+/** Status text colour follows the same tone as the row icon. */
+function statusToneClass(status: DockTask["status"]): string {
+  if (status === "done") return "text-emerald-600 dark:text-emerald-400";
+  if (status === "failed") return "text-destructive";
+  if (status === "cancelled") return "text-muted-foreground/70";
+  if (status === "waiting") return "text-amber-600 dark:text-amber-400";
+  return "text-foreground/80";
+}
+
 /**
  * One uniform row: icon left, details middle, status text right.
  * Fixed widths keep every row lined up; long text is cut short.
@@ -33,7 +42,10 @@ export function DockRow({ task }: { task: DockTask }) {
           {task.status === "failed" && task.error ? task.error : task.description}
         </span>
       </span>
-      <span className="w-[72px] shrink-0 truncate text-right text-[11px] tabular-nums text-muted-foreground" title={rightText}>
+      <span
+        className={`w-[72px] shrink-0 truncate text-right text-[11px] font-medium tabular-nums ${statusToneClass(task.status)}`}
+        title={rightText}
+      >
         {rightText}
       </span>
     </li>

@@ -1,4 +1,8 @@
 import { prisma } from "../../lib/prisma.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+} from "../../lib/learnerVisibility.js";
 import { sessionCancelledByRole } from "../../lib/sessionActors.js";
 import { NURSE_QUEUE_MAX_PAGE_SIZE } from "../../modules/referrals/referrals.repository.js";
 import type { ReferralContext } from "./referral.types.js";
@@ -84,6 +88,13 @@ export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
   if (roleWhere) scopeClauses.push(roleWhere);
   if (scopeTermId) scopeClauses.push({ termId: scopeTermId });
 
+  /* An adviser can remove a learner from their advisory list. That learner's
+     referral must leave every desk board (guidance ADM queue included), the
+     same way roster/attendance/anecdotal reads honour the archive. */
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const archivedClause = excludeArchivedLearnerRows(archivedLearners);
+  if (Object.keys(archivedClause).length > 0) scopeClauses.push(archivedClause);
+
   if (track === "adm") scopeClauses.push({ referredToRole: "adm_coordinator" });
   else if (track === "clinic")
     scopeClauses.push({ referredToRole: { not: "adm_coordinator" } });
@@ -108,12 +119,27 @@ export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
     Math.max(1, Math.floor(pageSize) || 15),
     NURSE_QUEUE_MAX_PAGE_SIZE,
   );
+  // `Referral.status` is a Prisma enum: an arbitrary free-text `equals` casts
+  // to the enum in Postgres and throws 22P02, 500-ing the whole search. Only
+  // offer the status clause when the query is an actual status slug.
+  const REFERRAL_STATUS_VALUES = [
+    "pending",
+    "in_progress",
+    "resolved",
+    "escalated",
+    "info_requested",
+    "dismissed",
+    "follow_up",
+  ] as const;
+  const statusMatch = REFERRAL_STATUS_VALUES.find(
+    (value) => value === q?.toLowerCase(),
+  );
   const searchWhere: any = q
     ? {
         OR: [
           { reason: { contains: q, mode: "insensitive" } },
           { notes: { contains: q, mode: "insensitive" } },
-          { status: { equals: q } },
+          ...(statusMatch ? [{ status: statusMatch }] : []),
           { student: { user: { fullName: { contains: q, mode: "insensitive" } } } },
           { student: { lrn: { contains: q, mode: "insensitive" } } },
           { roster: { fullName: { contains: q, mode: "insensitive" } } },

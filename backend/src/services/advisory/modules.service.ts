@@ -6,6 +6,11 @@ import { CACHE_TAGS } from "../../lib/cacheTags.js";
 import { paginated, clampPage } from "../../lib/pagination.js";
 import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
 import { advisorySubmissionObjectPath, uploadFile } from "../../lib/storage.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { ModuleStatus } from "../../modules/teacher/advisory-modules.schemas.js";
 import type { AdvisoryContext } from "./advisory.types.js";
 
@@ -82,15 +87,20 @@ async function resolveSection(
  * rule as the advisory list, so a learner never shows up twice.
  */
 async function sectionLearners(sectionId: string, admOnly = false): Promise<LearnerRef[]> {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, roster] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId, ...(admOnly ? { admProfiles: { some: {} } } : {}) },
+      where: {
+        sectionId,
+        ...(admOnly ? { admProfiles: { some: {} } } : {}),
+        ...excludeArchivedProfiles(archivedLearners),
+      },
       select: { userId: true, lrn: true, mascot: true, user: { select: { fullName: true } } },
     }),
     admOnly
       ? Promise.resolve([])
       : prisma.studentRoster.findMany({
-          where: { sectionId },
+          where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
           select: { id: true, lrn: true, fullName: true, mascot: true },
         }),
   ]);
@@ -124,7 +134,9 @@ export async function listModules(
   const { section, sections } = await resolveSection(ctx, query.sectionId);
   const [modules, admLearners] = await Promise.all([
     prisma.advisoryModule.findMany({
-      where: { sectionId: section.id },
+      // Modules belong to the term they were released in; the desk follows the
+      // teacher's selected term.
+      where: { sectionId: section.id, termId: ctx.termId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     }),
     sectionLearners(section.id, true),
@@ -251,7 +263,11 @@ export async function getModuleSubmissions(
 async function loadModule(ctx: AdvisoryContext, moduleId: string) {
   const sections = await adviserSectionsOr404(ctx.userId, ctx.schoolYearId);
   const module = await prisma.advisoryModule.findFirst({
-    where: { id: moduleId, sectionId: { in: sections.map((s) => s.id) } },
+    where: {
+      id: moduleId,
+      sectionId: { in: sections.map((s) => s.id) },
+      termId: ctx.termId,
+    },
   });
   if (!module) {
     throw new AppError(404, "MODULE_NOT_FOUND", "Module not found in your advisory");
@@ -277,6 +293,7 @@ export async function createModule(
   const created = await prisma.advisoryModule.create({
     data: {
       sectionId: section.id,
+      termId: ctx.termId,
       kind: input.kind ?? "general",
       moduleName: input.moduleName.trim(),
       moduleUrl,

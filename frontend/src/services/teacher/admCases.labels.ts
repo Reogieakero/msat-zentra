@@ -1,4 +1,5 @@
 import type { AdmCase } from "./admCases.types";
+import type { PillTone } from "@/components/ui/pill";
 
 export const ADM_STAGES: {
   stage: string;
@@ -94,6 +95,42 @@ const ADM_STAGE_COLORS: Record<string, string> = {
 export function stageColor(stage: string): string {
   return ADM_STAGE_COLORS[stage] ?? "#f59e0b";
 }
+
+/** Shared chip tone per stage — the pipeline legend uses the standard `<Pill>`. */
+const ADM_STAGE_TONES: Record<string, PillTone> = {
+  anecdotal: "violet",
+  consultation: "blue",
+  meeting_parents: "sky",
+  home_visitation: "teal",
+  certification: "amber",
+  principal_approval: "indigo",
+  enrollment_monitoring: "green",
+  completion: "green",
+};
+
+const ADM_STAGE_SHORT_LABELS: Record<string, string> = {
+  anecdotal: "Anecdotal",
+  consultation: "Consultation",
+  meeting_parents: "Meeting",
+  home_visitation: "Home Visit",
+  certification: "Certification",
+  principal_approval: "Approval",
+  enrollment_monitoring: "Modules",
+  completion: "Closed",
+};
+
+/** Pipeline legend rows: short label + the full stage name as the tooltip. */
+export const ADM_STAGE_LEGEND: {
+  key: string;
+  label: string;
+  hint: string;
+  tone: PillTone;
+}[] = ADM_STAGES.map((stage) => ({
+  key: stage.stage,
+  label: ADM_STAGE_SHORT_LABELS[stage.stage] ?? stage.label,
+  hint: `Stage ${stage.order} · ${stage.label}`,
+  tone: ADM_STAGE_TONES[stage.stage] ?? "neutral",
+}));
 
 const GRADE_LABELS: Record<string, string> = {
   G7: "Grade 7",

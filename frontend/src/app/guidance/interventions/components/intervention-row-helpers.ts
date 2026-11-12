@@ -54,6 +54,38 @@ export function interventionLatestAction(item: AtRiskStudentItem): {
   if (iv?.createdAt) return { label: "Intervention opened", time: iv.createdAt };
   return { label: "No follow-up yet", time: "" };
 }
+/**
+ * The single case-status ladder used by the board's status filter and by the
+ * card pill. Order is the precedence used everywhere: a closed case wins over
+ * sessions, a cleared risk wins over "no action".
+ */
+export type InterventionStatusKey =
+  | "no_action"
+  | "booked"
+  | "session_done"
+  | "follow_up"
+  | "risk_cleared"
+  | "done"
+  | "discontinued";
+
+export type InterventionStatusFilter = InterventionStatusKey | "all";
+
+export function interventionStatusKey(
+  row: AtRiskStudentItem,
+  followUp: AtRiskStudentItem["intervention"] = row.intervention,
+  scheduledCount: number = followUp?.sessions.filter((s) => s.status === "scheduled").length ?? 0,
+  doneCount: number = followUp?.completedSessions ?? 0
+): InterventionStatusKey {
+  if (followUp?.outcomeStatus === "resolved") return "done";
+  if (followUp?.outcomeStatus === "unresolved") return "discontinued";
+  if (followUp && row.riskLevel === "Low") return "risk_cleared";
+  if (!followUp || followUp.sessions.length === 0) return "no_action";
+  if (scheduledCount > 0 && doneCount > 0) return "follow_up";
+  if (scheduledCount > 0) return "booked";
+  if (doneCount > 0) return "session_done";
+  return "no_action";
+}
+
 export function pipelineStatus(
   row: AtRiskStudentItem,
   followUp: AtRiskStudentItem["intervention"],
@@ -64,26 +96,25 @@ export function pipelineStatus(
   variant: "default" | "success" | "secondary" | "destructive" | "outline" | "warning" | "green";
   sub: string | null;
 } {
-  if (followUp?.outcomeStatus === "resolved")
-    return { label: "Done", variant: "green", sub: null };
-  if (followUp?.outcomeStatus === "unresolved")
-    return { label: "Discontinued", variant: "secondary", sub: null };
-  if (followUp && row.riskLevel === "Low")
-    return { label: "No longer at risk", variant: "secondary", sub: "Risk factors cleared" };
-  if (!followUp || followUp.sessions.length === 0)
-    return { label: "No action yet", variant: "outline", sub: null };
-  if (scheduledCount > 0 && doneCount > 0)
-    return {
-      label: "Follow-up session",
-      variant: "default",
-      sub: `${doneCount} session${doneCount === 1 ? "" : "s"} done`,
-    };
-  if (scheduledCount > 0) return { label: "Booked session", variant: "default", sub: null };
-  if (doneCount > 0)
-    return {
-      label: "Session done",
-      variant: "green",
-      sub: `${doneCount} session${doneCount === 1 ? "" : "s"} done`,
-    };
-  return { label: "No action yet", variant: "outline", sub: null };
+  const sessionsDone = `${doneCount} session${doneCount === 1 ? "" : "s"} done`;
+  switch (interventionStatusKey(row, followUp, scheduledCount, doneCount)) {
+    case "done":
+      return { label: "Done", variant: "green", sub: null };
+    case "discontinued":
+      return { label: "Discontinued", variant: "secondary", sub: null };
+    case "risk_cleared":
+      return {
+        label: "No longer at risk",
+        variant: "secondary",
+        sub: "Risk factors cleared",
+      };
+    case "follow_up":
+      return { label: "Follow-up session", variant: "default", sub: sessionsDone };
+    case "booked":
+      return { label: "Booked session", variant: "default", sub: null };
+    case "session_done":
+      return { label: "Session done", variant: "green", sub: sessionsDone };
+    default:
+      return { label: "No action yet", variant: "outline", sub: null };
+  }
 }

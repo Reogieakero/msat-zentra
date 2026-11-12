@@ -108,7 +108,7 @@
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.02em;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-inter), ui-monospace, monospace;
   color: var(--foreground);
 }
 

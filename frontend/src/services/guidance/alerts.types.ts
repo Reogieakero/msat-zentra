@@ -31,6 +31,13 @@ export interface GuidanceAlertsSummary {
   behavioral: number;
 }
 
+/** Lightweight counters polled by the shell's alert sound / tab-title badge. */
+export interface GuidanceAlertCounts {
+  high: number;
+  moderate: number;
+  total: number;
+}
+
 export interface GuidanceAlertsData {
   termLabel: string;
   summary: GuidanceAlertsSummary;
@@ -57,6 +64,7 @@ export type AlertCaseRisk = "" | GuidanceRiskLevel;
 export interface GuidanceAlertUrgentItem {
   student: string;
   lrn: string;
+  mascot?: string | null;
   kind: "referral" | "intervention";
   id: string;
   track: "adm" | "counseling" | "intervention";
@@ -66,6 +74,7 @@ export interface GuidanceAlertDetectedItem {
   studentKey: string;
   student: string;
   lrn: string;
+  mascot?: string | null;
   riskLevel: string;
   detectedAt: string | null;
 }

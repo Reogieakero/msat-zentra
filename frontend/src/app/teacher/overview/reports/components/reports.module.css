@@ -270,6 +270,36 @@
   }
 }
 
+/* --- chart boards (same chrome as the overview page) --- */
+.boardIcon {
+  display: inline-flex;
+  color: var(--teacher-number);
+}
+
+.amberNumber {
+  color: var(--teacher-number);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "What it means" label inside the shared InsightCallout footer. */
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* The callout's own `.callout { margin: 0 }` beats Tailwind's `mt-auto`, so the
+   bottom pin lives on this wrapper instead. */
+.footerSlot {
+  display: flex;
+  margin-top: auto;
+}
+
+/* The callout hugs its copy: the bottom pin lives on the wrapper, and the
+   row's callouts share the same baseline. */
+.interpretation {
+  flex: 1;
+}
+
 /* --- tables --- */
 .tableWrap {
   overflow-x: auto;
@@ -337,65 +367,33 @@
   white-space: nowrap;
 }
 
-/* --- distribution bars --- */
-.bars {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+/* --- distribution bar chart --- */
+.barChart {
+  width: 100%;
+  position: relative;
+  z-index: 10;
 }
 
-.barRow {
-  display: grid;
-  grid-template-columns: 8.5rem minmax(0, 1fr) 5.5rem;
-  align-items: center;
-  gap: 0.625rem;
-  font-size: 0.75rem;
-}
-
-.barLabel {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.barLabel strong {
-  font-weight: 600;
-}
-
-.barLabel span {
+/* Recharts sets its own SVG attributes, so text colour comes from the sheet. */
+.barChart text {
+  fill: var(--muted-foreground);
   font-size: 0.6875rem;
-  color: var(--muted-foreground);
 }
 
-.barTrack {
-  height: 0.5rem;
-  border-radius: 999px;
-  background: var(--muted, #f3f4f6);
-  overflow: hidden;
-}
-
-.barFill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--primary, #2563eb);
-}
-
-/* Case activity chart — amber palette only. */
-.barFillAmber {
-  background: #f59e0b;
-}
-
-:global(.dark) .barFillAmber {
-  background: #fbbf24;
-}
-
-.barGroupTitle {
-  margin-top: 0.25rem;
-  font-size: 0.6875rem;
+.barChart .barNumber {
+  fill: var(--teacher-number);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Skeleton stand-in for the bar chart (same 208px plot height). */
+.skeletonBars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 0.75rem;
+  height: 208px;
+  padding-top: 18px;
 }
 
 /* --- case activity donut --- */
@@ -469,16 +467,6 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.barValue {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 

@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
+import { fetchMyRecords } from "@/components/ocform01/folders";
+import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
+import type {
+  AnecdotalCategory,
+  AnecdotalTier,
+} from "@/services/anecdotal/anecdotal.types";
 import {
   createConversation,
   loadBamaStore,
@@ -16,8 +22,9 @@ import {
   type BamaConversation,
 } from "./bama-conversations";
 import { TEXT_QUESTION_LABELS, TEXT_QUESTION_PLACEHOLDERS } from "./bama-flow";
-import { useAnecdotalFlow } from "./useAnecdotalFlow";
+import { useAnecdotalFlow, type AnecdotalEditInput } from "./useAnecdotalFlow";
 import { useSf10AccessFlow } from "./useSf10AccessFlow";
+import { useSf10AutofillFlow } from "./useSf10AutofillFlow";
 import { BamaSidebar } from "./BamaSidebar";
 import { BamaThread } from "./BamaThread";
 import { BamaComposer } from "./BamaComposer";
@@ -28,6 +35,7 @@ const TYPE_LABELS: Record<BamaChatType, string> = {
   "grade-flag": "Grade Flag",
   anecdotal: "Anecdotal Record",
   "sf10-access": "SF10 Access",
+  "sf10-autofill": "SF10 Auto-fill",
 };
 
 const GREETINGS: Record<BamaChatType, string> = {
@@ -37,6 +45,8 @@ const GREETINGS: Record<BamaChatType, string> = {
     "Hi, I'm Bama. Tell me what happened and I'll help you write the anecdotal record.\nWhich student is this anecdotal report for? Pick one below.",
   "sf10-access":
     "Hi, I'm Bama. I'll help you request SF10 read access for your advisory.\nPick your section below to begin.",
+  "sf10-autofill":
+    "Hi, I'm Bama. I'll fill your advisees' SF10 subject rows from adviser-approved grades.\nPick your section below to begin.",
 };
 
 const FREE_FOLLOWUPS: Record<BamaChatType, string> = {
@@ -46,6 +56,8 @@ const FREE_FOLLOWUPS: Record<BamaChatType, string> = {
     "Noted — I've kept that with this chat. Pick the student above and I'll walk you through the report.",
   "sf10-access":
     "Noted — I've kept that with this chat. Follow the steps above to finish your SF10 access request.",
+  "sf10-autofill":
+    "Noted — I've kept that with this chat. Follow the steps above to fill SF10 from approved grades.",
 };
 
 export function BamaChat() {
@@ -59,6 +71,7 @@ export function BamaChat() {
   const [sending, setSending] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BamaConversation | null>(null);
   const [previewRecordId, setPreviewRecordId] = useState<string | null>(null);
+  const [pendingEdit, setPendingEdit] = useState<AnecdotalEditInput | null>(null);
 
   const threadRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -87,6 +100,7 @@ export function BamaChat() {
   const active = conversations.find((c) => c.id === activeId) ?? null;
   const anecMode = active?.type === "anecdotal";
   const sf10Mode = active?.type === "sf10-access";
+  const autofillMode = active?.type === "sf10-autofill";
 
   const flow = useAnecdotalFlow({
     active,
@@ -104,6 +118,13 @@ export function BamaChat() {
     setConversations,
     draft,
     setDraft,
+  });
+
+  const autofillFlow = useSf10AutofillFlow({
+    active,
+    activeId,
+    hydrated,
+    setConversations,
   });
 
   function handleFreeSend() {
@@ -153,12 +174,14 @@ export function BamaChat() {
   function handleSend() {
     if (anecMode) flow.handleAnecSend();
     else if (sf10Mode) sf10Flow.handleReasonSend();
+    else if (autofillMode) return;
     else handleFreeSend();
   }
 
   function startChat(type: BamaChatType, keepDraft = false) {
     flow.resetFlowStates();
     sf10Flow.resetFlowStates();
+    autofillFlow.resetFlowStates();
     const now = Date.now();
     const convo: BamaConversation = {
       ...createConversation(type),
@@ -178,11 +201,51 @@ export function BamaChat() {
     const t = searchParams.get("new");
     if (t === null) return;
     newParamHandled.current = true;
-    if (t === "grade-flag" || t === "anecdotal" || t === "sf10-access") {
+    if (
+      t === "grade-flag" ||
+      t === "anecdotal" ||
+      t === "sf10-access" ||
+      t === "sf10-autofill"
+    ) {
       startChat(t);
+      const editId = searchParams.get("edit");
+      if (t === "anecdotal" && editId) {
+        void (async () => {
+          try {
+            const [records, detail] = await Promise.all([
+              fetchMyRecords(),
+              fetchOcForm01Detail(editId),
+            ]);
+            const record = records.find((r) => r.id === editId);
+            if (!record) return;
+            const category = (detail.category ?? record.category) as AnecdotalCategory;
+            const tier = (detail.confidentialityLevel ??
+              record.confidentialityLevel) as AnecdotalTier;
+            setPendingEdit({
+              recordId: record.id,
+              studentId: record.studentId,
+              studentName: record.studentName,
+              lrn: record.lrn,
+              section: record.section,
+              category,
+              tier: tier === "confidential" ? "confidential" : "restricted",
+              observationDatetime:
+                detail.observationDatetime ?? record.observationDatetime,
+              incident: detail.descriptionOfIncident ?? record.incident,
+              location: detail.descriptionOfLocation ?? "",
+              notes: detail.notesRecommendationsActions ?? "",
+              classPerformance: detail.classPerformance ?? "",
+              attendanceSummary: detail.attendanceSummary ?? "",
+            });
+          } catch {
+            /* keep the plain anecdotal chat open if the record can't be loaded */
+          }
+        })();
+      }
     } else {
       flow.resetFlowStates();
       sf10Flow.resetFlowStates();
+      autofillFlow.resetFlowStates();
       setActiveId(null);
       setDraft("");
     }
@@ -194,9 +257,30 @@ export function BamaChat() {
   }, [hydrated, searchParams, router]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Apply a chat "edit this record" deep link once its review conversation is
+  // active (the flow seeds itself against the live conversation id).
+  /* eslint-disable react-hooks/set-state-in-effect -- one-shot deep-link seed */
+  useEffect(() => {
+    if (!pendingEdit || !activeId || active?.type !== "anecdotal") return;
+    const input = pendingEdit;
+    setPendingEdit(null);
+    flow.startEdit(input);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [pendingEdit, activeId, active?.type]);
+
+  // In edit mode each context question starts with the record's current value,
+  // so the teacher only rewrites what changed.
+  useEffect(() => {
+    if (!flow.editingRecordId || !flow.editPrefill || !flow.textQuestion) return;
+    setDraft(flow.editPrefill[flow.textQuestion] ?? "");
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [flow.editingRecordId, flow.textQuestion]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   function handleNewChat() {
     flow.resetFlowStates();
     sf10Flow.resetFlowStates();
+    autofillFlow.resetFlowStates();
     setActiveId(null);
     setDraft("");
   }
@@ -207,6 +291,7 @@ export function BamaChat() {
     setConversations((prev) => prev.filter((c) => c.id !== id));
     flow.removeFlowSnapshot(id);
     sf10Flow.removeFlowSnapshot(id);
+    autofillFlow.removeFlowSnapshot(id);
     setActiveId((prev) => (prev === id ? null : prev));
     setDeleteTarget(null);
   }
@@ -215,14 +300,22 @@ export function BamaChat() {
     sending ||
     flow.filing ||
     sf10Flow.submitting ||
+    autofillFlow.submitting ||
+    autofillMode ||
     !active ||
     active?.filed === true ||
     (anecMode && flow.textQuestion === null) ||
     (sf10Mode && sf10Flow.phase !== "reason");
   const composerPlaceholder = !active
-    ? "Pick Grade Flag, Anecdotal, or SF10 Access above to begin"
+    ? "Pick Grade Flag, Anecdotal, SF10 Access, or SF10 Auto-fill above to begin"
     : active?.filed
       ? "This record is filed — start a New chat for another report."
+      : autofillMode
+        ? autofillFlow.phase === "section"
+          ? "Pick a section above to begin"
+          : autofillFlow.phase === "students"
+            ? "Select students above, then press Done"
+            : "Review the rows above, then press Fill SF10"
       : sf10Mode
         ? sf10Flow.phase === "section"
           ? "Pick a section above to begin"
@@ -242,6 +335,8 @@ export function BamaChat() {
     sending ||
     flow.filing ||
     sf10Flow.submitting ||
+    autofillFlow.submitting ||
+    autofillMode ||
     !active ||
     active?.filed === true ||
     (anecMode
@@ -271,6 +366,7 @@ export function BamaChat() {
             sending={sending}
             flow={flow}
             sf10Flow={sf10Flow}
+            autofillFlow={autofillFlow}
             typeLabel={active ? TYPE_LABELS[active.type] : ""}
             threadRef={threadRef}
             onStartChat={startChat}
@@ -301,7 +397,7 @@ export function BamaChat() {
             hint={
               active?.filed
                 ? "This record is filed — start a New chat for another report."
-                : sending || flow.filing || sf10Flow.submitting
+                : sending || flow.filing || sf10Flow.submitting || autofillFlow.submitting
                   ? "Working on it…"
                   : "Enter to send · Shift + Enter for a new line"
             }

@@ -1,2 +1,5 @@
 # QA / performance outputs (local only, never commit)
 qa-output/
+
+# Local seeded credentials (never commit)
+SEEDED_ACCOUNTS.md

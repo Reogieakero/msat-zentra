@@ -76,6 +76,22 @@ export function scheduleTone(status: string): PillTone {
   return SCHEDULE_STATUS_TONE[status] ?? "neutral";
 }
 
+/** SF10 record lifecycle status (adviser access rows). */
+export const SF10_STATUS_TONE: Record<string, PillTone> = {
+  pending: "amber",
+  verified: "blue",
+  validated: "green",
+};
+
+export function sf10StatusTone(status: string): PillTone {
+  return SF10_STATUS_TONE[status] ?? "neutral";
+}
+
+/** SF10 statuses render capitalised ("validated" → "Validated"). */
+export function sf10StatusLabel(status: string): string {
+  return status ? status.charAt(0).toUpperCase() + status.slice(1) : status;
+}
+
 /** Intervention outcome / plan status. */
 export function outcomeTone(status: string): PillTone {
   if (status === "resolved") return "green";

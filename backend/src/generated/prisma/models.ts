@@ -9,6 +9,7 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/User.js'
+export type * from './models/LoginEvent.js'
 export type * from './models/StudentProfile.js'
 export type * from './models/ParentProfile.js'
 export type * from './models/ParentStudentLink.js'
@@ -17,6 +18,7 @@ export type * from './models/SchoolYear.js'
 export type * from './models/Term.js'
 export type * from './models/Section.js'
 export type * from './models/StudentRoster.js'
+export type * from './models/TermRosterConfirmation.js'
 export type * from './models/Subject.js'
 export type * from './models/TeacherSubjectAssignment.js'
 export type * from './models/ScheduleConfig.js'

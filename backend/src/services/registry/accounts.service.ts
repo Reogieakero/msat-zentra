@@ -2,6 +2,11 @@ import { prisma } from "../../lib/prisma.js";
 import { scopedYearId } from "../../lib/termScope.js";
 import type { Request } from "express";
 import { gradeLabel } from "../../modules/registry/registry.repository.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 import type { RegistryContext } from "./registry.types.js";
 
@@ -12,9 +17,14 @@ export interface BreakdownQuery {
 export async function getAccountBreakdown(ctx: RegistryContext, query: BreakdownQuery) {
   const band = ctx.band;
   const schoolYearId = query.schoolYearId;
+  const archivedLearners = await archivedAdvisoryLearnerIds();
 
   const roster = await prisma.studentRoster.findMany({
-    where: { gradeLevel: { in: band }, schoolYearId: schoolYearId ?? "__none__" },
+    where: {
+      gradeLevel: { in: band },
+      schoolYearId: schoolYearId ?? "__none__",
+      ...excludeArchivedRosters(archivedLearners),
+    },
     select: { lrn: true, gradeLevel: true, section: { select: { name: true } } },
   });
 
@@ -31,6 +41,7 @@ export async function getAccountBreakdown(ctx: RegistryContext, query: Breakdown
   const profilesWithoutRoster = await prisma.studentProfile.findMany({
     where: {
       gradeLevel: { in: band },
+      ...excludeArchivedProfiles(archivedLearners),
       ...(rosteredLrns.size > 0
         ? { lrn: { notIn: Array.from(rosteredLrns) } }
         : {}),
@@ -94,8 +105,9 @@ export interface StudentsQuery {
 }
 
 export async function listBandStudents(band: GradeLevel[]) {
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const rows = await prisma.studentProfile.findMany({
-    where: { gradeLevel: { in: band } },
+    where: { gradeLevel: { in: band }, ...excludeArchivedProfiles(archivedLearners) },
     orderBy: [{ gradeLevel: "asc" }, { lrn: "asc" }],
     select: {
       userId: true,
@@ -126,8 +138,9 @@ export async function getAccountsAudit(query: AccountsAuditQuery) {
   const { band, page, pageSize } = query;
   const skip = (page - 1) * pageSize;
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const bandProfiles = await prisma.studentProfile.findMany({
-    where: { gradeLevel: { in: band } },
+    where: { gradeLevel: { in: band }, ...excludeArchivedProfiles(archivedLearners) },
     select: { userId: true },
   });
   const bandUserIds = bandProfiles.map((p) => p.userId);

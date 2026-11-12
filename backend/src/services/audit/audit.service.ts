@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { MAX_PAGE_SIZE, PAGE_SIZE, buildPaginationMeta, resolvePaging } from "../../lib/pagination.js";
 import { resolveSourceLabels } from "../../modules/audit/audit.repository.js";
+import { auditExportFilename, buildAuditWorkbook } from "./audit.workbook.js";
 
 export interface AuditListQuery {
   actionType?: string;
@@ -104,40 +105,45 @@ function metaFor(page: string, take: number, total: number) {
   return buildPaginationMeta(Math.max(parseInt(page, 10) || 1, 1), take, total);
 }
 
-export async function exportAuditCsv(query: Omit<AuditListQuery, "page" | "pageSize">) {
+export async function exportAuditWorkbook(
+  query: Omit<AuditListQuery, "page" | "pageSize">,
+  generatedBy: { userId: string },
+): Promise<{ buffer: Buffer; filename: string }> {
   const where = buildWhere(query);
 
-  const rows = await prisma.auditLog.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 5000,
-    include: { user: { select: { email: true, role: true } } },
-  });
+  const [rows, actor] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 5000,
+      include: { user: { select: { email: true, role: true } } },
+    }),
+    prisma.user.findUnique({
+      where: { id: generatedBy.userId },
+      select: { email: true },
+    }),
+  ]);
 
-  const header = [
-    "timestamp",
-    "user",
-    "actor_role",
-    "action_type",
-    "source_table",
-    "source_id",
-    "reason",
-  ];
-  const escape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const lines = rows.map((r) =>
-    [
-      r.createdAt.toISOString(),
-      r.user?.email ?? "system",
-      r.user?.role ?? "system",
-      r.actionType,
-      r.sourceTable,
-      r.sourceId,
-      r.reason ?? "",
-    ]
-      .map(escape)
-      .join(","),
+  const generatedAt = new Date();
+  const workbook = await buildAuditWorkbook(
+    rows,
+    {
+      actionType: query.actionType,
+      actorRole: query.actorRole,
+      sourceTable: query.sourceTable,
+      userId: query.userId,
+      q: query.q,
+      from: query.from,
+      to: query.to,
+    },
+    { generatedByEmail: actor?.email ?? "principal", generatedAt },
   );
-  return [header.join(","), ...lines].join("\n");
+
+  const arrayBuffer = await workbook.xlsx.writeBuffer();
+  return {
+    buffer: Buffer.from(arrayBuffer as ArrayBuffer),
+    filename: auditExportFilename(generatedAt),
+  };
 }
 
 export async function getSourceProjection(logId: string) {

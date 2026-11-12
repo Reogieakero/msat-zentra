@@ -26,7 +26,7 @@
 }
 
 .metaValue {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-inter), ui-monospace, monospace;
   font-weight: 600;
   color: var(--foreground);
 }
@@ -59,7 +59,7 @@
   font-size: 1.375rem;
   font-weight: 700;
   line-height: 1;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-inter), ui-monospace, monospace;
   color: var(--foreground);
 }
 
@@ -213,7 +213,7 @@
 
 .tdNum {
   text-align: right;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-inter), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   color: var(--muted-foreground);
 }
@@ -276,7 +276,7 @@
 }
 
 .weightPct {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-inter), ui-monospace, monospace;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--primary);
@@ -374,7 +374,7 @@
 }
 
 .donutCenter {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-inter), ui-monospace, monospace;
   font-size: 14px;
   font-weight: 700;
   fill: var(--foreground);
@@ -397,7 +397,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-inter), ui-monospace, monospace;
   color: var(--foreground);
 }
 

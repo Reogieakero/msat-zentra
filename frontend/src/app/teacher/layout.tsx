@@ -8,21 +8,21 @@ import { useQueryClient } from "@tanstack/react-query";
 import { TeacherSidebar } from "@/components/teacher-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import {
-  Command,
-  CommandInput,
-} from "@/components/ui/command";
-import { UserRound } from "lucide-react";
+import { CalendarClock, ClipboardCheck, UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { TermScopeBanner } from "@/components/term/TermScopeBanner";
+import { RosterCarryOverOverlay } from "@/components/term/RosterCarryOverOverlay";
 import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
+import { BreadcrumbExtraProvider } from "@/components/nav/BreadcrumbExtra";
 import { AdviserClaimGate } from "./components/AdviserClaimGate";
+import { TeacherGlobalSearch } from "./components/TeacherGlobalSearch";
 import {
   useTeacherProfileSettings,
 } from "@/services/settings/profile-settings";
 import { TeacherNotificationsBell } from "./components/TeacherNotificationsBell";
-import { TeacherBamaPill } from "./components/TeacherBamaPill";
+import { TeacherBamaPill, TONE_CLASSES } from "./components/TeacherBamaPill";
 import { TemplateSaveProvider } from "./schedule/components/template-save-context";
 import { AddAssessmentSaveProvider } from "./grading/[assignmentId]/components/add-assessment-save-context";
 import { ScoreSaveProvider } from "./grading/[assignmentId]/components/score-save-context";
@@ -30,6 +30,7 @@ import { DeleteAssessmentSaveProvider } from "./grading/[assignmentId]/component
 import { WeightsSaveProvider } from "./grading/[assignmentId]/components/weights-save-context";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
 import { useTeacherRealtime } from "@/lib/realtime/teacherChannel";
+import { AdviserRiskAlertMonitor } from "./components/AdviserRiskAlertMonitor";
 import styles from "./record-teacher.module.css";
 
 function TeacherShell({ children }: { children: React.ReactNode }) {
@@ -46,6 +47,7 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
     </React.Suspense>
 
       <AdviserClaimGate />
+      <AdviserRiskAlertMonitor />
       <BookingReminderStack desk="teacher" />
     </WeightsSaveProvider>
     </DeleteAssessmentSaveProvider>
@@ -65,14 +67,25 @@ function TeacherChrome({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [query, setQuery] = React.useState("");
 
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const standalone =
     searchParams.get("standalone") === "1" || pathname?.startsWith("/teacher/schedule/template") === true;
+  // Quick actions are dashboard shortcuts; other desks have their own controls.
+  const isOverview = pathname === "/teacher/overview";
 
   const profile = useTeacherProfileSettings();
+
+  const [bamaTone, setBamaTone] = React.useState(0);
+
+  React.useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => {
+      setBamaTone((prev) => (prev + 1) % TONE_CLASSES.length);
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.teacher.sidebar.collapsed");
@@ -89,6 +102,7 @@ function TeacherChrome({
   };
 
   return (
+    <BreadcrumbExtraProvider>
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
         <Link href="/teacher/overview" className={styles.brand}>
@@ -99,18 +113,36 @@ function TeacherChrome({
 
         <div className={styles.spacer} />
 
+        {isOverview ? (
+          <nav
+            className={`${styles.topbarQuick} ${TONE_CLASSES[bamaTone]}`}
+            aria-label="Quick actions"
+          >
+            <Link
+              href="/teacher/grading"
+              className={styles.topbarQuickLink}
+              aria-label="Enter grade"
+            >
+              <ClipboardCheck size={13} aria-hidden />
+              <span>Enter grade</span>
+            </Link>
+            <Link
+              href="/teacher/attendance"
+              className={styles.topbarQuickLink}
+              aria-label="Take attendance"
+            >
+              <CalendarClock size={13} aria-hidden />
+              <span>Take attendance</span>
+            </Link>
+          </nav>
+        ) : null}
+
         <TeacherBamaPill />
 
         <ActiveTermBadge />
 
         <div className={styles.search}>
-          <Command shouldFilter={false} className={styles.searchCommand}>
-            <CommandInput
-              value={query}
-              onValueChange={setQuery}
-              placeholder="Search…"
-            />
-          </Command>
+          <TeacherGlobalSearch />
         </div>
 
         <TeacherNotificationsBell />
@@ -155,9 +187,12 @@ function TeacherChrome({
             : `${styles.shell} ${styles.shellWithRail} ${sidebarCollapsed ? styles.shellWithRailCollapsed : ""}`
         }
       >
+        {standalone ? null : <TermScopeBanner />}
         <main className={styles.main}>{children}</main>
       </div>
     </div>
+      <RosterCarryOverOverlay />
+    </BreadcrumbExtraProvider>
   );
 }
 

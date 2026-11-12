@@ -6,8 +6,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CoordinatorCertificationsFolders } from "./components/coordinator-certifications-folders";
+import { CoordinatorCertificationsSkeleton } from "./components/coordinator-certifications-skeleton";
 import { CoordinatorCertificationsRail } from "./components/coordinator-certifications-rail";
 import {
   fetchCertApprovalRows,
@@ -90,45 +90,7 @@ function CertificationsBody() {
   };
 
   if (isPending) {
-    return (
-      <section className={styles.page} aria-busy="true" aria-label="Certifications">
-        <div className={styles.layout}>
-          <div className={styles.main}>
-            <div className={styles.skelPanel}>
-              <div className={styles.skelPanelHead}>
-                <div className={styles.skelPanelHeadText}>
-                  <div className={styles.skelPanelTitleRow}>
-                    <Skeleton className={styles.skelPanelTitle} />
-                    <Skeleton className={styles.skelHelpBtn} />
-                  </div>
-                  <Skeleton className={styles.skelPanelDesc} />
-                </div>
-                <div className={styles.skelPanelActions}>
-                  <Skeleton className={styles.skelSearch} />
-                  <Skeleton className={styles.skelDrop} />
-                </div>
-              </div>
-              <div className={styles.skelFolderGrid}>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className={styles.skelFolderCard}>
-                    <Skeleton className={styles.skelFolderBadge} />
-                    <Skeleton className={styles.skelFolder} />
-                    <Skeleton className={styles.skelFolderLabel} />
-                    <Skeleton className={styles.skelFolderSub} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.railSkel} aria-hidden>
-            {[0, 1].map((j) => (
-              <Skeleton key={j} className={styles.railSkelIcon} />
-            ))}
-          </div>
-        </div>
-      </section>
-    );
+    return <CoordinatorCertificationsSkeleton />;
   }
 
   if (isError) {

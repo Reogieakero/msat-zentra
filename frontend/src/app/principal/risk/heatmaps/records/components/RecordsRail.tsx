@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { fetchRecords } from "@/services/principal/records.service";
+import { liveQueryOptions } from "@/lib/api/live";
 import { RecordsBreakdownContent } from "./RecordsBreakdown";
 import { RecordsAttentionContent } from "./RecordsAttention";
 import styles from "./RecordsRail.module.css";
@@ -54,6 +55,7 @@ export function RecordsRail() {
 
   // Same key as the boards — TanStack dedupes the fetch.
   const { data } = useQuery({
+    ...liveQueryOptions,
     queryKey: ["records-heatmap"],
     queryFn: fetchRecords,
   });

@@ -1,6 +1,7 @@
 "use client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { ParentMeetingCard } from "../parent-meeting-card";
 import type { CoordinatorCaseDetail } from "@/services/coordinator/coordinator.types";
 import styles from "../case-page.module.css";
@@ -62,10 +63,10 @@ export function MeetingsPanel({
       </div>
       {total === 0 ? (
         <div className={styles.emptyMeeting}>
-          <p className={styles.muted}>
+          <InsightCallout>
             No meeting booked yet — schedule one in school or as a home
             visitation.
-          </p>
+          </InsightCallout>
           <Button
             size="sm"
             className="h-6 px-3 text-xs"

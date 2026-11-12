@@ -102,12 +102,12 @@
 }
 
 .interpretation {
-  margin: 0.625rem 0 0;
-  padding-left: 0.625rem;
-  border-left: 2px solid color-mix(in oklch, #f59e0b, transparent 35%);
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: var(--muted-foreground);
+  margin-top: 0.625rem;
+}
+
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
 }
 
 .empty {
@@ -149,5 +149,5 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background-color: var(--primary);
+  background-color: oklch(0.769 0.188 70.08);
 }

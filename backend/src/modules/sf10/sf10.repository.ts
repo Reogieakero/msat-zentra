@@ -50,11 +50,13 @@ export async function assertRecordAccess(recordId: string, user: { userId: strin
     where: { id: recordId },
     select: {
       id: true,
+      studentId: true,
       desk: true,
       status: true,
       verifiedBy: true,
       currentVersion: true,
       ocrExtractedData: true,
+      uploadedFileUrl: true,
       student: { select: { gradeLevel: true } },
     },
   });
@@ -65,19 +67,33 @@ export async function assertRecordAccess(recordId: string, user: { userId: strin
 
 /**
  * Adviser gate for approved SF10 read/download/edit: the adviser must hold an
- * approved `adviser_sf10_access_requests` row for the student's section.
- * Non-adviser roles are unaffected (their existing desk/grade checks apply).
+ * approved `adviser_sf10_access_requests` row for the learner. Access is keyed
+ * by LRN, not by the profile's section/grade — an SF10 record is linked to the
+ * advisee purely through the shared LRN, and the record owner's enrollment
+ * fields are never rewritten by the grant. Non-adviser roles are unaffected
+ * (their existing desk/grade checks apply).
  */
 export async function assertAdviserSf10Access(userId: string, recordId: string) {
   const record = await prisma.sf10Record.findUnique({
     where: { id: recordId },
-    select: { id: true, student: { select: { sectionId: true } } },
+    select: { id: true, student: { select: { sectionId: true, lrn: true } } },
   });
   if (!record) throw new AppError(404, "NOT_FOUND", "SF10 record not found");
   const sectionId = record.student.sectionId;
-  if (!sectionId) throw new AppError(403, "FORBIDDEN", "Approved SF10 access is required");
+  const lrn = record.student.lrn;
+  // A per-student "approve" keeps the request pending but writes the LRN into
+  // approvedLrns — that is an explicit grant for this learner wherever the
+  // record is filed. Whole-request approval covers every advisee on the
+  // request's section roster (plus the owner's section when it is still set).
   const grant = await prisma.adviserSf10AccessRequest.findFirst({
-    where: { adviserId: userId, sectionId, status: "approved" },
+    where: {
+      adviserId: userId,
+      OR: [
+        { approvedLrns: { has: lrn } },
+        { status: "approved", section: { rosterEntries: { some: { lrn } } } },
+        ...(sectionId ? [{ status: "approved" as const, sectionId }] : []),
+      ],
+    },
     select: { id: true },
   });
   if (!grant) throw new AppError(403, "FORBIDDEN", "Approved SF10 access is required");

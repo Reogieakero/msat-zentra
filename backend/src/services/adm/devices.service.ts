@@ -174,6 +174,7 @@ export async function listDevices(query: DeviceLedgerQuery) {
           select: {
             lrn: true,
             gradeLevel: true,
+            mascot: true,
             user: { select: { fullName: true } },
           },
         },
@@ -198,6 +199,7 @@ export async function listDevices(query: DeviceLedgerQuery) {
     student: d.admLearnerProfile.student.user.fullName,
     lrn: d.admLearnerProfile.student.lrn,
     grade: GRADE_LABEL[d.admLearnerProfile.student.gradeLevel] ?? d.admLearnerProfile.student.gradeLevel,
+    mascot: d.admLearnerProfile.student.mascot ?? null,
     stage: d.admLearnerProfile.stage,
     deviceType: d.deviceType,
     deviceSerial: d.deviceSerial,

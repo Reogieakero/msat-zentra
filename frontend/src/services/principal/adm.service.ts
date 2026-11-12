@@ -21,6 +21,19 @@ export async function fetchAdmReferrals(
   return res.data;
 }
 
+/** Whole endorsed-case queue in one call so the principal desk can filter it
+ *  in memory (instant search, no debounce and no stale-result stacking). */
+export async function fetchAdmReferralsCohort(
+  stage: string,
+  signal?: AbortSignal
+): Promise<AdmReferralsPage> {
+  const res = await apiClient.get<AdmReferralsPage>("/api/adm/referrals/all", {
+    signal,
+    params: { all: "1", stage },
+  });
+  return res.data;
+}
+
 export async function fetchAdmDashboard(signal?: AbortSignal): Promise<AdmDashboard | null> {
   try {
     const res = await apiClient.get<AdmDashboard>("/api/adm/dashboard", { signal });

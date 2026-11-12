@@ -3,10 +3,9 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import { FileBarChart2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { KanbanBoard } from "@/components/ui/kanban-board";
-import { Skeleton } from "@/components/ui/skeleton";
 import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { fetchAllGuidanceReferrals } from "@/services/guidance/referrals.service";
 import { fetchGuidanceRiskLevels } from "@/services/guidance/risk.service";
@@ -24,6 +23,7 @@ import {
 } from "./components/GuidanceAdmInsights";
 import { GuidanceAdmRisk } from "./components/GuidanceAdmRisk";
 import { GuidanceAdmReports } from "./components/guidance-adm-reports";
+import { GuidanceAdmSkeleton } from "./components/GuidanceAdmSkeleton";
 import pageStyles from "../pages.module.css";
 import styles from "./components/guidance-adm.module.css";
 
@@ -33,10 +33,10 @@ export default function GuidanceAdmPage() {
 
   const { data: referrals, isPending, isError, refetch, isFetching } =
     useQuery<GuidanceReferralItem[]>({
+      ...liveQueryOptions,
       queryKey: ["guidance-adm", "report", termKey],
       queryFn: () => fetchAllGuidanceReferrals(),
       placeholderData: keepPreviousData,
-      staleTime: 60_000,
       enabled: termReady,
     });
 
@@ -63,10 +63,10 @@ export default function GuidanceAdmPage() {
     isError: riskError,
     refetch: refetchRisk,
   } = useQuery<Record<string, GuidanceRiskLevel>>({
+    ...liveQueryOptions,
     queryKey: ["guidance-risk-levels", studentIds, termKey],
     queryFn: () => fetchGuidanceRiskLevels(studentIds),
     placeholderData: keepPreviousData,
-    staleTime: 300_000,
     enabled: termReady && studentIds.length > 0,
   });
 
@@ -76,30 +76,7 @@ export default function GuidanceAdmPage() {
   );
 
   if (isPending) {
-    return (
-      <section className={styles.page} aria-busy="true" aria-label="Loading referrals report">
-        <div className={styles.skelFindings} aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className={styles.skelFinding} />
-          ))}
-        </div>
-        <div
-          aria-hidden="true"
-          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(17rem, 1fr))", gap: "0.75rem" }}
-        >
-          {[0, 1, 2].map((i) => (
-            <KanbanBoard
-              key={i}
-              title={<Skeleton style={{ width: "45%", height: "0.9375rem" }} />}
-              description={<Skeleton style={{ width: "75%", height: "0.8125rem" }} />}
-            >
-              <Skeleton style={{ width: "100%", height: "168px" }} />
-              <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.625rem" }} />
-            </KanbanBoard>
-          ))}
-        </div>
-      </section>
-    );
+    return <GuidanceAdmSkeleton />;
   }
 
   if (isError || !data) {

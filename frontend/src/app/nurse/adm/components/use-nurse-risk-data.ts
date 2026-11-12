@@ -3,6 +3,7 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import {
   fetchNurseRisk,
   fetchNurseRiskFactors,
@@ -34,10 +35,10 @@ export function useNurseAdmRiskData(): NurseAdmRiskData {
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
   const riskQuery = useQuery({
+    ...liveQueryOptions,
     queryKey: ["nurse-risk", termKey],
     queryFn: ({ signal }) => fetchNurseRisk(signal),
     placeholderData: keepPreviousData,
-    staleTime: 60_000,
     enabled: termReady,
   });
 
@@ -48,18 +49,18 @@ export function useNurseAdmRiskData(): NurseAdmRiskData {
   );
 
   const levelsQuery = useQuery<Record<string, NurseRiskLevel>>({
+    ...liveQueryOptions,
     queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     placeholderData: keepPreviousData,
-    staleTime: 300_000,
     enabled: termReady && studentIds.length > 0,
   });
 
   const factorsQuery = useQuery({
+    ...liveQueryOptions,
     queryKey: ["nurse-risk-factors", studentIds, termKey],
     queryFn: () => fetchNurseRiskFactors(studentIds),
     placeholderData: keepPreviousData,
-    staleTime: 300_000,
     enabled: termReady && studentIds.length > 0,
   });
 

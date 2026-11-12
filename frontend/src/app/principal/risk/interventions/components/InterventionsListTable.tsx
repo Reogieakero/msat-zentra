@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -10,18 +10,17 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import {
-  SearchIcon,
-  ShieldCheck,
+  Search,
   Bell,
   HeartHandshake,
   Radar,
 } from "lucide-react";
 import { useTerm } from "@/lib/term/TermContext";
-import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import { KanbanBoard } from "@/components/ui/kanban-board";
-import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Input } from "@/components/ui/input";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import {
   Table,
   TableBody,
@@ -31,18 +30,19 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { toast } from "@/components/ui/sonner";
-import { PrincipalEmptyCard, PrincipalEmptyState } from "../../../components/PrincipalEmptyCard";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { riskTone } from "@/lib/labels/status-tone";
 import { Pagination } from "@/components/shared/pagination";
 import type { RiskSnapshotStudent, RiskLevelKey } from "../types";
 import { apiErrorMessage } from "@/lib/api/errors";
-import { alertGuidance, fetchInterventionStudents } from "@/services/principal/riskInterventions.service";
+import { alertGuidance, fetchInterventionCohort } from "@/services/principal/riskInterventions.service";
 import { formatElapsedShort, msSinceDate as msSinceAction } from "@/lib/clock";
 import { FactorBadges, canAlert, planStatus } from "./intervention-helpers";
 import { useInterventionFilters, type InterventionActionFilter } from "./use-intervention-filters";
 import { AlertGuidanceDialog } from "./alert-guidance-dialog";
 import styles from "./InterventionsListTable.module.css";
 import { PAGE_SIZE } from "@/components/shared/pagination";
+import { useLiveQuery } from "@/lib/api/live";
 
 const ACTION_TABS: { key: InterventionActionFilter; label: string }[] = [
   { key: "all", label: "All" },
@@ -74,43 +74,57 @@ export function InterventionsListTable() {
     setRiskFilter,
     actionFilter,
     setActionFilter,
-    hasActiveFilters,
   } = useInterventionFilters();
-  const debouncedQuery = useDebouncedValue(query, 300);
-  const { data, isPending, isError, refetch } = useQuery({
-    queryKey: ["interventions-list", termId, schoolYearId, page, debouncedQuery, riskFilter, actionFilter],
-    queryFn: ({ signal }) =>
-      fetchInterventionStudents(
-        {
-          riskLevel: riskFilter === "all" ? undefined : riskFilter,
-          q: debouncedQuery.trim() || undefined,
-          plan: actionFilter === "all" ? undefined : actionFilter,
-          // Newest engine detection first — the queue itself is ordered the
-          // same way server-side so page 1 holds the freshest flags.
-          sort: "detected",
-        },
-        page,
-        PAGE_SIZE,
-        signal,
-      ),
-    // Visited pages stay cached: back/forward navigation within the stale
+  // Live desk: the cohort changes when the risk sweep, guidance, or the
+  // adviser touches a case, so it polls while the tab is visible (20s) and the
+  // principal realtime channel invalidates instantly on Intervention changes.
+  const { data, isPending, isError, refetch } = useLiveQuery({
+    // One unfiltered cohort per term: search + tabs filter in memory so typing
+    // is instant and never stacks a second stale result set.
+    queryKey: ["interventions-list", termId, schoolYearId],
+    queryFn: ({ signal }) => fetchInterventionCohort(signal),
+    // Visited desks stay cached: back/forward navigation within the stale
     // window serves instantly with skeleton only on genuine first loads.
     staleTime: 120_000,
     gcTime: 600_000,
-    refetchOnWindowFocus: false,
   });
-  const students = React.useMemo(() => data?.students ?? [], [data]);
-  const total = data?.total ?? 0;
+  const allStudents = React.useMemo(() => data?.students ?? [], [data]);
+
+  const filteredStudents = React.useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return allStudents.filter((student) => {
+      if (riskFilter !== "all" && student.riskLevel !== riskFilter) return false;
+      if (actionFilter === "ongoing" && planStatus(student) !== "ongoing")
+        return false;
+      if (actionFilter === "none" && planStatus(student) !== "none") return false;
+      if (
+        needle &&
+        !`${student.studentName} ${student.lrn} ${student.section}`
+          .toLowerCase()
+          .includes(needle)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [allStudents, query, riskFilter, actionFilter]);
+
+  const total = filteredStudents.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
+  const students = React.useMemo(
+    () =>
+      filteredStudents.slice(
+        (safePage - 1) * PAGE_SIZE,
+        safePage * PAGE_SIZE,
+      ),
+    [filteredStudents, safePage],
+  );
 
-  // If filters shrink the result set under the current page, step back to
-  // the last valid page so footer label, requested page, and rows agree.
+  // A new search/filter always starts at page 1.
   React.useEffect(() => {
-    if (!isPending && totalPages >= 1 && page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [isPending, totalPages, page]);
+    setPage(1);
+  }, [query, riskFilter, actionFilter]);
   const columns = React.useMemo<ColumnDef<RiskSnapshotStudent>[]>(
     () => [
       {
@@ -284,19 +298,13 @@ export function InterventionsListTable() {
     setAlertTarget(null);
     setNote("");
   };
-  const isEmpty = !isPending && total === 0 && !debouncedQuery.trim() && !hasActiveFilters;
-  React.useEffect(() => {
-    setPage(1);
-  }, [debouncedQuery, riskFilter, actionFilter]);
+  const isEmpty = !isPending && allStudents.length === 0;
   if (isEmpty) {
     return (
-      <PrincipalEmptyCard
-        icon={ShieldCheck}
-        title="No at-risk students yet"
-        hint="Students flagged by the system will appear here once detected."
-        label="Intervention cases"
-        centered
-      />
+      <PageEmptyCallout>
+        No at-risk students yet. Students flagged by the system will appear here
+        once detected.
+      </PageEmptyCallout>
     );
   }
   return (
@@ -372,17 +380,18 @@ export function InterventionsListTable() {
           <Pill tone="green" label="Data source" className={styles.filterPill}>
             Adviser-shared
           </Pill>
-          <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
-            <InputGroupInput
-              placeholder="Filter students..."
+          <div className={styles.search}>
+            <Search className={styles.searchIcon} aria-hidden />
+            <Input
+              type="search"
+              placeholder="Search LRN or name"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              aria-label="Filter students"
+              aria-label="Search students"
+              className={`${styles.searchInput} rounded-[16px]`}
+              style={{ height: "2rem" }}
             />
-            <InputGroupAddon>
-              <SearchIcon />
-            </InputGroupAddon>
-          </InputGroup>
+          </div>
         </div>
       }
       footer={
@@ -395,7 +404,7 @@ export function InterventionsListTable() {
       }
     >
         {isPending ? (
-          <div className="relative overflow-x-auto rounded-md border">
+          <div className={styles.tableWrap}>
             <Table className="w-full table-fixed" aria-label="Loading intervention cases">
               <TableBody>
                 {Array.from({ length: PAGE_SIZE }).map((_, i) => (
@@ -421,28 +430,29 @@ export function InterventionsListTable() {
               Retry
             </Button>
           </div>
-        ) : students.length === 0 ? (
-          <PrincipalEmptyState
-            icon={ShieldCheck}
-            title={
-              debouncedQuery.trim() || hasActiveFilters
-                ? "No matches"
-                : "No at-risk students yet"
-            }
-            hint={
-              debouncedQuery.trim()
-                ? `No interventions match "${debouncedQuery}".`
-                : hasActiveFilters
-                  ? "No interventions match the selected filters."
-                  : "Students flagged by the system will appear here once detected."
-            }
-          />
+        ) : filteredStudents.length === 0 ? (
+          <div className={styles.noMatch}>
+            <InsightCallout role="status" className={styles.noMatchCallout}>
+              {query.trim() ? (
+                <>
+                  <strong>No interventions match “{query.trim()}”.</strong> Try a
+                  different name or LRN — or clear the search to see every
+                  intervention case.
+                </>
+              ) : (
+                <>
+                  <strong>No interventions match the selected filters.</strong>{" "}
+                  Try a different risk level or plan state.
+                </>
+              )}
+            </InsightCallout>
+          </div>
         ) : (
           <>
-            <div className="relative overflow-x-auto rounded-md border">
+            <div className={styles.tableWrap}>
               <Table className="w-full table-fixed" aria-label="Intervention cases">
                 <TableBody
-                  key={`${safePage}-${actionFilter}-${riskFilter}-${debouncedQuery}`}
+                  key={`${safePage}-${actionFilter}-${riskFilter}-${query}`}
                   className={styles.cascadeRows}
                 >
                   {table.getRowModel().rows?.length ? (

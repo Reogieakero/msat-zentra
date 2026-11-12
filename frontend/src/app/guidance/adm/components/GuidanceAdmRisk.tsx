@@ -25,7 +25,7 @@ import {
   YAxis,
 } from "recharts";
 import { KanbanBoard } from "@/components/ui/kanban-board";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Pill } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import {
   interpretCategoryMix,
@@ -41,6 +41,7 @@ import { GuidanceAdmValuePill } from "./guidance-adm-value-pill";
 import { AMBER_STEPS } from "./guidance-adm-palette";
 import type { RiskWatchData } from "../../risk/components/GuidanceRiskWatch";
 import { useGuidanceAdmRiskData } from "./use-guidance-adm-risk-data";
+import { GuidanceAdmRiskSkeleton } from "./GuidanceAdmSkeleton";
 import reportStyles from "./guidance-adm-reports.module.css";
 import styles from "./guidance-adm.module.css";
 
@@ -59,17 +60,14 @@ const LEVEL_COLORS: Record<RiskLevelBucket, string> = {
   Unassessed: AMBER_STEPS[3],
 };
 
-const TYPE_PILL =
-  "inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide";
-const TYPE_TONE: Record<string, string> = {
-  ADM: "border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-400",
-  Counseling:
-    "border-violet-500/40 bg-violet-500/15 text-violet-700 dark:text-violet-400",
-};
-const STUDENT_PILL =
-  "inline-flex min-w-0 max-w-[10rem] items-center truncate rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold leading-tight text-amber-700 dark:text-amber-400";
-const SECTION_PILL =
-  "inline-flex max-w-[7rem] items-center truncate rounded-md border border-border bg-secondary px-2 py-0.5 text-[11px] font-medium leading-tight text-secondary-foreground";
+const STUDENT_PILL = "max-w-[10rem] truncate";
+const SECTION_PILL = "max-w-[7rem] truncate";
+
+function typeTone(kind: string | null | undefined): "blue" | "violet" | "neutral" {
+  if (kind === "ADM") return "blue";
+  if (kind === "Counseling") return "violet";
+  return "neutral";
+}
 
 function BoardIcon({ icon: Icon }: { icon: LucideIcon }) {
   return (
@@ -433,14 +431,13 @@ function WhoNeedsAttention({ data }: { data: RiskWatchData }) {
                 <span className={styles.bottleneckMain}>
                   <span className={styles.bottleneckName}>
                     {s.kind ? (
-                      <span
-                        className={`${TYPE_PILL} ${
-                          TYPE_TONE[s.kind] ??
-                          "border-border bg-secondary text-secondary-foreground"
-                        }`}
+                      <Pill
+                        tone={typeTone(s.kind)}
+                        label="Referral type"
+                        className="shrink-0 uppercase tracking-wide"
                       >
                         {s.kind}
-                      </span>
+                      </Pill>
                     ) : null}
                     <span className="shrink-0" aria-hidden>
                       <StudentMascot
@@ -449,13 +446,23 @@ function WhoNeedsAttention({ data }: { data: RiskWatchData }) {
                         size={28}
                       />
                     </span>
-                    <span className={STUDENT_PILL} title={s.student}>
+                    <Pill
+                      tone="amber"
+                      label="Student"
+                      className={STUDENT_PILL}
+                      title={s.student}
+                    >
                       {s.student}
-                    </span>
+                    </Pill>
                     {s.section ? (
-                      <span className={SECTION_PILL} title={s.section}>
+                      <Pill
+                        tone="neutral"
+                        label="Section"
+                        className={SECTION_PILL}
+                        title={s.section}
+                      >
                         {s.section}
-                      </span>
+                      </Pill>
                     ) : null}
                   </span>
                   {s.drivers.length > 0 ? (
@@ -491,22 +498,7 @@ export function GuidanceAdmRisk() {
   const { isPending, dashboard, trend, watch } = useGuidanceAdmRiskData();
 
   if (isPending || !dashboard || !trend || !watch) {
-    return (
-      <div
-        className={styles.insightsGrid}
-        aria-busy="true"
-        aria-label="Loading risk dashboard"
-      >
-        {[0, 1].map((i) => (
-          <div key={i} className="flex min-w-0 flex-col gap-3">
-            <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5">
-              <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-40 w-full" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    return <GuidanceAdmRiskSkeleton />;
   }
 
   return (

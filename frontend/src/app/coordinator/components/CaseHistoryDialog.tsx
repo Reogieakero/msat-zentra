@@ -4,9 +4,9 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { History, Loader2, X } from "lucide-react";
+import { History, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AdmTrackingTimeline } from "@/components/adm-tracker/AdmTrackingTimeline";
 import type {
@@ -25,6 +25,7 @@ import type {
   AdmHistoryEvent,
 } from "@/services/coordinator/coordinator.types";
 import { stageOrder } from "@/lib/labels/adm-pipeline";
+import { toSlug } from "@/lib/slug";
 
 export interface HistoryTarget {
   title: string;
@@ -32,6 +33,20 @@ export interface HistoryTarget {
   referralId?: string;
   row: AdmCaseRow;
 }
+
+// Badge variants from `admCaseStatusVariant` mapped onto the shared pill tones.
+const STATUS_TONE: Record<
+  ReturnType<typeof admCaseStatusVariant>,
+  PillTone
+> = {
+  amber: "amber",
+  success: "green",
+  default: "blue",
+  destructive: "red",
+  secondary: "violet",
+  outline: "neutral",
+  red: "red",
+};
 
 export function historyTargetFor(row: AdmCaseRow): HistoryTarget {
   if (row.id.startsWith("referral:")) {
@@ -201,21 +216,16 @@ export function CaseHistoryDialog({
               LRN {row.lrn} · {row.grade}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-6 w-6 shrink-0 px-0"
-            onClick={onClose}
-            aria-label="Close dialog"
-          >
-            <X size={14} strokeWidth={1.8} aria-hidden />
-          </Button>
         </div>
 
         <div className="flex min-w-0 flex-wrap items-center gap-2 px-1">
-          <Badge variant={admCaseStatusVariant(caseStatus.key)} className="rounded-md">
+          <Pill
+            tone={STATUS_TONE[admCaseStatusVariant(caseStatus.key)]}
+            className="rounded-md"
+            label="Case status"
+          >
             {caseStatus.label}
-          </Badge>
+          </Pill>
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <div
               className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
@@ -291,7 +301,7 @@ export function CaseHistoryDialog({
             className="h-6 px-2.5 text-xs"
             asChild
           >
-            <Link href={`/coordinator/referrals/${encodeURIComponent(row.id)}`}>
+            <Link href={`/coordinator/referrals/${encodeURIComponent(toSlug(row.student))}`}>
               Open case file
             </Link>
           </Button>

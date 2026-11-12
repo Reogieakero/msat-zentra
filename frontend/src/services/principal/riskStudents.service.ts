@@ -1,5 +1,10 @@
 import { apiClient } from "@/lib/api/client";
-import type { BackendBoard, BackendHeatmap, BackendStudentsResult } from "./riskStudents.types";
+import type {
+  BackendBoard,
+  BackendHeatmap,
+  BackendStudent,
+  BackendStudentsResult,
+} from "./riskStudents.types";
 import { PAGE_SIZE } from "@/components/shared/pagination";
 
 // Real-time unified: no gradeMode.
@@ -23,4 +28,17 @@ export async function fetchRiskStudents(
     params,
   });
   return data;
+}
+
+/**
+ * Whole at-risk roster (High + Moderate) in one request. The principal risk
+ * desks filter and paginate it in memory so search is instant and never
+ * re-fetches while typing.
+ */
+export async function fetchAllRiskStudents(): Promise<BackendStudent[]> {
+  const { data } = await apiClient.get<{ students: BackendStudent[]; total: number }>(
+    "/api/risk/students",
+    { params: { all: 1 } },
+  );
+  return data.students;
 }

@@ -1,12 +1,13 @@
 "use client";
 import * as React from "react";
-import { BookOpen, Info, LayoutGrid } from "lucide-react";
+import { Info } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import type { ClassPick } from "@/services/teacher/studentList.types";
 import { useStudentRail } from "./components/use-student-rail";
 import { StudentTable } from "./components/student-table";
 import { SectionCards } from "./components/section-cards";
+import { useBreadcrumbExtra } from "@/components/nav/BreadcrumbExtra";
 import styles from "./components/student-list.module.css";
 export default function TeacherStudentListPage() {
   const {
@@ -22,6 +23,13 @@ export default function TeacherStudentListPage() {
     liveCountByKey,
   } = useStudentRail();
   const [cardsVisible, setCardsVisible] = React.useState(true);
+  const showCards = React.useCallback(() => setCardsVisible(true), []);
+  // Append the picked section to the shell breadcrumb while it is active.
+  const sectionCrumb = activePick
+    ? (selectedAdvisory?.name ??
+      (selectedClass ? `${selectedClass.subject} · ${selectedClass.section}` : null))
+    : null;
+  useBreadcrumbExtra(sectionCrumb, showCards);
   const handleSelect = React.useCallback(
     (pick: ClassPick) => {
       setPicked(pick);
@@ -30,47 +38,34 @@ export default function TeacherStudentListPage() {
     },
     [setPicked],
   );
-  const handleShowCards = React.useCallback(() => {
-    // Vanish the data table and bring the kanban cards back.
-    setCardsVisible(true);
-  }, []);
   if (roster.isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading student list">
         <div className={styles.mainCol}>
-          <div className={styles.sectionCardGrid} aria-hidden>
-            {[0, 1].map((i) => (
-              <div
-                key={i}
-                className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 dark:bg-muted/20"
-              >
-                <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
-              </div>
+          {/* Section/advisory cards: same grid and card anatomy as SectionCards. */}
+          <ul className={styles.sectionCardGrid} aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <li key={i} className={styles.sectionCard}>
+                <span className={styles.sectionCardHead}>
+                  <span className={styles.sectionCardHeading}>
+                    <Skeleton className="h-4 w-3/4 rounded" />
+                    <span className={styles.sectionCardMetaRow}>
+                      <Skeleton className="h-4 w-16 rounded-full" />
+                      <Skeleton className="h-4 w-12 rounded-full" />
+                    </span>
+                  </span>
+                  <Skeleton className={styles.sectionCardIcon} />
+                </span>
+                <span className={styles.sectionCardPanel}>
+                  <span className={styles.sectionCardStat}>
+                    <Skeleton className={styles.sectionCardStatIcon} />
+                    <Skeleton className="h-4 w-10 rounded-full" />
+                    <Skeleton className="h-3 w-14 rounded" />
+                  </span>
+                </span>
+              </li>
             ))}
-          </div>
-          <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-border p-2.5" aria-hidden>
-            <div className="-mx-2.5 flex items-center justify-between gap-2 border-b border-border px-3.5 pb-2">
-              <Skeleton className="h-4 w-44" />
-              <Skeleton className="h-7 w-36 shrink-0 sm:w-44" />
-            </div>
-            <div className="flex flex-col">
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <div key={i} className="flex items-center gap-2 border-t border-border px-3 py-2 first:border-t-0">
-                  <Skeleton className="h-5 w-16 shrink-0" />
-                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <Skeleton className="h-4 w-2/3" />
-                    <Skeleton className="h-3 w-1/3" />
-                  </div>
-                  <div className="flex gap-1.5">
-                    <Skeleton className="h-5 w-16" />
-                    <Skeleton className="h-5 w-20" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          </ul>
         </div>
       </section>
     );
@@ -88,21 +83,11 @@ export default function TeacherStudentListPage() {
     return (
       <section className={styles.page} aria-label="Student List">
         <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
-          <div className="w-full max-w-md rounded-xl border border-border p-2.5">
-            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-                aria-hidden="true"
-              >
-                <BookOpen size={24} className="text-muted-foreground" />
-              </span>
-              <p className="font-medium">No students to list yet</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                Your advised sections and handled subject × section cards will
-                appear here once sections are assigned to you this term.
-              </p>
-            </div>
-          </div>
+          <InsightCallout role="status" className="w-fit max-w-xl text-center">
+            <strong>No students to list yet.</strong> Your advised sections and
+            linked subject × section cards will appear here once a section is
+            assigned to you and your teacher code is linked on Classes.
+          </InsightCallout>
         </div>
       </section>
     );
@@ -136,39 +121,7 @@ export default function TeacherStudentListPage() {
     "";
   return (
     <section className={styles.page}>
-      <div className={styles.mainCol}>
-        <div className="flex min-w-0 items-start justify-end gap-3">
-          <div className="flex shrink-0 justify-end pt-1">
-            {!cardsVisible && activePick ? (
-              <div
-                className="transform-gpu transition-all delay-150 duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform motion-reduce:transition-none"
-                aria-hidden={cardsVisible || !activePick}
-              >
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleShowCards}
-                  aria-label="Show section cards"
-                >
-                  <LayoutGrid aria-hidden />
-                  Show cards
-                </Button>
-              </div>
-            ) : cardsVisible ? (
-              <div
-                role="note"
-                aria-label="How to view students"
-                className="flex w-full max-w-[220px] items-start gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-2 text-[11px] leading-snug text-blue-900 sm:max-w-[260px] dark:text-blue-200"
-              >
-                <Info size={13} aria-hidden className="mt-px shrink-0 text-blue-500" />
-                <p className="min-w-0">
-                  Click a subject or advisory card to view its student list.
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </div>
+      <div className={`${styles.mainCol}${cardsVisible ? "" : ` ${styles.mainColCompact}`}`}>
         <div
           className={`grid transform-gpu transition-[grid-template-rows,opacity,transform] delay-0 duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform motion-reduce:transition-none ${
             cardsVisible
@@ -178,7 +131,7 @@ export default function TeacherStudentListPage() {
           aria-hidden={!cardsVisible}
           inert={!cardsVisible ? true : undefined}
         >
-          <div className="min-h-0 overflow-hidden">
+          <div className="min-h-0 overflow-hidden -mt-2 pt-2">
             <SectionCards
               advisorySections={advisorySections}
               classes={classes}
@@ -213,6 +166,19 @@ export default function TeacherStudentListPage() {
           </div>
         ) : null}
       </div>
+
+      {cardsVisible ? (
+        <div
+          role="note"
+          aria-label="How to view students"
+          className="fixed bottom-4 right-4 z-30 flex w-[min(260px,calc(100vw-2rem))] items-start gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-2 text-[11px] leading-snug text-blue-900 shadow-lg backdrop-blur-sm dark:text-blue-200"
+        >
+          <Info size={13} aria-hidden className="mt-px shrink-0 text-blue-500" />
+          <p className="min-w-0">
+            Click a subject or advisory card to view its student list.
+          </p>
+        </div>
+      ) : null}
     </section>
   );
 }

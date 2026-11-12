@@ -1,12 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Trash2, Users } from "lucide-react";
+import { Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { KanbanBoard } from "@/components/ui/kanban-board";
-import { ScrollList } from "@/components/ui/scroll-list";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import { Pill } from "@/components/ui/pill";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table";
 import type { CatalogTeacher } from "./use-schedule-catalog";
 import { TeacherAddKanban } from "./teacher-add-kanban";
 import {
@@ -22,7 +28,8 @@ interface Props {
   teachers: CatalogTeacher[];
   pending?: boolean;
   loadError?: boolean;
-  onBack: () => void;
+  /** Retained for callers; the catalog no longer renders its own close action. */
+  onBack?: () => void;
   addOpen: boolean;
   onAddOpenChange: (open: boolean) => void;
   /** Hide the list — form card only. */
@@ -37,7 +44,6 @@ export function TeacherCatalogKanban({
   teachers,
   pending,
   loadError,
-  onBack,
   addOpen,
   onAddOpenChange,
   showList = true,
@@ -68,7 +74,7 @@ export function TeacherCatalogKanban({
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const handleDeleteOpen = () => {
-    // Delete mode puts a checkbox on every teacher card; the add form stays shut.
+    // Delete mode puts a checkbox on every teacher row; the add form stays shut.
     onAddOpenChange(false);
     setSelectedIds([]);
     setConfirmOpen(false);
@@ -99,34 +105,25 @@ export function TeacherCatalogKanban({
               : `${selectedIds.length} selected`}
           </span>
           <Button
-            size="sm"
-            onClick={() => setConfirmOpen(true)}
-            disabled={selectedIds.length === 0}
-            className="h-6 border border-red-600/50 bg-transparent px-3 font-sans text-red-600 hover:bg-red-600/10 hover:text-red-600 dark:border-red-500/50 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-400"
-          >
-            <Trash2 size={14} aria-hidden />
-            Delete{selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}
-          </Button>
-          <Button
-            size="sm"
+            variant="secondary"
             onClick={handleDeleteCancel}
-            className="h-6 border-transparent bg-red-600 px-3 font-sans text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
+            className="h-6 gap-1 px-2 font-sans text-[11px]"
           >
             Cancel
+          </Button>
+          <Button
+            onClick={() => setConfirmOpen(true)}
+            disabled={selectedIds.length === 0}
+            className="h-6 gap-1 px-2 font-sans text-[11px]"
+          >
+            <Trash2 size={12} aria-hidden />
+            Delete{selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}
           </Button>
         </div>
       ) : (
         <div className={styles.header}>
           <Button
-            size="sm"
-            onClick={() => onAddOpenChange(true)}
-            className="ml-auto h-6 border-transparent bg-white font-sans text-black hover:bg-neutral-200 hover:text-black dark:border-transparent dark:bg-white dark:text-black dark:hover:bg-neutral-200 dark:hover:text-black"
-          >
-            <Plus size={14} aria-hidden />
-            Add teacher
-          </Button>
-          <Button
-            size="sm"
+            variant="secondary"
             onClick={handleDeleteOpen}
             disabled={teachers.length === 0 || (addOpen && !showList)}
             title={
@@ -136,17 +133,17 @@ export function TeacherCatalogKanban({
                   ? "Close the add-teacher form to delete"
                   : "Delete a teacher"
             }
-            className="h-6 border border-red-600/50 bg-transparent px-3 font-sans text-red-600 hover:bg-red-600/10 hover:text-red-600 dark:border-red-500/50 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+            className="ml-auto h-6 gap-1 px-2 font-sans text-[11px]"
           >
-            <Trash2 size={14} aria-hidden />
+            <Trash2 size={12} aria-hidden />
             Delete teacher
           </Button>
           <Button
-            size="sm"
-            onClick={onBack}
-            className="h-6 border-transparent bg-red-600 px-3 font-sans text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
+            onClick={() => onAddOpenChange(true)}
+            className="h-6 gap-1 px-2 font-sans text-[11px]"
           >
-            Close
+            <UserPlus size={12} aria-hidden />
+            Add teacher
           </Button>
         </div>
       )}
@@ -165,87 +162,94 @@ export function TeacherCatalogKanban({
 
       {showList ? (
         pending ? (
-          <div className={styles.column} aria-busy="true" aria-label="Loading teachers">
-            <KanbanBoard title="Teachers" className="h-full">
-              <div className="flex flex-col gap-1.5">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-9 rounded-lg bg-muted" />
-                ))}
-              </div>
-            </KanbanBoard>
+          <div
+            className="flex flex-col gap-2 rounded-xl border border-border p-2.5"
+            aria-busy="true"
+            aria-label="Loading teachers"
+          >
+            <div className="h-4 w-32 rounded bg-muted" />
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-8 rounded-lg bg-muted" />
+            ))}
           </div>
         ) : loadError ? (
           <p role="alert" className="font-sans text-sm text-destructive">
             Could not load teachers.
           </p>
-        ) : teachers.length === 0 && !addOpen ? (
-          <p className="font-sans text-sm text-muted-foreground">
-            No teachers yet — add one to get started.
-          </p>
+        ) : teachers.length === 0 ? (
+          <div className="flex min-h-80 items-center justify-center">
+            <InsightCallout role="status" className="w-fit max-w-xl text-center font-sans">
+              No teachers yet — use <strong>Add teacher</strong> to build the name list.
+            </InsightCallout>
+          </div>
         ) : (
-          <div className={`${styles.column} mx-auto w-full max-w-3xl`}>
-            <KanbanBoard
-              title="Teachers"
-              icon={
-                <span className="text-amber-500" aria-hidden>
-                  <Users size={14} />
-                </span>
-              }
-              count={<span className="text-amber-600 dark:text-amber-500">{filtered.length}</span>}
-              description={`${teachers.length} name${teachers.length === 1 ? "" : "s"} total. Type a name once, pick it forever.`}
-              className="h-full"
-              toolbar={
-                <div className="px-1">
-                  <Input
-                    placeholder="Search name…"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    aria-label="Search teachers"
-                  />
-                </div>
-              }
-            >
-              {filtered.length === 0 ? (
-                <p className={styles.empty}>No matches.</p>
-              ) : (
-                <ScrollList className="max-h-[50dvh] gap-1.5 px-1" role="list" ariaLabel="Teachers">
-                  {filtered.map((t, idx) => {
-                    const checked = deleteMode && selectedIds.includes(t.id);
-                    return (
-                      <div
-                        key={t.id}
-                        role="listitem"
-                        className={`${styles.card} ${deleteMode ? "cursor-pointer" : ""} ${checked ? "border-red-500/60 bg-red-500/5 dark:border-red-500/60" : ""}`}
-                        style={{ animationDelay: `${Math.min(idx, 8) * 35}ms` }}
-                        onClick={deleteMode ? () => toggleSelect(t.id) : undefined}
-                      >
-                        {deleteMode ? (
-                          <span
-                            className="flex shrink-0 items-center"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Checkbox
-                              checked={checked}
-                              onCheckedChange={() => toggleSelect(t.id)}
-                              aria-label={`Select ${t.name} for deletion`}
-                            />
-                          </span>
-                        ) : null}
-                        <span
-                          className={`${styles.name} ${deleteMode ? "flex-1" : ""} font-sans`}
-                          title={t.name}
+          <div
+            className={`${styles.boardIn} flex min-h-80 flex-col gap-2 rounded-xl border border-border p-2.5`}
+          >
+            <div className="relative -mx-2.5 flex items-center justify-end gap-2 border-b border-border px-3 pb-2">
+              <div className="w-44 sm:w-56">
+                <Input
+                  placeholder="Search name…"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  aria-label="Search teachers"
+                  className="h-8 rounded-2xl px-3 font-sans text-[11px]"
+                />
+              </div>
+            </div>
+
+            {filtered.length === 0 ? (
+              <div className="flex flex-1 items-center justify-center">
+                <InsightCallout role="status" className="w-fit max-w-full">
+                  No teachers match “{q.trim()}” — clear the search or use{" "}
+                  <strong>Add teacher</strong> to create one.
+                </InsightCallout>
+              </div>
+            ) : (
+              <div className="px-0.5 pb-0.5">
+                <Table className={styles.table}>
+                  <TableBody key={needle || "all"}>
+                    {filtered.map((t, index) => {
+                      const checked = deleteMode && selectedIds.includes(t.id);
+                      return (
+                        <TableRow
+                          key={t.id}
+                          onClick={deleteMode ? () => toggleSelect(t.id) : undefined}
+                          className={`border-b border-border${
+                            deleteMode
+                              ? ` cursor-pointer${checked ? " bg-red-500/5 dark:bg-red-500/10" : ""}`
+                              : ""
+                          }`}
+                          style={{ animationDelay: `${40 + Math.min(index, 8) * 35}ms` }}
                         >
-                          {t.name}
-                        </span>
-                        <span className={styles.meta}>
-                          <TeacherCodePill code={t.code} />
-                        </span>
-                      </div>
-                    );
-                  })}
-                </ScrollList>
-              )}
-            </KanbanBoard>
+                          {deleteMode ? (
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={() => toggleSelect(t.id)}
+                                aria-label={`Select ${t.name} for deletion`}
+                              />
+                            </TableCell>
+                          ) : null}
+                          <TableCell className="font-medium">{t.name}</TableCell>
+                          <TableCell>
+                            <TeacherCodePill code={t.code} />
+                          </TableCell>
+                          <TableCell>
+                            <Pill
+                              tone={t.linked ? "green" : "neutral"}
+                              label={t.linked ? "Linked account" : "Name only"}
+                            >
+                              {t.linked ? "Linked" : "Name only"}
+                            </Pill>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         )
       ) : null}

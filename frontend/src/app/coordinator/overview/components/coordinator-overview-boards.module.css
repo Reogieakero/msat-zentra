@@ -1,0 +1,180 @@
+/* Three-board section under the KPI strip — same responsive rhythm as the
+   nurse / coordinator chart rows. */
+.boardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 1100px) {
+  .boardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .boardGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.railList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.railItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  min-width: 0;
+}
+
+.railItem:last-child {
+  border-bottom: none;
+}
+
+.railName {
+  min-width: 0;
+  flex: 1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.railWait {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Stage donut chart — amber slices, total in the ring, compact legend. */
+.donutRow {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.donutWrap {
+  position: relative;
+  width: 7rem;
+  min-width: 7rem;
+}
+
+.donutCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.donutTotal {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.donutLabel {
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.donutLegend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  font-size: 0.75rem;
+}
+
+.donutLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.donutSwatch {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.donutLegendName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--foreground);
+}
+
+.donutLegendValue {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Clickable booked-meeting row in the "Booked meetings" rail flyout. */
+.bookedRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.25rem;
+  border: none;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+
+.bookedRow:hover {
+  background-color: color-mix(in oklch, var(--foreground), transparent 94%);
+}
+
+/* "What it means" footer — the shared insight callout. The callout's own
+   `.callout { margin: 0 }` beats Tailwind's `mt-auto`, so the bottom pin
+   lives on this wrapper instead. */
+.footerSlot {
+  display: flex;
+  margin-top: auto;
+}
+
+/* The callout hugs its copy: the bottom pin lives on the wrapper. */
+.interpretation {
+  flex: 1;
+}
+
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}

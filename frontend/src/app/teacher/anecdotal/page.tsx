@@ -1,24 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { fetchMyRecords, type MyAnecdotalRecord } from "@/components/ocform01/folders";
 import { useTerm } from "@/lib/term/TermContext";
 import { AnecdotalEmptyKanban } from "./components/AnecdotalEmptyKanban";
+import { AnecdotalArchiveDialog } from "./components/AnecdotalArchiveDialog";
 import { AnecdotalRepoFolders } from "./components/AnecdotalRepoFolders";
-import { AnecdotalSidebar, ChatWithBamaCard, FolderLegendCard } from "./components/AnecdotalSideRail";
+import { AnecdotalRepoFoldersSkeleton } from "./components/AnecdotalRepoFoldersSkeleton";
+import { AnecdotalToolbarActions } from "./components/AnecdotalSideRail";
 import styles from "./components/anecdotal-repo.module.css";
 
 export default function TeacherAnecdotalPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const recordsQuery = useQuery<MyAnecdotalRecord[]>({
+  const recordsQuery = useLiveQuery<MyAnecdotalRecord[]>({
     queryKey: ["anecdotal-mine", termKey],
     queryFn: fetchMyRecords,
-    placeholderData: keepPreviousData,
     retry: false,
     staleTime: 60_000,
   });
@@ -26,43 +26,10 @@ export default function TeacherAnecdotalPage() {
     () => (Array.isArray(recordsQuery.data) ? recordsQuery.data : []),
     [recordsQuery.data]
   );
+  const [archiveOpen, setArchiveOpen] = React.useState(false);
 
   if (recordsQuery.isPending) {
-    return (
-      <section className={styles.page} aria-busy="true" aria-label="Loading filed records">
-        <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
-          <div className={`${styles.main} flex min-w-0 flex-col`}>
-            <div className={styles.skelPanel} aria-hidden>
-              <Skeleton className={styles.skelPanelTitle} />
-              <Skeleton className={styles.skelPanelDesc} />
-              <div className={styles.skelActions}>
-                <Skeleton className={styles.skelSearch} />
-                <Skeleton className={styles.skelBtn} />
-              </div>
-              <div className={styles.skelFolderGrid}>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex min-w-0 flex-col gap-2">
-                    <Skeleton className={styles.skelFolder} />
-                    <Skeleton className={styles.skelFolderLabel} />
-                    <Skeleton className={styles.skelFolderSub} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="hidden min-w-0 flex-col items-end gap-2 lg:flex" aria-hidden>
-            <Skeleton className="h-9 w-9 rounded-xl" />
-            <Skeleton className="h-9 w-9 rounded-xl" />
-          </div>
-        </div>
-        <div className="flex min-w-0 flex-col gap-4 lg:hidden" aria-hidden>
-          <div className={styles.skelCard}>
-            <Skeleton className={styles.skelCardTitle} />
-            <Skeleton className={styles.skelCardDesc} />
-          </div>
-        </div>
-      </section>
-    );
+    return <AnecdotalRepoFoldersSkeleton />;
   }
 
   if (recordsQuery.isError) {
@@ -93,24 +60,21 @@ export default function TeacherAnecdotalPage() {
       <section className={styles.page} aria-label="Anecdotal records">
         <div className="flex flex-1 flex-col items-center justify-center">
           <div className="w-full">
-            <AnecdotalEmptyKanban />
+            <AnecdotalEmptyKanban onOpenArchive={() => setArchiveOpen(true)} />
           </div>
         </div>
+        <AnecdotalArchiveDialog open={archiveOpen} onClose={() => setArchiveOpen(false)} />
       </section>
     );
   }
 
   return (
     <section className={styles.page}>
-      <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
-        <div className={`${styles.main} flex min-w-0 flex-col`}>
-          <AnecdotalRepoFolders records={records} />
-        </div>
-        <AnecdotalSidebar />
-      </div>
-      <div className="flex min-w-0 flex-col gap-4 lg:hidden">
-        <ChatWithBamaCard />
-        <FolderLegendCard />
+      <div className={`${styles.main} flex min-w-0 flex-col`}>
+        <AnecdotalRepoFolders
+          records={records}
+          toolbarActions={<AnecdotalToolbarActions />}
+        />
       </div>
     </section>
   );

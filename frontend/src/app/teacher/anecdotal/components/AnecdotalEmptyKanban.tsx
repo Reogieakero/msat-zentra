@@ -1,10 +1,12 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
-import { FolderOpen, Info, Plus } from "lucide-react";
+import { ArchiveRestore, FolderOpen, Info, Plus } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { Button } from "@/components/ui/button";
-import { CATEGORY_COLORS } from "./AnecdotalSideRail";
+import { Pill } from "@/components/ui/pill";
+import { getLegendEntries } from "./AnecdotalSideRail";
 import styles from "./anecdotal-empty-kanban.module.css";
 
 function BamaMascot({ size = 14 }: { size?: number }) {
@@ -16,6 +18,7 @@ function BamaMascot({ size = 14 }: { size?: number }) {
 }
 
 export interface EmptyKanbanAction {
+  key?: string;
   title: string;
   description: string;
   href: string;
@@ -24,12 +27,15 @@ export interface EmptyKanbanAction {
   newTab?: boolean;
   /** Render the CRT Bama mascot instead of the lucide icon. */
   mascot?: boolean;
+  /** Action that opens a dialog instead of navigating. */
+  onClick?: () => void;
 }
 
 const COLUMN_ACCENTS = ["text-blue-500", "text-amber-500", "text-emerald-600 dark:text-emerald-400"];
 
 const ACTIONS: EmptyKanbanAction[] = [
   {
+    key: "chat",
     title: "Chat with Bama",
     description: "File through chat — Bama drafts the GCForm-01 for you",
     href: "/teacher/chat?standalone=1",
@@ -38,13 +44,14 @@ const ACTIONS: EmptyKanbanAction[] = [
     mascot: true,
   },
   {
-    title: "New record",
-    description: "Start a fresh anecdotal filing from the chat",
-    href: "/teacher/chat?standalone=1&new=anecdotal",
-    icon: Plus,
-    newTab: true,
+    key: "archive",
+    title: "Archive records",
+    description: "Restore records you removed from this desk",
+    href: "/teacher/anecdotal",
+    icon: ArchiveRestore,
   },
   {
+    key: "folders",
     title: "Record folders",
     description: "Open per-student folders once records are stored",
     href: "/teacher/anecdotal/folders",
@@ -52,13 +59,7 @@ const ACTIONS: EmptyKanbanAction[] = [
   },
 ];
 
-const LEGEND: { key: string; label: string; hint: string; color: string }[] = [
-  { key: "behavioral", label: "Behavioral", hint: "Conduct and classroom behavior", color: CATEGORY_COLORS.behavioral },
-  { key: "bullying", label: "Bullying", hint: "Peer conflict and bullying", color: CATEGORY_COLORS.bullying },
-  { key: "academic", label: "Academic", hint: "Learning and performance", color: CATEGORY_COLORS.academic },
-  { key: "attendance", label: "Attendance", hint: "Absences and tardiness", color: CATEGORY_COLORS.attendance },
-  { key: "health", label: "Health", hint: "Wellness and clinic notes", color: CATEGORY_COLORS.health },
-];
+const LEGEND = getLegendEntries("category");
 
 function ColumnHead({
   icon,
@@ -91,35 +92,59 @@ function ColumnHead({
 
 function ActionCard({ action }: { action: EmptyKanbanAction }) {
   const Icon = action.icon;
+  const body = (
+    <>
+      <span className="flex items-center justify-between gap-2">
+        <span className="truncate font-mono text-[11px] font-medium text-muted-foreground" title={action.href}>
+          {action.href}
+        </span>
+        <span
+          className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-muted-foreground"
+          aria-hidden
+        >
+          {action.mascot ? <BamaMascot size={20} /> : <Icon size={13} />}
+        </span>
+      </span>
+      <span className="truncate text-sm font-semibold leading-snug" title={action.title}>
+        {action.title}
+      </span>
+      <span className="text-xs leading-snug text-muted-foreground">{action.description}</span>
+    </>
+  );
+  const cardClass =
+    "flex w-full min-w-0 cursor-pointer flex-col gap-1.5 rounded-lg border bg-white p-3 text-left shadow-sm transition-colors hover:border-primary/60 hover:shadow dark:bg-card";
   return (
     <li className="flex min-w-0 flex-col">
-      <Link
-        href={action.href}
-        {...(action.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-        aria-label={`Open ${action.title}${action.newTab ? " (opens in a new tab)" : ""}`}
-        className="flex min-w-0 cursor-pointer flex-col gap-1.5 rounded-lg border bg-white p-3 shadow-sm transition-colors hover:border-primary/60 hover:shadow dark:bg-card"
-      >
-        <span className="flex items-center justify-between gap-2">
-          <span className="truncate font-mono text-[11px] font-medium text-muted-foreground" title={action.href}>
-            {action.href}
-          </span>
-          <span
-            className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-muted-foreground"
-            aria-hidden
-          >
-            {action.mascot ? <BamaMascot size={20} /> : <Icon size={13} />}
-          </span>
-        </span>
-        <span className="truncate text-sm font-semibold leading-snug" title={action.title}>
-          {action.title}
-        </span>
-        <span className="text-xs leading-snug text-muted-foreground">{action.description}</span>
-      </Link>
+      {action.onClick ? (
+        <button type="button" onClick={action.onClick} aria-label={action.title} className={cardClass}>
+          {body}
+        </button>
+      ) : (
+        <Link
+          href={action.href}
+          {...(action.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          aria-label={`Open ${action.title}${action.newTab ? " (opens in a new tab)" : ""}`}
+          className={cardClass}
+        >
+          {body}
+        </Link>
+      )}
     </li>
   );
 }
 
-export function AnecdotalEmptyKanban() {
+export function AnecdotalEmptyKanban({
+  onOpenArchive,
+}: {
+  onOpenArchive?: () => void;
+} = {}) {
+  const actions = React.useMemo(
+    () =>
+      ACTIONS.map((action) =>
+        action.key === "archive" ? { ...action, onClick: onOpenArchive } : action,
+      ),
+    [onOpenArchive],
+  );
   return (
     <section aria-labelledby="anecdotal-empty-board" className={styles.section}>
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
@@ -132,7 +157,7 @@ export function AnecdotalEmptyKanban() {
           </p>
         </div>
         <div className={styles.kanbanGrid} style={{ ["--cols" as string]: 2 }}>
-        {ACTIONS.map((actionItem, i) => (
+        {actions.map((actionItem, i) => (
           <div
             key={actionItem.title}
             className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 dark:bg-muted/20"
@@ -148,22 +173,22 @@ export function AnecdotalEmptyKanban() {
               }
               title={actionItem.title}
               action={
-                i === 0 ? (
+                actionItem.key === "chat" ? (
                   <Button asChild variant="outline" className="h-6 px-2 text-[11px]">
                     <Link href="/teacher/chat?standalone=1" target="_blank" rel="noopener noreferrer">
                       Chat now
                     </Link>
                   </Button>
-                ) : i === 1 ? (
-                  <Button asChild variant="outline" className="h-6 w-6 px-0" aria-label="New record">
-                    <Link
-                      href="/teacher/chat?standalone=1&new=anecdotal"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="New record (opens in a new tab)"
-                    >
-                      <Plus aria-hidden />
-                    </Link>
+                ) : actionItem.key === "archive" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-6 gap-1 px-2 text-[11px]"
+                    onClick={onOpenArchive}
+                    disabled={!onOpenArchive}
+                  >
+                    <ArchiveRestore size={12} aria-hidden />
+                    Open
                   </Button>
                 ) : (
                   <Button asChild variant="outline" className="h-6 px-2 text-[11px]">
@@ -189,17 +214,9 @@ export function AnecdotalEmptyKanban() {
           <ul className="flex min-w-0 flex-1 flex-row flex-wrap content-center items-center justify-center gap-1.5" aria-label="Legend categories">
             {LEGEND.map((e) => (
               <li key={e.key} className="flex">
-                <span
-                  className="inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold leading-tight"
-                  style={{
-                    color: e.color,
-                    borderColor: `color-mix(in srgb, ${e.color} 40%, transparent)`,
-                    backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
-                  }}
-                  title={`${e.label} — ${e.hint}`}
-                >
+                <Pill tone={e.tone} label={e.hint}>
                   {e.label}
-                </span>
+                </Pill>
               </li>
             ))}
           </ul>

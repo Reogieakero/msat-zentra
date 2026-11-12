@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,16 +14,26 @@ import {
 } from "./components/guidance-anecdotal-siderail";
 import { GuidanceAnecdotalFolders } from "./components/guidance-anecdotal-folders";
 import type { TypeFilter } from "./components/guidance-anecdotal-filters";
-import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
-import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
-import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { fetchAllGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
+import type {
+  GuidanceAnecdotalData,
+  GuidanceAnecdotalRecord,
+} from "@/services/guidance/anecdotal.types";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import styles from "./components/guidance-anecdotal.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 import { useSearchParams } from "next/navigation";
 
-const GUIDANCE_ANECDOTAL_PAGE_SIZE = PAGE_SIZE;
+// Guidance folder boards lay out a 4×4 card grid, so they page at 16 instead of
+// the global 15 (same exception as the referrals/interventions guidance queues).
+const GUIDANCE_ANECDOTAL_PAGE_SIZE = 16;
+
+function readTypeParam(raw: string | null): TypeFilter {
+  if (raw === "adm" || raw === "ADM") return "ADM";
+  if (raw === "counseling" || raw === "Counseling") return "Counseling";
+  return "";
+}
 
 export default function GuidanceAnecdotalPage() {
   return (
@@ -38,55 +48,62 @@ function GuidanceAnecdotalPageInner() {
   const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState(searchParams.get("q") ?? "");
-  const [type, setTypeState] = React.useState<TypeFilter>(
-    searchParams.get("type") === "adm" || searchParams.get("type") === "counseling"
-      ? searchParams.get("type") as TypeFilter
-      : "",
-  );
-  const pager = useUrlPager(0, {}, { searchParam: "q", extraParams: ["q", "type"] });
-  const page = pager.page;
-  const setPage = pager.setPage;
-  const setType = React.useCallback(
-    (value: TypeFilter) => {
-      setTypeState(value);
-      pager.setFilters({ type: value === "" ? undefined : value });
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+  const [type, setTypeState] = React.useState<TypeFilter>(() =>
+    readTypeParam(searchParams.get("type")),
   );
 
-  const query = useDebouncedValue(queryInput.trim(), 300);
-
-  // Sync debounced search to the URL and reset to page 1 when it changes.
-  const firstSearchSync = React.useRef(true);
-  React.useEffect(() => {
-    if (firstSearchSync.current) {
-      firstSearchSync.current = false;
-      return;
-    }
-    pager.setFilters({ q: query || undefined });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
-
-  const handleQueryInputChange = (value: string) => {
-    setQueryInput(value);
-  };
-
-  const { data, isPending, isError, isFetching, refetch, isRefetching } =
+  // One request set for the whole queue, then search / type tabs / paging are
+  // all client-side — typing never triggers a fetch or a stale request stack.
+  const { data, isPending, isError, refetch, isRefetching } =
     useQuery<GuidanceAnecdotalData>({
-      queryKey: ["guidance-anecdotal", page, query, type, termKey],
-      queryFn: ({ signal }) =>
-        fetchGuidanceAnecdotal(
-          { q: query || undefined, type, page, pageSize: GUIDANCE_ANECDOTAL_PAGE_SIZE },
-          { signal }
-        ),
-      staleTime: 60_000,
-      placeholderData: keepPreviousData,
+      ...liveQueryOptions,
+      queryKey: ["guidance-anecdotal", "queue", termKey],
+      queryFn: ({ signal }) => fetchAllGuidanceAnecdotal({ signal }),
       enabled: termReady,
     });
 
-  const totalPages = Math.max(1, data?.totalPages ?? 1);
-  const safePage = Math.min(data?.page ?? page, totalPages);
+  const allRecords = React.useMemo<GuidanceAnecdotalRecord[]>(
+    () => (Array.isArray(data?.records) ? data.records : []),
+    [data],
+  );
+
+  const filtered = React.useMemo(() => {
+    const needle = queryInput.trim().toLowerCase();
+    return allRecords.filter((record) => {
+      if (type && record.referralType !== type) return false;
+      if (!needle) return true;
+      const haystack =
+        `${record.student} ${record.lrn} ${record.section} ${record.observer} ${record.referredBy} ${record.category}`.toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [allRecords, queryInput, type]);
+
+  const pager = useUrlPager(filtered.length, {}, {
+    searchParam: "q",
+    extraParams: ["type"],
+    pageSize: GUIDANCE_ANECDOTAL_PAGE_SIZE,
+  });
+  const page = pager.page;
+  const setPage = pager.setPage;
+
+  const handleQueryChange = (value: string) => {
+    setQueryInput(value);
+    // Local filtering is instant — only reset the pager, and skip the URL write
+    // while already on page 1 so typing never triggers router churn.
+    if (page !== 1) setPage(1);
+  };
+
+  const handleTypeChange = (value: TypeFilter) => {
+    setTypeState(value);
+    pager.setFilters({ type: value === "" ? undefined : value });
+  };
+
+  const totalPages = pager.totalPages;
+  const safePage = page;
+  const pageRecords = filtered.slice(
+    (safePage - 1) * GUIDANCE_ANECDOTAL_PAGE_SIZE,
+    safePage * GUIDANCE_ANECDOTAL_PAGE_SIZE,
+  );
 
   if (isPending) {
     return (
@@ -157,8 +174,8 @@ function GuidanceAnecdotalPageInner() {
     );
   }
 
-  const hasActiveFilters = query !== "" || type !== "";
-  if (data.total === 0 && !hasActiveFilters) {
+  const hasActiveFilters = queryInput.trim() !== "" || type !== "";
+  if (allRecords.length === 0 && !hasActiveFilters) {
     return (
       <section className={styles.page} aria-label="Anecdotal records">
         <GuidanceEmptyCard
@@ -182,20 +199,16 @@ function GuidanceAnecdotalPageInner() {
       <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
         <div className={`${styles.main} flex min-w-0 flex-col`}>
           <GuidanceAnecdotalFolders
-            records={Array.isArray(data.records) ? data.records : []}
+            records={pageRecords}
             page={safePage}
-            pageSize={data.pageSize}
-            total={data.total}
+            pageSize={GUIDANCE_ANECDOTAL_PAGE_SIZE}
+            total={filtered.length}
             totalPages={totalPages}
-            isNavigating={isFetching && !isPending}
             onPageChange={setPage}
             query={queryInput}
-            onQueryChange={handleQueryInputChange}
+            onQueryChange={handleQueryChange}
             type={type}
-            onTypeChange={(value) => {
-              setType(value);
-              setPage(1);
-            }}
+            onTypeChange={handleTypeChange}
           />
         </div>
         <GuidanceAnecdotalSidebar items={data.summary.topStudents ?? []} />

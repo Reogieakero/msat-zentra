@@ -8,9 +8,9 @@ import { useTeacherOverviewGradebook } from "@/services/teacher/overview.service
 import { gradebookSlug } from "@/lib/gradebookSlug";
 
 /**
- * Horizontal subject-gradebook switcher: one compact code card per subject
- * of the user. The picked card reads highlighted; the row lives in the
- * workspace toolbar, aligned with the search bar.
+ * Vertical subject-gradebook switcher for the workspace's left panel: one
+ * compact code card per subject of the user. The picked card reads
+ * highlighted.
  */
 export function SubjectRail({ currentId }: { currentId: string }) {
   const gradebook = useTeacherOverviewGradebook();
@@ -32,13 +32,13 @@ export function SubjectRail({ currentId }: { currentId: string }) {
 
   return (
     <div
-      className="flex min-w-0 flex-row gap-2 overflow-x-auto pb-0.5"
+      className="flex min-w-0 flex-col gap-1.5"
       role="group"
       aria-label="Subject gradebooks"
     >
       {gradebook.isPending
         ? [0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-[54px] w-40 shrink-0 rounded-lg" aria-hidden />
+            <Skeleton key={i} className="h-[54px] w-full rounded-lg" aria-hidden />
           ))
         : classes.map((c) => {
             const active = isActive(c);
@@ -51,7 +51,7 @@ export function SubjectRail({ currentId }: { currentId: string }) {
                 aria-current={active ? "page" : undefined}
                 aria-label={`${c.subject} — ${c.section}, ${c.gradeLevel}${active ? " (current)" : ""}`}
                 title={`${c.subject} — ${c.section} · ${c.gradeLevel}`}
-                className={`flex min-w-0 max-w-52 shrink-0 cursor-pointer flex-col justify-center gap-1 rounded-lg border px-2.5 py-1.5 text-left transition-colors ${
+                className={`flex min-w-0 w-full cursor-pointer flex-col justify-center gap-1 rounded-lg border px-2.5 py-1.5 text-left transition-colors ${
                   active
                     ? "border-amber-500/60 bg-amber-500/10"
                     : "border-border bg-card hover:border-amber-500/60 hover:bg-amber-500/10"

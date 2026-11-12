@@ -25,12 +25,12 @@ import menuStyles from "../../../classes/components/timetable-menu.module.css";
 // Flyout panel — same look as the classes icon-rail menus: solid surface,
 // shadow + ring, smooth open/close. Anchored left of the gutter icon.
 const MENU_PANEL =
-  "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
+  "absolute top-full right-0 z-50 mt-2 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
 
 // Wider variant for the weights editor so the three category cards fit
 // without wrapping or clipping. Capped to the viewport on small screens.
 const WEIGHTS_PANEL =
-  "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-[calc(100vw-6rem)] max-w-[28rem] overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-[28rem]";
+  "absolute top-full right-0 z-50 mt-2 max-h-[calc(100dvh-6rem)] w-[calc(100vw-6rem)] max-w-[28rem] overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-[28rem]";
 
 function WeightsDonut({ ww, pt, exam }: { ww: number; pt: number; exam: number }) {
   const total = ww + pt + exam;
@@ -78,23 +78,23 @@ export type WorkspaceView = "scores" | "finals";
 
 function GutterIconButton({
   label,
+  text,
   expanded,
   onToggle,
   disabled,
   children,
-  ref,
   ...triggerProps
 }: {
   label: string;
+  /** Visible button text when it should differ from the aria label. */
+  text?: string;
   expanded: boolean;
   onToggle: () => void;
   disabled?: boolean;
   children: React.ReactNode;
-  ref?: React.Ref<HTMLButtonElement>;
 } & Omit<React.ComponentPropsWithoutRef<"button">, "onClick" | "aria-label">) {
   return (
-    <button
-      ref={ref}
+    <Button
       type="button"
       {...triggerProps}
       onClick={disabled ? undefined : onToggle}
@@ -102,16 +102,15 @@ function GutterIconButton({
       aria-expanded={expanded}
       aria-haspopup="dialog"
       aria-label={expanded ? `Close ${label}` : `Open ${label}`}
-      className={`relative flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
-        disabled
-          ? "cursor-not-allowed border-border bg-card opacity-40"
-          : expanded
-            ? "cursor-pointer border-amber-500/60 bg-amber-500/10"
-            : "cursor-pointer border-border bg-card hover:border-amber-500/60 hover:bg-amber-500/10"
+      variant={expanded ? "default" : "secondary"}
+      size="xs"
+      className={`relative h-6 rounded-[6px] px-3 text-xs ${
+        disabled ? "pointer-events-none opacity-40" : ""
       }`}
     >
       {children}
-    </button>
+      <span className="whitespace-nowrap">{text ?? label}</span>
+    </Button>
   );
 }
 
@@ -201,7 +200,7 @@ export function WorkspaceGutter({
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div ref={railRef} className="flex flex-row justify-end gap-2 lg:flex-col lg:items-end">
+      <div ref={railRef} className="flex flex-row flex-wrap items-center justify-end gap-1.5">
         <div className="relative">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -412,6 +411,7 @@ export function WorkspaceGutter({
             <TooltipTrigger asChild>
               <GutterIconButton
                 label={unlockCount > 0 ? `Lock grades (${unlockCount})` : "Lock grades"}
+                text="Lock grades"
                 expanded={openKey === "lock"}
                 onToggle={() => toggle("lock")}
                 disabled={unlockCount === 0}

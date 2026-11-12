@@ -52,6 +52,9 @@ export interface GuidanceReferralItem {
 
   studentId: string | null;
 
+  /** Persisted sprite mascot; null falls back to the `${name}:${lrn}` pick. */
+  mascot?: string | null;
+
   type: string;
   category: string;
   referredBy: string;
@@ -75,6 +78,8 @@ export interface GuidanceReferralItem {
   sessions: CounselingSessionItem[];
   completedSessions: number;
 
+  /** When the referral was filed (null for legacy rows with no audit trail). */
+  referredAt?: string | null;
   lastActionAt: string;
   lastActionType: string;
 

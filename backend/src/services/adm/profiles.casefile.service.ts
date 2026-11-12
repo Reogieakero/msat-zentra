@@ -1,10 +1,55 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { GRADE_LABEL, formatMeetingAttachment, meetingInviteeInclude, meetingInviteeList } from "../../modules/adm/adm.repository.js";
+import { caseSlug } from "./monitoring.service.js";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The coordinator desk addresses a case by the learner's name
+ * (`ma-juana-dela-cruz`), never the UUID, so shared links stay readable.
+ * Legacy UUID / `referral:` links still resolve. The newest profile wins.
+ */
+async function resolveCaseSlug(slug: string): Promise<string> {
+  const needle = slug.trim().toLowerCase();
+  if (!needle) throw new AppError(404, "NOT_FOUND", "ADM case not found");
+
+  const profiles = await prisma.admLearnerProfile.findMany({
+    select: {
+      id: true,
+      student: { select: { user: { select: { fullName: true } } } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const profile = profiles.find(
+    (p) => caseSlug(p.student.user.fullName) === needle,
+  );
+  if (profile) return profile.id;
+
+  // Referral-only cases (no learner profile yet) resolve too.
+  const referrals = await prisma.referral.findMany({
+    select: {
+      id: true,
+      student: { select: { user: { select: { fullName: true } } } },
+      roster: { select: { fullName: true } },
+    },
+    orderBy: { id: "desc" },
+  });
+  const referral = referrals.find(
+    (r) =>
+      caseSlug(r.student?.user.fullName ?? r.roster?.fullName ?? "") === needle,
+  );
+  if (referral) return `referral:${referral.id}`;
+
+  throw new AppError(404, "NOT_FOUND", "ADM case not found");
+}
 
 export async function getCaseFile(id: string) {
-  const raw = id;
   const referralPrefix = "referral:";
+  let raw = id;
+  if (!raw.startsWith(referralPrefix) && !UUID_RE.test(raw)) {
+    raw = await resolveCaseSlug(raw);
+  }
   const asReferralId = raw.startsWith(referralPrefix)
     ? raw.slice(referralPrefix.length)
     : null;

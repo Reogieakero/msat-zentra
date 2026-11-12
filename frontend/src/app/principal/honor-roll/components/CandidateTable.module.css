@@ -27,6 +27,65 @@
   outline-offset: 2px;
 }
 
+/* ---- Panel (replaces the former parent kanban board card) ---- */
+.panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.panelTitleBlock {
+  min-width: 0;
+  flex: 1 1 20rem;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.panelIcon {
+  display: inline-flex;
+  color: var(--amber-600, #d97706);
+}
+
+.panelDesc {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.panelTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.panelFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+
 /* ---- Awardee grid: one mini kanban board per student ---- */
 .grid {
   display: grid;
@@ -187,6 +246,20 @@
   color: var(--muted-foreground);
 }
 
+/* No search hit — amber insight callout, same as the other principal desks. */
+.noMatch {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding: 1.5rem 0.25rem;
+}
+
+.noMatchCallout {
+  width: 100%;
+  max-width: 36rem;
+  text-align: left;
+}
+
 /* Boards cascade in on mount — same entrance as the academics roster. */
 @keyframes board-in {
   from {
@@ -312,28 +385,63 @@
   color: var(--foreground);
 }
 
-/* ---- Loading skeleton ---- */
-.skeletonCard {
-  height: 7.5rem;
+/* ---- Loading skeleton: exact card anatomy ---- */
+.skeletonBoard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0.875rem 0.875rem;
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background-color: color-mix(in oklch, var(--muted), transparent 55%);
-  animation: pulse 1.5s ease-in-out infinite;
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent);
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
+.skeletonHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0 -0.875rem;
+  padding: 0 0.875rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.skeletonMascot {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+
+.skeletonIdentity {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.skeletonPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.skeletonFoot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.375rem;
+  margin-top: auto;
+  padding-top: 0.375rem;
+  border-top: 1px dashed var(--border);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .board,
   .grid > .board,
-  .skeletonCard {
+  .skeletonBoard {
     animation: none;
     transition: none;
   }

@@ -13,6 +13,7 @@ import {
   fetchRecords,
 } from "@/services/principal/records.service";
 import styles from "./RecordsOverview.module.css";
+import { liveQueryOptions } from "@/lib/api/live";
 
 const chartConfig = {
   value: { label: "Records", color: "var(--chart-1)" },
@@ -86,6 +87,7 @@ function DonutTooltip({
  */
 export function RecordsBreakdownContent() {
   const { data, isPending, isError } = useQuery({
+    ...liveQueryOptions,
     queryKey: ["records-heatmap"],
     queryFn: fetchRecords,
   });

@@ -4,8 +4,16 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
+import { markRealtimeUpdate } from "@/lib/api/fresh";
 import { toast } from "@/components/ui/sonner";
 import { coordinatorNotificationTitle } from "@/lib/notifications/label";
+import {
+  isIncomingReferral,
+  isReferralCancelled,
+  playDeskSound,
+  primeDeskSounds,
+} from "@/lib/notify/deskSounds";
+import { useDeskCatchUp } from "@/lib/notify/deskCatchUp";
 
 const COORDINATOR_KEYS = [
   ["coordinator-dashboard"],
@@ -91,22 +99,40 @@ export function useCoordinatorRealtime(enabled = true) {
   const trailingTimer = React.useRef<number | null>(null);
   const seenIds = React.useRef<Set<string>>(new Set());
   const realtimeOk = React.useRef(false);
+  const deskUserId = enabled ? currentUserId() : null;
+
+  // Login catch-up: ADM referrals that landed while the coordinator was signed
+  // out ring once on arrival instead of rejoining the backlog in silence.
+  useDeskCatchUp({
+    role: "coordinator",
+    userId: deskUserId,
+    enabled,
+    title: "New ADM referrals on the coordinator desk",
+    clipFor: (row) =>
+      isReferralCancelled(row) ? "cancelled" : isIncomingReferral(row) ? "referral" : null,
+  });
 
   React.useEffect(() => {
     if (!enabled) return;
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
     const userId = currentUserId();
     if (!userId) return;
+    primeDeskSounds(["referral", "cancelled"]);
     let channel: { unsubscribe: () => void } | null = null;
     let cancelled = false;
 
-    function notify(row: CoordinatorNotification) {
+    function notify(row: CoordinatorNotification, { silent = false } = {}) {
       if (!row || row.userId !== userId || seenIds.current.has(row.id)) return;
       seenIds.current.add(row.id);
 
       const selfConfirmed =
         !!row.sourceId && Date.now() - (selfSaved.get(row.sourceId) ?? 0) < SELF_SUPPRESS_MS;
+      // A new ADM referral landed on — or was withdrawn from — this desk.
       if (!selfConfirmed) {
+        if (isReferralCancelled(row)) playDeskSound("cancelled");
+        else if (isIncomingReferral(row)) playDeskSound("referral");
+      }
+      if (!selfConfirmed && !silent) {
         toast.info({
           title: coordinatorNotificationTitle({
             type: row.type,
@@ -129,7 +155,10 @@ export function useCoordinatorRealtime(enabled = true) {
             event: "INSERT",
             schema: "public",
             table: "Notification",
-            filter: `userId=eq.${userId}`,
+            // No `filter`: Supabase Realtime cannot filter on the camelCase
+            // "userId" column (it lowercases it, the binding is rejected and
+            // takes the whole channel's CDC stream down). Notification is RLS-
+            // scoped to the caller's rows; `notify()` drops other users' rows.
           },
           (payload) => {
             notify((payload as unknown as { new?: CoordinatorNotification }).new as CoordinatorNotification);
@@ -148,7 +177,10 @@ export function useCoordinatorRealtime(enabled = true) {
 
     let seeded = false;
     async function poll() {
-      if (cancelled || document.hidden) return;
+      // Runs while hidden too: a fanout notification must still land (and toast
+      // on return) when the desk is in another tab or another site. This is the
+      // fallback for a socket that is down or blocked by RLS.
+      if (cancelled) return;
       try {
         const { data } = await apiClient.get<CoordinatorNotification[]>(
           "/api/notifications/",
@@ -163,9 +195,12 @@ export function useCoordinatorRealtime(enabled = true) {
         const fresh = mine.filter((n) => !seenIds.current.has(n.id));
         if (fresh.length === 0) return;
 
-        const ordered = [...fresh].reverse().slice(0, MAX_TOASTS_PER_POLL);
-        for (const n of ordered) notify(n);
-
+        const ordered = [...fresh].reverse();
+        // Only the newest few toast; the overflow still routes through
+        // `notify()` silently, because that is what rings the referral /
+        // cancelled clip — a burst used to be dropped by the toast cap.
+        ordered.slice(0, MAX_TOASTS_PER_POLL).forEach((n) => notify(n));
+        ordered.slice(MAX_TOASTS_PER_POLL).forEach((n) => notify(n, { silent: true }));
         for (const n of fresh) seenIds.current.add(n.id);
         void invalidate(fresh);
       } catch {
@@ -183,7 +218,7 @@ export function useCoordinatorRealtime(enabled = true) {
     document.addEventListener("visibilitychange", onFocus);
 
     function invalidate(rows?: CoordinatorNotification[]) {
-
+      markRealtimeUpdate();
       const now = Date.now();
       if (rows) {
         for (const row of rows) pendingRows.current.push(row);

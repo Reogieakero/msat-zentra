@@ -14,6 +14,7 @@ import {
   reviewAdmConsultation,
 } from "@/services/guidance/adm.service";
 import { dismissReferral } from "@/services/guidance/referrals.service";
+import { fetchDaySchedule } from "@/services/guidance/sessions.service";
 import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
 
 export interface AdmReviewCaseInfo {
@@ -190,6 +191,7 @@ export function AdmReviewDialog({
         recommendationRequired: "Write your recommendation first — the record needs it.",
         rejectFailed: "Could not reject this case. Try again.",
       }}
+      fetchTakenTimes={(dateKey, signal) => fetchDaySchedule(dateKey, { signal })}
       onBookSession={bookSessionOnly}
       onReject={decideReject}
       onCreateReferral={goToReferralForm}

@@ -52,10 +52,28 @@ export async function assertSubjectAccess(teacherId: string, subjectId: string, 
     },
     select: { id: true },
   });
-  if (!linked) {
+  if (linked) return linked;
+  // Classes carry across the terms of a school year (see
+  // resolveTeacherClassPairs), so a subject paired with this teacher in any
+  // term of the same year is still accessible now.
+  const schoolYearId = (
+    await prisma.term.findUnique({ where: { id: termId }, select: { schoolYearId: true } })
+  )?.schoolYearId;
+  const carried = schoolYearId
+    ? await prisma.sectionTimetableEntry.findFirst({
+        where: {
+          subjectId,
+          status: { in: ["APPROVED", "SUBMITTED"] },
+          teacherName: { userId: teacherId },
+          term: { schoolYearId },
+        },
+        select: { id: true },
+      })
+    : null;
+  if (!carried) {
     throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
   }
-  return linked;
+  return carried;
 }
 
 export async function assertAssignment(teacherId: string, assignmentId: string, termId: string) {
@@ -92,7 +110,26 @@ export async function assertAssignment(teacherId: string, assignmentId: string, 
       select: { subjectId: true, sectionId: true },
     });
     if (!linked) {
-      throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
+      // Classes carry across the school year: the pair may only have been
+      // timetabled in an earlier term (the list comes from there too).
+      const schoolYearId = (
+        await prisma.term.findUnique({ where: { id: termId }, select: { schoolYearId: true } })
+      )?.schoolYearId;
+      const carried = schoolYearId
+        ? await prisma.sectionTimetableEntry.findFirst({
+            where: {
+              subjectId,
+              sectionId,
+              status: { in: ["APPROVED", "SUBMITTED"] },
+              teacherName: { userId: teacherId },
+              term: { schoolYearId },
+            },
+            select: { subjectId: true, sectionId: true },
+          })
+        : null;
+      if (!carried) {
+        throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
+      }
     }
     const [subject, section, term] = await Promise.all([
       prisma.subject.findUnique({

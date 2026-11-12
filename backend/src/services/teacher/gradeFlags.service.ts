@@ -4,6 +4,11 @@ import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { runEscalation } from "../gradeFlags.js";
 import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
+import {
   flagInclude,
   serializeFlag,
   teacherScope,
@@ -90,9 +95,13 @@ export async function listFlags(ctx: TeacherContext, query: FlagListQuery) {
     if (advised.length === 0) {
       throw new AppError(403, "FORBIDDEN", "Adviser scope requires an advisory section");
     }
+    const archivedLearners = await archivedAdvisoryLearnerIds();
     const adviseeIds = (
       await prisma.studentProfile.findMany({
-        where: { sectionId: { in: advised.map((s) => s.id) } },
+        where: {
+          sectionId: { in: advised.map((s) => s.id) },
+          ...excludeArchivedProfiles(archivedLearners),
+        },
         select: { userId: true },
       })
     ).map((s) => s.userId);
@@ -128,9 +137,10 @@ export async function getFlagOptions(ctx: TeacherContext, query: FlagOptionsQuer
   const scopeTermId = query.termId;
   const termFilter = scopeTermId ? { termId: scopeTermId } : {};
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [profiles, rosterEntries, assignments, sectionClasses, timetableEntries] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         userId: true,
         lrn: true,
@@ -141,7 +151,7 @@ export async function getFlagOptions(ctx: TeacherContext, query: FlagOptionsQuer
     }),
 
     prisma.studentRoster.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedRosters(archivedLearners) },
       select: { id: true, lrn: true, fullName: true, sectionId: true },
       orderBy: { fullName: "asc" },
     }),

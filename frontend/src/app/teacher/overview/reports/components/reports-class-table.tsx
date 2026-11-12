@@ -2,6 +2,7 @@
 
 import { GraduationCap } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { Pill } from "@/components/ui/pill";
 import type { FinalsLockStatus, TeacherReportClassRow } from "@/services/teacher/reports.types";
 import { formatGrade, formatPercent, LOCK_LABELS } from "./reports-format";
@@ -31,13 +32,19 @@ export function ReportsClassTable({ rows }: { rows: TeacherReportClassRow[] }) {
       ariaLabel="Class performance"
     >
       {rows.length === 0 ? (
-        <p className={styles.empty}>No classes in this term yet.</p>
+        <InsightCallout role="status" className="w-full text-left">
+          <strong>No classes to report on yet.</strong> Assigned sections and
+          subjects will show their completion, averages, and attendance here.
+        </InsightCallout>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
                 <th scope="col">Class</th>
+                <th scope="col">Code</th>
+                <th scope="col">Section</th>
+                <th scope="col">Grade</th>
                 <th scope="col">Your role</th>
                 <th scope="col">Learners</th>
                 <th scope="col">Assessments</th>
@@ -53,21 +60,23 @@ export function ReportsClassTable({ rows }: { rows: TeacherReportClassRow[] }) {
                 <tr key={row.id}>
                   <td>
                     <span className={styles.classCell}>
-                      <span className={styles.classNameRow}>
-                        <span className={styles.className}>{row.subject}</span>
-                        <Pill tone="blue" label="Subject code">
-                          {row.subjectCode}
-                        </Pill>
-                      </span>
-                      <span className={styles.chips}>
-                        <Pill tone="amber" label="Section">
-                          {row.section}
-                        </Pill>
-                        <Pill tone="neutral" label="Grade level">
-                          {row.gradeLevel}
-                        </Pill>
-                      </span>
+                      <span className={styles.className}>{row.subject}</span>
                     </span>
+                  </td>
+                  <td>
+                    <Pill tone="blue" label="Subject code">
+                      {row.subjectCode}
+                    </Pill>
+                  </td>
+                  <td>
+                    <Pill tone="amber" label="Section">
+                      {row.section}
+                    </Pill>
+                  </td>
+                  <td>
+                    <Pill tone="neutral" label="Grade level">
+                      {row.gradeLevel}
+                    </Pill>
                   </td>
                   <td>
                     <Pill

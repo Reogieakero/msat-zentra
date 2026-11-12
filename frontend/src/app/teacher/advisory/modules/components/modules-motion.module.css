@@ -1,0 +1,53 @@
+/* Adviser Modules loaded state — content entrance.
+   The section fades in, then the cards cascade top-left → bottom-right so a
+   filter/section switch feels deliberate instead of a hard cut. Matches the
+   existing advisory board motion (ease-out cubic-bezier, staggered delays)
+   and is fully disabled under prefers-reduced-motion. */
+
+.reveal {
+  animation: modules-reveal 180ms ease-out both;
+}
+
+.card {
+  animation: modules-card-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* --card-index is capped by the caller so a full page (15 cards) never
+     leaves the last card waiting too long. */
+  animation-delay: calc(var(--card-index, 0) * 40ms);
+  will-change: transform, opacity;
+}
+
+/* Content switches (edit / filter / pagination) should feel immediate, so
+   hover feedback stays faster than the entrance. */
+.card:hover {
+  transition:
+    border-color 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+
+@keyframes modules-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modules-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .card {
+    animation: none;
+    will-change: auto;
+  }
+}

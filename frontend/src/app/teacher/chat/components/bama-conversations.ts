@@ -1,9 +1,10 @@
-export type BamaChatType = "grade-flag" | "anecdotal" | "sf10-access";
+export type BamaChatType = "grade-flag" | "anecdotal" | "sf10-access" | "sf10-autofill";
 
 export const BAMA_CHAT_TYPES: { key: BamaChatType; label: string }[] = [
   { key: "grade-flag", label: "Grade Flag" },
   { key: "anecdotal", label: "Anecdotal Record" },
   { key: "sf10-access", label: "SF10 Access" },
+  { key: "sf10-autofill", label: "SF10 Auto-fill" },
 ];
 
 export interface BamaMessage {
@@ -20,6 +21,18 @@ export interface BamaMessage {
   detail?: BamaRecordCard & { recordId: string };
   sf10Preview?: Sf10RequestCard;
   sf10Detail?: Sf10RequestCard & { requestId: string };
+  sf10AutofillDetail?: Sf10AutofillDetailCard;
+}
+
+export interface Sf10AutofillDetailCard {
+  section: string;
+  schoolYear: string;
+  studentCount: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  filedOn: string;
+  results: { name: string; status: "updated" | "skipped" | "failed"; message: string }[];
 }
 
 export interface BamaRecordCard {
@@ -35,6 +48,8 @@ export interface BamaRecordCard {
   attendanceSummary: string;
   observationDateTime: string;
   filedOn: string;
+  /** Preview belongs to an edit of an existing record (chat edit mode). */
+  editing?: boolean;
 }
 
 export interface Sf10RequestCard {
@@ -79,7 +94,12 @@ export function createConversation(type: BamaChatType, title = "New chat"): Bama
 }
 
 function isValidType(value: unknown): value is BamaChatType {
-  return value === "grade-flag" || value === "anecdotal" || value === "sf10-access";
+  return (
+    value === "grade-flag" ||
+    value === "anecdotal" ||
+    value === "sf10-access" ||
+    value === "sf10-autofill"
+  );
 }
 
 function isValidMessage(m: unknown): m is BamaMessage {

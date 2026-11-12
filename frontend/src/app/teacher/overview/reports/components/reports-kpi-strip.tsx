@@ -145,22 +145,28 @@ export function ReportsKpiStrip({ summary }: { summary: TeacherReportsPayload["s
         />
         <ReportsStatColumn
           icon={<AlertTriangle size={14} className="text-red-500" />}
-          title="Learners at risk"
-          value={String(summary.atRisk)}
+          title="High-risk learners"
+          value={String(summary.highRisk)}
           hint={
             <span className={styles.chips}>
-              <Pill tone={summary.highRisk > 0 ? "red" : "green"} label="High risk learners">
-                {summary.highRisk} high
+              <Pill
+                tone={summary.highRiskAdvisees > 0 ? "red" : "green"}
+                label="High-risk advisees"
+              >
+                {summary.highRiskAdvisees} advisees
               </Pill>
-              <Pill tone={summary.openFlags > 0 ? "amber" : "neutral"} label="Open grade flags">
-                {summary.openFlags} open flags
+              <Pill
+                tone={summary.highRiskSubjectStudents > 0 ? "red" : "green"}
+                label="High-risk subject students"
+              >
+                {summary.highRiskSubjectStudents} subject students
               </Pill>
             </span>
           }
-          hintText={`${summary.highRisk} high, ${summary.openFlags} open flags`}
-          tooltip="Learners flagged by the live risk engine this term"
-          valueTone={summary.atRisk === 0 ? "positive" : "danger"}
-          mascot={<StudentMascot name="Learners at risk" character="knight" size={36} />}
+          hintText={`${summary.highRiskAdvisees} advisees, ${summary.highRiskSubjectStudents} subject students`}
+          tooltip="High-risk learners in your advisory section and in the subject classes assigned to you this term"
+          valueTone={summary.highRisk === 0 ? "positive" : "danger"}
+          mascot={<StudentMascot name="High-risk learners" character="knight" size={36} />}
           action={
             <Link className={styles.statBtn} href="/teacher/overview/students">
               Review learners

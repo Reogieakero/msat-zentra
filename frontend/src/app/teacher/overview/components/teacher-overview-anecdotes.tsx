@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import * as React from "react";
 import { NotebookPen } from "lucide-react";
 import { Pill } from "@/components/ui/pill";
@@ -11,6 +11,7 @@ import {
   humanizeCategory,
 } from "@/components/anecdotal/anecdotal-record-kanban-card";
 import { apiClient } from "@/lib/api/client";
+import { liveQueryOptions } from "@/lib/api/live";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
@@ -37,7 +38,7 @@ export function TeacherOverviewAnecdotes() {
   const session = useSession();
   const teacherId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const anecdotesQuery = useQuery({
+  const anecdotesQuery = useLiveQuery({
     // Term-scoped: never show Term A anecdotes for Term B.
     // Cached 30s / GC 5m like the rest of teacher overview.
     queryKey: ["teacher-anecdotes", teacherId ?? "anon", termKey],
@@ -50,7 +51,7 @@ export function TeacherOverviewAnecdotes() {
     staleTime: 30_000,
     gcTime: 5 * 60_000,
     placeholderData: (previous) => previous,
-    refetchOnWindowFocus: false,
+    ...liveQueryOptions,
   });
 
   const rows = (anecdotesQuery.data ?? []).slice(0, 5);

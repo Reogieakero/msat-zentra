@@ -128,7 +128,7 @@ export function SessionListDialog({
 
         <div className={board.scroll}>
           <div className={board.caseStrip}>
-            <StudentMascot name={row.student} seed={row.lrn} size={36} />
+            <StudentMascot name={row.student} seed={row.lrn} character={row.mascot ?? undefined} size={36} />
             <div className={board.caseText}>
               <span className={board.caseName}>{row.student}</span>
               <div className={board.casePills}>

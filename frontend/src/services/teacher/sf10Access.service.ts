@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { apiClient } from "@/lib/api/client";
 
 export type AccessStatus = "pending" | "approved" | "denied";
@@ -16,6 +16,8 @@ export interface MyAccessRequest {
   decisionReason: string | null;
   requestedAt: string;
   decidedAt: string | null;
+  /** Term the request was filed in (null when term dates are missing). */
+  termNumber: number | null;
   total: number;
   has: number;
   missing: number;
@@ -29,6 +31,8 @@ export interface VerificationRecord {
   verifiedAt: string | null;
   validatedAt: string | null;
   currentVersion: number;
+  /** Most recent Bama auto-fill render, kept separate from the original file. */
+  autoFill: { fileUrl: string; version: number; at: string | null } | null;
 }
 
 export interface HasRow {
@@ -44,6 +48,8 @@ export interface HasRow {
   approved: boolean;
   /** ISO timestamp of the per-student grant, if granted individually. */
   approvedAt?: string | null;
+  /** Term the SF10 access was granted in — shared across the school year. */
+  grantedTermNumber?: number | null;
   record: VerificationRecord | null;
 }
 
@@ -97,7 +103,7 @@ export async function fetchMyVerification(requestId: string): Promise<Verificati
 }
 
 export function useMyAccessRequests(enabled = true) {
-  return useQuery<MyAccessRequest[]>({
+  return useLiveQuery<MyAccessRequest[]>({
     queryKey: ["teacher-sf10-access"],
     queryFn: fetchMyAccessRequests,
     enabled,
@@ -106,7 +112,7 @@ export function useMyAccessRequests(enabled = true) {
 }
 
 export function useMyVerification(requestId: string | null) {
-  return useQuery<VerificationResult>({
+  return useLiveQuery<VerificationResult>({
     queryKey: ["teacher-sf10-access", requestId, "records"],
     queryFn: () => fetchMyVerification(requestId as string),
     enabled: !!requestId,

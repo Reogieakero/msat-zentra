@@ -1,10 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Inbox, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { GuidancePageHeader } from "../../components/GuidancePageHeader";
 import { GuidanceEmptyCard } from "../../components/GuidanceEmptyCard";
@@ -13,12 +12,15 @@ import type { GuidanceReferralsData } from "@/services/guidance/guidance.types";
 import { GuidanceReferralsTable } from "./guidance-referrals-table";
 import { GuidanceReferralsSkeleton } from "./GuidanceReferralsSkeleton";
 import {
+  buildGuidanceSummary,
+  matchesGuidanceFilters,
   resolveActionParams,
   type GuidanceAction,
   type GuidanceTypeFilter,
 } from "./guidance-referrals-format";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 import { useSearchParams } from "next/navigation";
 import styles from "./guidance-referrals.module.css";
@@ -108,51 +110,45 @@ export function GuidanceReferralsView({
       ? "adm"
       : lockedType === "Counseling"
         ? "counseling"
-        : action !== ""
-          ? actionParams.type
-          : typeFilter === "ADM"
-            ? "adm"
-            : typeFilter === "Counseling"
-              ? "counseling"
-              : "";
-  const statusParam = actionParams.status || undefined;
-  const bookedParam = actionParams.booked || undefined;
-  const completedParam = actionParams.completed || undefined;
-  const openParam = actionParams.open || undefined;
+        : typeFilter === "ADM"
+          ? "adm"
+          : typeFilter === "Counseling"
+            ? "counseling"
+            : "";
 
+  /* Action tabs filter the already-loaded page, exactly like the nurse ADM
+     board: no refetch, no stale board. Only the type + search hit the API. */
+  const requestedPage = takeover || !locked ? page : 1;
   const queryKey = [
     "guidance-referrals",
-    takeover || !locked ? page : 1,
+    requestedPage,
     debounced,
-    statusParam ?? "",
     effType,
-    bookedParam ?? false,
-    completedParam ?? false,
-    openParam ?? false,
     termKey,
     landing ? (highlightId ?? "") : "",
   ];
 
   const referralsQuery = useQuery<GuidanceReferralsData>({
+    ...liveQueryOptions,
     queryKey,
     queryFn: ({ signal }) =>
       fetchGuidanceReferrals(
         {
           q: debounced || undefined,
-          status: statusParam,
           type: effType || undefined,
-          booked: bookedParam,
-          completed: completedParam,
-          open: openParam,
-          page: takeover || !locked ? page : 1,
+          page: requestedPage,
           pageSize,
           ...(landing && highlightId ? { highlight: highlightId } : {}),
         },
         { signal }
       ),
 
-    placeholderData: keepPreviousData,
-    staleTime: 60_000,
+    // Same-page refreshes (typing) keep the cards; a page flip drops the
+    // retained page so the skeleton shows while the next payload loads.
+    placeholderData: (previousData, previousQuery) =>
+      previousData && previousQuery?.queryKey?.[1] === requestedPage
+        ? previousData
+        : undefined,
     enabled: termReady,
   });
 
@@ -188,25 +184,7 @@ export function GuidanceReferralsView({
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading your cases">
         {isKanban ? (
-          <>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {[72, 96, 84, 92, 74, 78, 84].map((width, index) => (
-                  <Skeleton
-                    key={index}
-                    className="h-7 rounded-full"
-                    style={{ width }}
-                  />
-                ))}
-              </div>
-              <Skeleton className="h-8 w-56 rounded-[16px]" />
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <Skeleton key={index} className="h-64 rounded-xl" />
-              ))}
-            </div>
-          </>
+          <GuidanceReferralsSkeleton lockType />
         ) : (
           <>
             <ZentraPageHeaderSkeleton />
@@ -242,14 +220,35 @@ export function GuidanceReferralsView({
   }
 
   const refreshing = isRefetching && !isPending;
-  const referrals = Array.isArray(data.referrals) ? data.referrals : [];
+  const loadedReferrals = Array.isArray(data.referrals) ? data.referrals : [];
+  const hasActionFilter = action !== "";
+  /* Search types instantly over the loaded page (the debounced server query
+     catches up in the background); action tabs narrow the same slice. */
+  const liveQuery = queryInput.trim();
+  const referrals =
+    hasActionFilter || liveQuery !== ""
+      ? loadedReferrals.filter((row) =>
+          matchesGuidanceFilters(row, liveQuery, actionParams)
+        )
+      : loadedReferrals;
   const unfilteredTotal = data.unfilteredTotal ?? data.total ?? 0;
+  /* Tab badges count the loaded page, exactly like the nurse board — a
+     desk-wide count would advertise a case this page cannot show. */
+  const pageSummary = buildGuidanceSummary(loadedReferrals);
   const isTrueEmpty =
-    referrals.length === 0 &&
+    loadedReferrals.length === 0 &&
     unfilteredTotal === 0 &&
     debounced === "" &&
     action === "" &&
     (locked || typeFilter === "");
+  /* While an action lens is on, report the filtered slice — never a stale
+     server total for rows the board is not showing. */
+  const displayTotal = hasActionFilter ? referrals.length : data.total;
+  const displayPage = hasActionFilter ? 1 : safePage;
+  const displayPageSize = hasActionFilter
+    ? Math.max(referrals.length, 1)
+    : data.pageSize;
+  const displayTotalPages = hasActionFilter ? 1 : totalPages;
 
   return (
     <section
@@ -275,12 +274,12 @@ export function GuidanceReferralsView({
       ) : (
       <GuidanceReferralsTable
         referrals={referrals}
-        summary={data.summary ?? null}
-        total={data.total}
+        summary={pageSummary}
+        total={displayTotal}
         unfilteredTotal={data.unfilteredTotal}
-        page={safePage}
-        pageSize={data.pageSize}
-        totalPages={totalPages}
+        page={displayPage}
+        pageSize={displayPageSize}
+        totalPages={displayTotalPages}
         onPageChange={handlePageChange}
         query={queryInput}
         onQueryChange={handleQueryChange}
@@ -290,7 +289,6 @@ export function GuidanceReferralsView({
         onActionChange={handleActionChange}
         onRetry={() => refetch()}
         isRetrying={isRefetching}
-        isNavigating={isRefetching && !isPending}
         lockType={locked}
         title={title}
         layout={isKanban ? "kanban" : "list"}

@@ -9,6 +9,7 @@ import {
 import type { GuidanceAdmCase } from "@/services/guidance/adm.types";
 import { listAdmConsultationSessions, reviewAdmConsultation } from "@/services/guidance/adm.service";
 import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
+import { liveQueryOptions } from "@/lib/api/live";
 import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
 import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 
@@ -36,6 +37,7 @@ export function GuidanceAdmReferralFormSheet({
   const referralId = adapter.referralId;
 
   const sessionsQuery = useQuery({
+    ...liveQueryOptions,
     queryKey: ["adm-consultation-sessions", referralId],
     queryFn: () => listAdmConsultationSessions(referralId),
     enabled: open,

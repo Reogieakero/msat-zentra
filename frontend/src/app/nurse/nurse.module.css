@@ -42,6 +42,32 @@
    overflow-x: clip;
 }
 
+/* Dark mode mirrors the teacher desk / landing hero canvas — the same deep
+   green-black with mint/violet aurora glows — so every desk shares one
+   palette. Painted on the wrapper (not .main) so the fixed rail and mobile
+   tab bar share the exact same canvas. `fixed` anchors the glow to the
+   viewport while long pages scroll; the topbar is translucent above it. */
+:global(.dark) .wrapper {
+  background-color: #050807;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 80% 20%, rgba(126, 245, 208, 0.1), transparent 65%),
+    radial-gradient(ellipse 70% 70% at 12% 78%, rgba(169, 156, 255, 0.12), transparent 65%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Let the wrapper canvas show through the content + rail. */
+:global(.dark) .main {
+  background-color: transparent;
+}
+
+/* Same translucent bar as the landing nav so the hero glow reads through. */
+:global(.dark) .topbar {
+  background-color: rgba(5, 8, 7, 0.4);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
 .topbar {
    position: fixed;
    top: 0;
@@ -58,7 +84,11 @@
    height: 3rem;
    padding-inline: 0.75rem;
    border-bottom: 1px solid var(--border);
-   background-color: var(--background);
+   /* Glass bar: the page canvas runs behind the fixed topbar instead of
+      stopping at a solid strip. */
+   background-color: color-mix(in oklch, var(--background) 72%, transparent);
+   backdrop-filter: blur(18px) saturate(140%);
+   -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 
 .brand {

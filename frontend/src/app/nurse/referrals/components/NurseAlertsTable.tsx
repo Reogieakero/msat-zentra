@@ -1,12 +1,13 @@
 "use client";
 import * as React from "react";
-import { Inbox, Search, SearchX } from "lucide-react";
+import { Inbox, Search } from "lucide-react";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import type {
   NurseQueueRow,
   NurseSessionItem,
@@ -122,6 +123,7 @@ export function NurseAlertsTable({
     serverPage,
     serverTotal,
     serverTotalPages,
+    search,
     pageSize,
   });
   const [previewId, setPreviewId] = React.useState<string | null>(null);
@@ -202,9 +204,9 @@ export function NurseAlertsTable({
               onClear={clearActionFilter}
             />
             {onSearchChange ? (
-              /* 32px tall, 16px radius — the same search field as the
-                 alerts board, sitting at the right of the action tabs. */
-              <InputGroup className="w-56 max-w-full shrink-0 rounded-[16px]">
+              /* Same search field as the alerts board: 32px tall, 16px
+                 radius, pinned right of the action tabs. */
+              <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
                 <InputGroupInput
                   placeholder={searchPlaceholder}
                   value={search ?? ""}
@@ -219,17 +221,29 @@ export function NurseAlertsTable({
           </div>
         ) : null}
         {visibleRows.length === 0 ? (
-          <NurseEmptyState
-            icon={hasActiveFilters ? SearchX : Inbox}
-            title={hasActiveFilters ? "No cases match the selected filter" : "You're all caught up"}
-            hint={
-              hasActiveFilters
-                ? layout === "kanban"
-                  ? "Pick a different filter above the board, or show every case."
-                  : "Pick a different action in the sidebar, or show every case."
-                : "New cases sent to you by advisers will appear here."
-            }
-          />
+          (search ?? "").trim() !== "" || hasActiveFilters ? (
+            <div className={styles.emptyCenter}>
+              <InsightCallout role="status" className="w-full max-w-xl text-left">
+                {(search ?? "").trim() !== "" ? (
+                  <>
+                    <strong>No cases match your search.</strong> Try a different
+                    name, LRN, or category — or clear the search to see every case.
+                  </>
+                ) : (
+                  <>
+                    <strong>No cases match the selected filter.</strong> Pick a
+                    different filter above the board, or show every case.
+                  </>
+                )}
+              </InsightCallout>
+            </div>
+          ) : (
+            <NurseEmptyState
+              icon={Inbox}
+              title="You're all caught up"
+              hint="New cases sent to you by advisers will appear here."
+            />
+          )
         ) : layout === "kanban" ? (
           <div className={styles.kanbanGrid} role="list" aria-label={title}>
             {visibleRows.map((alert) => (
@@ -296,19 +310,21 @@ export function NurseAlertsTable({
           </ol>
         )}
         {paginate ? (
-          <Pagination
-            currentPage={safePage}
-            totalItems={total}
-            pageSize={pageSize}
-            onPageChange={(p) => {
-              if (serverDriven) {
-                onServerPageChange?.(p);
-              } else {
-                setPaged(true);
-                setPage(p);
-              }
-            }}
-          />
+          visibleRows.length > 0 ? (
+            <Pagination
+              currentPage={safePage}
+              totalItems={total}
+              pageSize={pageSize}
+              onPageChange={(p) => {
+                if (serverDriven) {
+                  onServerPageChange?.(p);
+                } else {
+                  setPaged(true);
+                  setPage(p);
+                }
+              }}
+            />
+          ) : null
         ) : (
           <ScrollHint count={total} />
         )}

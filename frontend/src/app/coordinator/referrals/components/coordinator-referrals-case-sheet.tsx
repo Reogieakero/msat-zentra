@@ -27,6 +27,7 @@ import type {
   AdmCaseRow,
   AdmMeeting,
 } from "@/services/coordinator/coordinator.types";
+import { toSlug } from "@/lib/slug";
 import {
   FORM_LABELS,
   FORM_DOT,
@@ -337,7 +338,7 @@ export function CoordinatorReferralsCaseSheet({
                 <div className={styles.sheetActions}>
                   <Button size="sm" asChild>
                     <Link
-                      href={`/coordinator/referrals/${encodeURIComponent(selected.id)}?certify=1`}
+                      href={`/coordinator/referrals/${encodeURIComponent(toSlug(selected.student))}?certify=1`}
                     >
                       Continue to certification
                     </Link>

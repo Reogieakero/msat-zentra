@@ -25,6 +25,7 @@ enum Role {
   record_keeper
   registrar
   principal
+  admin
 }
 
 enum UserStatus {
@@ -257,6 +258,16 @@ model User {
   approvedAt     DateTime?
   createdAt      DateTime    @default(now())
 
+  // Last-known presence, written on login/refresh and bumped (throttled) by the
+  // auth middleware. Powers the administrator presence globe: users active in
+  // the last 5 minutes are plotted at their last geolocated IP.
+  lastActiveAt   DateTime?
+  lastIp         String?
+  lastCity       String?
+  lastCountry    String?
+  lastLat        Float?
+  lastLng        Float?
+
   studentProfile      StudentProfile?
   parentProfile       ParentProfile?
   staffProfile        StaffProfile?
@@ -285,6 +296,7 @@ model User {
   auditLogs           AuditLog[]
   notifications       Notification[]
   refreshTokens       RefreshToken[]
+  loginEvents         LoginEvent[]
   sectionsAdvised     Section[]              @relation("AdviserSection")
   sf10AccessRequests  AdviserSf10AccessRequest[] @relation("Sf10AccessAdviser")
   sf10AccessDecided   AdviserSf10AccessRequest[] @relation("Sf10AccessDecidedBy")
@@ -294,11 +306,35 @@ model User {
   teacherName         TeacherName?
   termGrants          TeacherTermGrant[]
   archivedAdvisees    AdviserArchivedStudent[]
+  termRosterConfirmations TermRosterConfirmation[]
   gradeFlagsRaised    GradeFlag[]            @relation("FlagRaisedBy")
   gradeFlagsOwned     GradeFlag[]            @relation("FlagOwner")
   gradeFlagsResolved  GradeFlag[]            @relation("FlagResolvedBy")
   // Account approval + role-banded roster reads filter on (role, status).
   @@index([role, status])
+  // Presence globe: "active in the last 5 minutes".
+  @@index([lastActiveAt])
+}
+
+/// Sign-in/out history for the administrator overview's activity chart.
+enum LoginEventKind {
+  login
+  logout
+}
+
+/// A sign-in or sign-out event, used by the administrator overview's
+/// login-activity chart.
+model LoginEvent {
+  id         String         @id @default(uuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ip         String?
+  kind       LoginEventKind @default(login)
+  occurredAt DateTime       @default(now())
+
+  @@index([occurredAt])
+  @@index([userId, occurredAt])
+  @@index([kind, occurredAt])
 }
 
 model StudentProfile {
@@ -429,6 +465,9 @@ model Term {
   scheduleConfigs ScheduleConfig[]
   timetableEntries SectionTimetableEntry[]
   termGrants TeacherTermGrant[]
+  rosterEnlistments StudentRoster[] @relation("RosterEnlistTerm")
+  rosterConfirmations TermRosterConfirmation[]
+  advisoryModules AdvisoryModule[]
   @@unique([schoolYearId, termNumber])
 }
 
@@ -464,6 +503,14 @@ model Section {
   @@index([adviserId])
 }
 
+/// Advisory enlistment tag. A transferee joined mid-term, so their attendance
+/// window starts on the day they were enlisted (StudentRoster.createdAt), not
+/// on the term start date. Everyone else is rated from the term start.
+enum LearnerType {
+  regular
+  transferee
+}
+
 // Decoupled enrollment roster: a student enrolled in a section for a school year,
 // independent of whether they have a login account yet. Used by the registrar
 // "Accounts Breakdown" to report enrolled-but-not-yet-registered students
@@ -476,12 +523,19 @@ model StudentRoster {
   sectionId    String
   schoolYearId String
   mascot       String?
+  // regular = rated from term start; transferee = rated from createdAt.
+  learnerType  LearnerType @default(regular)
   riskCount    Int        @default(0)
   riskLevel    RiskLevel  @default(Low)
   academicFlag Boolean @default(false)
   attendanceFlag Boolean @default(false)
   behavioralFlag Boolean @default(false)
+  createdAt    DateTime   @default(now())
+  // Term the learner was enlisted in. Null = legacy row created before this
+  // column existed; treated as "not newly enlisted", never as "new this term".
+  enlistedTermId String?
   section      Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  enlistedTerm Term?      @relation("RosterEnlistTerm", fields: [enlistedTermId], references: [id])
   schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
   attendanceRecords AttendanceRecord[]
   anecdotalRecords AnecdotalRecord[]
@@ -496,6 +550,26 @@ model StudentRoster {
   @@index([sectionId])
   @@index([schoolYearId])
   @@index([schoolYearId, riskLevel])
+  @@index([enlistedTermId])
+}
+
+// Adviser acknowledgement that the advisory roster carried over into a term.
+// One row per (adviser, term, kind); the fingerprint is the roster state the
+// adviser actually saw, so a later enlistment can be reported as a diff.
+model TermRosterConfirmation {
+  id                String   @id @default(uuid())
+  userId            String
+  termId            String
+  kind              String // "roster" | "classes"
+  rosterFingerprint String
+  // true = same students/classes as the previous term (keep it as the default
+  // view), false = start the term empty. Legacy rows default to true.
+  sameAsPrevious    Boolean  @default(true)
+  acknowledgedAt    DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  term              Term     @relation(fields: [termId], references: [id], onDelete: Cascade)
+  @@unique([userId, termId, kind])
+  @@index([termId])
 }
 
 enum SubjectCategory {
@@ -867,6 +941,11 @@ model AnecdotalRecord {
   signedBy               String?
   signedAt               DateTime?
   signatureImageUrl      String?
+  // Soft delete: every anecdotal read filters `deletedAt: null`; the row (and
+  // its follow-ups) stays so the filing teacher can restore it from the desk.
+  // Records with any referral are never deletable (the case owns the record).
+  deletedAt              DateTime?
+  deletedBy              String?
   student                StudentProfile? @relation(fields: [studentId], references: [userId], onDelete: Cascade)
   roster                 StudentRoster?  @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   observer               User            @relation("ObserverAnecdotals", fields: [observerId], references: [id])
@@ -1257,6 +1336,9 @@ enum AdvisoryModuleKind {
 model AdvisoryModule {
   id           String   @id @default(uuid())
   sectionId    String
+  // Term the module was released in. Null only on legacy rows created before
+  // this column existed; they are visible to no term until they are backfilled.
+  termId       String?
   kind         AdvisoryModuleKind @default(general)
   moduleName   String
   // Adviser-pasted link to the uploaded module (Google Drive or any https URL).
@@ -1269,9 +1351,11 @@ model AdvisoryModule {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   section      Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  term         Term?    @relation(fields: [termId], references: [id], onDelete: Cascade)
   creator      User     @relation("AdvisoryModuleCreator", fields: [createdBy], references: [id])
   submissions  AdvisoryModuleSubmission[]
   @@index([sectionId])
+  @@index([termId])
 }
 
 // How the learner handed the answered module in. Physical = the paper/module

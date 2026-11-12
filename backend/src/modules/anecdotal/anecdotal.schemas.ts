@@ -15,6 +15,21 @@ export const createSchema = z.object({
   folderId: z.string().min(1).optional(),
 });
 
+export const updateSchema = z
+  .object({
+    observationDatetime: z.string().datetime().optional(),
+    descriptionOfIncident: z.string().min(1).optional(),
+    descriptionOfLocation: z.string().nullable().optional(),
+    notesRecommendationsActions: z.string().nullable().optional(),
+    classPerformance: z.string().nullable().optional(),
+    attendanceSummary: z.string().nullable().optional(),
+    category: z.enum(["behavioral", "bullying", "academic", "attendance", "health"]).optional(),
+    confidentialityLevel: z.enum(["restricted", "confidential"]).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "Nothing to update",
+  });
+
 export const followupSchema = z.object({ notes: z.string().min(1) });
 
 export const referSchema = z.object({

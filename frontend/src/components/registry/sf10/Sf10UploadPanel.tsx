@@ -23,7 +23,7 @@ const GRADES = ["G7", "G8", "G9", "G10", "G11", "G12"];
 // Accepted formats render as amber pills (the SF10 desk accent) — one pill
 // each, never a comma/dot separated list. Shared by the board description
 // and the dropzone hint.
-const FILE_FORMATS = ["PDF", "JPG", "PNG", "XLSX"];
+const FILE_FORMATS = ["PDF", "XLSX"];
 
 function FormatPills() {
   return (
@@ -148,7 +148,7 @@ export function Sf10UploadPanel({
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.jpg,.jpeg,.png,.xlsx"
+          accept=".pdf,.xlsx"
           multiple
           className={styles.fileInput}
           onChange={(e) => handleFiles(e.target.files)}

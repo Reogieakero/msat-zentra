@@ -21,6 +21,7 @@ import { KanbanBoard } from "@/components/ui/kanban-board";
 import { useTheme } from "@/components/providers";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pill } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { BookOpen } from "lucide-react";
 import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import {
@@ -259,7 +260,15 @@ export function SubjectTrendChart({
       ariaLabel="Subject trends"
     >
       {isPending ? (
-        <Skeleton className={styles.chartSkel} aria-hidden />
+        <div className={styles.chartBody} aria-hidden>
+          <Skeleton className={styles.chartSkel} />
+          <div className={styles.dotLegend}>
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <InsightCallout>
+            <span className="block h-3 w-2/3 animate-pulse rounded-md bg-muted" />
+          </InsightCallout>
+        </div>
       ) : (
         <div className={styles.chartBody}>
           <div className={styles.chartScroll}>
@@ -348,14 +357,14 @@ export function SubjectTrendChart({
             )}
           </div>
 
-          <p className={styles.interpretation}>
-            <span className={styles.interpretationLabel}>What it means · </span>
+          <InsightCallout>
+            <strong>What it means · </strong>
             {belowCount === 0
               ? "Every subject trend sits at or above 75 — clear."
               : lowest
                 ? `${belowCount} grade–subject point${belowCount === 1 ? "" : "s"} below 75. Lowest: ${lowest.key.replace("::", " · ")} at ${lowest.stat.avg}.`
                 : `${belowCount} grade–subject points below 75.`}
-          </p>
+          </InsightCallout>
         </div>
       )}
     </KanbanBoard>

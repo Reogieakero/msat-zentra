@@ -29,16 +29,19 @@ export function TemplateSaveProvider({ children }: { children: React.ReactNode }
   const syncToDock = React.useCallback((next: SaveProgress | null, prev: SaveProgress | null) => {
     try {
       const d = dockRef.current;
+      const id = taskIdRef.current;
       if (!next) {
-        const id = taskIdRef.current;
         taskIdRef.current = null;
-        if (id) {
-          // Dismiss is explicit via dismiss(); dropping progress to null
-          // without dismiss (e.g. unmount) leaves the shared task alone.
-        }
+        // Nothing will report on this task any more — never leave it spinning.
+        if (id) d.cancelTask(id);
         return;
       }
       if (next.active && (!prev || !prev.active)) {
+        // A new save batch must never orphan the previous task: the old id is
+        // about to be dropped, so close it out first. Without this, one stray
+        // duplicate start leaves a running task the heartbeat keeps alive
+        // forever ("Working on 1 task" that never finishes).
+        if (id) d.cancelTask(id);
         taskIdRef.current = d.startTask({
           kind: "timetable-save",
           title: "Saving timetable",
@@ -47,7 +50,6 @@ export function TemplateSaveProvider({ children }: { children: React.ReactNode }
         });
         return;
       }
-      const id = taskIdRef.current;
       if (!id) return;
       const totalRows = next.rows.length;
       const settled = next.rows.filter((r) => r.status !== "saving").length;
@@ -82,21 +84,29 @@ export function TemplateSaveProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const setProgress = React.useCallback(
-    (action: React.SetStateAction<SaveProgress | null>) => {
-      setProgressState((prev) => {
-        const next = typeof action === "function" ? (action as (p: SaveProgress | null) => SaveProgress | null)(prev) : action;
-        syncToDock(next, prev);
-        return next;
-      });
-    },
-    [syncToDock],
-  );
+  const setProgress = React.useCallback((action: React.SetStateAction<SaveProgress | null>) => {
+    setProgressState(action);
+  }, []);
+
+  // Dock writes must never run inside a state updater: React executes updaters
+  // during render, and updating DockProvider from another component's render
+  // throws "Cannot update a component while rendering a different component".
+  // Sync after commit instead, diffing against the previous progress value.
+  const prevProgressRef = React.useRef<SaveProgress | null>(null);
+  React.useEffect(() => {
+    const prev = prevProgressRef.current;
+    prevProgressRef.current = progress;
+    syncToDock(progress, prev);
+  }, [progress, syncToDock]);
 
   const dismiss = React.useCallback(() => {
-    setProgressState(null);
+    const id = taskIdRef.current;
     taskIdRef.current = null;
+    setProgressState(null);
     try {
+      // A still-running task for this batch would otherwise spin until the tab
+      // closes, so cancel it before clearing finished ones.
+      if (id) dockRef.current.cancelTask(id);
       for (const t of dockRef.current.tasks) {
         if (t.kind === "timetable-save" && t.status !== "running" && t.status !== "waiting") {
           dockRef.current.dismissTask(t.id);

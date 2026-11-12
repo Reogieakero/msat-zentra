@@ -3,14 +3,16 @@
 import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Trash2, Undo2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill } from "@/components/ui/pill";
 import { ScrollList } from "@/components/ui/scroll-list";
 import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { toast } from "@/components/ui/sonner";
+import { isOptimisticId, markOptimisticCancelled } from "./schedule-optimistic";
 import type { ScheduleSubject } from "../page";
 import styles from "./subject-kanban.module.css";
 
@@ -113,16 +115,32 @@ export function useSubjectDelete(onProgress?: (p: SubjectDeleteProgress | null) 
       const startedAt = Date.now();
       const report = (next: SubjectDeleteRowState[], active: boolean) =>
         onProgress?.({ active, done: !active, rows: [...next], startedAt });
-      // Instant grid update — the dock reports each DELETE as it lands.
+      // Instant grid update — and cancel any in-flight list fetch so a stale
+      // response can't paint the rows back after they are evicted.
+      await qc.cancelQueries({ queryKey: ["teacher-schedule-subjects"] });
       evict(new Set(targets.map((t) => t.id)));
       report(rows, true);
       const failed: ScheduleSubject[] = [];
       await Promise.all(
         targets.map(async (t, i) => {
+          // A row still waiting on its POST has no server id yet. Mark it
+          // cancelled (the add mutation compensates) instead of firing a 404.
+          if (isOptimisticId(t.id)) {
+            markOptimisticCancelled(t.id);
+            rows[i] = { ...rows[i], status: "deleted" };
+            report(rows, true);
+            return;
+          }
           try {
             await apiClient.delete(`/api/teacher/schedule/subjects/${t.id}`);
             rows[i] = { ...rows[i], status: "deleted" };
           } catch (err) {
+            // Already gone (e.g. deleted from another tab) — not a failure.
+            if ((err as { response?: { status?: number } })?.response?.status === 404) {
+              rows[i] = { ...rows[i], status: "deleted" };
+              report(rows, true);
+              return;
+            }
             const message = apiErrorMessage(err, "Failed to delete subject.");
             rows[i] = { ...rows[i], status: "failed", message };
             failed.push(t);
@@ -131,6 +149,9 @@ export function useSubjectDelete(onProgress?: (p: SubjectDeleteProgress | null) 
         }),
       );
       if (failed.length > 0) reinsert(failed);
+      // Re-evict the rows the server confirmed gone: a list fetch that started
+      // before the DELETEs committed can still resolve with them.
+      evict(new Set(rows.filter((r) => r.status === "deleted").map((r) => r.id)));
       invalidateTeacher.schedule();
       const ok = rows.filter((r) => r.status === "deleted").length;
       if (ok > 0) {
@@ -149,7 +170,7 @@ export function useSubjectDelete(onProgress?: (p: SubjectDeleteProgress | null) 
       busyRef.current = false;
       setDeleting(false);
     },
-    [evict, invalidateTeacher, onProgress, reinsert],
+    [evict, invalidateTeacher, onProgress, qc, reinsert],
   );
 
   return { deleteSubjects, deleting };
@@ -193,23 +214,31 @@ export function SubjectDeleteConfirm({ subjects, pending, onCancel, onConfirm }:
           className="bg-card text-card-foreground shadow-2xl"
           footer={
             <div className="flex justify-end gap-1.5 px-1 pb-1">
-              <Button size="sm" onClick={onCancel} disabled={pending} variant="outline" className="h-6">
+              <Button
+                onClick={onCancel}
+                disabled={pending}
+                variant="outline"
+                className="h-6 gap-1 px-2 text-[11px]"
+              >
+                <Undo2 size={12} aria-hidden />
                 Keep them
               </Button>
               <Button
-                size="sm"
                 onClick={onConfirm}
                 disabled={pending}
                 aria-busy={pending || undefined}
-                className="h-6 border-transparent bg-red-600 px-3 text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
+                className="h-6 gap-1 border-transparent bg-red-600 px-2 text-[11px] text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
               >
                 {pending ? (
                   <>
-                    <Loader2 size={14} className="animate-spin" aria-hidden />
+                    <Loader2 size={12} className="animate-spin" aria-hidden />
                     <span aria-live="polite">Deleting…</span>
                   </>
                 ) : (
-                  `Confirm delete${subjects.length === 1 ? "" : ` (${subjects.length})`}`
+                  <>
+                    <Trash2 size={12} aria-hidden />
+                    Confirm delete{subjects.length === 1 ? "" : ` (${subjects.length})`}
+                  </>
                 )}
               </Button>
             </div>
@@ -222,14 +251,15 @@ export function SubjectDeleteConfirm({ subjects, pending, onCancel, onConfirm }:
                   {s.name} <span className={styles.code}>({s.code})</span>
                 </span>
                 <span className={styles.meta}>
-                  <span className="shrink-0 rounded-full border border-border bg-muted/40 px-1.5 text-[10px] text-muted-foreground">
+                  <Pill tone="neutral" label="Grade level">
                     {gradeLabel(s.gradeLevel)}
-                  </span>
-                  <span
-                    className={`${styles.pill} ${s.category === "ELECTIVE" ? styles.pillElective : styles.pillCore}`}
+                  </Pill>
+                  <Pill
+                    tone={s.category === "ELECTIVE" ? "sky" : "amber"}
+                    label="Category"
                   >
                     {categoryLabel(s.category)}
-                  </span>
+                  </Pill>
                 </span>
               </div>
             ))}

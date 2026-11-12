@@ -30,6 +30,7 @@ export interface CoordinatorReferralsModel
   stageCounts: Record<string, number>;
   totalReferred: number;
   isInitialLoading: boolean;
+  isPageLoading: boolean;
   isSyncing: boolean;
   referralsError: boolean;
   referralsRefetching: boolean;
@@ -168,6 +169,7 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     stageCounts: filters.stageCounts,
     totalReferred: filters.totalReferred,
     isInitialLoading: filters.isInitialLoading,
+    isPageLoading: filters.isPageLoading,
     isSyncing: filters.isSyncing,
     referralsError: filters.referralsError,
     referralsRefetching: filters.referralsRefetching,

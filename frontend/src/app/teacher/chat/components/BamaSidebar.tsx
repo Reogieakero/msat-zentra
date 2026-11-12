@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { FileText, Flag, FolderOpen, Plus, Search, Trash2 } from "lucide-react";
+import { FileSpreadsheet, FileText, Flag, FolderOpen, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   BAMA_CHAT_TYPES,
@@ -14,6 +14,7 @@ const TYPE_META: Record<BamaChatType, { icon: typeof Flag; accent: string; path:
   "grade-flag": { icon: Flag, accent: "text-rose-500", path: "chat/grade-flag" },
   anecdotal: { icon: FileText, accent: "text-amber-500", path: "chat/anecdotal" },
   "sf10-access": { icon: FolderOpen, accent: "text-blue-500", path: "chat/sf10-access" },
+  "sf10-autofill": { icon: FileSpreadsheet, accent: "text-emerald-500", path: "chat/sf10-autofill" },
 };
 
 function ColumnHead({

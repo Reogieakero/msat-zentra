@@ -28,6 +28,7 @@ type RawReferral = Record<string, any> & {
   lrn: string;
   section: string;
   studentId: string | null;
+  mascot: string | null;
   type: string;
   reason: string;
   category: string;
@@ -39,6 +40,7 @@ type RawIntervention = Record<string, any> & {
   lrn: string;
   section: string;
   riskLevel: string;
+  mascot: string | null;
   detectedAt: string | null;
   intervention: Record<string, any> | null;
 };
@@ -113,6 +115,7 @@ export async function getAlertCases(ctx: GuidanceContext, query: AlertCasesQuery
       { userId: ctx.userId, role: ctx.role, termId: ctx.termId },
       {
         level: "All",
+        grade: null,
         factor: null,
         mineOnly: false,
         outcome: "all",
@@ -157,17 +160,19 @@ export async function getAlertCases(ctx: GuidanceContext, query: AlertCasesQuery
   const countBy = (predicate: (row: AlertCaseRow) => boolean) => boardRows.filter(predicate).length;
 
   const seen = new Set<string>();
-  const urgent: { student: string; lrn: string; kind: "referral" | "intervention"; id: string; track: "adm" | "counseling" | "intervention" }[] = [];
+  const urgent: { student: string; lrn: string; mascot: string | null; kind: "referral" | "intervention"; id: string; track: "adm" | "counseling" | "intervention" }[] = [];
   for (const row of boardRows) {
     if (riskOf(row) !== "High") continue;
     const student = row.kind === "referral" ? row.referral.student : row.item.student;
     const lrn = row.kind === "referral" ? row.referral.lrn : row.item.lrn;
+    const mascot = row.kind === "referral" ? row.referral.mascot : row.item.mascot;
     const key = `${student.trim().toLowerCase()}|${lrn.trim().toLowerCase()}`;
     if (seen.has(key)) continue;
     seen.add(key);
     urgent.push({
       student,
       lrn,
+      mascot: mascot ?? null,
       kind: row.kind,
       id: row.kind === "referral" ? row.referral.id : row.item.studentKey,
       track:
@@ -196,6 +201,7 @@ export async function getAlertCases(ctx: GuidanceContext, query: AlertCasesQuery
       studentKey: item.studentKey,
       student: item.student,
       lrn: item.lrn,
+      mascot: item.mascot ?? null,
       riskLevel: item.riskLevel,
       detectedAt: item.detectedAt,
     })),

@@ -64,7 +64,10 @@ export const interventionsQueueQuerySchema = paginationQuerySchema(
   INTERVENTIONS_QUEUE_MAX_PAGE_SIZE,
 ).extend({
   level: z.enum(["High", "Moderate", "All"]).optional(),
+  grade: z.enum(["G7", "G8", "G9", "G10", "G11", "G12"]).optional(),
   factor: z.enum(["Academic", "Attendance", "Behavioral"]).optional(),
   mine: z.enum(["true", "false"]).optional(),
   outcome: z.enum(["ongoing", "resolved", "unresolved", "all"]).optional(),
+  /** Board order: risk-first (default) or newest detection first. */
+  sort: z.enum(["risk", "detected"]).optional(),
 });

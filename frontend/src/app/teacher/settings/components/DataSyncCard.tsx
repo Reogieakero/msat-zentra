@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
+import { Pill } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import sectionStyles from "./settings-section.module.css";
 import { useTeacherDataSharing, setDataSharing } from "@/services/settings/data-sharing";
@@ -120,11 +121,11 @@ export function DataSyncCard() {
                 </p>
                 {handled.length > 0 ? (
                   <>
-                    <div className={`${sectionStyles.pills} mt-1.5 flex flex-wrap items-center gap-1.5`} aria-label="Handled classes preview">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5" aria-label="Handled classes preview">
                       {preview.map((c) => (
-                        <span key={`${c.subject}|${c.section}`} className={sectionStyles.pill} title={`${c.subject} — ${c.section}`}>
+                        <Pill key={`${c.subject}|${c.section}`} tone="amber" label="Subject · Section">
                           {c.subject} · {c.section}
-                        </span>
+                        </Pill>
                       ))}
                       {remaining > 0 ? (
                         <button
@@ -152,11 +153,11 @@ export function DataSyncCard() {
                           className="bg-card"
                           style={{ background: "var(--card)" }}
                         >
-                          <div className={`${sectionStyles.pills} flex max-h-60 flex-wrap items-center gap-1.5 overflow-y-auto bg-card px-1 py-1`} role="list" aria-label="Full handled class list">
+                          <div className="flex max-h-60 flex-wrap items-center gap-1.5 overflow-y-auto bg-card px-1 py-1" role="list" aria-label="Full handled class list">
                             {handled.map((c) => (
-                              <span key={`${c.subject}|${c.section}`} role="listitem" className={sectionStyles.pill} title={`${c.subject} — ${c.section}`}>
+                              <Pill key={`${c.subject}|${c.section}`} tone="amber" label="Subject · Section" role="listitem">
                                 {c.subject} · {c.section}
-                              </span>
+                              </Pill>
                             ))}
                           </div>
                         </KanbanBoard>

@@ -34,6 +34,8 @@ export type Sf10Record = {
   archivedAt: string | null;
   currentVersion: number;
   updatedAt: string;
+  /** Adviser read access granted on the adviser-access desk — NOT a release. */
+  adviserAccess?: boolean;
 
   versions?: Sf10Version[];
 };

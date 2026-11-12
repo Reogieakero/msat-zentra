@@ -1,6 +1,11 @@
 import { prisma } from "../lib/prisma.js";
 import { dailyFromDayCounts, type DayCountCell } from "./attendance.agg.utils.js";
 import { isWeekendKey } from "./attendance.date.utils.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../lib/learnerVisibility.js";
 
 export interface AttendanceRate {
   rate: number;
@@ -137,6 +142,7 @@ export async function subjectAverageAttendance(
 ): Promise<Map<string, SubjectAverageEntry>> {
   const empty = new Map<string, SubjectAverageEntry>();
   if (sectionIds.length === 0) return empty;
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [entries, term, records, profiles, rosters] = await Promise.all([
     prisma.sectionTimetableEntry.findMany({
       where: {
@@ -162,12 +168,12 @@ export async function subjectAverageAttendance(
       },
     }),
     prisma.studentProfile.findMany({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedProfiles(archivedLearners) },
       select: { userId: true, sectionId: true },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId: { in: sectionIds } },
-      select: { id: true, sectionId: true },
+      where: { sectionId: { in: sectionIds }, ...excludeArchivedRosters(archivedLearners) },
+      select: { id: true, sectionId: true, learnerType: true, createdAt: true },
     }),
   ]);
 
@@ -213,7 +219,16 @@ export async function subjectAverageAttendance(
   }
   const sectionOf = new Map<string, string>();
   for (const p of profiles) sectionOf.set(p.userId, p.sectionId as string);
-  for (const r of rosters) sectionOf.set(`roster:${r.id}`, r.sectionId);
+  // Transferees are rated from the day after their enlistment date, not the
+  // term start — the enlistment day's sheets may predate them.
+  const startOf = new Map<string, string>();
+  for (const r of rosters) {
+    const key = `roster:${r.id}`;
+    sectionOf.set(key, r.sectionId);
+    if (r.learnerType === "transferee") {
+      startOf.set(key, r.createdAt.toISOString().slice(0, 10));
+    }
+  }
 
   const present = new Map<string, Set<string>>();
   const touched = new Set<string>();
@@ -235,17 +250,32 @@ export async function subjectAverageAttendance(
   for (const [studentKey, sectionId] of sectionOf) {
     const offered = offeredBySection.get(sectionId) ?? [];
     if (offered.length === 0) continue;
+    const startStr = startOf.get(studentKey) ?? null;
     let sum = 0;
+    // Only subjects that actually held a meetup inside this learner's window.
+    // A transferee enlisted mid-week has some subjects with no elapsed meetup
+    // yet; averaging those as 0% would flag them the moment they are added.
+    let ratedSubjects = 0;
     for (const subjectId of offered) {
       const dates = elapsed.get(`${sectionId}|${subjectId}`);
       if (!dates || dates.size === 0) continue;
+      // Transferees: the enlistment day's meetups may predate them, so the
+      // window opens the next day (same rule as countMeetupsSince).
+      const inWindow = startStr
+        ? [...dates].filter((d) => d > startStr)
+        : [...dates];
+      if (inWindow.length === 0) continue;
+      ratedSubjects += 1;
       const presentDates = present.get(`${studentKey}|${sectionId}|${subjectId}`);
       let n = 0;
-      for (const d of presentDates ?? []) if (dates.has(d)) n += 1;
-      sum += n / dates.size;
+      for (const d of presentDates ?? []) if (inWindow.includes(d)) n += 1;
+      sum += n / inWindow.length;
     }
+    // No elapsed meetup since the learner joined — no attendance signal at all,
+    // so leave them without an entry instead of reporting 0%.
+    if (ratedSubjects === 0) continue;
     result.set(studentKey, {
-      average: sum / offered.length,
+      average: sum / ratedSubjects,
       hasSubjectData: touched.has(studentKey),
     });
   }

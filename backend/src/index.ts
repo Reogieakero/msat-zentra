@@ -46,8 +46,12 @@ escalationTimer.unref?.();
 
 const autoAbsentTimer = setInterval(() => {
   sweepAutoAbsent()
-    .then(({ meetups, rows }) => {
-      if (rows > 0) logger.info({ meetups, rows }, "Auto-absent sweep wrote rows");
+    .then(async ({ meetups, rows }) => {
+      if (rows > 0) {
+        logger.info({ meetups, rows }, "Auto-absent sweep wrote rows");
+        const { invalidateTags } = await import("./lib/cache.js");
+        await invalidateTags(["attendance", "overview", "principal", "teacher", "risk", "reports", "guidance"]);
+      }
     })
     .catch((err) => logger.error({ err }, "Auto-absent sweep failed"));
 }, 3_600_000);

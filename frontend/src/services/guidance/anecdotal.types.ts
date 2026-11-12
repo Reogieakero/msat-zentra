@@ -34,6 +34,8 @@ export interface GuidanceAnecdotalRecord {
   date: string;
   confidentiality: string;
   referralStatus: string;
+  /** Persisted profile/roster mascot — same character the adviser sees. */
+  mascot?: string | null;
 
   sessionDocs?: GuidanceSessionDocs[];
 
@@ -51,6 +53,7 @@ export interface GuidanceAnecdotalGradeCount {
 export interface GuidanceAnecdotalTopStudent {
   student: string;
   lrn: string;
+  mascot?: string | null;
   section: string;
   count: number;
 }

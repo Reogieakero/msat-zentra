@@ -21,6 +21,8 @@ function learnerStatusOf(dueDate: Date | null, submitted: boolean): ModuleStatus
 
 export interface StudentCtx {
   userId: string;
+  /** Learner's current term — modules are released per term. */
+  termId: string | null;
 }
 
 interface StudentProfile {
@@ -78,7 +80,7 @@ export async function listStudentModules(
   }
 
   const modules = await prisma.advisoryModule.findMany({
-    where: { sectionId: profile.sectionId },
+    where: { sectionId: profile.sectionId, termId: ctx.termId },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
   const moduleIds = modules.map((m) => m.id);
@@ -139,7 +141,7 @@ async function loadStudentModule(ctx: StudentCtx, moduleId: string) {
     throw new AppError(404, "MODULE_NOT_FOUND", "No modules are released to your section yet");
   }
   const module = await prisma.advisoryModule.findFirst({
-    where: { id: moduleId, sectionId: profile.sectionId },
+    where: { id: moduleId, sectionId: profile.sectionId, termId: ctx.termId },
   });
   if (!module) {
     throw new AppError(404, "MODULE_NOT_FOUND", "Module not found in your section");

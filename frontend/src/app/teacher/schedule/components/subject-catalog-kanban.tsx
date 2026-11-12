@@ -1,11 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { BookPlus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { KanbanBoard } from "@/components/ui/kanban-board";
-import { ScrollList } from "@/components/ui/scroll-list";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import { Pill } from "@/components/ui/pill";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table";
 import type { ScheduleSubject } from "../page";
 import { SubjectAddKanban } from "./subject-add-kanban";
 import {
@@ -33,7 +39,8 @@ interface Props {
   subjects: ScheduleSubject[];
   pending?: boolean;
   loadError?: boolean;
-  onBack: () => void;
+  /** Retained for callers; the catalog no longer renders its own close action. */
+  onBack?: () => void;
   addOpen: boolean;
   onAddOpenChange: (open: boolean) => void;
   /** Hide the grade grid — form card only (used when Add subject was picked directly). */
@@ -48,26 +55,31 @@ export function SubjectCatalogKanban({
   subjects,
   pending,
   loadError,
-  onBack,
   addOpen,
   onAddOpenChange,
   showGrid = true,
   onCreateProgress,
   onDeleteProgress,
 }: Props) {
-  const byGrade = useMemo(() => {
-    const map = new Map<string, ScheduleSubject[]>();
-    for (const g of GRADES) map.set(g.key, []);
-    for (const s of subjects) {
-      const bucket = map.get(s.gradeLevel);
-      if (bucket) bucket.push(s);
-      else map.set(s.gradeLevel, [s]);
-    }
-    for (const list of map.values()) {
-      list.sort((a, b) => a.name.localeCompare(b.name));
-    }
+  const gradeRank = useMemo(() => {
+    const map = new Map<string, number>();
+    GRADES.forEach((g, i) => map.set(g.key, i));
     return map;
-  }, [subjects]);
+  }, []);
+
+  const [activeGrade, setActiveGrade] = useState<string | null>(null);
+
+  // One table at a time — grade tabs filter the catalog, same pattern as the
+  // registry desks' subjects page.
+  const filtered = useMemo(() => {
+    const list = activeGrade
+      ? subjects.filter((s) => s.gradeLevel === activeGrade)
+      : subjects;
+    return [...list].sort((a, b) => {
+      const rank = (gradeRank.get(a.gradeLevel) ?? 99) - (gradeRank.get(b.gradeLevel) ?? 99);
+      return rank !== 0 ? rank : a.name.localeCompare(b.name);
+    });
+  }, [subjects, activeGrade, gradeRank]);
 
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -114,35 +126,26 @@ export function SubjectCatalogKanban({
               : `${selectedIds.length} selected`}
           </span>
           <Button
-            size="sm"
-            onClick={() => setConfirmOpen(true)}
-            disabled={selectedIds.length === 0 || deleting}
-            className="h-6 border border-red-600/50 bg-transparent px-3 text-red-600 hover:bg-red-600/10 hover:text-red-600 dark:border-red-500/50 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-400"
-          >
-            <Trash2 size={14} aria-hidden />
-            Delete{selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}
-          </Button>
-          <Button
-            size="sm"
+            variant="secondary"
             onClick={handleDeleteCancel}
             disabled={deleting}
-            className="h-6 border-transparent bg-red-600 px-3 text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
+            className="h-6 gap-1 px-2 text-[11px]"
           >
             Cancel
+          </Button>
+          <Button
+            onClick={() => setConfirmOpen(true)}
+            disabled={selectedIds.length === 0 || deleting}
+            className="h-6 gap-1 px-2 text-[11px]"
+          >
+            <Trash2 size={12} aria-hidden />
+            Delete{selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}
           </Button>
         </div>
       ) : (
         <div className={styles.header}>
           <Button
-            size="sm"
-            onClick={() => onAddOpenChange(true)}
-            className="ml-auto h-6 border-transparent bg-white text-black hover:bg-neutral-200 hover:text-black dark:border-transparent dark:bg-white dark:text-black dark:hover:bg-neutral-200 dark:hover:text-black"
-          >
-            <Plus size={14} aria-hidden />
-            Add subject
-          </Button>
-          <Button
-            size="sm"
+            variant="secondary"
             onClick={handleDeleteOpen}
             disabled={subjects.length === 0 || (addOpen && !showGrid)}
             title={
@@ -152,17 +155,17 @@ export function SubjectCatalogKanban({
                   ? "Close the add-subject form to delete"
                   : "Delete a subject"
             }
-            className="h-6 border border-red-600/50 bg-transparent px-3 text-red-600 hover:bg-red-600/10 hover:text-red-600 dark:border-red-500/50 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+            className="ml-auto h-6 gap-1 px-2 text-[11px]"
           >
-            <Trash2 size={14} aria-hidden />
+            <Trash2 size={12} aria-hidden />
             Delete subject
           </Button>
           <Button
-            size="sm"
-            onClick={onBack}
-            className="h-6 border-transparent bg-red-600 px-3 text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
+            onClick={() => onAddOpenChange(true)}
+            className="h-6 gap-1 px-2 text-[11px]"
           >
-            Close
+            <BookPlus size={12} aria-hidden />
+            Add subject
           </Button>
         </div>
       )}
@@ -182,89 +185,123 @@ export function SubjectCatalogKanban({
 
       {showGrid ? (
         pending ? (
-        <div className={styles.grid} aria-busy="true" aria-label="Loading subjects">
-          {GRADES.map((g) => (
-            <div key={g.key} className="flex min-h-40 flex-col gap-2 rounded-xl border border-border p-2.5">
-              <div className="h-4 w-24 rounded bg-muted" />
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="h-9 rounded-lg bg-muted" />
-              ))}
-            </div>
-          ))}
-        </div>
-      ) : loadError ? (
-        <p role="alert" className="text-sm text-destructive">
-          Could not load subjects.
-        </p>
-      ) : subjects.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No subjects yet — add one to get started.
-        </p>
-      ) : (
-        <div className={styles.grid} role="list" aria-label="Subjects grouped by grade level">
-          {GRADES.map((g, colIdx) => {
-            const list = byGrade.get(g.key) ?? [];
-            return (
+          <div
+            className="flex flex-col gap-2 rounded-xl border border-border p-2.5"
+            aria-busy="true"
+            aria-label="Loading subjects"
+          >
+            <div className="h-4 w-32 rounded bg-muted" />
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-8 rounded-lg bg-muted" />
+            ))}
+          </div>
+        ) : loadError ? (
+          <p role="alert" className="text-sm text-destructive">
+            Could not load subjects.
+          </p>
+        ) : subjects.length === 0 ? (
+          <div className="flex min-h-80 items-center justify-center">
+            <InsightCallout role="status" className="w-fit max-w-xl text-center">
+              No subjects yet — use <strong>Add subject</strong> to create one for this
+              term.
+            </InsightCallout>
+          </div>
+        ) : (
+          <div
+            className={`${styles.boardIn} flex min-h-80 flex-col gap-2 rounded-xl border border-border p-2.5`}
+          >
+            <div className="relative -mx-2.5 flex items-center border-b border-border px-3 pb-2">
+              <span className="text-[13px] font-semibold text-muted-foreground">
+                Subjects
+              </span>
               <div
-                key={g.key}
-                role="listitem"
-                aria-label={`${g.label} subjects`}
-                className={styles.column}
-                style={{ animationDelay: `${colIdx * 70}ms` }}
+                className="absolute top-1/2 left-1/2 flex max-w-full -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-1"
+                role="tablist"
+                aria-label="Filter subjects by grade"
               >
-                <KanbanBoard
-                  title={g.label}
-                  count={<span className="text-amber-600 dark:text-amber-500">{list.length}</span>}
-                  className="h-full"
-                >
-                  {list.length === 0 ? (
-                    <p className={styles.empty}>No {g.label} subjects.</p>
-                  ) : (
-                    <ScrollList className="max-h-[46dvh] gap-[0.375rem] pr-[2px]" ariaLabel={`${g.label} list`}>
-                      {list.map((s, cardIdx) => {
-                        const checked = deleteMode && selectedIds.includes(s.id);
-                        return (
-                          <div
-                            key={s.id}
-                            className={`${styles.card} ${deleteMode ? "cursor-pointer" : ""} ${checked ? "border-red-500/60 bg-red-500/5 dark:border-red-500/60" : ""}`}
-                            style={{ animationDelay: `${colIdx * 70 + Math.min(cardIdx, 8) * 35}ms` }}
-                            onClick={deleteMode ? () => toggleSelect(s.id) : undefined}
-                          >
-                            {deleteMode ? (
-                              <span
-                                className="flex shrink-0 items-center"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={() => toggleSelect(s.id)}
-                                  aria-label={`Select ${s.name} (${s.code}) for deletion`}
-                                />
-                              </span>
-                            ) : null}
-                            <span
-                              className={`${styles.name} ${deleteMode ? "flex-1" : ""}`}
-                              title={`${s.name} (${s.code})`}
-                            >
-                              {s.name} <span className={styles.code}>({s.code})</span>
-                            </span>
-                            <span className={styles.meta}>
-                              <span
-                                className={`${styles.pill} ${s.category === "ELECTIVE" ? styles.pillElective : styles.pillCore}`}
-                              >
-                                {categoryLabel(s.category)}
-                              </span>
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </ScrollList>
-                  )}
-                </KanbanBoard>
+                {[null, ...GRADES.map((g) => g.key)].map((key) => {
+                  const active = activeGrade === key;
+                  const label =
+                    key === null
+                      ? "All"
+                      : (GRADES.find((g) => g.key === key)?.label ?? key);
+                  return (
+                    <button
+                      key={key ?? "all"}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setActiveGrade(key)}
+                      className="inline-flex cursor-pointer rounded-md p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      <Pill tone={active ? "blue" : "neutral"}>{label}</Pill>
+                    </button>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+
+            {filtered.length === 0 ? (
+              <div className="flex flex-1 items-center justify-center">
+                <InsightCallout role="status" className="w-fit max-w-full">
+                  No {GRADES.find((g) => g.key === activeGrade)?.label ?? "selected grade"}{" "}
+                  subjects yet — switch grade tabs or use <strong>Add subject</strong> to
+                  create one.
+                </InsightCallout>
+              </div>
+            ) : (
+              <div className="px-0.5 pb-0.5">
+                <Table className={styles.table}>
+                  <TableBody key={activeGrade ?? "all"}>
+                    {filtered.map((s, index) => {
+                      const checked = deleteMode && selectedIds.includes(s.id);
+                      return (
+                        <TableRow
+                          key={s.id}
+                          onClick={deleteMode ? () => toggleSelect(s.id) : undefined}
+                          className={`border-b border-border${
+                            deleteMode
+                              ? ` cursor-pointer${checked ? " bg-red-500/5 dark:bg-red-500/10" : ""}`
+                              : ""
+                          }`}
+                          style={{ animationDelay: `${40 + Math.min(index, 8) * 35}ms` }}
+                        >
+                          {deleteMode ? (
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={() => toggleSelect(s.id)}
+                                aria-label={`Select ${s.name} (${s.code}) for deletion`}
+                              />
+                            </TableCell>
+                          ) : null}
+                          <TableCell className="font-medium">{s.name}</TableCell>
+                          <TableCell>
+                            <Pill tone="green" label="Subject code">
+                              {s.code}
+                            </Pill>
+                          </TableCell>
+                          <TableCell>
+                            <Pill tone="blue" label="Grade level">
+                              {GRADES.find((g) => g.key === s.gradeLevel)?.label ?? s.gradeLevel}
+                            </Pill>
+                          </TableCell>
+                          <TableCell>
+                            <Pill
+                              tone={s.category === "ELECTIVE" ? "blue" : "amber"}
+                              label="Subject category"
+                            >
+                              {categoryLabel(s.category)}
+                            </Pill>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
         )
       ) : null}
     </div>

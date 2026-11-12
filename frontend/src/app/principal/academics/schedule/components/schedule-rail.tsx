@@ -18,12 +18,12 @@ import {
 } from "@/components/schedule/SectionScheduleCard";
 import { scheduleTone } from "@/lib/labels/status-tone";
 import rail from "@/app/principal/overview/components/PrincipalOverviewRail.module.css";
-import type { ScheduleSection } from "./schedule-table";
+import type { ScheduleSection } from "@/components/schedule/section-schedule-table";
 import { sectionPath } from "./section-path";
 import styles from "./schedule.module.css";
 
 const MENU_PANEL =
-  "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
+  "absolute right-0 top-9 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
 
 type RailKey = "submitted" | "approved" | "draft" | "empty";
 
@@ -103,7 +103,7 @@ function GutterIconButton({
       aria-expanded={expanded}
       aria-haspopup="dialog"
       aria-label={expanded ? `Close ${label}` : `Open ${label}`}
-      className={`relative flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
+      className={`relative flex h-8 w-8 items-center justify-center rounded-xl border transition-colors ${
         expanded
           ? "cursor-pointer border-amber-500/60 bg-amber-500/10"
           : "cursor-pointer border-border bg-card hover:border-amber-500/60 hover:bg-amber-500/10"
@@ -115,12 +115,24 @@ function GutterIconButton({
 }
 
 /**
- * Right rail for the schedule board — same amber icon-only rail as the
- * principal overview: hover shows the bucket label, click opens its sections
- * in a flyout kanban panel.
+ * Schedule bucket controls — the amber icon buttons that used to be the right
+ * rail, now a horizontal row of 32px buttons at the page's top-right corner.
+ * Hover shows the bucket label, click opens its sections in a flyout panel.
  */
-export function ScheduleRail({ sections }: { sections: ScheduleSection[] }) {
+export function ScheduleRail({
+  sections,
+  hrefFor,
+}: {
+  sections: ScheduleSection[];
+  /** Overrides where each bucket row links. */
+  hrefFor?: (section: ScheduleSection) => string;
+}) {
   const [openKey, setOpenKey] = React.useState<RailKey | null>(null);
+  // Controlled hover label — Radix's uncontrolled tooltips can leave a stale
+  // label behind (or skip one) while a flyout is open, because the clicked
+  // trigger keeps focus. Driving `open` from pointer/focus keeps every icon
+  // labelled no matter which panel is expanded.
+  const [hoverKey, setHoverKey] = React.useState<RailKey | null>(null);
   const railRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -147,96 +159,109 @@ export function ScheduleRail({ sections }: { sections: ScheduleSection[] }) {
     };
   }, [openKey]);
 
-  const toggle = (key: RailKey) => setOpenKey((prev) => (prev === key ? null : key));
+  const toggle = (key: RailKey) => {
+    setHoverKey(null);
+    setOpenKey((prev) => (prev === key ? null : key));
+  };
+  const clearHover = (key: RailKey) =>
+    setHoverKey((prev) => (prev === key ? null : prev));
   const items = buildItems(sections);
 
   return (
     <TooltipProvider delayDuration={100}>
-      <aside
-        className={`${rail.rail} ${styles.railIn}`}
-        style={{ top: "1rem" }}
+      <div
+        ref={railRef}
+        className="flex min-w-0 flex-wrap items-center justify-end gap-1"
+        role="group"
         aria-label="Schedule buckets"
       >
-        <div ref={railRef} className={rail.railInner}>
-          {items.map((item) => {
-            const Icon = item.icon;
-            const opened = openKey === item.key;
-            return (
-              <div key={item.key} className="relative">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <GutterIconButton
-                      label={item.title}
-                      expanded={opened}
-                      onToggle={() => toggle(item.key)}
-                    >
-                      <span className={rail.icon} aria-hidden>
-                        <Icon size={16} />
-                      </span>
-                      {item.sections.length > 0 ? (
-                        <span className={rail.badge} aria-hidden="true">
-                          {item.sections.length}
-                        </span>
-                      ) : null}
-                    </GutterIconButton>
-                  </TooltipTrigger>
-                  <TooltipContent side="left" sideOffset={10}>
-                    <span className={rail.tipTitle}>{item.title}</span>
-                    <span className={rail.tipHint}>{item.hint}</span>
-                  </TooltipContent>
-                </Tooltip>
-                <div
-                  role="dialog"
-                  aria-label={item.title}
-                  aria-hidden={opened ? undefined : true}
-                  className={`${MENU_PANEL} ${rail.menu} ${
-                    opened ? rail.menuOpen : rail.menuClosed
-                  }`}
-                >
-                  <KanbanBoard
-                    title={item.title}
-                    icon={
-                      <span className={rail.icon} aria-hidden>
-                        <Icon size={14} />
-                      </span>
-                    }
-                    count={item.sections.length}
-                    description={item.description}
-                    className="border-0"
+        {items.map((item) => {
+          const Icon = item.icon;
+          const opened = openKey === item.key;
+          return (
+            <div key={item.key} className="relative">
+              <Tooltip
+                open={hoverKey === item.key}
+                onOpenChange={(next) => {
+                  if (!next) clearHover(item.key);
+                }}
+              >
+                <TooltipTrigger asChild>
+                  <GutterIconButton
+                    label={item.title}
+                    expanded={opened}
+                    onToggle={() => toggle(item.key)}
+                    onPointerEnter={() => setHoverKey(item.key)}
+                    onPointerLeave={() => clearHover(item.key)}
+                    onFocus={() => setHoverKey(item.key)}
+                    onBlur={() => clearHover(item.key)}
                   >
-                    {item.sections.length === 0 ? (
-                      <p className={rail.hintText}>Nothing in this bucket.</p>
-                    ) : (
-                      <ul className={styles.railList}>
-                        {item.sections.map((section) => {
-                          const meta = SECTION_CARD_STATUS_META[statusesOf(section)];
-                          return (
-                            <li key={section.id}>
-                              <Link
-                                href={sectionPath(section)}
-                                className={styles.railRow}
-                                onClick={() => setOpenKey(null)}
-                              >
-                                <span className={styles.railRowName} title={section.name}>
-                                  {section.name}
-                                </span>
-                                <span className={styles.railRowMeta}>
-                                  G{section.gradeLevel.replace("G", "")}
-                                </span>
-                                <Pill tone={scheduleTone(statusesOf(section))}>{meta.label}</Pill>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </KanbanBoard>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </aside>
+                    <span className={rail.icon} aria-hidden>
+                      <Icon size={16} />
+                    </span>
+                    {item.sections.length > 0 ? (
+                      <span className={rail.badge} aria-hidden="true">
+                        {item.sections.length}
+                      </span>
+                    ) : null}
+                  </GutterIconButton>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" sideOffset={10}>
+                  <span className={rail.tipTitle}>{item.title}</span>
+                  <span className={rail.tipHint}>{item.hint}</span>
+                </TooltipContent>
+              </Tooltip>
+            <div
+              role="dialog"
+              aria-label={item.title}
+              aria-hidden={opened ? undefined : true}
+              className={`${MENU_PANEL} ${rail.menu} ${
+                opened ? rail.menuOpen : rail.menuClosed
+              }`}
+            >
+              <KanbanBoard
+                title={item.title}
+                icon={
+                  <span className={rail.icon} aria-hidden>
+                    <Icon size={14} />
+                  </span>
+                }
+                count={item.sections.length}
+                description={item.description}
+                className="border-0"
+              >
+                {item.sections.length === 0 ? (
+                  <p className={rail.hintText}>Nothing in this bucket.</p>
+                ) : (
+                  <ul className={styles.railList}>
+                    {item.sections.map((section) => {
+                      const meta = SECTION_CARD_STATUS_META[statusesOf(section)];
+                      return (
+                        <li key={section.id}>
+                          <Link
+                            href={hrefFor ? hrefFor(section) : sectionPath(section)}
+                            className={styles.railRow}
+                            onClick={() => setOpenKey(null)}
+                          >
+                            <span className={styles.railRowName} title={section.name}>
+                              {section.name}
+                            </span>
+                            <span className={styles.railRowMeta}>
+                              G{section.gradeLevel.replace("G", "")}
+                            </span>
+                            <Pill tone={scheduleTone(statusesOf(section))}>{meta.label}</Pill>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </KanbanBoard>
+            </div>
+          </div>
+        );
+      })}
+      </div>
     </TooltipProvider>
   );
 }

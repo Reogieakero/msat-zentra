@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollField } from "@/components/landing/ScrollField";
 import { getAccessToken } from "@/lib/api/client";
 import { decodeTokenIdentity, isTeacherRole } from "@/lib/auth/roles";
 import {
@@ -19,6 +20,7 @@ import {
   useTerm,
   type ActiveTerm,
 } from "@/lib/term/TermContext";
+import styles from "./TermSelectOverlay.module.css";
 
 function formatRange(start: string | null, end: string | null): string {
   if (!start || !end) return "Dates not set";
@@ -59,6 +61,17 @@ export function TermSelectOverlay() {
   const [role, setRole] = React.useState<string | null>(null);
   const [yearId, setYearId] = React.useState<string>("");
   const [picked, setPicked] = React.useState<ActiveTerm | null>(null);
+  // Fade the overlay out before committing the term so the workspace never
+  // appears underneath it in a single frame.
+  const [leaving, setLeaving] = React.useState(false);
+  const leaveTimer = React.useRef<number | null>(null);
+
+  React.useEffect(
+    () => () => {
+      if (leaveTimer.current !== null) window.clearTimeout(leaveTimer.current);
+    },
+    [],
+  );
 
   React.useEffect(() => {
     const identity = decodeTokenIdentity(getAccessToken());
@@ -90,15 +103,29 @@ export function TermSelectOverlay() {
     }
   }, [mustShow, schoolYears, activeTerm, yearId]);
 
+  // Re-open cleanly: the component stays mounted while hidden, so clear the
+  // exit flag whenever the overlay becomes visible again.
+  React.useEffect(() => {
+    if (mustShow) setLeaving(false);
+  }, [mustShow]);
+
   if (!mustShow) return null;
 
   const year = schoolYears.find((y) => y.id === yearId) ?? schoolYears[0] ?? null;
   const terms = [...(year?.terms ?? [])].sort((a, b) => a.termNumber - b.termNumber);
 
   function handleContinue() {
-    if (!picked) return;
-    setActiveTerm(picked);
-    setPromptRequired(false);
+    if (!picked || leaving) return;
+    const commit = () => {
+      setActiveTerm(picked);
+      setPromptRequired(false);
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      commit();
+      return;
+    }
+    setLeaving(true);
+    leaveTimer.current = window.setTimeout(commit, 300);
   }
 
   return (
@@ -106,10 +133,17 @@ export function TermSelectOverlay() {
       role="dialog"
       aria-modal="true"
       aria-label="Select active term"
-      className="fixed inset-0 z-[100] overflow-y-auto bg-background"
+      data-leaving={leaving ? "true" : undefined}
+      className={`fixed inset-0 z-[100] overflow-y-auto bg-background ${styles.shell}`}
     >
-      <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col justify-center px-4 py-10">
-        <h2 className="text-2xl font-semibold tracking-tight">Select term</h2>
+      <ScrollField palette="mint" autoCycle align="topRight" />
+
+      <div
+        className={`relative mx-auto flex min-h-full w-full max-w-4xl flex-col justify-center px-4 py-10 ${styles.stage}`}
+      >
+        <h2 className={`text-2xl font-semibold tracking-tight ${styles.title}`}>
+          Select <span className={styles.titleAccent}>term</span>
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Choose which term your workspace will display. Each term is a separate card.
         </p>
@@ -142,7 +176,7 @@ export function TermSelectOverlay() {
                 <SelectTrigger id="term-year" className="w-56">
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="border border-white/10 bg-[#070d0b] text-[#f3f7f5]">
                   {schoolYears.map((y) => (
                     <SelectItem key={y.id} value={y.id}>
                       {y.name}
@@ -172,7 +206,7 @@ export function TermSelectOverlay() {
                         termNumber: t.termNumber,
                       })
                     }
-                    className={`flex min-h-44 flex-col rounded-xl border bg-card p-5 text-left shadow-sm transition-all ${
+                    className={`flex min-h-44 flex-col rounded-xl border bg-card p-5 text-left shadow-sm transition-all ${styles.termCard} ${
                       selected
                         ? "border-primary ring-2 ring-primary/40"
                         : "border-input hover:border-primary/50 hover:shadow"

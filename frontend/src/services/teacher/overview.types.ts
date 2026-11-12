@@ -159,3 +159,45 @@ export interface TeacherOverviewGradebook {
   assessments: SubjectAssessmentRow[];
   standings: ClassAverageRow[];
 }
+
+export interface TeacherOverviewInsightDay {
+  date: string;
+  label: string;
+  high: number;
+  moderate: number;
+  low: number;
+  tracked: number;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  marked: number;
+  rate: number | null;
+}
+
+export interface TeacherOverviewInsights {
+  days: number;
+  rangeStart: string | null;
+  rangeEnd: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
+  populationLabel: "advisees" | "students";
+  learnerCount: number;
+  series: TeacherOverviewInsightDay[];
+  riskMix: {
+    high: number;
+    moderate: number;
+    low: number;
+    unassessed: number;
+  };
+  totals: {
+    high: number;
+    moderate: number;
+    low: number;
+    present: number;
+    late: number;
+    absent: number;
+    excused: number;
+    attendanceRate: number | null;
+  };
+}

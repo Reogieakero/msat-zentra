@@ -43,6 +43,32 @@
    overflow-x: clip;
 }
 
+/* Dark mode mirrors the teacher desk / landing hero canvas — the same deep
+   green-black with mint/violet aurora glows — so every desk shares one
+   palette. Painted on the wrapper (not .main) so the fixed rail and mobile
+   tab bar share the exact same canvas. `fixed` anchors the glow to the
+   viewport while long pages scroll; the topbar is translucent above it. */
+:global(.dark) .wrapper {
+  background-color: #050807;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 80% 20%, rgba(126, 245, 208, 0.1), transparent 65%),
+    radial-gradient(ellipse 70% 70% at 12% 78%, rgba(169, 156, 255, 0.12), transparent 65%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Let the wrapper canvas show through the content + rail. */
+:global(.dark) .main {
+  background-color: transparent;
+}
+
+/* Same translucent bar as the landing nav so the hero glow reads through. */
+:global(.dark) .topbar {
+  background-color: rgba(5, 8, 7, 0.4);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
 .topbar {
    position: fixed;
    top: 0;
@@ -59,7 +85,11 @@
    height: 3rem;
    padding-inline: 0.75rem;
    border-bottom: 1px solid var(--border);
-   background-color: var(--background);
+   /* Glass bar: the page canvas runs behind the fixed topbar instead of
+      stopping at a solid strip. */
+   background-color: color-mix(in oklch, var(--background) 72%, transparent);
+   backdrop-filter: blur(18px) saturate(140%);
+   -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 
 .brand {
@@ -89,50 +119,68 @@
 .search {
   width: 16rem;
   max-width: 40vw;
-  border: none;
-  background: transparent;
-  box-shadow: none;
+  /* Keeps the search trigger beside (not touching) the right icon cluster:
+     8px topbar gap + 8px here = 16px breathing room. */
+  margin-right: 0.5rem;
 }
 
-.searchCommand {
-  background: transparent !important;
-  border-radius: 0 !important;
-  padding: 0 !important;
-}
-
-.searchCommand :global([data-slot="command-input"]) {
-  height: 2.25rem;
-}
-
-.accountGradeBasis {
+/* Topbar trigger — looks like a search field, opens the centered palette. */
+.searchTrigger {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.375rem;
-  padding: 0.25rem 0.5rem;
-}
-
-.segmentedCompact {
-  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 2rem;
+  padding: 0 0.375rem 0 0.625rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.segmentCompact {
-  flex: 1;
-  border: 0;
-  background: transparent;
-  padding: 0.25rem 0.625rem;
-  font-size: 0.75rem;
-  line-height: 1.1;
+  border-radius: 16px;
+  background-color: var(--muted);
   color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1;
+  text-align: left;
   cursor: pointer;
+  outline: none;
+  transition:
+    border-color 140ms ease-out,
+    background-color 140ms ease-out;
 }
 
-.segmentCompactOn {
-  background: var(--foreground);
-  color: var(--background);
+.searchTrigger:hover {
+  border-color: var(--ring);
+  background-color: color-mix(in oklch, var(--muted), var(--foreground) 4%);
+}
+
+.searchTrigger:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.searchTriggerIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.searchTriggerText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchKbd {
+  flex-shrink: 0;
+  padding: 0.125rem 0.3125rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-md) * 0.7);
+  background-color: var(--background);
+  color: var(--muted-foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .avatarButton {

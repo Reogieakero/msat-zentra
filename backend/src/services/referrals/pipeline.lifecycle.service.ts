@@ -83,7 +83,19 @@ export async function dismissReferral(ctx: ReferralContext, referralId: string, 
       userId: referral.referredBy,
       sourceTable: "referrals",
       action: "status",
-      message: `Your referral for ${card.who} was dismissed.`,
+      // Keep "ADM" in the message: the adviser desk routes ADM rejections to
+      // the dedicated reject clip and everything else to the cancelled one.
+      // ADM type = the referral was routed/escorted to the ADM coordinator
+      // (same rule the desks use; `Referral` has no `type` column).
+      message:
+        referral.referredToRole === "adm_coordinator" ||
+        referral.escalatedTo === "adm_coordinator"
+          ? `Your ADM referral for ${card.who} was dismissed.`
+          : referral.referredToRole === "guidance_counselor"
+            // "counseling referral" — the adviser desk rings the dedicated
+            // counseling-reject clip (`isAdviserCounselingRejected`).
+            ? `Your counseling referral for ${card.who} was dismissed.`
+            : `Your referral for ${card.who} was dismissed.`,
       sourceId: referral.id,
     });
   }
@@ -198,22 +210,26 @@ export async function reopenReferral(ctx: ReferralContext, referralId: string, i
   if (input.consultReviewer && nextRole !== "adm_coordinator") {
     throw new AppError(400, "INVALID_ACTION", "A consultation reviewer can only be picked for ADM cases");
   }
-  if (nextRole === "adm_coordinator") {
-    const studentMatch = referral.studentId
-      ? { studentId: referral.studentId }
-      : { rosterId: referral.rosterId };
-    const existingAdm = await prisma.referral.findFirst({
-      where: {
-        referredToRole: "adm_coordinator",
-        status: { notIn: ["dismissed", "resolved"] },
-        termId: referral.termId,
-        ...studentMatch,
-      },
-      select: { id: true },
-    });
-    if (existingAdm) {
-      throw new AppError(409, "ADM_CASE_EXISTS", "This student already has an open ADM case — only one ADM referral per student");
-    }
+  // Same one-live-referral-per-learner-per-type rule as a fresh referral:
+  // re-submitting a cancelled case must not duplicate an open one.
+  const studentMatch = referral.studentId
+    ? { studentId: referral.studentId }
+    : { rosterId: referral.rosterId };
+  const existingOpen = await prisma.referral.findFirst({
+    where: {
+      id: { not: referral.id },
+      referredToRole: nextRole,
+      status: { notIn: ["dismissed", "resolved"] },
+      ...studentMatch,
+    },
+    select: { id: true },
+  });
+  if (existingOpen) {
+    throw new AppError(
+      409,
+      "REFERRAL_ALREADY_OPEN",
+      "This student already has an open referral of this type — resolve or dismiss it before referring again",
+    );
   }
   const updated = await prisma.referral.update({
     where: { id: referral.id },

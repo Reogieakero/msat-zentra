@@ -3,25 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  BookOpen,
-  CalendarClock,
-  CalendarDays,
-  ClipboardCheck,
-  FilePenLine,
-  FileText,
-  GraduationCap,
-  Send,
-  Inbox,
-  Settings,
-  Users,
-  ListChecks,
-  type LucideIcon,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import styles from "./teacher-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { NAV_ICONS } from "./nav/sidebar-icons";
 import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 import {
@@ -43,40 +29,44 @@ type NavGroup = {
   items: NavItem[];
 };
 
-function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
+export type { NavGroup, NavItem };
+
+export function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
   const workspaceItems = [
-    { title: "Class", href: "/teacher/classes", icon: BookOpen },
-    { title: "Gradebook", href: "/teacher/grading", icon: ClipboardCheck },
-    { title: "Attendance", href: "/teacher/attendance", icon: CalendarClock },
+    { title: "Class", href: "/teacher/classes", icon: NAV_ICONS.class },
+    { title: "Gradebook", href: "/teacher/grading", icon: NAV_ICONS.gradebook },
+    { title: "Lock Grades", href: "/teacher/lock-grades", icon: NAV_ICONS.lockGrades },
+    { title: "Attendance", href: "/teacher/attendance", icon: NAV_ICONS.attendance },
   ];
   if (isMasterTeacher) {
-    workspaceItems.push({ title: "Timeslot", href: "/teacher/schedule", icon: ListChecks });
+    workspaceItems.push({ title: "Timeslot", href: "/teacher/schedule", icon: NAV_ICONS.timeslot });
   }
   const groups: NavGroup[] = [
     { label: "Overview", items: [
-      { title: "Dashboard", href: "/teacher/overview", icon: LayoutDashboard },
-      { title: "Student List", href: "/teacher/overview/students", icon: Users },
-      { title: "Reports", href: "/teacher/overview/reports", icon: FileText },
+      { title: "Dashboard", href: "/teacher/overview", icon: NAV_ICONS.overview },
+      { title: "Student List", href: "/teacher/overview/students", icon: NAV_ICONS.studentList },
+      { title: "Reports", href: "/teacher/overview/reports", icon: NAV_ICONS.reports },
     ] },
   ];
   if (isAdviser) {
     groups.push(
       { label: "Advisory", items: [
-        { title: "Advisory List", href: "/teacher/advisory/list", icon: Users },
-        { title: "Attendance", href: "/teacher/advisory/attendance", icon: CalendarClock },
-        { title: "Academic", href: "/teacher/advisory/students", icon: GraduationCap },
-        { title: "Anecdotal", href: "/teacher/anecdotal", icon: FilePenLine },
-        { title: "Referrals", href: "/teacher/advisory/referrals", icon: Send },
-        { title: "ADM", href: "/teacher/advisory/adm-cases", icon: Inbox },
-        { title: "Modules", href: "/teacher/advisory/modules", icon: BookOpen },
-        { title: "Class Schedule", href: "/teacher/advisory/schedule", icon: CalendarDays },
-        { title: "SF10 Access", href: "/teacher/advisory/sf10-access", icon: FileText },
+        { title: "Advisory List", href: "/teacher/advisory/list", icon: NAV_ICONS.advisoryList },
+        { title: "Attendance", href: "/teacher/advisory/attendance", icon: NAV_ICONS.attendance },
+        { title: "Academic", href: "/teacher/advisory/students", icon: NAV_ICONS.academic },
+        { title: "Anecdotal", href: "/teacher/anecdotal", icon: NAV_ICONS.anecdotal },
+        { title: "Referrals", href: "/teacher/advisory/referrals", icon: NAV_ICONS.referrals },
+        { title: "Interventions", href: "/teacher/advisory/interventions", icon: NAV_ICONS.interventions },
+        { title: "ADM", href: "/teacher/advisory/adm-cases", icon: NAV_ICONS.admCases },
+        { title: "Modules", href: "/teacher/advisory/modules", icon: NAV_ICONS.modules },
+        { title: "Class Schedule", href: "/teacher/advisory/schedule", icon: NAV_ICONS.schedule },
+        { title: "SF10 Access", href: "/teacher/advisory/sf10-access", icon: NAV_ICONS.sf10Access },
       ]},
     );
   }
   groups.push(
     { label: "Workspace", items: workspaceItems },
-    { label: "Settings", items: [{ title: "General Settings", href: "/teacher/settings", icon: Settings }] },
+    { label: "Settings", items: [{ title: "General Settings", href: "/teacher/settings", icon: NAV_ICONS.settings }] },
   );
   return groups;
 }

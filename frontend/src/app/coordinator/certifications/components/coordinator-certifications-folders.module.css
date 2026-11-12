@@ -7,6 +7,40 @@
   height: 100%;
 }
 
+/* Centered status pill-tabs in the board header — same pattern as referrals. */
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.filterButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.filterButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.statusTabCount {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+/* No-match message sits centred inside the board card. */
+.emptyCallout {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
 .content {
   display: flex;
   flex-direction: column;
@@ -143,6 +177,19 @@
   background-color: color-mix(in oklch, var(--muted), transparent 40%);
   padding: 0.625rem;
   font-family: var(--font-inter);
+  /* Cards cascade in — same expo-out entrance as the coordinator boards. */
+  animation: cert-card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes cert-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .certCardHead {
@@ -356,6 +403,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .certCard {
+    animation: none;
+  }
+
   .spin {
     animation: none;
   }

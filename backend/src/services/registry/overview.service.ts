@@ -1,6 +1,12 @@
 import { prisma } from "../../lib/prisma.js";
 import { gradeLabel, schoolYearClause } from "../../modules/registry/registry.repository.js";
 import { normalizeApprovedLrnAt } from "./access.service.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { RegistryContext } from "./registry.types.js";
 
 export interface OverviewTakes {
@@ -83,6 +89,7 @@ function buildRequestDaily(
 
 export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, schoolYearId: string | null) {
   const band = ctx.band;
+  const archivedLearners = await archivedAdvisoryLearnerIds();
 
   const pendingAdviserAccess = await prisma.staffProfile.count({
     where: { isAdviser: true, user: { status: "pending" } },
@@ -96,7 +103,7 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
   };
 
   const viewableFinalRows = await prisma.finalGrade.findMany({
-    where: inBand,
+    where: { ...inBand, ...excludeArchivedLearnerRows(archivedLearners) },
     select: {
       lockStatus: true,
       studentId: true,
@@ -130,7 +137,9 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
     await Promise.all([
     prisma.sf10Record.groupBy({
       by: ["status"],
-      where: { student: { gradeLevel: { in: band } } },
+      where: {
+        student: { gradeLevel: { in: band }, ...excludeArchivedProfiles(archivedLearners) },
+      },
       _count: { _all: true },
     }),
     prisma.section.groupBy({
@@ -169,7 +178,11 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
     Promise.all(
       band.map((g) =>
         prisma.studentRoster.count({
-          where: { gradeLevel: g, ...schoolYearClause(schoolYearId) },
+          where: {
+            gradeLevel: g,
+            ...schoolYearClause(schoolYearId),
+            ...excludeArchivedRosters(archivedLearners),
+          },
         })
       )
     ),
@@ -183,7 +196,10 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
   const sf10Attach = sf10ByStatus.find((r) => r.status === "attach")?._count._all ?? 0;
 
   const latestAttachRows = await prisma.sf10Record.findMany({
-    where: { status: "attach", student: { gradeLevel: { in: band } } },
+    where: {
+      status: "attach",
+      student: { gradeLevel: { in: band }, ...excludeArchivedProfiles(archivedLearners) },
+    },
     orderBy: { validatedAt: "desc" },
     ...(takes.attachTake !== undefined ? { take: takes.attachTake } : {}),
     select: {
@@ -206,7 +222,11 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
   }));
 
   const missingRows = await prisma.studentProfile.findMany({
-    where: { gradeLevel: { in: band }, sf10Records: { none: {} } },
+    where: {
+      gradeLevel: { in: band },
+      sf10Records: { none: {} },
+      ...excludeArchivedProfiles(archivedLearners),
+    },
     ...(takes.missingTake !== undefined ? { take: takes.missingTake } : {}),
     select: {
       lrn: true,
@@ -224,7 +244,11 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
 
   const [profiledPending, barePending] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { gradeLevel: { in: band }, user: { status: "pending" } },
+      where: {
+        gradeLevel: { in: band },
+        user: { status: "pending" },
+        ...excludeArchivedProfiles(archivedLearners),
+      },
       ...(takes.pendingTake !== undefined ? { take: takes.pendingTake } : {}),
       select: {
         lrn: true,
@@ -247,7 +271,7 @@ export async function getOverview(ctx: RegistryContext, takes: OverviewTakes, sc
   const bareRosters =
     bareLrns.length > 0
       ? await prisma.studentRoster.findMany({
-          where: { lrn: { in: bareLrns } },
+          where: { lrn: { in: bareLrns }, ...excludeArchivedRosters(archivedLearners) },
           select: { lrn: true, gradeLevel: true, schoolYearId: true },
         })
       : [];

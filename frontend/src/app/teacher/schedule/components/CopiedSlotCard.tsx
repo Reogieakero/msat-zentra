@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { Copy, X } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
@@ -20,7 +20,7 @@ type Props = {
 export function CopiedSlotCard({ copied, onClear }: Props) {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const subjectsQuery = useQuery<{ subjects: ScheduleSubject[] }>({
+  const subjectsQuery = useLiveQuery<{ subjects: ScheduleSubject[] }>({
     queryKey: ["teacher-schedule-subjects", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ subjects: ScheduleSubject[] }>(
@@ -29,7 +29,7 @@ export function CopiedSlotCard({ copied, onClear }: Props) {
       return data;
     },
   });
-  const teachersQuery = useQuery<{ teachers: { id: string; name: string }[] }>({
+  const teachersQuery = useLiveQuery<{ teachers: { id: string; name: string }[] }>({
     queryKey: ["teacher-schedule-teachers", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ teachers: { id: string; name: string }[] }>(

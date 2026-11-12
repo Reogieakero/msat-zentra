@@ -52,10 +52,14 @@ export async function assertOwnFolder(folderId: string, ownerId: string) {
   return folder;
 }
 
-export async function loadOcForm01Data(recordId: string, requesterId: string, requesterRole: string): Promise<{
+export async function loadOcForm01Data(recordId: string, requesterId: string, requesterRole: string, opts: { signatureBytes?: boolean } = {}): Promise<{
   data: OcForm01Data;
   filename: string;
   recordId: string;
+  canEdit: boolean;
+  category: string;
+  confidentialityLevel: string;
+  observationDatetime: string;
   canSign: boolean;
   signature: { by: string; at: string; imageUrl: string } | null;
 }> {
@@ -84,7 +88,9 @@ export async function loadOcForm01Data(recordId: string, requesterId: string, re
       },
     },
   });
-  if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+  if (!record || record.deletedAt) {
+    throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+  }
 
   const isObserver = record.observerId === requesterId;
   const isSectionAdviser = record.section.adviserId === requesterId;
@@ -166,7 +172,11 @@ export async function loadOcForm01Data(recordId: string, requesterId: string, re
       at: record.signedAt.toISOString(),
       imageUrl: record.signatureImageUrl,
     };
-    signatureImage = await loadSignatureBytes(record.signatureImageUrl);
+    // The detail endpoint drops the bytes anyway; only the Excel export needs
+    // them, so skip the remote storage round-trip when they won't be used.
+    if (opts.signatureBytes !== false) {
+      signatureImage = await loadSignatureBytes(record.signatureImageUrl);
+    }
   }
 
   const data: OcForm01Data = {
@@ -201,6 +211,11 @@ export async function loadOcForm01Data(recordId: string, requesterId: string, re
     data,
     filename: ocForm01Filename(data.studentName, when),
     recordId: record.id,
+    // Editable/removable only by the filing observer or the section adviser.
+    canEdit: isObserver || isSectionAdviser,
+    category: record.category,
+    confidentialityLevel: record.confidentialityLevel,
+    observationDatetime: when.toISOString(),
     canSign,
     signature,
   };

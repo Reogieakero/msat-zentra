@@ -3,7 +3,7 @@
 import { useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Trash2, Undo2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { ScrollList } from "@/components/ui/scroll-list";
@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { toast } from "@/components/ui/sonner";
+import { isOptimisticId, markOptimisticCancelled } from "./schedule-optimistic";
 import type { CatalogTeacher } from "./use-schedule-catalog";
 import styles from "./subject-kanban.module.css";
 
@@ -110,16 +111,32 @@ export function useTeacherDelete(onProgress?: (p: TeacherDeleteProgress | null) 
       const startedAt = Date.now();
       const report = (next: TeacherDeleteRowState[], active: boolean) =>
         onProgress?.({ active, done: !active, rows: [...next], startedAt });
-      // Instant list update — the dock reports each DELETE as it lands.
+      // Instant list update — and cancel any in-flight list fetch so a stale
+      // response can't paint the rows back after they are evicted.
+      await qc.cancelQueries({ queryKey: ["teacher-schedule-teachers"] });
       evict(new Set(targets.map((t) => t.id)));
       report(rows, true);
       const failed: CatalogTeacher[] = [];
       await Promise.all(
         targets.map(async (t, i) => {
+          // A row still waiting on its POST has no server id yet. Mark it
+          // cancelled (the add mutation compensates) instead of firing a 404.
+          if (isOptimisticId(t.id)) {
+            markOptimisticCancelled(t.id);
+            rows[i] = { ...rows[i], status: "deleted" };
+            report(rows, true);
+            return;
+          }
           try {
             await apiClient.delete(`/api/teacher/schedule/teachers/${t.id}`);
             rows[i] = { ...rows[i], status: "deleted" };
           } catch (err) {
+            // Already gone (e.g. deleted from another tab) — not a failure.
+            if ((err as { response?: { status?: number } })?.response?.status === 404) {
+              rows[i] = { ...rows[i], status: "deleted" };
+              report(rows, true);
+              return;
+            }
             const message = apiErrorMessage(err, "Failed to delete teacher.");
             rows[i] = { ...rows[i], status: "failed", message };
             failed.push(t);
@@ -128,6 +145,10 @@ export function useTeacherDelete(onProgress?: (p: TeacherDeleteProgress | null) 
         }),
       );
       if (failed.length > 0) reinsert(failed);
+      // Re-evict the rows the server confirmed gone: a list fetch that started
+      // before the DELETEs committed can still resolve with them and would
+      // otherwise bring them back on screen.
+      evict(new Set(rows.filter((r) => r.status === "deleted").map((r) => r.id)));
       invalidateTeacher.schedule();
       const ok = rows.filter((r) => r.status === "deleted").length;
       if (ok > 0) {
@@ -145,7 +166,7 @@ export function useTeacherDelete(onProgress?: (p: TeacherDeleteProgress | null) 
       report(rows, false);
       busyRef.current = false;
     },
-    [evict, invalidateTeacher, onProgress, reinsert],
+    [evict, invalidateTeacher, onProgress, qc, reinsert],
   );
 
   return { deleteTeachers };
@@ -186,14 +207,19 @@ export function TeacherDeleteConfirm({ teachers, onCancel, onConfirm }: ConfirmP
           className="bg-card font-sans text-card-foreground shadow-2xl"
           footer={
             <div className="flex justify-end gap-1.5 px-1 pb-1">
-              <Button size="sm" onClick={onCancel} variant="outline" className="h-6 font-sans">
+              <Button
+                onClick={onCancel}
+                variant="outline"
+                className="h-6 gap-1 px-2 font-sans text-[11px]"
+              >
+                <Undo2 size={12} aria-hidden />
                 Keep them
               </Button>
               <Button
-                size="sm"
                 onClick={onConfirm}
-                className="h-6 border-transparent bg-red-600 px-3 font-sans text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
+                className="h-6 gap-1 border-transparent bg-red-600 px-2 font-sans text-[11px] text-white hover:bg-red-700 hover:text-white dark:border-transparent dark:bg-red-600 dark:text-white dark:hover:bg-red-700 dark:hover:text-white"
               >
+                <Trash2 size={12} aria-hidden />
                 {`Confirm delete${teachers.length === 1 ? "" : ` (${teachers.length})`}`}
               </Button>
             </div>

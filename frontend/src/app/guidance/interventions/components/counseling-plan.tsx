@@ -276,9 +276,10 @@ export function CounselingPlan({
             <Button
               type="button"
               size="sm"
+              variant="default"
               disabled={locked || isActionPending}
               onClick={onSchedule}
-              className="h-8 rounded-lg bg-blue-600 px-3 text-[13px] font-semibold text-white hover:bg-blue-700"
+              className="h-8 rounded-lg px-3 text-[13px] font-semibold"
             >
               Book session
             </Button>
@@ -288,6 +289,7 @@ export function CounselingPlan({
               <Button
                 type="button"
                 size="sm"
+                variant="default"
                 disabled={
                   locked ||
                   isActionPending ||
@@ -299,7 +301,7 @@ export function CounselingPlan({
                     : undefined
                 }
                 onClick={() => onSession(upcoming, "finish")}
-                className="h-8 rounded-lg bg-blue-600 px-3 text-[13px] font-semibold text-white hover:bg-blue-700"
+                className="h-8 rounded-lg px-3 text-[13px] font-semibold"
               >
                 <Busy busy={isBusy("finish")} />
                 Mark done

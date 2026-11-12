@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FolderCard } from "@/components/ui/FolderCard";
-import { fetchOcForm01Detail, type OcForm01Detail } from "@/components/ocform01/ocform01";
+import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
 import {
   buildGcForm03Data,
   consultRecommendation,
@@ -77,7 +77,7 @@ export function GuidanceReferralEntry({
   onChanged: () => void;
   highlighted?: boolean;
 }) {
-  const { isPending, isClosed, isAdmTrack, hasRail, isEndorsedRow, canManageSessions, latest, booked } = useGuidanceEntryMeta(row);
+  const { isPending, isClosed, isAdmTrack, hasRail, isEndorsedRow, canManageSessions, latest, booked, done } = useGuidanceEntryMeta(row);
 
   const [docsFor, setDocsFor] = React.useState<CounselingSessionItem | null>(null);
 
@@ -88,31 +88,32 @@ export function GuidanceReferralEntry({
   const [gcLoading, setGcLoading] = React.useState(false);
 
   async function openGcForm() {
-    if (gcLoading) return;
-    if (gcData) {
-      setGcOpen(true);
-      return;
-    }
-    setGcLoading(true);
-    try {
-      let report: OcForm01Detail | null = null;
-      try {
-        if (row.anecdotalId) report = await fetchOcForm01Detail(row.anecdotalId);
-      } catch {
-        report = null;
-      }
-      const data = buildGcForm03Data(
-        row,
-        report,
-        consultRecommendation(row.notes)
-      );
+    if (gcLoading || gcOpen) return;
+    const stamped = (data: GcForm03Data): GcForm03Data => {
       const day = latestActionDay(latest.time);
       if (day) {
         data.receivedDate = day;
         data.counselorDate = day;
       }
-      setGcData(data);
+      return data;
+    };
+    // Show the form immediately from the queue row, then refine it once the
+    // full OCForm-01 report arrives.
+    if (gcData) {
       setGcOpen(true);
+      return;
+    }
+    setGcData(stamped(buildGcForm03Data(row, null, consultRecommendation(row.notes))));
+    setGcOpen(true);
+    if (!row.anecdotalId) return;
+    setGcLoading(true);
+    try {
+      const report = await fetchOcForm01Detail(row.anecdotalId).catch(() => null);
+      if (report) {
+        setGcData(
+          stamped(buildGcForm03Data(row, report, consultRecommendation(row.notes))),
+        );
+      }
     } finally {
       setGcLoading(false);
     }
@@ -275,7 +276,7 @@ export function GuidanceReferralEntry({
                 </Button>
                 )
               )}
-              {!isClosed && !isAdmTrack && (
+              {!isClosed && !isAdmTrack && !done && (
                 <Button
                   type="button"
                   size="xs"

@@ -112,7 +112,11 @@ export async function sectionLinkCounts(
     prisma.studentRoster.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
     prisma.teacherSubjectAssignment.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
     prisma.attendanceRecord.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
-    prisma.anecdotalRecord.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
+    prisma.anecdotalRecord.groupBy({
+      by: ["sectionId"],
+      where: { ...where, deletedAt: null },
+      _count: { _all: true },
+    }),
     prisma.gradeFlag.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
     prisma.adviserSf10AccessRequest.groupBy({ by: ["sectionId"], where, _count: { _all: true } }),
   ]);

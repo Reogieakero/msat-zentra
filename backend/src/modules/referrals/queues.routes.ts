@@ -7,8 +7,24 @@ import { CACHE_TTLS } from "../../lib/cacheTags.js";
 import { referralsMineQuerySchema, referralsQueueQuerySchema } from "./referrals.schemas.js";
 import { NURSE_CACHE_TAGS, resolveQueuePageSize } from "./referrals.repository.js";
 import { listMine, listQueue } from "../../services/referrals/queues.service.js";
+import { listFormSigners } from "../../services/referrals/signers.service.js";
 
 const router = Router();
+
+router.get(
+  "/form-signers",
+  requireAuth,
+  requireRole("guidance_counselor", "nurse", "principal"),
+  cache({ tags: ["referrals", "staff"], ttl: CACHE_TTLS.lookup }),
+  etag(),
+  async (_req, res, next) => {
+    try {
+      res.json(await listFormSigners());
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 router.get(
   "/",

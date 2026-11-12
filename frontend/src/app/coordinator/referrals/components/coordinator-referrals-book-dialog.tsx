@@ -106,6 +106,7 @@ export function CoordinatorReferralsBookDialog({
       onClose={onClose}
       onSubmit={handleSubmit}
       inviteStaff={staffQuery.data?.staff}
+      inviteStaffLoading={staffQuery.isPending}
       initialInviteIds={(rescheduleMeeting?.invitees ?? []).map((u) => u.id)}
       sectionAdviserId={scopedAdviserId}
       inviteHint={

@@ -1,0 +1,149 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  width: 100%;
+}
+
+.rowAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 4.5rem;
+}
+
+/* Filter triggers — 32px outline pill with a dot when a filter is active. */
+.filterBtn {
+  gap: 0.375rem;
+  height: 2rem;
+  white-space: nowrap;
+}
+
+.filterActive {
+  border-color: color-mix(in oklch, #f59e0b 55%, transparent);
+  color: #b45309;
+}
+
+:global(.dark) .filterActive {
+  color: #f59e0b;
+}
+
+.filterDot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: #f59e0b;
+}
+
+/* Filter menu panel — thin amber scrollbar when the option list overflows. */
+.filterMenu {
+  max-height: 20rem;
+  min-width: 11rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, #f59e0b, transparent 20%) transparent;
+}
+
+.filterMenu::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.filterMenu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.filterMenu::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklch, #f59e0b, transparent 20%);
+  border-radius: 999px;
+}
+
+.filterMenu::-webkit-scrollbar-thumb:hover {
+  background-color: #f59e0b;
+}
+
+.muted {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+/* 24px row action button — compact so the list rows stay tight. */
+.actionBtn,
+.actionBtnDanger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.5rem;
+  padding: 0 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  color: var(--foreground);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.actionBtn:hover:not(:disabled) {
+  border-color: var(--ring);
+  background-color: var(--muted);
+}
+
+.actionBtnDanger {
+  color: var(--destructive);
+}
+
+.actionBtnDanger:hover:not(:disabled) {
+  border-color: var(--destructive);
+  background-color: color-mix(in oklch, var(--destructive) 8%, transparent);
+}
+
+.actionBtn:disabled,
+.actionBtnDanger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty {
+  margin: 0;
+  padding: 1.5rem 0.875rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.inlineBtn {
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}

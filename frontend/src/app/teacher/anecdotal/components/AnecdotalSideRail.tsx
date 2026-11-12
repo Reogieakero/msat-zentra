@@ -6,6 +6,7 @@ import { Info } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import {
   Tooltip,
   TooltipContent,
@@ -34,7 +35,7 @@ export function ChatWithBamaCard() {
       ariaLabel="Chat with Bama"
       className="[font-family:var(--font-inter)]"
       actions={
-        <Button asChild variant="outline" className="h-6 px-2 text-[11px]">
+        <Button asChild className="h-6 px-2 text-[11px]">
           <Link href="/teacher/chat?standalone=1" target="_blank" rel="noopener noreferrer">
             Chat now
           </Link>
@@ -91,17 +92,9 @@ export function FolderLegendCard({ variant = "category" }: { variant?: "category
       <ul className="flex min-w-0 flex-row flex-wrap content-center items-center justify-center gap-1.5" aria-label="Legend categories">
         {entries.map((e) => (
           <li key={e.label} className="flex">
-            <span
-              className="inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold leading-tight"
-              style={{
-                color: e.color,
-                borderColor: `color-mix(in srgb, ${e.color} 40%, transparent)`,
-                backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
-              }}
-              title={`${e.label} — ${e.hint}`}
-            >
+            <Pill tone={e.tone} label={e.hint}>
               {e.label}
-            </span>
+            </Pill>
           </li>
         ))}
       </ul>
@@ -111,35 +104,37 @@ export function FolderLegendCard({ variant = "category" }: { variant?: "category
 
 type LegendVariant = "category" | "docs";
 
-type LegendEntry = { key: string; label: string; hint: string; color: string };
+export type LegendEntry = { key: string; label: string; hint: string; tone: PillTone };
 
-function getLegendEntries(variant: LegendVariant): LegendEntry[] {
+export function getLegendEntries(variant: LegendVariant): LegendEntry[] {
   if (variant === "docs") {
     return [
-      { key: "counseling", label: "Counseling", hint: "Referral cases", color: "#f59e0b" },
-      { key: "intervention", label: "Intervention", hint: "Follow-up docs", color: "var(--primary)" },
-      { key: "adm", label: "ADM", hint: "By category", color: "var(--muted-foreground)" },
+      { key: "counseling", label: "Counseling", hint: "Referral cases", tone: "amber" },
+      { key: "intervention", label: "Intervention", hint: "Follow-up docs", tone: "teal" },
+      { key: "adm", label: "ADM", hint: "By category", tone: "neutral" },
     ];
   }
   return [
-    { key: "behavioral", label: "Behavioral", hint: "Conduct and classroom behavior", color: CATEGORY_COLORS.behavioral },
-    { key: "bullying", label: "Bullying", hint: "Peer conflict and bullying", color: CATEGORY_COLORS.bullying },
-    { key: "academic", label: "Academic", hint: "Learning and performance", color: CATEGORY_COLORS.academic },
-    { key: "attendance", label: "Attendance", hint: "Absences and tardiness", color: CATEGORY_COLORS.attendance },
-    { key: "health", label: "Health", hint: "Wellness and clinic notes", color: CATEGORY_COLORS.health },
+    { key: "behavioral", label: "Behavioral", hint: "Conduct and classroom behavior", tone: "amber" },
+    { key: "bullying", label: "Bullying", hint: "Peer conflict and bullying", tone: "red" },
+    { key: "academic", label: "Academic", hint: "Learning and performance", tone: "blue" },
+    { key: "attendance", label: "Attendance", hint: "Absences and tardiness", tone: "green" },
+    { key: "health", label: "Health", hint: "Wellness and clinic notes", tone: "violet" },
   ];
 }
 
-// Icon-only right rail — same gutter pattern as the attendance sidebar:
-// a 9x9 icon button per card with a hover tooltip; the KanbanBoard
-// lives in a flyout anchored left of the icon.
+// Toolbar actions — 24px horizontal buttons (icon + label), same shape as the
+// advisory list page actions; each KanbanBoard lives in a flyout below its
+// button.
 const MENU_PANEL =
-  "absolute top-0 right-12 z-50 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
+  "absolute top-full right-0 z-50 mt-2 max-h-[calc(100dvh-6rem)] w-72 overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xl ring-1 ring-border sm:w-80";
 
 function GutterIconButton({
   label,
   expanded,
   onToggle,
+  count,
+  primary = false,
   children,
   ref,
   ...triggerProps
@@ -147,6 +142,8 @@ function GutterIconButton({
   label: string;
   expanded: boolean;
   onToggle: () => void;
+  count?: number;
+  primary?: boolean;
   children: React.ReactNode;
   ref?: React.Ref<HTMLButtonElement>;
 } & Omit<React.ComponentPropsWithoutRef<"button">, "onClick" | "aria-label">) {
@@ -159,13 +156,28 @@ function GutterIconButton({
       aria-expanded={expanded}
       aria-haspopup="dialog"
       aria-label={expanded ? `Close ${label}` : `Open ${label}`}
-      className={`relative flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
-        expanded
-          ? "cursor-pointer border-amber-500/60 bg-amber-500/10"
-          : "cursor-pointer border-border bg-card hover:border-amber-500/60 hover:bg-amber-500/10"
+      className={`relative flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 text-xs transition-colors ${
+        primary
+          ? "cursor-pointer border-transparent bg-primary text-primary-foreground hover:bg-primary/90"
+          : expanded
+            ? "cursor-pointer border-amber-500/60 bg-amber-500/10"
+            : "cursor-pointer border-border bg-card hover:border-amber-500/60 hover:bg-amber-500/10"
       }`}
     >
-      {children}
+      <span className="inline-flex shrink-0 items-center" aria-hidden>
+        {children}
+      </span>
+      <span className="truncate">{label}</span>
+      {count != null && count > 0 ? (
+        <span
+          className={`flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none ${
+            primary ? "bg-primary-foreground text-primary" : "bg-amber-500 text-black"
+          }`}
+          aria-hidden="true"
+        >
+          {count}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -181,7 +193,9 @@ function GutterTip({ title, hint }: { title: string; hint: string }) {
 
 type MenuKey = "chat" | "legend";
 
-export function AnecdotalSidebar({ variant = "category" }: { variant?: LegendVariant } = {}) {
+// Inline toolbar actions — horizontal 24px buttons living in the record desk's
+// top row; each opens its KanbanBoard in a flyout below the button.
+export function AnecdotalToolbarActions({ variant = "category" }: { variant?: LegendVariant } = {}) {
   const [openKey, setOpenKey] = React.useState<MenuKey | null>(null);
   const railRef = React.useRef<HTMLDivElement>(null);
   const entries = getLegendEntries(variant);
@@ -217,12 +231,53 @@ export function AnecdotalSidebar({ variant = "category" }: { variant?: LegendVar
     `${MENU_PANEL} ${menuStyles.menu} ${openKey === key ? menuStyles.menuOpen : menuStyles.menuClosed}`;
 
   return (
-    <aside
-      className="hidden self-start lg:sticky lg:top-16 lg:block"
-      aria-label="Anecdotal tools"
-    >
+    <div className="flex shrink-0 items-center gap-2" aria-label="Anecdotal tools">
       <TooltipProvider delayDuration={100}>
-        <div ref={railRef} className="flex flex-row justify-end gap-2 lg:flex-col lg:items-end">
+        <div ref={railRef} className="flex flex-row items-center gap-2">
+          <div className="relative">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <GutterIconButton
+                  label="Legend"
+                  expanded={openKey === "legend"}
+                  onToggle={() => toggle("legend")}
+                  count={entries.length}
+                >
+                  <span className="text-amber-500" aria-hidden>
+                    <Info size={14} />
+                  </span>
+                </GutterIconButton>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={8}>
+                <GutterTip title="Legend" hint="What each folder color means" />
+              </TooltipContent>
+            </Tooltip>
+            <div role="dialog" aria-label="Legend" aria-hidden={openKey === "legend" ? undefined : true} className={panel("legend")}>
+              <KanbanBoard
+                title="Legend"
+                icon={
+                  <span className="text-amber-500" aria-hidden>
+                    <Info size={14} />
+                  </span>
+                }
+                count={entries.length}
+                description="What each folder color means."
+                ariaLabel={`Legend, ${entries.length}`}
+                className="border-0"
+              >
+                <ul className="flex min-w-0 flex-row flex-wrap content-center items-center justify-center gap-1.5" aria-label="Legend categories">
+                  {entries.map((e) => (
+                    <li key={e.label} className="flex">
+                      <Pill tone={e.tone} label={e.hint}>
+                        {e.label}
+                      </Pill>
+                    </li>
+                  ))}
+                </ul>
+              </KanbanBoard>
+            </div>
+          </div>
+
           <div className="relative">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -230,13 +285,12 @@ export function AnecdotalSidebar({ variant = "category" }: { variant?: LegendVar
                   label="Chat with Bama"
                   expanded={openKey === "chat"}
                   onToggle={() => toggle("chat")}
+                  primary
                 >
-                  <span className="inline-flex items-center" aria-hidden>
-                    <StudentMascot name="Bama" character="crt" size={22} />
-                  </span>
+                  <StudentMascot name="Bama" character="crt" size={14} />
                 </GutterIconButton>
               </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={10}>
+              <TooltipContent side="bottom" sideOffset={8}>
                 <GutterTip title="Chat with Bama" hint="File through chat" />
               </TooltipContent>
             </Tooltip>
@@ -251,7 +305,7 @@ export function AnecdotalSidebar({ variant = "category" }: { variant?: LegendVar
                 ariaLabel="Chat with Bama"
                 className="border-0 [font-family:var(--font-inter)]"
                 actions={
-                  <Button asChild variant="outline" className="h-6 px-2 text-[11px]">
+                  <Button asChild className="h-6 px-2 text-[11px]">
                     <Link href="/teacher/chat?standalone=1" target="_blank" rel="noopener noreferrer">
                       Chat now
                     </Link>
@@ -289,67 +343,8 @@ export function AnecdotalSidebar({ variant = "category" }: { variant?: LegendVar
               </KanbanBoard>
             </div>
           </div>
-
-          <div className="relative">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <GutterIconButton
-                  label="Legend"
-                  expanded={openKey === "legend"}
-                  onToggle={() => toggle("legend")}
-                >
-                  <span className="text-amber-500" aria-hidden>
-                    <Info size={16} />
-                  </span>
-                  {entries.length > 0 ? (
-                    <span
-                      className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-black"
-                      aria-hidden="true"
-                    >
-                      {entries.length}
-                    </span>
-                  ) : null}
-                </GutterIconButton>
-              </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={10}>
-                <GutterTip title="Legend" hint="What each folder color means" />
-              </TooltipContent>
-            </Tooltip>
-            <div role="dialog" aria-label="Legend" aria-hidden={openKey === "legend" ? undefined : true} className={panel("legend")}>
-              <KanbanBoard
-                title="Legend"
-                icon={
-                  <span className="text-amber-500" aria-hidden>
-                    <Info size={14} />
-                  </span>
-                }
-                count={entries.length}
-                description="What each folder color means."
-                ariaLabel={`Legend, ${entries.length}`}
-                className="border-0"
-              >
-                <ul className="flex min-w-0 flex-row flex-wrap content-center items-center justify-center gap-1.5" aria-label="Legend categories">
-                  {entries.map((e) => (
-                    <li key={e.label} className="flex">
-                      <span
-                        className="inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-semibold leading-tight"
-                        style={{
-                          color: e.color,
-                          borderColor: `color-mix(in srgb, ${e.color} 40%, transparent)`,
-                          backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
-                        }}
-                        title={`${e.label} — ${e.hint}`}
-                      >
-                        {e.label}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </KanbanBoard>
-            </div>
-          </div>
         </div>
       </TooltipProvider>
-    </aside>
+    </div>
   );
 }

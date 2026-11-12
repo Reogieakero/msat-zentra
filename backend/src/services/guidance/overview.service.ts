@@ -1,6 +1,12 @@
 import { prisma } from "../../lib/prisma.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
+import {
   computeRiskFactors,
   isAtRisk,
   levelFromFlags,
@@ -34,6 +40,15 @@ export async function getOverview(ctx: GuidanceContext) {
     ? `${term.schoolYear.name.split(" ")[0]} · Term ${term.termNumber}`
     : "No active term";
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  /* An adviser's removal hides the learner from this desk too — including the
+     referral/intervention/ADM lists and every KPI count derived from them. */
+  const archivedClause = excludeArchivedLearnerRows(archivedLearners);
+  const hasArchived =
+    archivedLearners.studentIds.length > 0 || archivedLearners.rosterIds.length > 0;
+  const admProfileArchivedClause: any = hasArchived
+    ? { referral: archivedClause }
+    : {};
   const [
     pendingAdm,
     pendingCounseling,
@@ -54,6 +69,7 @@ export async function getOverview(ctx: GuidanceContext) {
       where: {
         status: "pending",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
         OR: [
           { referredToRole: "guidance_counselor", escalatedTo: "adm_coordinator" },
           {
@@ -68,6 +84,7 @@ export async function getOverview(ctx: GuidanceContext) {
         status: "pending",
         referredToRole: "guidance_counselor",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
 
         OR: [{ escalatedTo: null }, { NOT: { escalatedTo: "adm_coordinator" } }],
       },
@@ -77,6 +94,7 @@ export async function getOverview(ctx: GuidanceContext) {
       where: {
         status: "in_progress",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
         OR: [
           { referredToRole: "guidance_counselor", escalatedTo: "adm_coordinator" },
           {
@@ -90,6 +108,7 @@ export async function getOverview(ctx: GuidanceContext) {
       where: {
         referredToRole: "guidance_counselor",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
       },
 
       orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
@@ -122,6 +141,7 @@ export async function getOverview(ctx: GuidanceContext) {
       where: {
         outcomeStatus: "ongoing",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
       },
     }),
     prisma.intervention.count({
@@ -129,12 +149,14 @@ export async function getOverview(ctx: GuidanceContext) {
         assignedTo: counselorId,
         outcomeStatus: "ongoing",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
       },
     }),
     prisma.intervention.findMany({
       where: {
         outcomeStatus: "ongoing",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
       },
       orderBy: [{ assignedAt: "desc" }, { id: "desc" }],
       take: 5,
@@ -166,6 +188,7 @@ export async function getOverview(ctx: GuidanceContext) {
     prisma.referral.findMany({
       where: {
         ...(termId ? { termId } : {}),
+        ...archivedClause,
         OR: [
           { referredToRole: "guidance_counselor" },
           {
@@ -206,7 +229,7 @@ export async function getOverview(ctx: GuidanceContext) {
       },
     }),
     prisma.admLearnerProfile.findMany({
-      where: termId ? { termId } : undefined,
+      where: { ...(termId ? { termId } : {}), ...admProfileArchivedClause },
       orderBy: { createdAt: "desc" },
       take: 5,
       select: {
@@ -230,6 +253,7 @@ export async function getOverview(ctx: GuidanceContext) {
         status: { in: ["pending", "in_progress"] },
         admProfiles: { none: {} },
         ...(termId ? { termId } : {}),
+        ...archivedClause,
       },
       orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
       take: 5,
@@ -256,7 +280,10 @@ export async function getOverview(ctx: GuidanceContext) {
       },
     }),
     prisma.studentProfile.findMany({
-      where: schoolYearId ? { section: { schoolYearId } } : undefined,
+      where: {
+        ...(schoolYearId ? { section: { schoolYearId } } : {}),
+        ...excludeArchivedProfiles(archivedLearners),
+      },
       select: {
         lrn: true,
         gradeLevel: true,
@@ -272,13 +299,16 @@ export async function getOverview(ctx: GuidanceContext) {
           select: { status: true },
         },
         anecdotalRecords: {
-          where: termId ? { termId } : undefined,
+          where: { deletedAt: null, ...(termId ? { termId } : {}) },
           select: { id: true },
         },
       },
     }),
     prisma.studentRoster.findMany({
-      where: schoolYearId ? { schoolYearId } : undefined,
+      where: {
+        ...(schoolYearId ? { schoolYearId } : {}),
+        ...excludeArchivedRosters(archivedLearners),
+      },
       select: {
         lrn: true,
         gradeLevel: true,
@@ -292,7 +322,7 @@ export async function getOverview(ctx: GuidanceContext) {
           select: { status: true },
         },
         anecdotalRecords: {
-          where: termId ? { termId } : undefined,
+          where: { deletedAt: null, ...(termId ? { termId } : {}) },
           select: { id: true },
         },
       },
@@ -308,6 +338,14 @@ export async function getOverview(ctx: GuidanceContext) {
   const sectionTotals = termId
     ? await sectionAttendanceTotals(sectionPopulations.map((s) => s.id), termId)
     : new Map<string, number>();
+
+  // The section is the source of truth for which grade desk a learner shows up
+  // under. A profile whose `gradeLevel` drifted from its section's grade (test
+  // accounts do this) used to land in a different grade's bucket than its
+  // section pill, which produced a phantom "Unassigned" learner.
+  const sectionGradeById = new Map(
+    sectionPopulations.map((s) => [s.id, s.gradeLevel]),
+  );
 
   const registeredLrns = new Set(students.map((s) => s.lrn));
   const riskCohort: {
@@ -345,9 +383,11 @@ export async function getOverview(ctx: GuidanceContext) {
   let moderate = 0;
   let low = 0;
   const riskByGrade = new Map<string, number>();
-  const highByGrade = new Map<string, number>();
-  const atRiskBySection = new Map<string, number>();
   const levelBySection = new Map<string, { high: number; moderate: number; low: number }>();
+  // Grade-level counts come straight from the cohort, not from summing section
+  // buckets: a flagged learner with no section still belongs to a grade.
+  // Summing sections used to show "1 at risk" with every section at 0.
+  const levelByGrade = new Map<string, { high: number; moderate: number; low: number }>();
 
   for (const s of riskCohort) {
     const flags = computeRiskFactors({
@@ -371,12 +411,15 @@ export async function getOverview(ctx: GuidanceContext) {
     else bucket.low++;
     levelBySection.set(s.sectionId, bucket);
 
+    const gradeLevel = sectionGradeById.get(s.sectionId) ?? s.gradeLevel;
+    const gradeBucket = levelByGrade.get(gradeLevel) ?? { high: 0, moderate: 0, low: 0 };
+    if (level === "High") gradeBucket.high++;
+    else if (level === "Moderate") gradeBucket.moderate++;
+    else gradeBucket.low++;
+    levelByGrade.set(gradeLevel, gradeBucket);
+
     if (isAtRisk(level)) {
-      riskByGrade.set(s.gradeLevel, (riskByGrade.get(s.gradeLevel) ?? 0) + 1);
-      atRiskBySection.set(s.sectionId, (atRiskBySection.get(s.sectionId) ?? 0) + 1);
-    }
-    if (level === "High") {
-      highByGrade.set(s.gradeLevel, (highByGrade.get(s.gradeLevel) ?? 0) + 1);
+      riskByGrade.set(gradeLevel, (riskByGrade.get(gradeLevel) ?? 0) + 1);
     }
   }
 
@@ -395,26 +438,38 @@ export async function getOverview(ctx: GuidanceContext) {
 
   const gradeAttention = GRADE_ORDER.map((g) => {
     const secs = sectionsByGrade.get(g) ?? [];
-    let topSection = "—";
-    let topCount = 0;
-    let moderate = 0;
-    let low = 0;
+    const bucket = levelByGrade.get(g) ?? { high: 0, moderate: 0, low: 0 };
+    const high = bucket.high;
+    const moderate = bucket.moderate;
+    const low = bucket.low;
+    const atRisk = high + moderate;
 
     const sectionsList: { name: string; atRisk: number }[] = [];
     for (const sec of secs) {
-      const bucket = levelBySection.get(sec.id) ?? { high: 0, moderate: 0, low: 0 };
-      moderate += bucket.moderate;
-      low += bucket.low;
-      const c = bucket.high + bucket.moderate;
-      if (c > topCount) {
-        topCount = c;
-        topSection = sec.name;
-      }
-      sectionsList.push({ name: sec.name, atRisk: c });
+      const sectionBucket = levelBySection.get(sec.id) ?? {
+        high: 0,
+        moderate: 0,
+        low: 0,
+      };
+      sectionsList.push({
+        name: sec.name,
+        atRisk: sectionBucket.high + sectionBucket.moderate,
+      });
     }
-    sectionsList.sort((a, b) => b.atRisk - a.atRisk);
-    const high = highByGrade.get(g) ?? 0;
-    const atRisk = riskByGrade.get(g) ?? 0;
+
+    // Flagged learners with no listed section (unassigned or a section outside
+    // the active school year) still count toward the grade. Show them as an
+    // explicit bucket so the section pills always add up to the grade total.
+    const listedAtRisk = sectionsList.reduce((n, s) => n + s.atRisk, 0);
+    if (atRisk > listedAtRisk) {
+      sectionsList.push({ name: "Unassigned", atRisk: atRisk - listedAtRisk });
+    }
+
+    sectionsList.sort(
+      (a, b) => b.atRisk - a.atRisk || a.name.localeCompare(b.name),
+    );
+    const topSection = sectionsList[0]?.name ?? "—";
+    const topCount = sectionsList[0]?.atRisk ?? 0;
 
     const mostLevel =
       atRisk === 0

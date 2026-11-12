@@ -18,6 +18,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Pill } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import styles from "./guidance-overview.module.css";
 
@@ -134,13 +135,15 @@ function amberCount(value: number) {
   return <span className={styles.amberNumber}>{value}</span>;
 }
 
-/** Uniform "What it means" footer — bottom-left of every chart board. */
+/** Uniform "What it means" footer — the shared insight callout, pinned low. */
 function Interpretation({ children }: { children: React.ReactNode }) {
   return (
-    <p className={styles.interpretation}>
-      <span className={styles.interpretationLabel}>What it means · </span>
-      {children}
-    </p>
+    <div className={styles.footerSlot}>
+      <InsightCallout className={styles.interpretation} role="status">
+        <span className={styles.interpretationLabel}>What it means · </span>
+        {children}
+      </InsightCallout>
+    </div>
   );
 }
 

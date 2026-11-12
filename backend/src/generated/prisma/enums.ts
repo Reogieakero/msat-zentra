@@ -19,7 +19,8 @@ export const Role = {
   guidance_counselor: 'guidance_counselor',
   record_keeper: 'record_keeper',
   registrar: 'registrar',
-  principal: 'principal'
+  principal: 'principal',
+  admin: 'admin'
 } as const
 
 export type Role = (typeof Role)[keyof typeof Role]
@@ -314,6 +315,22 @@ export const NotifChannel = {
 } as const
 
 export type NotifChannel = (typeof NotifChannel)[keyof typeof NotifChannel]
+
+
+export const LoginEventKind = {
+  login: 'login',
+  logout: 'logout'
+} as const
+
+export type LoginEventKind = (typeof LoginEventKind)[keyof typeof LoginEventKind]
+
+
+export const LearnerType = {
+  regular: 'regular',
+  transferee: 'transferee'
+} as const
+
+export type LearnerType = (typeof LearnerType)[keyof typeof LearnerType]
 
 
 export const SubjectCategory = {

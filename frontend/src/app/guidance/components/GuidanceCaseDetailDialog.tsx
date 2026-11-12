@@ -254,6 +254,7 @@ export function GuidanceCaseDetailDialog({
   const isIntervention = row.kind === "intervention";
   const student = isIntervention ? row.item.student : row.referral.student;
   const lrn = isIntervention ? row.item.lrn : row.referral.lrn;
+  const mascot = isIntervention ? row.item.mascot : row.referral.mascot;
   const grade = isIntervention ? row.item.grade : row.referral.grade;
   const section = isIntervention ? row.item.section : row.referral.section;
   const type = isIntervention ? "Intervention" : row.referral.type === "ADM" ? "ADM" : "Counseling";
@@ -292,7 +293,7 @@ export function GuidanceCaseDetailDialog({
     const allDone = doneCount > 0 && !r.sessions.some((s) => s.status === "scheduled");
     statusText = allDone ? "Done" : rowStatusLabel(r.type, r.status, r);
     statusVariant = allDone ? "success" : "default";
-    detectedText = formatActionTime(r.date);
+    detectedText = formatActionTime(r.referredAt || r.date);
     sessions = r.sessions;
     note = [r.reason, r.recommendations].filter((t) => t && t.trim() !== "").join(" — ") || null;
     fullCaseHref =
@@ -326,7 +327,7 @@ export function GuidanceCaseDetailDialog({
           </span>
         </span>
       }
-      icon={<StudentMascot name={student} seed={lrn} size={24} />}
+      icon={<StudentMascot name={student} seed={lrn} character={mascot ?? undefined} size={24} />}
       description={
         <span className="flex w-full items-center justify-end gap-1.5 text-xs text-muted-foreground">
           <Clock className="size-3.5" aria-hidden />
@@ -365,7 +366,7 @@ export function GuidanceCaseDetailDialog({
             {showOpenFullCase ? (
               <Link
                 href={fullCaseHref}
-                className="inline-flex h-6 items-center gap-1.5 rounded-md bg-amber-500 px-2.5 text-xs font-semibold text-amber-950 transition-colors hover:bg-amber-400"
+                className="inline-flex h-6 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Open full case
                 <ArrowUpRight className="size-3.5" aria-hidden />
@@ -418,12 +419,21 @@ export function GuidanceCaseDetailDialog({
                         {outcome}
                       </LabeledPill>
                     ) : null}
-                    <LabeledPill
-                      label="Plan status"
-                      className={cn(PILL, "bg-muted text-muted-foreground")}
-                    >
-                      {outcomeLabel(row.item.intervention?.outcomeStatus ?? "ongoing")}
-                    </LabeledPill>
+                    {sessions.length > 0 ? (
+                      <LabeledPill
+                        label="Plan status"
+                        className={cn(PILL, "bg-muted text-muted-foreground")}
+                      >
+                        {outcomeLabel(row.item.intervention?.outcomeStatus ?? "ongoing")}
+                      </LabeledPill>
+                    ) : (
+                      <LabeledPill
+                        label="Plan status"
+                        className={cn(PILL, "bg-muted text-muted-foreground")}
+                      >
+                        No sessions booked yet
+                      </LabeledPill>
+                    )}
                   </div>
                 </div>
                 {row.item.intervention ? (
@@ -442,7 +452,7 @@ export function GuidanceCaseDetailDialog({
                 <dl className="grid grid-cols-1 gap-3 rounded-xl border border-border/70 bg-card p-4 sm:grid-cols-2">
                   <DetailField label="Category" value={row.referral.category} />
                   <DetailField label="Referred by" value={row.referral.referredBy} />
-                  <DetailField label="Date referred" value={formatActionTime(row.referral.date)} />
+                  <DetailField label="Date referred" value={formatActionTime(row.referral.referredAt || row.referral.date)} />
                   <DetailField label="Location" value={row.referral.location} />
                   <DetailField label="Priority" value={row.referral.priority} />
                   <DetailField label="Confidentiality" value={row.referral.confidentiality} />

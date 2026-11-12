@@ -16,9 +16,9 @@ import {
 } from "@tanstack/react-table";
 import { BookOpen, Loader2, SearchIcon, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { InsightCallout } from "@/components/ui/insight-callout";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Pill } from "@/components/ui/pill";
 import {
   Select,
   SelectContent,
@@ -47,6 +47,7 @@ import {
   generalAverageOf,
 } from "./components/AdvisoryGradesBoard";
 import { StudentMascot } from "../referrals/components/StudentMascot";
+import { AdvisoryStudentsSkeleton } from "./components/AdvisoryStudentsSkeleton";
 
 export default function TeacherAdvisoryStudentsPage() {
   const rosterQuery = useAdvisoryRoster();
@@ -135,11 +136,20 @@ export default function TeacherAdvisoryStudentsPage() {
               >
                 {formatSurnameFirst(row.original.name)}
               </span>
-              <span
-                className="mt-1 inline-flex max-w-full shrink-0 items-center truncate rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground"
-                title={row.original.lrn}
-              >
-                {row.original.lrn}
+              <span className="mt-1 flex max-w-full flex-col items-start gap-1">
+                <Pill
+                  tone="neutral"
+                  label="LRN"
+                  className="max-w-full truncate"
+                  title={row.original.lrn}
+                >
+                  {row.original.lrn}
+                </Pill>
+                {row.original.learnerType === "transferee" ? (
+                  <Pill tone="amber" label="Learner type">
+                    Transferee
+                  </Pill>
+                ) : null}
               </span>
             </div>
           </div>
@@ -204,41 +214,7 @@ export default function TeacherAdvisoryStudentsPage() {
   }, [highlightId, pageIndex, filteredStudents]);
 
   if (rosterQuery.isPending) {
-    return (
-      <section aria-label="Advisory students" className="flex min-w-0 flex-col gap-3">
-        <div className={assign.card} aria-busy="true" aria-label="Loading advisory students" aria-hidden>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="mt-1 h-4 w-52" />
-            </div>
-            <Skeleton className="h-9 w-40 shrink-0" />
-          </div>
-          <div className="relative overflow-x-auto rounded-md border">
-            <div className="flex bg-muted/50" aria-hidden>
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 170 }} />
-              <Skeleton className="m-2 h-4 rounded" style={{ width: 100 }} />
-            </div>
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div key={i} className="flex items-center gap-2 border-t px-3 py-2">
-                <div className="flex min-w-0 flex-col gap-1.5" style={{ width: 170 }}>
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-                <Skeleton className="h-5 rounded-full" style={{ width: 100 }} />
-              </div>
-            ))}
-          </div>
-          <div className="relative flex items-center justify-end space-x-2">
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-8 w-20" />
-          </div>
-        </div>
-      </section>
-    );
+    return <AdvisoryStudentsSkeleton />;
   }
 
   if (rosterQuery.isError) {
@@ -268,9 +244,12 @@ export default function TeacherAdvisoryStudentsPage() {
   }
 
   return (
-    <section aria-label="Advisory students" className="flex min-w-0 flex-col gap-3">
+    <section
+      aria-label="Advisory students"
+      className={`${listStyles.pageLock} flex min-w-0 flex-col gap-3`}
+    >
       {students.length === 0 ? (
-        <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center">
           <div className={`${assign.card} w-full max-w-md`}>
             <span className={assign.glowClip} aria-hidden="true">
               <span className={assign.cardGlow} />

@@ -21,9 +21,10 @@ type Props = {
   id?: string;
   ariaLabel?: string;
   triggerClassName?: string;
+  disabled?: boolean;
 };
 
-export function DropdownSelect({ value, onValueChange, options, placeholder, id, ariaLabel, triggerClassName }: Props) {
+export function DropdownSelect({ value, onValueChange, options, placeholder, id, ariaLabel, triggerClassName, disabled }: Props) {
   const selected = options.find((o) => o.value === value);
 
   return (
@@ -34,6 +35,7 @@ export function DropdownSelect({ value, onValueChange, options, placeholder, id,
           className={triggerClassName ? `${styles.dropdown} ${triggerClassName}` : styles.dropdown}
           id={id}
           aria-label={ariaLabel}
+          disabled={disabled}
         >
           <span className={styles.value}>{selected ? selected.label : (placeholder ?? "Select…")}</span>
           <ChevronDown className={styles.chevron} aria-hidden />

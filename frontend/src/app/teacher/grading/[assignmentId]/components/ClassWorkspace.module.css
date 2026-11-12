@@ -35,11 +35,35 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 2.75rem;
-  /* 16px between the content column (search bar) and the icon rail. */
+  grid-template-columns: 17rem minmax(0, 1fr);
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
   min-width: 0;
+  /* Keeps the panel divider running to the bottom of the page even when the
+     right panel is short (empty term, no assessments yet). */
+  min-height: calc(100dvh - 8rem);
+}
+
+/* Left panel — subject gradebook switcher, separated by a full-height rule. */
+.subjectsPanel {
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  padding-right: 1rem;
+}
+
+.subjects {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  position: sticky;
+  top: 4rem;
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  /* Breathing room so an input's focus ring is never clipped by the
+     scroll container (it read as a broken offset outline). */
+  padding: 0.25rem;
 }
 
 .main {
@@ -93,6 +117,18 @@
 @media (max-width: 64rem) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .subjectsPanel {
+    border-right: 0;
+    padding-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.75rem;
+  }
+  .subjects {
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
   .rail {
     position: static;

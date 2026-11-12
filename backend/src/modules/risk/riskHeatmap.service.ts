@@ -2,6 +2,11 @@ import { prisma } from "../../lib/prisma.js";
 import type { RiskLevel } from "../../generated/prisma/client.js";
 import { computeRiskFactors, levelFromFlags, sectionAttendanceTotals, type GradeMode } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
@@ -47,10 +52,11 @@ export async function getRiskHeatmap(
 
   const sectionIds = sections.map((s) => s.id);
 
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [allProfiles, allRoster] = await Promise.all([
     sectionIds.length
       ? prisma.studentProfile.findMany({
-          where: { sectionId: { in: sectionIds } },
+          where: { sectionId: { in: sectionIds }, ...excludeArchivedProfiles(archivedLearners) },
           take: 5000,
           select: {
             lrn: true,
@@ -60,13 +66,16 @@ export async function getRiskHeatmap(
               select: { computedAverage: true, transmutedGrade: true },
             },
             attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
-            anecdotalRecords: { where: { termId }, select: { id: true } },
+            anecdotalRecords: {
+              where: { termId, deletedAt: null },
+              select: { id: true },
+            },
           },
         })
       : Promise.resolve([]),
     sectionIds.length
       ? prisma.studentRoster.findMany({
-          where: { sectionId: { in: sectionIds } },
+          where: { sectionId: { in: sectionIds }, ...excludeArchivedRosters(archivedLearners) },
           take: 5000,
           select: {
             lrn: true,
@@ -76,7 +85,10 @@ export async function getRiskHeatmap(
               select: { computedAverage: true, transmutedGrade: true },
             },
             attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
-            anecdotalRecords: { where: { termId }, select: { id: true } },
+            anecdotalRecords: {
+              where: { termId, deletedAt: null },
+              select: { id: true },
+            },
           },
         })
       : Promise.resolve([]),
@@ -150,9 +162,10 @@ export async function getSectionFactorStudents(
   _gradeMode?: GradeMode,
 ): Promise<HeatmapStudent[]> {
   const { sectionHeadcounts } = await import("../../services/enrollment.js");
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   const [students, rosterEntries] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedProfiles(archivedLearners) },
       select: {
         lrn: true,
         user: { select: { fullName: true } },
@@ -161,11 +174,11 @@ export async function getSectionFactorStudents(
           select: { computedAverage: true, transmutedGrade: true },
         },
         attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
-        anecdotalRecords: { where: { termId }, select: { id: true } },
+        anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true } },
       },
     }),
     prisma.studentRoster.findMany({
-      where: { sectionId },
+      where: { sectionId, ...excludeArchivedRosters(archivedLearners) },
       select: {
         lrn: true,
         fullName: true,
@@ -174,7 +187,7 @@ export async function getSectionFactorStudents(
           select: { computedAverage: true, transmutedGrade: true },
         },
         attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
-        anecdotalRecords: { where: { termId }, select: { id: true } },
+        anecdotalRecords: { where: { termId, deletedAt: null }, select: { id: true } },
       },
     }),
   ]);

@@ -16,11 +16,13 @@ export const TEACHER_QUERY_KEYS = [
   ["teacher-overview"],
   ["teacher-overview-secondary"],
   ["teacher-overview-gradebook"],
+  ["teacher-overview-insights"],
   ["teacher-student-list"],
   ["teacher-reports"],
   ["advisory-students"],
   ["advisory-students-archived"],
   ["advisory-modules"],
+  ["advisory-interventions"],
   ["teacher-sf10-access"],
   ["advisee-academic"],
   ["advisee-anecdotal"],
@@ -42,6 +44,8 @@ export const TEACHER_QUERY_KEYS = [
   ["teacher-schedule-me"],
   ["teacher-my-slots"],
   ["teacher-grading-class"],
+  ["teacher-lock-grades"],
+  ["teacher-term-context"],
   ["teacher-settings-adviser-sections"],
   ["teacher-profile-settings"],
   ["teacher-data-sharing"],
@@ -62,14 +66,17 @@ export const TEACHER_SCOPE_KEYS = {
     ["attendance-section-matrix"],
     ["attendance-section-roster"],
     ["offered-subjects"],
+    ["teacher-overview-insights"],
   ],
   grading: [
     ["teacher-grading-class"],
+    ["teacher-lock-grades"],
     ["advisee-academic"],
     ["advisory-students"],
     ["teacher-overview"],
     ["teacher-overview-secondary"],
     ["teacher-overview-gradebook"],
+    ["teacher-overview-insights"],
     ["teacher-reports"],
   ],
   schedule: [
@@ -87,6 +94,7 @@ export const TEACHER_SCOPE_KEYS = {
     ["teacher-overview"],
     ["teacher-overview-secondary"],
     ["teacher-overview-gradebook"],
+    ["teacher-overview-insights"],
     ["teacher-student-list"],
     ["teacher-reports"],
   ],
@@ -95,6 +103,9 @@ export const TEACHER_SCOPE_KEYS = {
     ["advisory-students"],
     ["advisory-students-archived"],
     ["advisory-modules"],
+    ["teacher-lock-grades"],
+    ["teacher-term-context"],
+    ["advisory-interventions"],
     ["teacher-sf10-access"],
     ["advisee-academic"],
     ["advisee-anecdotal"],
@@ -102,6 +113,19 @@ export const TEACHER_SCOPE_KEYS = {
     ["adm-my-cases"],
     ["adm-monitoring"],
   ],
+  /**
+   * Risk-snapshot writes (hourly refresh + live recompute after attendance /
+   * grading saves). Narrower than `advisory` on purpose: a snapshot only moves
+   * risk levels/flags, so it must never invalidate ADM cases or SF10 access.
+   */
+  risk: [
+    ["advisory-interventions"],
+    ["advisory-students"],
+    ["teacher-overview"],
+    ["teacher-overview-insights"],
+  ],
+  /** The adviser monitoring desk is the only teacher surface reading plans. */
+  interventions: [["advisory-interventions"]],
   modules: [["advisory-modules"], ["advisory-students"], ["teacher-overview"]],
   adm: [
     ["adm-my-cases"],
@@ -175,7 +199,7 @@ const SCOPES_BY_TYPE: Record<string, readonly TeacherInvalidateScope[]> = {
   teacher_code_claimed: ["schedule", "overview"],
   teacher_code_claimed_self: ["schedule"],
   teacher_code_released: ["schedule", "overview"],
-  master_teacher_changed: ["settings", "schedule"],
+  master_teacher_changed: ["settings", "schedule", "overview"],
 
   // SF10
   sf10_access_requested: ["sf10"],
@@ -267,6 +291,31 @@ export function scopesForNotification(row: {
 
 export function isSelfNotification(row: { type?: string | null }): boolean {
   return (row.type ?? "").toLowerCase().endsWith("_self");
+}
+
+/**
+ * Postgres table name as Realtime reports it (PascalCase) → teacher scopes.
+ * Used for the direct table subscriptions (not the Notification rows, which go
+ * through `scopesForNotification`).
+ */
+export function scopesForRealtimeTable(table: string): readonly TeacherInvalidateScope[] {
+  switch (table) {
+    // A referral row moves whenever the receiving desk accepts, escalates,
+    // resolves or dismisses it — the filing teacher's board mirrors that row
+    // directly, so refresh it without waiting for a fanout notification.
+    case "Referral":
+      return ["referrals"];
+    case "Intervention":
+      return ["interventions"];
+    // A booked/completed counseling session rewrites the referral's status and
+    // timeline, so the filing teacher's board has to move too.
+    case "CounselingSession":
+      return ["interventions", "referrals"];
+    case "RiskSnapshot":
+      return ["risk", "overview"];
+    default:
+      return ["notifications"];
+  }
 }
 
 /** Keys covered by one or more scopes, de-duplicated. */

@@ -1,6 +1,9 @@
 "use client";
 
+import { Activity } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { Pill } from "@/components/ui/pill";
 import type { TeacherReportsPayload } from "@/services/teacher/reports.types";
 import { REFERRAL_STATUS_LABELS } from "./reports-format";
@@ -75,82 +78,89 @@ export function ReportsActivity({
     percent: total > 0 ? Math.round((item.value / total) * 100) : 0,
     fill: SHADES[i] ?? SHADES[SHADES.length - 1],
   }));
+  const top = slices.reduce((lead, slice) => (slice.value > lead.value ? slice : lead), slices[0]);
 
   return (
-    <div className={styles.card}>
-      <div className={styles.cardHead}>
-        <div className="min-w-0">
-          <h2 className={styles.cardTitle}>Case activity</h2>
-          <p className={styles.cardSub}>Records and referrals you filed this term.</p>
-        </div>
-      </div>
-
-      <div className={styles.activityBody}>
-        <div className={styles.donutWrap}>
-          <ResponsiveContainer width="100%" height={176}>
-            <PieChart>
-              <Pie
-                data={
-                  total > 0
-                    ? slices
-                    : [{ key: "empty", label: "No activity", value: 1, percent: 0, fill: "var(--muted)" }]
-                }
-                dataKey="value"
-                nameKey="label"
-                innerRadius="62%"
-                outerRadius="92%"
-                paddingAngle={total > 0 ? 2 : 0}
-                stroke="var(--card)"
-                strokeWidth={2}
-                isAnimationActive
-                animationDuration={700}
-              >
-                {(total > 0
-                  ? slices
-                  : [{ key: "empty", fill: "var(--muted)" }]
-                ).map((slice) => (
-                  <Cell key={slice.key} fill={slice.fill} />
-                ))}
-              </Pie>
-              <Tooltip
-                cursor={false}
-                content={<ActivityTooltip />}
-                wrapperStyle={{ outline: "none", zIndex: 80 }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className={styles.donutCenter} aria-hidden="true">
-            <span className={styles.donutValue}>{total}</span>
-            <span className={styles.donutLabel}>case records</span>
+    <KanbanBoard
+      title="Case activity"
+      icon={
+        <span className={styles.boardIcon} aria-hidden>
+          <Activity size={14} />
+        </span>
+      }
+      count={<span className={styles.amberNumber}>{total}</span>}
+      description="Records and referrals you filed this term."
+      className="flex-1"
+    >
+      {total > 0 ? (
+        <div className={styles.activityBody}>
+          <div className={styles.donutWrap}>
+            <ResponsiveContainer width="100%" height={176}>
+              <PieChart>
+                <Pie
+                  data={slices}
+                  dataKey="value"
+                  nameKey="label"
+                  innerRadius="62%"
+                  outerRadius="92%"
+                  paddingAngle={2}
+                  stroke="transparent"
+                  strokeWidth={2}
+                  isAnimationActive
+                  animationDuration={700}
+                >
+                  {slices.map((slice) => (
+                    <Cell key={slice.key} fill={slice.fill} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  cursor={false}
+                  content={<ActivityTooltip />}
+                  wrapperStyle={{ outline: "none", zIndex: 80 }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className={styles.donutCenter} aria-hidden="true">
+              <span className={styles.donutValue}>{total}</span>
+              <span className={styles.donutLabel}>case records</span>
+            </div>
           </div>
-        </div>
 
-        <ul className={styles.activityLegend}>
-          {slices.map((slice) => (
-            <li key={slice.key} className={styles.activityLegendItem}>
-              <span className={styles.legendSwatch} style={{ background: slice.fill }} aria-hidden />
-              <span className={styles.legendLabel}>{slice.label}</span>
-              <Pill tone={slice.value > 0 ? "amber" : "neutral"} label={slice.label}>
-                {slice.value} · {slice.percent}%
-              </Pill>
-            </li>
-          ))}
-        </ul>
-
-        {activity.referrals.byStatus.length > 0 ? (
-          <div className={styles.chips}>
-            {activity.referrals.byStatus.map((item) => (
-              <Pill
-                key={item.status}
-                tone={item.count > 0 ? "amber" : "neutral"}
-                label="Referral status"
-              >
-                {REFERRAL_STATUS_LABELS[item.status] ?? item.status}: {item.count}
-              </Pill>
+          <ul className={styles.activityLegend}>
+            {slices.map((slice) => (
+              <li key={slice.key} className={styles.activityLegendItem}>
+                <span className={styles.legendSwatch} style={{ background: slice.fill }} aria-hidden />
+                <span className={styles.legendLabel}>{slice.label}</span>
+                <Pill tone={slice.value > 0 ? "amber" : "neutral"} label={slice.label}>
+                  {slice.value} · {slice.percent}%
+                </Pill>
+              </li>
             ))}
-          </div>
-        ) : null}
+          </ul>
+
+          {activity.referrals.byStatus.length > 0 ? (
+            <div className={styles.chips}>
+              {activity.referrals.byStatus.map((item) => (
+                <Pill
+                  key={item.status}
+                  tone={item.count > 0 ? "amber" : "neutral"}
+                  label="Referral status"
+                >
+                  {REFERRAL_STATUS_LABELS[item.status] ?? item.status}: {item.count}
+                </Pill>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      <div className={styles.footerSlot}>
+        <InsightCallout className={styles.interpretation}>
+          <span className={styles.interpretationLabel}>What it means · </span>
+          {total === 0
+            ? "No anecdotal records, referrals or final grades yet this term."
+            : `${top.label} make up ${top.percent}% of your case activity.`}
+        </InsightCallout>
       </div>
-    </div>
+    </KanbanBoard>
   );
 }

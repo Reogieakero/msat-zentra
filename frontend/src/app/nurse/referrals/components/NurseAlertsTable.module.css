@@ -5,6 +5,8 @@
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
+  /* Fill the page so an empty board centers its message vertically. */
+  flex: 1 1 auto;
   width: 100%;
   max-width: 90rem;
   margin: 0 auto;
@@ -19,6 +21,19 @@
   flex: 1 1 0;
   min-width: 0;
   gap: 1.25rem;
+  /* Full remaining height so an empty board can center its message. */
+  align-self: stretch;
+}
+
+/* No-match / filtered-empty message: fills the board area and centers on
+   both axes (nurse + guidance case desks share this shape). */
+.emptyCenter {
+  display: flex;
+  flex: 1 1 0;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 0;
 }
 
 /* Kanban boards get the wider feed — four folder cards per row need more

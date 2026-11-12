@@ -1,23 +1,18 @@
 "use client";
-import { Search, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import styles from "./coordinator-referrals-board.module.css";
 
 /**
- * In-board filter controls for the referrals kanban board — search box +
- * clear. Rendered inside the board header actions.
+ * In-board filter controls for the referrals kanban board — search box.
+ * Rendered inside the board header actions.
  */
 export function CoordinatorReferralsFilters({
   query,
   onQueryChange,
-  hasActiveFilters,
-  onClear,
 }: {
   query: string;
   onQueryChange: (v: string) => void;
-  hasActiveFilters: boolean;
-  onClear: () => void;
 }) {
   return (
     <div className={styles.filters}>
@@ -35,12 +30,6 @@ export function CoordinatorReferralsFilters({
           aria-label="Search referrals"
         />
       </div>
-      {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={onClear}>
-          <X aria-hidden />
-          Show all
-        </Button>
-      )}
     </div>
   );
 }

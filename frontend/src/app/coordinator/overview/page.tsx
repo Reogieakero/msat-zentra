@@ -12,11 +12,12 @@ import { CoordinatorReferralsBookDialog } from "../referrals/components/coordina
 import { CoordinatorOverviewKpis } from "./components/coordinator-overview-kpis";
 import { CoordinatorOverviewAttentionDialog } from "./components/coordinator-overview-attention-dialog";
 import { CoordinatorOverviewForwards } from "./components/coordinator-overview-forwards";
-import { CoordinatorOverviewRail } from "./components/coordinator-overview-rail";
+import { CoordinatorOverviewBoards } from "./components/coordinator-overview-boards";
 import {
   CoordinatorOverviewError,
   CoordinatorOverviewSkeleton,
 } from "./components/coordinator-overview-states";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import styles from "./components/coordinator-overview.module.css";
 
 export default function CoordinatorOverviewPage() {
@@ -45,36 +46,43 @@ export default function CoordinatorOverviewPage() {
     );
   }
 
+  // No ADM activity at all → one centered callout instead of empty boards.
+  const isEmpty =
+    overview.referredToMe === 0 &&
+    overview.certificationsIssued === 0 &&
+    overview.activeEnrolled === 0 &&
+    overview.forwards.rows.length === 0 &&
+    overview.booked.rows.length === 0 &&
+    overview.devices.oldestOut.length === 0 &&
+    overview.stageDonut.every((entry) => entry.value === 0);
+
+  if (isEmpty) {
+    return (
+      <section className={styles.page}>
+        <PageEmptyCallout>
+          No ADM activity for the selected term yet. Referrals, certifications,
+          and device tracking will appear here once cases are filed.
+        </PageEmptyCallout>
+      </section>
+    );
+  }
+
   return (
     <section className={styles.page}>
-      <div className={styles.body}>
-        <div className={styles.mainCol}>
-          <CoordinatorOverviewKpis
-            attentionTotal={overview.attentionTotal}
-            attentionReady={overview.attentionReady}
-            attentionError={overview.attentionError}
-            allClear={overview.allClear}
-            referredToMe={overview.referredToMe}
-            certificationsIssued={overview.certificationsIssued}
-            awaitingPrincipal={overview.awaitingPrincipal}
-            activeEnrolled={overview.activeEnrolled}
-            onReview={() => setAttentionOpen(true)}
-          />
+      <div className={styles.mainCol}>
+        <CoordinatorOverviewKpis
+          attentionTotal={overview.attentionTotal}
+          attentionReady={overview.attentionReady}
+          attentionError={overview.attentionError}
+          allClear={overview.allClear}
+          referredToMe={overview.referredToMe}
+          certificationsIssued={overview.certificationsIssued}
+          awaitingPrincipal={overview.awaitingPrincipal}
+          activeEnrolled={overview.activeEnrolled}
+          onReview={() => setAttentionOpen(true)}
+        />
 
-          <CoordinatorOverviewForwards
-            rows={overview.forwards.rows}
-            isPending={overview.forwards.isPending}
-            isError={overview.forwards.isError}
-            isRefetching={overview.forwards.isRefetching}
-            now={overview.now}
-            bookPendingId={booking.bookPendingId}
-            onRetry={overview.forwards.refetch}
-            onHistory={setHistoryTarget}
-            onBook={booking.bookForRow}
-          />
-        </div>
-
-        <CoordinatorOverviewRail
+        <CoordinatorOverviewBoards
           stageDonut={overview.stageDonut}
           devicesIssued={overview.devices.data?.issued ?? null}
           devicesReturned={overview.devices.data?.returned ?? null}
@@ -83,6 +91,18 @@ export default function CoordinatorOverviewPage() {
           bookedMeetings={overview.booked.rows}
           bookedPending={overview.booked.isPending}
           now={overview.now}
+        />
+
+        <CoordinatorOverviewForwards
+          rows={overview.forwards.rows}
+          isPending={overview.forwards.isPending}
+          isError={overview.forwards.isError}
+          isRefetching={overview.forwards.isRefetching}
+          now={overview.now}
+          bookPendingId={booking.bookPendingId}
+          onRetry={overview.forwards.refetch}
+          onHistory={setHistoryTarget}
+          onBook={booking.bookForRow}
         />
       </div>
 

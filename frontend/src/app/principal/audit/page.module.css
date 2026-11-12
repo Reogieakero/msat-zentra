@@ -18,3 +18,17 @@
   font-size: 0.8125rem;
   color: var(--muted-foreground);
 }
+
+/* No search/filter hits — amber insight callout, same as the other desks. */
+.noMatch {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding: 1.5rem 0.25rem;
+}
+
+.noMatchCallout {
+  width: 100%;
+  max-width: 36rem;
+  text-align: left;
+}

@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api/client";
 
 export interface OcForm01Detail {
+  id?: string;
   observerName: string;
   gradeSection: string;
   observationDate: string;
@@ -13,6 +14,13 @@ export interface OcForm01Detail {
   attendanceSummary: string;
 
   adviserName: string;
+
+  /** Observer / section adviser — the teacher desk may edit or delete it. */
+  canEdit?: boolean;
+  category?: string;
+  confidentialityLevel?: "restricted" | "confidential";
+  /** Raw ISO timestamp used to prefill the edit form. */
+  observationDatetime?: string;
 
   canSign: boolean;
 

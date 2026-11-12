@@ -3,6 +3,7 @@ import {
   formatActionTime,
   formatDate,
   hasScheduledSession,
+  isCaseDone,
   latestActionOf,
 } from "./guidance-referrals-format";
 import type { GuidanceReferralItem } from "@/services/guidance/guidance.types";
@@ -31,6 +32,7 @@ export function useGuidanceEntryMeta(row: GuidanceReferralItem) {
   const canManageSessions = !isAdmTrack || (isAdmTrack && row.status === "pending");
   const latest = latestActionOf(row);
   const booked = hasScheduledSession(row.sessions);
+  const done = isCaseDone(row);
   return {
     isPending,
     isDismissed,
@@ -41,5 +43,6 @@ export function useGuidanceEntryMeta(row: GuidanceReferralItem) {
     canManageSessions,
     latest,
     booked,
+    done,
   };
 }

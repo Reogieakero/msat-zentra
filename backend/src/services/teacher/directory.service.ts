@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { findTeacherTermGrant } from "../../lib/teacherGrant.js";
 import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
 import {
   notifyMastersTeacherLinkChanged,
@@ -34,10 +35,9 @@ export async function getMyLink(ctx: TeacherContext) {
   const termId = ctx.termId;
   let termGrant: { via: string; attendanceVerified: boolean } | null = null;
   if (termId) {
-    const grant = await prisma.teacherTermGrant.findUnique({
-      where: { userId_termId: { userId: teacherId, termId } },
-      select: { via: true, attendanceVerifiedAt: true },
-    });
+    // One verification per school year: a grant on any term of the year opens
+    // grading, lock-grades and attendance for every term.
+    const grant = await findTeacherTermGrant(teacherId, termId);
     if (grant) {
       termGrant = { via: grant.via, attendanceVerified: grant.attendanceVerifiedAt !== null };
     }

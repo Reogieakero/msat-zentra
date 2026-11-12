@@ -1,22 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Megaphone, ShieldQuestion, Users } from "lucide-react";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import { AdviserAccessKanban } from "./components/AdviserAccessTables";
+import { AdviserAccessTable, AdviserAccessTableSkeleton } from "@/components/shared/adviser-access/adviser-access-table";
 import { apiClient } from "@/lib/api/client";
-import { toast } from "@/components/ui/sonner";
-import { useDock } from "@/components/dock/dock-store";
-import { markSelfNotified } from "@/lib/realtime/registrarChannel";
 import type { AdviserAccessRequest } from "./components/types";
 import { getStudentListStats, mergeConfirmedMarks } from "@/components/shared/adviser-access/adviser-access-types";
-import { useAdviserAccessCheck } from "@/components/shared/adviser-access/adviser-access-check-context";
 import { RegistrarEmptyCard } from "../components/RegistrarEmptyCard";
 import { Sf10RequestsRail } from "./components/Sf10RequestsRail";
 import {
   AdviserAccessSummarySkeleton,
-  AdviserAccessBoardSkeleton,
 } from "@/components/shared/adviser-access/adviser-access-skeleton";
 import styles from "./adviser-access.module.css";
 
@@ -31,8 +26,6 @@ async function fetchRequests() {
 }
 
 export default function AdviserAccessPage() {
-  const qc = useQueryClient();
-  const dock = useDock();
   const { data, isPending, isError } = useQuery({
     queryKey: QUERY_KEY,
     queryFn: fetchRequests,
@@ -42,71 +35,16 @@ export default function AdviserAccessPage() {
 
   const requests = React.useMemo(() => data ?? [], [data]);
 
-  // Whole-request Deny only — kept as a secondary action in the kanban.
-  const deny = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      apiClient.post(`/api/registrar/adviser-access-requests/${id}/deny`, {
-        reason: reason ?? "Denied by registrar",
-      }),
-    onSuccess: (_data, { id }) => {
-      markSelfNotified(id);
-      toast.success({
-        title: "Access denied",
-        description: "The access request was denied.",
-      });
-    },
-    onError: (err) => {
-      const message =
-        (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message ??
-        "Could not deny this request.";
-      toast.error({ title: "Action failed", description: message });
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEY });
-      qc.invalidateQueries({ queryKey: ["registrar-overview"] });
-      qc.invalidateQueries({ queryKey: ["registrar-notifications"] });
-    },
-  });
-
-  const [denyingId, setDenyingId] = React.useState<string | null>(null);
-  // Verification runs in the root-level dock (survives page navigation).
-  const accessCheck = useAdviserAccessCheck();
-  const checkingId = accessCheck.checkingId;
-
-  const handleCheck = React.useCallback(
-    (id: string) => {
-      accessCheck.startCheck("registrar", id);
-    },
-    [accessCheck],
-  );
-
-  const handleDeny = React.useCallback(
-    async (id: string, reason: string) => {
-      setDenyingId(id);
-      let taskId: string | null = null;
-      try {
-        taskId = dock.startTask({ kind: "generic", title: "Denying adviser access", description: "Adviser access request" });
-      } catch {
-        taskId = null;
-      }
-      try {
-        await deny.mutateAsync({ id, reason });
-        if (taskId) dock.completeTask(taskId, "Access request denied.");
-      } catch {
-        if (taskId) dock.failTask(taskId, "Could not deny this request.");
-      } finally {
-        setDenyingId(null);
-      }
-    },
-    [deny, dock],
-  );
-
   const pendingRequests = React.useMemo(() => requests.filter((r) => r.status === "pending"), [requests]);
 
   // KPI is pure student-list counts over pending requests.
   const stats = React.useMemo(() => getStudentListStats(pendingRequests), [pendingRequests]);
 
   // Kanban stat columns — same column chrome as the Request Board below
+  // (tinted column, bordered head, white stat card). Column mascots are
+  // deliberately distinct from the overview board's cast (owl / scout /
+  // knight / postbot) and the final-grades strip (scientist / rocket /
+  // cap), and sit on the left of the number (final-grades puts them right).
   const summaryColumns = [
     {
       key: "pendingChecking",
@@ -165,7 +103,7 @@ export default function AdviserAccessPage() {
         <div className={styles.layout}>
           <div className={styles.stack}>
             <AdviserAccessSummarySkeleton className={styles.summaryGrid} />
-            <AdviserAccessBoardSkeleton />
+            <AdviserAccessTableSkeleton desk="registrar" />
           </div>
           <Sf10RequestsRail />
         </div>
@@ -235,13 +173,7 @@ export default function AdviserAccessPage() {
             ))}
           </section>
 
-          <AdviserAccessKanban
-            requests={pendingRequests}
-            onCheck={handleCheck}
-            checkingId={checkingId}
-            onDeny={handleDeny}
-            denyingId={denyingId}
-          />
+          <AdviserAccessTable desk="registrar" requests={pendingRequests} />
         </div>
         <Sf10RequestsRail />
       </div>

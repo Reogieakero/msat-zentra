@@ -17,9 +17,29 @@ import type {
   GuidanceAlertCasesData,
 } from "@/services/guidance/alerts.types";
 import { useTerm } from "@/lib/term/TermContext";
-import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { guidanceLiveQueryOptions } from "@/lib/api/live";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 import styles from "./components/guidance-alerts.module.css";
 import pageStyles from "../pages.module.css";
+
+/**
+ * The board filters locally, so load every page of the merged desk once.
+ * Requests happen on mount instead of on every keystroke.
+ */
+async function fetchAllAlertCases(signal?: AbortSignal): Promise<GuidanceAlertCasesData> {
+  const first = await fetchGuidanceAlertCases({ page: 1, pageSize: PAGE_SIZE }, { signal });
+  if (first.totalPages <= 1) return first;
+  const rest = await Promise.all(
+    Array.from({ length: first.totalPages - 1 }, (_, i) =>
+      fetchGuidanceAlertCases({ page: i + 2, pageSize: PAGE_SIZE }, { signal })
+    )
+  );
+  return {
+    ...first,
+    cases: [first.cases, ...rest.map((r) => r.cases)].flat(),
+    page: 1,
+  };
+}
 
 export default function GuidanceAlertsPage() {
   const { activeTerm, termReady } = useTerm();
@@ -27,36 +47,22 @@ export default function GuidanceAlertsPage() {
   const [riskFilter, setRiskFilter] = React.useState<RiskFilter>("");
   const [typeFilter, setTypeFilter] = React.useState<AlertCaseType>("");
   const [queryInput, setQueryInput] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  const query = useDebouncedValue(queryInput.trim(), 300);
 
-  // One server-paged request for the whole merged desk (referrals + live
-  // interventions). The board used to fan out to twenty requests and made the
-  // backend recompute the live cohort ten times per visit.
+  // One server request for the whole merged desk (referrals + live
+  // interventions), then search / tabs / paging are all client-side. The board
+  // used to fan out to twenty requests and made the backend recompute the live
+  // cohort ten times per visit.
   const casesQuery = useQuery<GuidanceAlertCasesData>({
-    queryKey: [
-      "guidance-alerts",
-      "cases",
-      termKey,
-      page,
-      typeFilter,
-      riskFilter,
-      query,
-    ],
-    queryFn: ({ signal }) =>
-      fetchGuidanceAlertCases(
-        { page, type: typeFilter, risk: riskFilter, q: query },
-        { signal }
-      ),
+    ...guidanceLiveQueryOptions,
+    queryKey: ["guidance-alerts", "cases", termKey],
+    queryFn: ({ signal }) => fetchAllAlertCases(signal),
     placeholderData: keepPreviousData,
-    staleTime: 60_000,
     enabled: termReady,
   });
 
   const isFetching = casesQuery.isFetching;
   const data = casesQuery.data;
   const summary = data?.summary;
-  const total = data?.total ?? 0;
   const isTrueEmpty = (summary?.total ?? 0) === 0;
 
   if (casesQuery.isPending) {
@@ -146,33 +152,18 @@ export default function GuidanceAlertsPage() {
               rows={data.cases}
               riskByStudent={data.riskByStudent}
               summary={summary}
-              total={total}
-              page={data.page}
               query={queryInput}
               type={typeFilter}
               risk={riskFilter}
-              onQueryChange={(next) => {
-                setQueryInput(next);
-                setPage(1);
-              }}
-              onTypeChange={(next) => {
-                setTypeFilter(next);
-                setPage(1);
-              }}
-              onRiskChange={(next) => {
-                setRiskFilter(next);
-                setPage(1);
-              }}
-              onPageChange={setPage}
+              onQueryChange={setQueryInput}
+              onTypeChange={setTypeFilter}
+              onRiskChange={setRiskFilter}
             />
           </div>
           <GuidanceAlertsSideRail
             summary={summary}
             activeRisk={riskFilter}
-            onRiskFilterChange={(next) => {
-              setRiskFilter(next);
-              setPage(1);
-            }}
+            onRiskFilterChange={setRiskFilter}
           />
         </div>
       )}

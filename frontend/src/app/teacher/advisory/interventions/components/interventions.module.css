@@ -1,0 +1,270 @@
+/* Adviser intervention board — mirrors the guidance interventions desk
+   (4×4 card grid, same card anatomy and motion) without the write actions. */
+
+/* Page shell — same flex column as the guidance interventions page. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 100%;
+}
+
+/* Board header search — same rounded field as the guidance desk. */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.searchWrap {
+  position: relative;
+  width: 16rem;
+  max-width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.search {
+  padding-left: 2rem;
+}
+
+.caseList {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+@media (max-width: 1280px) {
+  .caseList {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .caseList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .caseList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* One card: identity + risk, pills, then detected + details hint. */
+.caseRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 95%);
+  cursor: pointer;
+  outline: none;
+  scroll-margin-top: 7rem;
+  transition:
+    transform 160ms ease-out,
+    box-shadow 160ms ease-out,
+    border-color 160ms ease-out;
+}
+
+.caseRow:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 45%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 45%);
+}
+
+.caseRow:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.caseRowActive {
+  border-color: color-mix(in oklch, oklch(0.769 0.188 70.08), transparent 30%);
+}
+
+.boardIn {
+  animation: board-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  /* Clip the entrance motion so translated cards can't flash a page scrollbar. */
+  overflow: clip;
+}
+
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.caseList > .caseRow {
+  animation: card-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.caseCardHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.caseCardId {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.caseCardName {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.caseCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* The card's 8px column gap plus this 24px margin gives the 32px
+   separation from the LRN/section pills above. */
+.caseCardPills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 1.5rem;
+}
+
+/* Card footer: detected timestamp. */
+.caseCardFoot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+
+/* Skeleton mirrors the loaded board: header, description, 4×4 card grid, pager. */
+.skelCaseRow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+}
+
+.skelAvatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+
+.skelCaseLines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.skelBar {
+  height: 0.8125rem;
+  border-radius: var(--radius-md);
+}
+
+.skelPill {
+  width: 6rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+}
+
+.skelPager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.skelRange {
+  width: 9rem;
+  height: 0.875rem;
+  border-radius: var(--radius-md);
+}
+
+.skelPagerBtns {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skelPageBtn {
+  width: 5rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+}
+
+.skelPageLabel {
+  width: 6rem;
+  height: 0.875rem;
+  border-radius: var(--radius-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardIn,
+  .caseList > .caseRow {
+    animation: none;
+  }
+
+  .caseRow {
+    transition: none;
+  }
+}

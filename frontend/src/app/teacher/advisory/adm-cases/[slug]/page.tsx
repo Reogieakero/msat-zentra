@@ -3,10 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { Loader2, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Pill } from "@/components/ui/pill";
 import { useDock } from "@/components/dock/dock-store";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { sileo } from "@/components/ui/sonner";
@@ -22,17 +22,8 @@ import { MonitoringProgress } from "./components/monitoring-progress";
 import { ModulesPanel } from "./components/modules-panel";
 import { ModuleFormDialog } from "./components/module-form-dialog";
 import { MonitoringReport } from "./components/monitoring-report";
-
-function MonitoringSkeleton() {
-  return (
-    <div className="flex w-full flex-col gap-4" aria-busy="true" aria-label="Loading ADM monitoring">
-      <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-      <div className="h-28 animate-pulse rounded-lg border bg-muted/40" />
-      <div className="h-24 animate-pulse rounded-lg border bg-muted/40" />
-      <div className="h-64 animate-pulse rounded-lg border bg-muted/40" />
-    </div>
-  );
-}
+import { ModuleStatus } from "./components/module-status";
+import { MonitoringSkeleton } from "./components/MonitoringSkeleton";
 
 export default function AdmMonitoringPage() {
   const params = useParams();
@@ -45,7 +36,7 @@ export default function AdmMonitoringPage() {
   // Shared dock task started when the dialog closes; finished by the mutation.
   const dockTaskRef = React.useRef<string | null>(null);
 
-  const monitoringQuery = useQuery({
+  const monitoringQuery = useLiveQuery({
     queryKey: admMonitoringKey(caseRef),
     queryFn: ({ signal }) => fetchAdmMonitoringCase(caseRef, signal),
     enabled: Boolean(caseRef),
@@ -118,45 +109,20 @@ export default function AdmMonitoringPage() {
     );
   }
 
-  const { header, progress, modules, devices } = data;
+  const { header, progress, modules } = data;
 
   return (
     <div className="flex w-full flex-col gap-4">
       <MonitoringHeader header={header} />
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
-        <div className="flex min-w-0 flex-col gap-4">
-          <ModulesPanel
-            modules={modules}
-            onEdit={(module) => setDialog(module)}
-          />
-        </div>
-
-        <aside className="flex min-w-0 flex-col gap-4">
-          <MonitoringProgress progress={progress} />
-          <MonitoringReport data={data} />
-
-          {devices.length > 0 ? (
-            <section className="rounded-lg border bg-card p-4" aria-label="Issued devices">
-              <h2 className="m-0 mb-2 text-sm font-bold tracking-[-0.01em] text-foreground">
-                Devices
-              </h2>
-              <ul className="m-0 flex list-none flex-col gap-1 p-0 text-xs">
-                {devices.map((d) => (
-                  <li key={d.id} className="flex items-center justify-between gap-2">
-                    <span className="truncate text-foreground" title={`${d.deviceType} · ${d.deviceSerial}`}>
-                      {d.deviceType}
-                    </span>
-                    <Pill tone={d.returnedDate ? "neutral" : "blue"} label="Device status">
-                      {d.returnedDate ? "Returned" : "Issued"}
-                    </Pill>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-        </aside>
+      {/* Progress + report + module status: three flat cards in one band. */}
+      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-3">
+        <MonitoringProgress progress={progress} />
+        <MonitoringReport data={data} />
+        <ModuleStatus data={data} />
       </div>
+
+      <ModulesPanel modules={modules} onEdit={(module) => setDialog(module)} />
 
       {dialog ? (
         <ModuleFormDialog

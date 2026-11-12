@@ -104,6 +104,10 @@ export function useCoordinatorFilters() {
     stageCounts,
     totalReferred,
     isInitialLoading: referralsQuery.isPending,
+    isPageLoading:
+      referralsQuery.isFetching &&
+      referralsQuery.data !== undefined &&
+      referralsQuery.data.page !== page,
     isSyncing: referralsQuery.isFetching && !referralsQuery.isPending,
     referralsError: referralsQuery.isError || !referralsQuery.data,
     referralsRefetching: referralsQuery.isRefetching,

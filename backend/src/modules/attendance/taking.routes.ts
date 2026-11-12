@@ -48,7 +48,7 @@ router.post(
           records,
         });
 
-        await invalidateTags(["overview", "principal", "teacher", "risk", "reports", "guidance"]);
+        await invalidateTags(["attendance", "overview", "principal", "teacher", "risk", "reports", "guidance"]);
 
         res.status(201).json({ count: result.count, subjectId, slot: slot ?? 1 });
         for (const ping of result.parentPings) {
@@ -91,7 +91,7 @@ router.post(
         records,
       });
 
-      await invalidateTags(["overview", "principal", "teacher", "risk", "guidance", "reports"]);
+      await invalidateTags(["attendance", "overview", "principal", "teacher", "risk", "guidance", "reports"]);
 
       res.status(201).json({ count: result.count });
       for (const ping of result.parentPings) {
@@ -123,6 +123,9 @@ router.post(
   async (_req, res, next) => {
     try {
       const result = await sweepAutoAbsent();
+      if ((result.rows ?? 0) > 0) {
+        await invalidateTags(["attendance", "overview", "principal", "teacher", "risk", "reports", "guidance"]);
+      }
       res.json(result);
       void (async () => {
         try {

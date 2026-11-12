@@ -17,13 +17,7 @@ import type {
 } from "@/services/nurse/adm.reports";
 import { AdmInterpretation } from "./NurseAdmInterpretation";
 import { AdmNumberText } from "./NurseAdmNumberText";
-import {
-  SECTION_PILL,
-  STAT_PILL,
-  STUDENT_PILL,
-  TYPE_PILL,
-  TYPE_TONE,
-} from "./nurse-adm-pills";
+import { Pill } from "@/components/ui/pill";
 import styles from "./nurse-adm.module.css";
 
 /* Per-KPI icon + accent — same coloured-icon language as the overview KPI
@@ -57,7 +51,7 @@ export function NurseAdmStats({
                 <Icon size={14} />
               </span>
             }
-            description={<span className={STAT_PILL}>{f.hint}</span>}
+            description={<Pill tone="amber" label="Summary">{f.hint}</Pill>}
             className="flex-1"
           >
             <p className={styles.findingValue}>{f.value}</p>
@@ -118,14 +112,12 @@ function Bottlenecks({ data }: { data: NurseAdmInsightsData }) {
                 <span className={styles.bottleneckMain}>
                   <span className={styles.bottleneckName}>
                     {b.kind ? (
-                      <span
-                        className={`${TYPE_PILL} ${
-                          TYPE_TONE[b.kind] ??
-                          "border-border bg-secondary text-secondary-foreground"
-                        }`}
+                      <Pill
+                        tone={b.kind === "ADM" ? "blue" : "green"}
+                        label="Referral type"
                       >
                         {b.kind}
-                      </span>
+                      </Pill>
                     ) : null}
                     <span className="shrink-0" aria-hidden>
                       <StudentMascot
@@ -134,13 +126,13 @@ function Bottlenecks({ data }: { data: NurseAdmInsightsData }) {
                         size={28}
                       />
                     </span>
-                    <span className={STUDENT_PILL} title={b.student}>
-                      {b.student}
-                    </span>
+                    <Pill tone="amber" label="Student" title={b.student} className="min-w-0 max-w-full overflow-hidden">
+                      <span className="truncate">{b.student}</span>
+                    </Pill>
                     {b.section ? (
-                      <span className={SECTION_PILL} title={b.section}>
-                        {b.section}
-                      </span>
+                      <Pill label="Section" title={b.section} className="min-w-0 max-w-full overflow-hidden">
+                        <span className="truncate">{b.section}</span>
+                      </Pill>
                     ) : null}
                   </span>
                   {b.reason ? (

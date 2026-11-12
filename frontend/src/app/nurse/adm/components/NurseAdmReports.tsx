@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { ClipboardList, PieChart as PieChartIcon, TrendingUp } from "lucide-react";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { NurseChartTooltip, NURSE_TOOLTIP_Z_INDEX } from "../../overview/components/nurse-chart-tooltip";
 import { AdmInterpretation } from "./NurseAdmInterpretation";
 import { AdmValuePill } from "./NurseAdmValuePill";
 import { AMBER, AMBER_STEPS } from "./nurse-adm-palette";
@@ -24,14 +25,6 @@ import type {
   NurseAdmReferralsData,
 } from "@/services/nurse/adm.reports";
 import styles from "./nurse-adm.module.css";
-
-const TOOLTIP_STYLE: React.CSSProperties = {
-  borderRadius: 8,
-  border: "1px solid var(--border)",
-  background: "var(--card)",
-  color: "var(--foreground)",
-  fontSize: 12,
-};
 
 const ACTION_COLORS: Record<string, string> = {
   needs_review: AMBER_STEPS[0],
@@ -166,29 +159,17 @@ function ReferredActions({ data }: { data: NurseAdmReferralsData }) {
                 </Pie>
                 <Tooltip
                   cursor={false}
-                  wrapperStyle={{ zIndex: 50 }}
-                  content={({ active, payload }) => {
-                    const row = active
-                      ? (payload?.[0]?.payload as NurseAdmActionCount | undefined)
-                      : undefined;
-                    if (!row) return null;
-                    const pct =
-                      total > 0 ? Math.round((row.count / total) * 100) : 0;
-                    return (
-                      <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-card-foreground shadow-lg">
-                        <p className="font-semibold">{row.label}</p>
-                        <p className="mt-1 text-muted-foreground">
-                          <span className="font-semibold text-foreground">
-                            {row.count}
-                          </span>{" "}
-                          {row.count === 1 ? "case" : "cases"} ·{" "}
-                          <span className="font-semibold text-amber-600 dark:text-amber-400">
-                            {pct}%
-                          </span>
-                        </p>
-                      </div>
-                    );
-                  }}
+                  wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
+                  content={
+                    <NurseChartTooltip
+                      formatValue={(item) => {
+                        const count = Number(item.value);
+                        const pct =
+                          total > 0 ? Math.round((count / total) * 100) : 0;
+                        return `${item.value} (${pct}%)`;
+                      }}
+                    />
+                  }
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -272,9 +253,8 @@ function ReferralTrend({ data }: { data: NurseAdmReferralsData }) {
                 width={32}
               />
               <Tooltip
-                contentStyle={TOOLTIP_STYLE}
-                labelFormatter={(label) => `Week of ${label}`}
-                formatter={(value) => [`${value} case${value === 1 ? "" : "s"}`, "Referred"]}
+                wrapperStyle={NURSE_TOOLTIP_Z_INDEX}
+                content={<NurseChartTooltip />}
               />
               <Line
                 type="monotone"

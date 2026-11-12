@@ -2,6 +2,7 @@
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AnecdotalRecordKanbanCard } from "@/components/anecdotal/anecdotal-record-kanban-card";
+import { Pill } from "@/components/ui/pill";
 import {
   friendlyWords,
 } from "@/services/coordinator/labels";
@@ -138,11 +139,12 @@ export function EvidencePanel({
                         {ok ? <Check size={12} strokeWidth={3} /> : ""}
                       </span>
                       <span className={styles.evidenceColLabel}>{label}</span>
-                      <span
-                        className={`${styles.evidencePill} ${ok ? styles.evidencePillGreen : ""}`}
+                      <Pill
+                        tone={ok ? "green" : "amber"}
+                        label="Form status"
                       >
                         {friendlyWords(f.status)}
-                      </span>
+                      </Pill>
                     </button>
                   </li>
                 );

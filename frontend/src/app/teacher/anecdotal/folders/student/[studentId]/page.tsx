@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,10 +18,9 @@ export default function StudentRecordFolderPage() {
 
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  const recordsQuery = useQuery<MyAnecdotalRecord[]>({
+  const recordsQuery = useLiveQuery<MyAnecdotalRecord[]>({
     queryKey: ["anecdotal-mine", termKey],
     queryFn: fetchMyRecords,
-    placeholderData: keepPreviousData,
   });
 
   const records = useMemo(

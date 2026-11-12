@@ -3,20 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  Award,
-  UserCheck,
-  ShieldQuestion,
-  FileBarChart,
-  FileText,
-  Settings,
-  Upload,
-  type LucideIcon,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import styles from "./registrar-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { NAV_ICONS } from "./nav/sidebar-icons";
 import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
@@ -32,26 +23,27 @@ type NavGroup = {
   items: NavItem[];
 };
 
-const NAV: NavGroup[] = [
+export const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { title: "Overview", href: "/registrar/overview", icon: LayoutDashboard },
+      { title: "Overview", href: "/registrar/overview", icon: NAV_ICONS.overview },
     ],
   },
   {
     label: "Records",
     items: [
-      { title: "Final Grades", href: "/registrar/final-grades", icon: Award },
-      { title: "Account Approvals", href: "/registrar/accounts", icon: UserCheck },
+      { title: "Final Grades", href: "/registrar/final-grades", icon: NAV_ICONS.finalGrades },
+      { title: "Account Approvals", href: "/registrar/accounts", icon: NAV_ICONS.accountApprovals },
       {
         title: "Adviser Access Requests",
         href: "/registrar/adviser-access",
-        icon: ShieldQuestion,
+        icon: NAV_ICONS.adviserAccessRequests,
       },
-      { title: "Report Cards", href: "/registrar/report-cards", icon: FileBarChart },
-      { title: "SF10 Records", href: "/registrar/sf10", icon: FileText },
-      { title: "Upload SF10", href: "/registrar/sf10/upload", icon: Upload },
+      { title: "Report Cards", href: "/registrar/report-cards", icon: NAV_ICONS.reportCards },
+      { title: "SF10 Records", href: "/registrar/sf10", icon: NAV_ICONS.sf10Records },
+      { title: "Upload SF10", href: "/registrar/sf10/upload", icon: NAV_ICONS.uploadSf10 },
+      { title: "Subjects", href: "/registrar/academics", icon: NAV_ICONS.subjects },
     ],
   },
   {
@@ -60,7 +52,7 @@ const NAV: NavGroup[] = [
       {
         title: "General Settings",
         href: "/registrar/settings",
-        icon: Settings,
+        icon: NAV_ICONS.settings,
       },
     ],
   },

@@ -388,24 +388,6 @@
   color: var(--muted-foreground);
 }
 
-.errorBlock {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.625rem;
-  padding: 0.75rem 0.875rem;
-  border: 1px solid var(--destructive, #dc2626);
-  border-radius: var(--radius-md);
-  background-color: color-mix(in oklch, var(--destructive, #dc2626), transparent 94%);
-}
-
-.errorText {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
 .empty {
   display: flex;
   flex-direction: column;
@@ -859,11 +841,30 @@
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 60%);
 }
 
-/* Rows cascade in on mount — same entrance as the nurse case board. */
-@keyframes case-card-in {
+/* Board entrance + row cascade — same motion as the alerts desk: the board
+   slides in, then each card rises in turn via the inline animationDelay. */
+.boardIn {
+  animation: board-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  /* Clip the entrance motion so translated cards can't spurt past the board
+     edge and flash a page scrollbar while the animation runs. */
+  overflow: clip;
+}
+
+@keyframes board-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -872,11 +873,24 @@
 }
 
 .caseList > .caseRow {
-  animation: case-card-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation: card-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Retry spinner — referenced by the page's error card. */
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .caseList > .caseRow {
+  .boardIn,
+  .caseList > .caseRow,
+  .spin {
     animation: none;
   }
   .caseRow,
@@ -976,96 +990,11 @@
   outline-offset: 2px;
 }
 
-/* Amber "Mark done" action — flat tinted pill, no solid border. */
-.markDoneBtn {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  height: 1.5rem;
-  padding-inline: 0.5rem;
-  border-radius: var(--radius-md);
-  background-color: rgb(245 158 11 / 0.15);
-  color: #b45309;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  outline: none;
-  transition:
-    background-color 140ms ease-out,
-    color 140ms ease-out;
-}
-
-.markDoneBtn:hover:not(:disabled) {
-  background-color: rgb(245 158 11 / 0.24);
-}
-
-.markDoneBtn:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.markDoneBtn:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-:global(.dark) .markDoneBtn {
-  color: #fbbf24;
-}
-
-/* Flat blue "Book session" control — same pill language as Mark done. */
-.bookSessionBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex-shrink: 0;
-  height: 1.5rem;
-  padding-inline: 0.5rem;
-  border-radius: var(--radius-md);
-  background-color: rgb(59 130 246 / 0.15);
-  color: #1d4ed8;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  outline: none;
-  transition:
-    background-color 140ms ease-out,
-    color 140ms ease-out;
-}
-
-.bookSessionBtn:hover:not(:disabled) {
-  background-color: rgb(59 130 246 / 0.24);
-}
-
-.bookSessionBtn:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.bookSessionBtn:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-:global(.dark) .bookSessionBtn {
-  color: #60a5fa;
-}
-
-/* Kanban skeleton rows. */
-.skelCaseRow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.625rem;
-  border-radius: var(--radius-md);
-}
-
-/* Kanban skeleton cards (same 3/2/1 grid shell as the real cards). */
+/* Kanban skeleton cards (same 4/3/2/1 grid + card shell as the real cards). */
 .skelCaseRow {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 0.5rem;
   padding: 0.75rem;
   border: 1px solid var(--border);
@@ -1100,4 +1029,10 @@
   height: 1.5rem;
   flex-shrink: 0;
   border-radius: var(--radius-md);
+}
+
+/* Dark mode: let the aurora canvas painted by the shell show through the
+   page surface instead of a flat --background fill. */
+:global(.dark) .page {
+  background-color: transparent;
 }

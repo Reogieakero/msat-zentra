@@ -4,6 +4,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { mascotForUnique, sectionTakenMascots } from "../mascot.js";
+import { decryptContact } from "../../lib/contact-crypto.js";
 import type { GradeLevel, Role } from "../../generated/prisma/client.js";
 import type { AuthContext } from "./auth.types.js";
 
@@ -193,9 +194,15 @@ export interface PendingQuery {
 export async function listPending(query: PendingQuery) {
   const { band, roleFilter, q, page, pageSize, hasPaging } = query;
 
+  // Self-registered teachers (`role=staff`) are not banded: both desks review
+  // the same queue and either may activate the account.
+  const STAFF_SELF_ROLES: Role[] = ["subject_teacher", "adviser"];
+  const roleWhere =
+    roleFilter === "staff" ? { in: STAFF_SELF_ROLES } : (roleFilter as Role);
+
   const [profiled, bare, rosterSections] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: { gradeLevel: { in: band }, user: { status: "pending", role: roleFilter as Role } },
+      where: { gradeLevel: { in: band }, user: { status: "pending", role: roleWhere } },
       select: {
         userId: true,
         lrn: true,
@@ -213,10 +220,11 @@ export async function listPending(query: PendingQuery) {
     prisma.user.findMany({
       where: {
         status: "pending",
-        role: roleFilter as Role,
+        role: roleWhere,
         studentProfile: null,
       },
-      select: { id: true, fullName: true, email: true, contactNumber: true, lrn: true, status: true, createdAt: true },
+      select: { id: true, role: true, fullName: true, email: true, contactNumber: true, lrn: true, status: true, createdAt: true,
+        staffProfile: { select: { employeeId: true, department: true } } },
       orderBy: { createdAt: "asc" },
     }),
 
@@ -231,12 +239,15 @@ export async function listPending(query: PendingQuery) {
 
   const students = profiled.map((s) => ({
     id: s.user.id,
+    role: "student",
     lrn: s.lrn,
+    employeeId: null as string | null,
+    department: null as string | null,
     name: s.user.fullName,
     gradeLevel: s.gradeLevel as GradeLevel | string,
     section: rosterSectionByLrn.get(s.lrn) ?? s.section?.name ?? "—",
     email: s.user.email,
-    contactNumber: s.user.contactNumber ?? "—",
+    contactNumber: decryptContact(s.user.contactNumber) ?? "—",
     birthdate: s.birthdate ? s.birthdate.toISOString().slice(0, 10) : "—",
     address: s.address ?? "—",
     imageUrl: s.photoUrl ?? null,
@@ -276,12 +287,15 @@ export async function listPending(query: PendingQuery) {
     }
     students.push({
       id: u.id,
+      role: u.role,
       lrn: u.lrn ?? "—",
+      employeeId: u.staffProfile?.employeeId ?? null,
+      department: u.staffProfile?.department ?? null,
       name: u.fullName,
       gradeLevel,
       section,
       email: u.email,
-      contactNumber: u.contactNumber ?? "—",
+      contactNumber: decryptContact(u.contactNumber) ?? "—",
       birthdate: "—",
       address: "—",
       imageUrl: null,

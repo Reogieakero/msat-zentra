@@ -3,79 +3,47 @@
 import * as React from "react";
 import {
   CalendarDays,
-  ChevronDown,
+  CheckCircle2,
+  CircleDashed,
   Loader2,
   Plus,
-  SearchIcon,
+  Search,
+  TabletSmartphone,
   TriangleAlert,
   Undo2,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { KanbanBoard } from "@/components/ui/kanban-board";
+import { InsightCallout } from "@/components/ui/insight-callout";
+import { Pill } from "@/components/ui/pill";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { Pagination } from "@/components/shared/pagination";
+import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { stageLabel } from "@/services/coordinator/labels";
 import type { AdmDeviceRow } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-devices-table.module.css";
 
 export type DeviceFilter = "all" | "issued" | "returned";
 
-/* Status menu options with their accent dots — amber for issued, green for
-   returned, matching the badges on each card. */
-const STATUS_OPTIONS: { value: DeviceFilter; label: string; color: string }[] = [
-  { value: "all", label: "All statuses", color: "var(--muted-foreground)" },
-  { value: "issued", label: "Issued", color: "#f59e0b" },
-  { value: "returned", label: "Returned", color: "#22c55e" },
+/* Status tabs in the board header — same centered pill-tab pattern as the
+   certifications and referrals desks. */
+const STATUS_TABS: { value: DeviceFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "issued", label: "Issued" },
+  { value: "returned", label: "Returned" },
 ];
-
-/* Rectangle pills — same metric as the nurse overview case rows. */
-const PILL_BASE =
-  "inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium whitespace-nowrap";
-const PILL_SECONDARY = "border-border bg-secondary text-secondary-foreground";
-const PILL_MUTED = "border-border bg-muted text-muted-foreground";
-
-interface CoordinatorDevicesBoardProps {
-  rows: AdmDeviceRow[];
-  isPending: boolean;
-  isError: boolean;
-  isRefetching: boolean;
-  isBackground?: boolean;
-  query: string;
-  onQueryChange: (v: string) => void;
-  filter: DeviceFilter;
-  onFilterChange: (v: DeviceFilter) => void;
-  hasActiveFilters: boolean;
-  onClear: () => void;
-  returningId?: string | null;
-  total: number;
-  page: number;
-  onRetry: () => void;
-  onPageChange: (page: number) => void;
-  onRecordReturn: (row: AdmDeviceRow) => void;
-  onIssueDevice: () => void;
-}
 
 /* Hover/click info board — a tiny kanban card that lists every device field as
    pills, grouped into learner / device / timeline sections. */
@@ -84,61 +52,66 @@ function DeviceInfoBoard({ row }: { row: AdmDeviceRow }) {
   return (
     <div className={styles.infoCard}>
       <div className={styles.infoHead}>
-        <StudentMascot name={row.student} seed={row.lrn} size={28} />
+        <StudentMascot
+          name={row.student}
+          seed={row.lrn}
+          character={row.mascot ?? undefined}
+          size={28}
+        />
         <p className={styles.infoName} title={row.student}>
           {row.student}
         </p>
-        <Badge
-          variant={issued ? "amber" : "green"}
-          className="ml-auto shrink-0 rounded-md"
+        <Pill
+          tone={issued ? "amber" : "green"}
+          label="Status"
+          className="ml-auto"
         >
           {issued ? "Issued" : "Returned"}
-        </Badge>
+        </Pill>
       </div>
 
       <div className={styles.infoBody}>
         <p className={styles.infoLabel}>Learner</p>
         <div className={styles.deviceChips}>
-          <span className={`${PILL_BASE} ${PILL_SECONDARY} tabular-nums`}>
+          <Pill tone="neutral" label="LRN" className="tabular-nums">
             LRN {row.lrn}
-          </span>
-          <span className={`${PILL_BASE} ${PILL_MUTED}`}>{row.grade}</span>
-          <span
-            className={`${PILL_BASE} ${
-              row.stage === "completion"
-                ? styles.stagePillGreen
-                : styles.stagePillAmber
-            }`}
+          </Pill>
+          <Pill tone="neutral" label="Grade level">
+            {row.grade}
+          </Pill>
+          <Pill
+            tone={row.stage === "completion" ? "green" : "amber"}
+            label="ADM stage"
             title={stageLabel(row.stage)}
           >
             {stageLabel(row.stage)}
-          </span>
+          </Pill>
         </div>
 
         <p className={styles.infoLabel}>Device</p>
         <div className={styles.deviceChips}>
-          <span className={`${PILL_BASE} ${PILL_SECONDARY}`}>
+          <Pill tone="neutral" label="Device type">
             {row.deviceType}
-          </span>
-          <span className={`${PILL_BASE} ${PILL_MUTED} tabular-nums`}>
+          </Pill>
+          <Pill tone="neutral" label="Serial number" className="tabular-nums">
             {row.deviceSerial}
-          </span>
+          </Pill>
         </div>
 
         <p className={styles.infoLabel}>Timeline</p>
         <div className={styles.deviceChips}>
-          <span className={`${PILL_BASE} ${PILL_MUTED} tabular-nums`}>
+          <Pill tone="neutral" label="Issued" className="tabular-nums">
             <CalendarDays size={11} aria-hidden />
             Issued {row.issuedDate}
-          </span>
-          <span className={`${PILL_BASE} ${PILL_MUTED}`}>
+          </Pill>
+          <Pill tone="neutral" label="Issued by">
             by {row.issuedBy}
-          </span>
+          </Pill>
           {row.returnedDate ? (
-            <span className={`${PILL_BASE} ${PILL_MUTED} tabular-nums`}>
+            <Pill tone="neutral" label="Returned" className="tabular-nums">
               <Undo2 size={11} aria-hidden />
               Returned {row.returnedDate}
-            </span>
+            </Pill>
           ) : null}
         </div>
 
@@ -153,12 +126,31 @@ function DeviceInfoBoard({ row }: { row: AdmDeviceRow }) {
   );
 }
 
-function DeviceCard({
+interface CoordinatorDevicesBoardProps {
+  rows: AdmDeviceRow[];
+  isPending: boolean;
+  isError: boolean;
+  isRefetching: boolean;
+  query: string;
+  onQueryChange: (v: string) => void;
+  filter: DeviceFilter;
+  onFilterChange: (v: DeviceFilter) => void;
+  onClear: () => void;
+  returningId?: string | null;
+  onRetry: () => void;
+  onRecordReturn: (row: AdmDeviceRow) => void;
+  onIssueDevice: () => void;
+}
+
+function DeviceRow({
   row,
+  index,
   returning,
   onRecordReturn,
 }: {
   row: AdmDeviceRow;
+  /** Row position — drives the entrance stagger, same as the enrolled table. */
+  index: number;
   returning: boolean;
   onRecordReturn: (row: AdmDeviceRow) => void;
 }) {
@@ -182,206 +174,185 @@ function DeviceCard({
   };
 
   return (
-    <li className={styles.deviceCard}>
-      <div className={styles.deviceCardHead}>
-        <div className={styles.deviceTop}>
-          <StudentMascot name={row.student} seed={row.lrn} size={32} />
-          <div className={styles.deviceIdentity}>
-            <p className={styles.cellMain} title={row.student}>
-              {row.student}
-            </p>
-            <div className={styles.deviceChips}>
-              <span
-                className={`${PILL_BASE} ${PILL_SECONDARY} tabular-nums`}
-                title={`LRN ${row.lrn}`}
-              >
-                {row.lrn}
-              </span>
-              {row.grade ? (
-                <span
-                  className={`${PILL_BASE} ${PILL_MUTED}`}
-                  title={`Grade ${row.grade}`}
-                >
-                  {row.grade}
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </div>
-        <Badge
-          variant={issued ? "amber" : "green"}
-          className="shrink-0 rounded-md"
-        >
+    <TableRow
+      className={styles.row}
+      style={{ animationDelay: `${450 + Math.min(index, 11) * 140}ms` }}
+    >
+      <TableCell className={styles.learnerCell}>
+        <span className={styles.mascot}>
+          <StudentMascot
+            name={row.student}
+            seed={row.lrn}
+            character={row.mascot ?? undefined}
+            size={32}
+          />
+        </span>
+        <span className={styles.learnerText}>
+          <span className={styles.learnerName} title={row.student}>
+            {row.student}
+          </span>
+          <span className={styles.learnerMeta}>
+            Issued by {row.issuedBy}
+          </span>
+        </span>
+      </TableCell>
+
+      <TableCell>
+        <Pill tone="amber" label="LRN">
+          {row.lrn}
+        </Pill>
+      </TableCell>
+
+      <TableCell>
+        <Pill tone="neutral" label="Grade level">
+          {row.grade || "—"}
+        </Pill>
+      </TableCell>
+
+      <TableCell className={styles.deviceCell}>
+        <span className={styles.cellMain} title={row.deviceType}>
+          {row.deviceType}
+        </span>
+        <span className={`${styles.cellSub} ${styles.mono}`}>
+          {row.deviceSerial}
+        </span>
+      </TableCell>
+
+      <TableCell className={styles.dateCell}>
+        <span className={styles.mono}>{row.issuedDate}</span>
+      </TableCell>
+
+      <TableCell className={styles.dateCell}>
+        {row.returnedDate ? (
+          <span className={styles.mono}>{row.returnedDate}</span>
+        ) : (
+          <span className={styles.dash}>—</span>
+        )}
+      </TableCell>
+
+      <TableCell>
+        <Pill tone={issued ? "amber" : "green"} label="Status">
+          {issued ? (
+            <CircleDashed size={11} aria-hidden />
+          ) : (
+            <CheckCircle2 size={11} aria-hidden />
+          )}
           {issued ? "Issued" : "Returned"}
-        </Badge>
-      </div>
-
-      {/* Inner card — the device details sit on their own panel. */}
-      <div className={styles.deviceCardBody}>
-        <div className={styles.deviceChips}>
-          <span className={`${PILL_BASE} ${PILL_SECONDARY}`} title="Device type">
-            {row.deviceType}
-          </span>
-          <span
-            className={`${PILL_BASE} ${PILL_MUTED} tabular-nums`}
-            title={`Serial ${row.deviceSerial}`}
-          >
-            {row.deviceSerial}
-          </span>
-        </div>
-
-        <div className={styles.deviceChips}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                className={`${PILL_BASE} ${PILL_MUTED} tabular-nums`}
-                tabIndex={0}
-                aria-label={`Issued ${row.issuedDate} by ${row.issuedBy}`}
-              >
-                <CalendarDays size={11} aria-hidden />
-                {row.issuedDate}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              Issued on {row.issuedDate} · by {row.issuedBy}
-            </TooltipContent>
-          </Tooltip>
-          {row.returnedDate ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className={`${PILL_BASE} ${PILL_MUTED} tabular-nums`}
-                  tabIndex={0}
-                  aria-label={`Returned ${row.returnedDate}`}
-                >
-                  <Undo2 size={11} aria-hidden />
-                  {row.returnedDate}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                Returned on {row.returnedDate}
-              </TooltipContent>
-            </Tooltip>
-          ) : null}
-        </div>
-
+        </Pill>
         {issued && row.stage === "completion" ? (
           <p className={styles.returnWarning}>
             <TriangleAlert size={11} aria-hidden="true" />
-            Student completed — device not returned yet.
+            Student completed — device not returned.
           </p>
         ) : null}
-      </div>
+      </TableCell>
 
-      <div className={styles.deviceActions}>
-        <HoverCard
-          open={infoOpen}
-          onOpenChange={handleInfoOpenChange}
-          openDelay={120}
-          closeDelay={80}
-        >
-          <HoverCardTrigger asChild>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 px-2 text-xs"
-              onClick={toggleInfo}
-              aria-label={`View details of ${row.deviceSerial}`}
+      <TableCell className={styles.actionsCell}>
+        <div className={styles.actions}>
+          <HoverCard
+            open={infoOpen}
+            onOpenChange={handleInfoOpenChange}
+            openDelay={120}
+            closeDelay={80}
+          >
+            <HoverCardTrigger asChild>
+              <button
+                type="button"
+                className={styles.ctaSecondary}
+                onClick={toggleInfo}
+                aria-label={`View details of ${row.deviceSerial}`}
+              >
+                Details
+              </button>
+            </HoverCardTrigger>
+            <HoverCardContent
+              align="end"
+              side="top"
+              className="w-80 p-0"
+              onPointerDownOutside={() => {
+                setInfoPinned(false);
+                setInfoOpen(false);
+              }}
             >
-              Details
-            </Button>
-          </HoverCardTrigger>
-          <HoverCardContent
-            align="end"
-            side="top"
-            className="w-80 p-0"
-            onPointerDownOutside={() => {
-              setInfoPinned(false);
-              setInfoOpen(false);
-            }}
-          >
-            <DeviceInfoBoard row={row} />
-          </HoverCardContent>
-        </HoverCard>
-        {issued ? (
-          <Button
-            size="sm"
-            className="h-6 px-2 text-xs"
-            disabled={returning}
-            onClick={() => onRecordReturn(row)}
-            aria-label={`Record return of ${row.deviceSerial}`}
-          >
-            {returning ? (
-              <>
+              <DeviceInfoBoard row={row} />
+            </HoverCardContent>
+          </HoverCard>
+
+          {issued ? (
+            <button
+              type="button"
+              className={styles.cta}
+              disabled={returning}
+              onClick={() => onRecordReturn(row)}
+              aria-busy={returning || undefined}
+              aria-label={`Record return of ${row.deviceSerial}`}
+            >
+              {returning ? (
                 <Loader2 className={styles.spin} aria-hidden="true" />
-                Recording…
-              </>
-            ) : (
-              "Record return"
-            )}
-          </Button>
-        ) : null}
-      </div>
-    </li>
+              ) : null}
+              {returning ? "Recording…" : "Record return"}
+            </button>
+          ) : null}
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
 
 /**
- * Device ledger as a kanban-style card grid — five per row on wide desks,
- * every card the same height. Each card: status badge, mascot + student with
- * LRN/grade, then device/date pills and the row actions.
+ * Device ledger as a data table — one row per issued device, same board shell
+ * + table chrome as the enrolled desk. Search, status filter and the issue
+ * action share the board header; pagination sits under the board.
  */
 export function CoordinatorDevicesBoard({
   rows,
   isPending,
   isError,
   isRefetching,
-  isBackground = false,
   query,
   onQueryChange,
   filter,
   onFilterChange,
-  hasActiveFilters,
   onClear,
   returningId = null,
-  total,
-  page,
   onRetry,
-  onPageChange,
   onRecordReturn,
   onIssueDevice,
 }: CoordinatorDevicesBoardProps) {
-  const statusLabel =
-    filter === "issued" ? "Issued" : filter === "returned" ? "Returned" : "Status";
-  const activeOption = STATUS_OPTIONS.find((o) => o.value === filter);
+  const searchTerm = query.trim().toLowerCase();
+
+  // Filter the loaded page instantly as the clerk types (same feel as the
+  // enrolled desk); the debounced server query then swaps in matches from the
+  // rest of the ledger.
+  const filteredRows = React.useMemo(() => {
+    if (searchTerm === "") return rows;
+    return rows.filter((row) =>
+      `${row.student} ${row.lrn} ${row.deviceType} ${row.deviceSerial} ${row.grade}`
+        .toLowerCase()
+        .includes(searchTerm),
+    );
+  }, [rows, searchTerm]);
 
   if (isPending) {
-    return (
-      <div className={styles.skeletonShell} aria-busy="true" aria-label="Loading devices">
-        <div className={styles.skeletonHead}>
-          <Skeleton className={styles.skelTitle} />
-          <Skeleton className={styles.skelDesc} />
-        </div>
-        <Skeleton className={styles.skelSearch} />
-        <div className={styles.deviceGrid} aria-hidden="true">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <Skeleton key={i} className={styles.skelCard} />
-          ))}
-        </div>
-      </div>
-    );
+    return <CoordinatorDevicesBoardSkeleton />;
   }
 
   if (isError) {
     return (
-      <div className={styles.stateCard} role="alert">
-        <p className={styles.stateTitle}>Learning devices</p>
-        <p className={styles.stateDesc}>
+      <div className={styles.errorBlock} role="alert">
+        <p className={styles.errorText}>
           We couldn&apos;t load the device ledger. Please check your internet
           connection and try again.
         </p>
-        <Button size="sm" variant="outline" disabled={isRefetching} onClick={onRetry}>
-          {isRefetching ? <Loader2 className={styles.spin} aria-hidden="true" /> : null}
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isRefetching}
+          onClick={onRetry}
+        >
+          {isRefetching ? (
+            <Loader2 className={styles.spin} aria-hidden="true" />
+          ) : null}
           {isRefetching ? "Loading…" : "Try again"}
         </Button>
       </div>
@@ -389,64 +360,63 @@ export function CoordinatorDevicesBoard({
   }
 
   return (
-    <div className={styles.board} aria-label="Learning devices">
-      <div className={styles.toolbar}>
-        <p className={styles.count} aria-live="polite">
-          {total} device{total === 1 ? "" : "s"}
-          {isBackground ? " · Syncing…" : ""}
-        </p>
-        <div className={styles.headerActions}>
-          <InputGroup className={`${styles.searchGroup} h-8 rounded-[16px]`}>
-            <InputGroupInput
-              className="h-8 py-0 text-xs"
-              placeholder="Search devices..."
+    <KanbanBoard
+      title="Device ledger"
+      ariaLabel="Learning devices"
+      className={styles.boardIn}
+      icon={
+        <span className={styles.boardIcon} aria-hidden="true">
+          <TabletSmartphone size={14} />
+        </span>
+      }
+      description="Every device issued to a principal-approved ADM case — status, serial and return dates in one list."
+      headerCenter={
+        <div
+          className={styles.filterRow}
+          role="tablist"
+          aria-label="Filter devices by status"
+        >
+          {STATUS_TABS.map((tab) => {
+            const active = filter === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={styles.filterButton}
+                onClick={() => onFilterChange(tab.value)}
+              >
+                <Pill
+                  tone={active ? "blue" : "neutral"}
+                  label={`${tab.label} devices`}
+                >
+                  {tab.label}
+                </Pill>
+              </button>
+            );
+          })}
+        </div>
+      }
+      actions={
+        <>
+          <div className={styles.searchWrap}>
+            <Search className={styles.searchIcon} aria-hidden="true" />
+            <input
+              type="search"
+              className={styles.searchInput}
+              placeholder="Search serial, student, or LRN…"
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
               aria-label="Search serial, student, or LRN"
             />
-            <InputGroupAddon className="py-0">
-              <SearchIcon className="size-3.5" />
-            </InputGroupAddon>
-          </InputGroup>
+          </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs">
-                {filter === "all" ? "Status" : statusLabel}
-                {filter !== "all" && activeOption ? (
-                  <span
-                    className={styles.filterDot}
-                    style={{ backgroundColor: activeOption.color }}
-                    aria-hidden
-                  />
-                ) : null}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[9.5rem]">
-              {STATUS_OPTIONS.map((item) => (
-                <DropdownMenuCheckboxItem
-                  key={item.value}
-                  checked={filter === item.value}
-                  onCheckedChange={() => onFilterChange(item.value)}
-                  className="whitespace-nowrap"
-                >
-                  <span
-                    className={styles.optionDot}
-                    style={{ backgroundColor: item.color }}
-                    aria-hidden
-                  />
-                  {item.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {hasActiveFilters ? (
+          {filter !== "all" ? (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2.5 text-xs"
+              className="h-6 px-2 text-xs"
               onClick={onClear}
             >
               Clear
@@ -455,35 +425,77 @@ export function CoordinatorDevicesBoard({
 
           <Button
             size="sm"
-            className="h-8 px-2.5 text-xs"
+            className="h-6 px-2 text-xs"
             onClick={onIssueDevice}
           >
             <Plus className="size-3.5" aria-hidden />
             Issue device
           </Button>
+        </>
+      }
+    >
+      {filteredRows.length === 0 ? (
+        <div className={styles.emptyCallout}>
+          <InsightCallout role="status">
+            {searchTerm !== ""
+              ? "No devices match your search. Try a different serial, learner, or LRN."
+              : "No devices match the current filters. Try a different status."}
+          </InsightCallout>
         </div>
-      </div>
-
-      {rows.length === 0 ? (
-        <p className={styles.empty}>No devices match the current filters.</p>
       ) : (
-        <ul className={styles.deviceGrid}>
-          {rows.map((row) => (
-            <DeviceCard
-              key={row.id}
-              row={row}
-              returning={returningId === row.id}
-              onRecordReturn={onRecordReturn}
-            />
-          ))}
-        </ul>
+        <Table className={styles.table} aria-label="Device ledger">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Learner</TableHead>
+              <TableHead>LRN</TableHead>
+              <TableHead>Grade</TableHead>
+              <TableHead>Device</TableHead>
+              <TableHead>Issued</TableHead>
+              <TableHead>Returned</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className={styles.actionsHead}>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody key={filteredRows.map((r) => r.id).join("|")}>
+            {filteredRows.map((row, index) => (
+              <DeviceRow
+                key={row.id}
+                row={row}
+                index={index}
+                returning={returningId === row.id}
+                onRecordReturn={onRecordReturn}
+              />
+            ))}
+          </TableBody>
+        </Table>
       )}
+    </KanbanBoard>
+  );
+}
 
-      <Pagination
-        currentPage={page}
-        totalItems={total}
-        onPageChange={(p) => onPageChange(p)}
-      />
-    </div>
+/** Table-shaped loading mirror for the page Suspense (single board shell). */
+export function CoordinatorDevicesBoardSkeleton() {
+  return (
+    <KanbanBoard
+      title="Device ledger"
+      ariaLabel="Loading devices"
+      icon={
+        <span className={styles.boardIcon} aria-hidden="true">
+          <TabletSmartphone size={14} />
+        </span>
+      }
+    >
+      <div className={styles.skelTable} aria-busy="true">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className={styles.skelRow} aria-hidden="true">
+            <Skeleton className={styles.skelMascot} />
+            <Skeleton className={styles.skelName} />
+            <Skeleton className={styles.skelMeta} />
+            <Skeleton className={styles.skelTrack} />
+            <Skeleton className={styles.skelCta} />
+          </div>
+        ))}
+      </div>
+    </KanbanBoard>
   );
 }

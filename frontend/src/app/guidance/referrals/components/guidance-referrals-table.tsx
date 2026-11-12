@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Inbox, Loader2, Search, SearchX } from "lucide-react";
+import { Inbox, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import {
   InputGroup,
   InputGroupAddon,
@@ -190,7 +191,7 @@ export function GuidanceReferralsTable({
                 goToPage(1);
               }}
             />
-            <InputGroup className="w-56 max-w-full shrink-0 rounded-[16px]">
+            <InputGroup className="max-w-40 shrink-0 rounded-[16px]">
               <InputGroupInput
                 placeholder={
                   typeFilter === "ADM"
@@ -229,25 +230,21 @@ export function GuidanceReferralsTable({
         </div>
       )}
       {referrals.length === 0 ? (
-        <GuidanceEmptyState
-          icon={hasActiveFilters ? SearchX : Inbox}
-          title={
-            hasActiveFilters
-              ? lockType
-                ? "No cases match the selected filter"
-                : "No cases match your search"
-              : "You're all caught up"
-          }
-          hint={
-            hasActiveFilters
-              ? isKanban
-                ? "Pick a different filter above the board, or show every case."
-                : lockType
-                  ? "Pick a different action in the sidebar, or show every case."
-                  : "Try a different name or keyword, or clear the filter to see every case."
-              : "New cases sent to you by advisers will appear here."
-          }
-        />
+        hasActiveFilters ? (
+          <div className={styles.emptyCenter}>
+            <InsightCallout role="status" className="w-full max-w-xl text-left">
+              {query.trim() !== ""
+                ? `No cases on this page match “${query.trim()}”.`
+                : "No cases on this page match your filters."}
+            </InsightCallout>
+          </div>
+        ) : (
+          <GuidanceEmptyState
+            icon={Inbox}
+            title="You're all caught up"
+            hint="New cases sent to you by advisers will appear here."
+          />
+        )
       ) : isKanban ? (
         <div className={styles.kanbanGrid} role="list" aria-label={title}>
           {referrals.map((row) => (
@@ -297,12 +294,14 @@ export function GuidanceReferralsTable({
       )}
 
       {paginate ? (
-        <Pagination
-          currentPage={page}
-          totalItems={total}
-          pageSize={pageSize}
-          onPageChange={goToPage}
-        />
+        referrals.length > 0 ? (
+          <Pagination
+            currentPage={page}
+            totalItems={total}
+            pageSize={pageSize}
+            onPageChange={goToPage}
+          />
+        ) : null
       ) : (
         <ScrollHint count={total} />
       )}
@@ -376,7 +375,6 @@ interface GuidanceReferralsTableProps {
   onActionChange: (value: GuidanceAction) => void;
   onRetry: () => void;
   isRetrying: boolean;
-  isNavigating?: boolean;
 
   lockType?: boolean;
   title?: string;

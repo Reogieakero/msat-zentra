@@ -30,12 +30,18 @@ router.get(
         query.factor === "Academic" || query.factor === "Attendance" || query.factor === "Behavioral"
           ? (query.factor as "Academic" | "Attendance" | "Behavioral")
           : null;
+      const gradeFilter =
+        typeof query.grade === "string" &&
+        /^G(7|8|9|10|11|12)$/.test(query.grade)
+          ? query.grade
+          : null;
       const mineOnly = query.mine === "true";
       const outcomeFilter =
         query.outcome === "ongoing" || query.outcome === "resolved" || query.outcome === "unresolved" || query.outcome === "all"
           ? String(query.outcome)
           : "";
       const q = typeof query.q === "string" ? query.q.trim().toLowerCase() : "";
+      const sort = query.sort === "detected" ? ("detected" as const) : undefined;
       const page = Math.max(1, Number(query.page) || 1);
       const pageSize = Math.max(
         1,
@@ -46,10 +52,12 @@ router.get(
           { userId: req.user!.id, role: req.user!.role, termId: req.termScope?.termId ?? null },
           {
             level: levelFilter,
+            grade: gradeFilter,
             factor: factorFilter,
             mineOnly,
             outcome: outcomeFilter,
             q,
+            sort,
             page,
             pageSize,
           },

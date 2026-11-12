@@ -12,6 +12,8 @@ import { fetchGuidanceOverview } from "@/services/guidance/overview.service";
 import type { GuidanceOverviewData } from "@/services/guidance/overview.types";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
+import { liveQueryOptions } from "@/lib/api/live";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import styles from "./components/guidance-overview.module.css";
 
 export default function GuidanceOverviewPage() {
@@ -19,10 +21,10 @@ export default function GuidanceOverviewPage() {
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<GuidanceOverviewData>({
+      ...liveQueryOptions,
       queryKey: ["guidance-overview", "preview", termKey],
       queryFn: ({ signal }) => fetchGuidanceOverview(signal),
       placeholderData: keepPreviousData,
-      staleTime: 60_000,
       enabled: termReady,
     });
 
@@ -44,7 +46,12 @@ export default function GuidanceOverviewPage() {
             >
               <ul className={styles.caseList}>
                 {[0, 1, 2, 3, 4].map((i) => (
-                  <li key={i} className={styles.caseRow} aria-hidden="true">
+                  <li
+                    key={i}
+                    className={styles.caseRow}
+                    style={{ animationDelay: `${450 + Math.min(i, 11) * 140}ms` }}
+                    aria-hidden="true"
+                  >
                     <div className={styles.rowLink}>
                       <div className={styles.caseInfo}>
                         <Skeleton className="size-8 shrink-0 rounded-md" />
@@ -162,6 +169,30 @@ export default function GuidanceOverviewPage() {
   }
 
   const refreshing = isFetching && !isPending;
+
+  // No caseload at all → one centered callout instead of a wall of empty boards.
+  const isEmpty =
+    data.kpis.referredToMe === 0 &&
+    data.kpis.pendingAdm === 0 &&
+    data.kpis.pendingCounseling === 0 &&
+    data.kpis.openInterventions === 0 &&
+    data.kpis.myInterventions === 0 &&
+    data.kpis.highRisk === 0 &&
+    data.kpis.admHandoffs === 0 &&
+    data.gradeAttention.length === 0 &&
+    data.sectionHeat.length === 0 &&
+    data.referralsByType.length === 0;
+
+  if (isEmpty) {
+    return (
+      <section className={styles.page} aria-label="Guidance overview">
+        <PageEmptyCallout>
+          No guidance activity for the selected term yet. Referrals, risk
+          signals, and caseload will appear here once cases are filed.
+        </PageEmptyCallout>
+      </section>
+    );
+  }
 
   return (
     <section

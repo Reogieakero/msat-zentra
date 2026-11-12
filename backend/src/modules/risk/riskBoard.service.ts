@@ -7,6 +7,12 @@ import {
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import { gradeLabel } from "../../lib/grades.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  excludeArchivedProfiles,
+  excludeArchivedRosters,
+} from "../../lib/learnerVisibility.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
 export interface RiskBoardResult {
@@ -95,6 +101,17 @@ export async function getRiskBoard(
     bySectionMap.set(sectionId, e);
   };
 
+  // These feed the trend chart + intervention donut outside the live-compute
+  // block, but are loaded together with it (see the batch below).
+  let termRow: { startDate: Date | null; endDate: Date | null } | null = null;
+  let snapshots: {
+    snapshotDate: Date;
+    riskLevel: RiskLevel;
+    studentId: string | null;
+    rosterId: string | null;
+  }[] = [];
+  let interventionGroups: { outcomeStatus: OutcomeStatus; _count: { _all: number } }[] = [];
+
   {
     // Real-time unified live computation (EITHER avg < 75). The ADM desk uses
     // an explicit learner set, so annual section scoping is redundant there.
@@ -105,7 +122,8 @@ export async function getRiskBoard(
         : {};
     const yearRoster: any = schoolYearId ? { roster: { schoolYearId } } : {};
     const termScope: any = activeTermId ? { termId: activeTermId } : {};
-    const [
+    const archivedLearners = await archivedAdvisoryLearnerIds();
+  const [
       gradeAvgsP,
       gradeAvgsR,
       subTotalP,
@@ -118,75 +136,130 @@ export async function getRiskBoard(
       anecdR,
       profKeys,
       rosterKeys,
+      sectionMetaRows,
+      trendTermRow,
+      trendSnapshots,
+      trendInterventionGroups,
     ] = await Promise.all([
       prisma.finalGrade.groupBy({
         by: ["studentId"],
-        where: { ...termScope, studentId: { not: null }, ...yearProfile },
+        where: { ...termScope, studentId: { not: null }, ...yearProfile, ...excludeArchivedLearnerRows(archivedLearners) },
         _avg: { computedAverage: true, transmutedGrade: true },
       }),
       prisma.finalGrade.groupBy({
         by: ["rosterId"],
-        where: { ...termScope, rosterId: { not: null }, ...yearRoster },
+        where: { ...termScope, rosterId: { not: null }, ...yearRoster, ...excludeArchivedLearnerRows(archivedLearners) },
         _avg: { computedAverage: true, transmutedGrade: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["studentId"],
-        where: { ...termScope, studentId: { not: null }, subjectId: { not: null }, ...yearProfile },
+        where: { ...termScope, studentId: { not: null }, subjectId: { not: null }, ...yearProfile, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["rosterId"],
-        where: { ...termScope, rosterId: { not: null }, subjectId: { not: null }, ...yearRoster },
+        where: { ...termScope, rosterId: { not: null }, subjectId: { not: null }, ...yearRoster, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["studentId"],
-        where: { ...termScope, studentId: { not: null }, subjectId: { not: null }, status: "present", ...yearProfile },
+        where: { ...termScope, studentId: { not: null }, subjectId: { not: null }, status: "present", ...yearProfile, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["rosterId"],
-        where: { ...termScope, rosterId: { not: null }, subjectId: { not: null }, status: "present", ...yearRoster },
+        where: { ...termScope, rosterId: { not: null }, subjectId: { not: null }, status: "present", ...yearRoster, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["studentId"],
-        where: { ...termScope, studentId: { not: null }, status: "present", ...yearProfile },
+        where: { ...termScope, studentId: { not: null }, status: "present", ...yearProfile, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.attendanceRecord.groupBy({
         by: ["rosterId"],
-        where: { ...termScope, rosterId: { not: null }, status: "present", ...yearRoster },
+        where: { ...termScope, rosterId: { not: null }, status: "present", ...yearRoster, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.anecdotalRecord.groupBy({
         by: ["studentId"],
-        where: { ...termScope, studentId: { not: null }, ...yearProfile },
+        where: { ...termScope, studentId: { not: null }, deletedAt: null, ...yearProfile, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.anecdotalRecord.groupBy({
         by: ["rosterId"],
-        where: { ...termScope, rosterId: { not: null }, ...yearRoster },
+        where: { ...termScope, rosterId: { not: null }, deletedAt: null, ...yearRoster, ...excludeArchivedLearnerRows(archivedLearners) },
         _count: { _all: true },
       }),
       prisma.studentProfile.findMany({
         where: admOnly
           ? admStudentIds
-            ? { userId: { in: [...admStudentIds] } }
+            ? { userId: { in: [...admStudentIds] }, ...excludeArchivedProfiles(archivedLearners) }
             : { userId: { in: [] } }
           : {
               ...(schoolYearId ? { section: { schoolYearId } } : {}),
               ...(admStudentIds ? { userId: { in: [...admStudentIds] } } : {}),
+              ...excludeArchivedProfiles(archivedLearners),
             },
         select: { userId: true, lrn: true, gradeLevel: true, sectionId: true },
       }),
       admOnly
         ? Promise.resolve([])
         : prisma.studentRoster.findMany({
-            where: schoolYearId ? { schoolYearId } : undefined,
+            where: {
+              ...(schoolYearId ? { schoolYearId } : {}),
+              ...excludeArchivedRosters(archivedLearners),
+            },
             select: { id: true, lrn: true, gradeLevel: true, sectionId: true },
           }),
+      // Everything below used to run as its own serial stage after this batch.
+      // Against the remote pooler each stage is ~0.5–2s of latency, so folding
+      // the (independent) section/trend/intervention reads in here removes
+      // several seconds from the board.
+      prisma.section.findMany({
+        where: schoolYearId ? { schoolYearId } : undefined,
+        select: {
+          id: true,
+          name: true,
+          gradeLevel: true,
+          adviser: {
+            select: { staffProfile: { select: { shareStudentData: true } } },
+          },
+        },
+      }),
+      activeTermId
+        ? prisma.term.findUnique({
+            where: { id: activeTermId },
+            select: { startDate: true, endDate: true },
+          })
+        : Promise.resolve(null),
+      activeTermId
+        ? prisma.riskSnapshot.findMany({
+            where: {
+              termId: activeTermId,
+              ...(admStudentIds ? { studentId: { in: [...admStudentIds] } } : {}),
+            },
+            select: {
+              snapshotDate: true,
+              riskLevel: true,
+              studentId: true,
+              rosterId: true,
+            },
+            orderBy: { snapshotDate: "asc" },
+          })
+        : Promise.resolve([]),
+      prisma.intervention.groupBy({
+        by: ["outcomeStatus"],
+        where: {
+          ...(schoolYearId ? { student: { section: { schoolYearId } } } : {}),
+          ...(admStudentIds ? { studentId: { in: [...admStudentIds] } } : {}),
+        },
+        _count: { _all: true },
+      }),
     ]);
+    termRow = trendTermRow;
+    snapshots = trendSnapshots;
+    interventionGroups = trendInterventionGroups;
     const countBy = (groups: any[], getKey: (g: any) => string | null) => {
       const m = new Map<string, number>();
       for (const g of groups) {
@@ -217,21 +290,8 @@ export async function getRiskBoard(
       ),
     );
     const headcounts = await sectionHeadcounts(sectionIds);
-    const sectionMeta = sectionIds.length
-      ? await prisma.section.findMany({
-          where: { id: { in: sectionIds } },
-          select: {
-            id: true,
-            name: true,
-            gradeLevel: true,
-            adviser: {
-              select: { staffProfile: { select: { shareStudentData: true } } },
-            },
-          },
-        })
-      : [];
     const connectedSectionIds = new Set<string>();
-    for (const s of sectionMeta) {
+    for (const s of sectionMetaRows) {
       sectionNameById.set(s.id, s.name);
       sectionGradeById.set(s.id, gradeLabel(s.gradeLevel));
       if (s.adviser?.staffProfile?.shareStudentData) connectedSectionIds.add(s.id);
@@ -306,7 +366,15 @@ export async function getRiskBoard(
       if (level === "High") high++;
       else if (level === "Moderate") moderate++;
       else low++;
-      addGrade(gradeByKey.get(key) ?? "—", level, 1);
+      // Prefer the section's grade (the adviser's roster record) over a
+      // possibly stale StudentProfile/StudentRoster gradeLevel.
+      addGrade(
+        (sectionId ? sectionGradeById.get(sectionId) : undefined) ??
+          gradeByKey.get(key) ??
+          "—",
+        level,
+        1,
+      );
       if (sectionId) addSection(sectionId, level, 1);
     }
   }
@@ -317,28 +385,7 @@ export async function getRiskBoard(
   // the term. Each learner counts once per week — their latest snapshot in
   // that week — so repeating hourly sweeps don't inflate the bars.
   const trend: RiskBoardResult["trend"] = [];
-  if (activeTermId) {
-    const [termRow, snapshots] = await Promise.all([
-      prisma.term.findUnique({
-        where: { id: activeTermId },
-        select: { startDate: true, endDate: true },
-      }),
-      prisma.riskSnapshot.findMany({
-        where: {
-          termId: activeTermId,
-          ...(admStudentIds ? { studentId: { in: [...admStudentIds] } } : {}),
-        },
-        select: {
-          snapshotDate: true,
-          riskLevel: true,
-          studentId: true,
-          rosterId: true,
-        },
-        orderBy: { snapshotDate: "asc" },
-      }),
-    ]);
-
-    if (snapshots.length > 0) {
+  if (activeTermId && snapshots.length > 0) {
       const WEEK_MS = 7 * 86_400_000;
       const nowMs = Date.now();
       const firstMs = snapshots[0].snapshotDate.getTime();
@@ -380,7 +427,6 @@ export async function getRiskBoard(
           low: lowCount,
         });
       }
-    }
   }
   // A trimester is ~13–14 weeks; cap the chart so long holiday gaps don't
   // squeeze the bars into unreadable slivers.
@@ -393,14 +439,6 @@ export async function getRiskBoard(
     visibleTrend = [{ term: "Now", high, moderate, low }];
   }
 
-  const interventionGroups = await prisma.intervention.groupBy({
-    by: ["outcomeStatus"],
-    where: {
-      ...(schoolYearId ? { student: { section: { schoolYearId } } } : {}),
-      ...(admStudentIds ? { studentId: { in: [...admStudentIds] } } : {}),
-    },
-    _count: { _all: true },
-  });
   const outcomeMap = new Map<OutcomeStatus, number>();
   for (const g of interventionGroups) outcomeMap.set(g.outcomeStatus, g._count._all);
   const interventionOutcome = {
@@ -476,7 +514,7 @@ async function connectedLearnerIds(yearId: string): Promise<{
   const sectionIds = sections.map((s) => s.id);
   if (sectionIds.length === 0) return { studentIds: [], rosterIds: [] };
 
-  const [profiles, rosters] = await Promise.all([
+  const [profiles, rosters, archived] = await Promise.all([
     prisma.studentProfile.findMany({
       where: { sectionId: { in: sectionIds } },
       select: { userId: true },
@@ -485,11 +523,14 @@ async function connectedLearnerIds(yearId: string): Promise<{
       where: { sectionId: { in: sectionIds } },
       select: { id: true },
     }),
+    archivedAdvisoryLearnerIds(),
   ]);
 
+  const hiddenProfiles = new Set(archived.studentIds);
+  const hiddenRosters = new Set(archived.rosterIds);
   return {
-    studentIds: profiles.map((p) => p.userId),
-    rosterIds: rosters.map((r) => r.id),
+    studentIds: profiles.map((p) => p.userId).filter((id) => !hiddenProfiles.has(id)),
+    rosterIds: rosters.map((r) => r.id).filter((id) => !hiddenRosters.has(id)),
   };
 }
 
@@ -510,26 +551,28 @@ export async function getRiskTrend(
   schoolYearId?: string,
   termId?: string
 ): Promise<RiskTrendResult> {
-  const year = schoolYearId
-    ? await prisma.schoolYear.findUnique({
-        where: { id: schoolYearId },
-        select: { id: true },
-      })
-    : await prisma.schoolYear.findFirst({
-        where: { isActive: true },
-        select: { id: true },
-      });
-  const yearId = year?.id ?? null;
+  const yearId = schoolYearId
+    ? schoolYearId
+    : (
+        (
+          await prisma.schoolYear.findFirst({
+            where: { isActive: true },
+            select: { id: true },
+          })
+        )?.id ?? null
+      );
 
   if (termId && yearId) {
-    const term = await prisma.term.findUnique({
-      where: { id: termId },
-      select: { id: true, schoolYearId: true, startDate: true, endDate: true },
-    });
+    const [term, connected] = await Promise.all([
+      prisma.term.findUnique({
+        where: { id: termId },
+        select: { id: true, schoolYearId: true, startDate: true, endDate: true },
+      }),
+      connectedLearnerIds(yearId),
+    ]);
     const validTerm = term && term.schoolYearId === yearId ? term : null;
 
     if (validTerm) {
-      const connected = await connectedLearnerIds(yearId);
       const ownerFilter = connectedOwnerFilter(connected);
       if (ownerFilter.length === 0) {
         return { schoolYearId: yearId, termId: validTerm.id, trend: [] };
@@ -595,21 +638,22 @@ export async function getRiskTrend(
     }
   }
 
-  let terms = yearId
-    ? await prisma.term.findMany({
-        where: { schoolYearId: yearId },
-        orderBy: { termNumber: "asc" },
-        select: {
-          id: true,
-          termNumber: true,
-          schoolYear: { select: { name: true } },
-        },
-      })
-    : [];
-
-  const connected = yearId
-    ? await connectedLearnerIds(yearId)
-    : { studentIds: [], rosterIds: [] };
+  const [terms, connected] = await Promise.all([
+    yearId
+      ? prisma.term.findMany({
+          where: { schoolYearId: yearId },
+          orderBy: { termNumber: "asc" },
+          select: {
+            id: true,
+            termNumber: true,
+            schoolYear: { select: { name: true } },
+          },
+        })
+      : Promise.resolve([]),
+    yearId
+      ? connectedLearnerIds(yearId)
+      : Promise.resolve({ studentIds: [], rosterIds: [] }),
+  ]);
   const ownerFilter = connectedOwnerFilter(connected);
   if (yearId && terms.length > 0 && ownerFilter.length === 0) {
     return { schoolYearId: yearId, termId: null, trend: [] };

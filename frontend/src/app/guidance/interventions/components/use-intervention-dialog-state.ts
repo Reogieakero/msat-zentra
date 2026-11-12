@@ -80,9 +80,10 @@ export function useInterventionDialogState(students: AtRiskStudentItem[]) {
     setDialogs((p) => ({ ...p, outcome: true }));
   };
   const openSchedule = (row: AtRiskStudentItem) => {
-    if (!row.intervention) return;
     setActiveKey(row.studentKey);
-    setActiveFollowUpId(row.intervention.id);
+    // A learner with no plan books the first session from the same overlay;
+    // the submit handler opens the follow-up behind it.
+    setActiveFollowUpId(row.intervention?.id ?? null);
     resetSessionForm();
     setDialogs((p) => ({ ...p, schedule: true }));
   };

@@ -3,19 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  BellRing,
-  Inbox,
-  Stethoscope,
-  HeartPulse,
-  Send,
-  Settings,
-  type LucideIcon,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import styles from "./nurse-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
+import { NAV_ICONS } from "./nav/sidebar-icons";
 import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
@@ -35,8 +27,8 @@ const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { title: "Overview", href: "/nurse/overview", icon: LayoutDashboard },
-      { title: "Alerts", href: "/nurse/alerts", icon: BellRing },
+      { title: "Overview", href: "/nurse/overview", icon: NAV_ICONS.overview },
+      { title: "Alerts", href: "/nurse/alerts", icon: NAV_ICONS.alerts },
     ],
   },
   {
@@ -45,12 +37,12 @@ const NAV: NavGroup[] = [
       {
         title: "ADM Cases",
         href: "/nurse/referrals/adm",
-        icon: Inbox,
+        icon: NAV_ICONS.admCases,
       },
       {
         title: "Clinic Matters",
         href: "/nurse/referrals/clinic",
-        icon: Stethoscope,
+        icon: NAV_ICONS.clinicMatters,
       },
     ],
   },
@@ -60,7 +52,7 @@ const NAV: NavGroup[] = [
       {
         title: "Health Records",
         href: "/nurse/health-records",
-        icon: HeartPulse,
+        icon: NAV_ICONS.healthRecords,
       },
     ],
   },
@@ -70,7 +62,7 @@ const NAV: NavGroup[] = [
       {
         title: "Referrals Report",
         href: "/nurse/adm",
-        icon: Send,
+        icon: NAV_ICONS.referrals,
       },
     ],
   },
@@ -80,7 +72,7 @@ const NAV: NavGroup[] = [
       {
         title: "General Settings",
         href: "/nurse/settings",
-        icon: Settings,
+        icon: NAV_ICONS.settings,
       },
     ],
   },

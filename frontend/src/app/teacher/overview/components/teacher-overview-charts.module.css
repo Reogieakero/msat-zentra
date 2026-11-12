@@ -1,0 +1,285 @@
+/* Overview chart grid — kanban boards in the same shell as the guidance and
+   nurse overview pages: one chart per board, amber ramp, shared tooltip and a
+   "What it means" footer. Charts are the primary view; tables are drill-down. */
+
+.stack {
+  /* Amber figures — same values as the guidance/nurse overview pages. */
+  --teacher-number: #b45309;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+:global(.dark) .stack {
+  --teacher-number: #fbbf24;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  min-width: 0;
+  align-items: stretch;
+}
+
+.gridWide {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  min-width: 0;
+  align-items: stretch;
+}
+
+/* Board header icon — same slot as the guidance/nurse boards. */
+.boardIcon {
+  display: inline-flex;
+  color: var(--teacher-number);
+}
+
+/* Chart figures sit above neighbouring board content so Recharts tooltips
+   never get painted under the next board. */
+.chartBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.chartRow {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.chartWrap {
+  position: relative;
+  width: 8.5rem;
+  min-width: 8.5rem;
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Legend-free donut: centred in the board so it fills the space an empty
+   legend column would otherwise leave. */
+.donut {
+  position: relative;
+  width: 100%;
+  max-width: 204px;
+  margin-inline: auto;
+}
+
+.centerValue {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--teacher-number);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.centerLabel {
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+}
+
+.legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.swatch {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legendLabel {
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legendValue {
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Legend value — the shared Pill supplies the rectangle; these two spans
+   only colour the count and the share in the chart's amber accent. */
+.legendPillCount,
+.legendPillPercent {
+  font-variant-numeric: tabular-nums;
+  color: var(--teacher-number);
+}
+
+.legendPillPercent {
+  opacity: 0.7;
+}
+
+/* Chart tooltip — popover surface tokens keep it readable in light (white
+   card) and dark (near-black card) mode, with amber figures matching the
+   legend pills. Identical to the guidance/nurse overview tooltip. */
+.chartTooltip {
+  min-width: 9.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  padding: 0.5rem 0.625rem;
+  box-shadow:
+    0 16px 40px -20px rgb(0 0 0 / 0.45),
+    0 4px 12px -6px rgb(0 0 0 / 0.3);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  position: relative;
+  z-index: 50;
+}
+
+.chartTooltipLabel {
+  margin: 0 0 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.chartTooltipList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.chartTooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+
+.chartTooltipDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.chartTooltipName {
+  color: var(--popover-foreground);
+}
+
+.chartTooltipValue {
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--teacher-number);
+}
+
+/* Bar charts — theme-aware SVG text (recharts sets its own attributes, so
+   color comes from the stylesheet, not props). */
+.barChart {
+  width: 100%;
+}
+
+.barChart text {
+  fill: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+/* Line / composed charts — same theme-aware text, raised above neighbouring
+   boards so the tooltip is never clipped. */
+.lineChart {
+  width: 100%;
+  position: relative;
+  z-index: 10;
+}
+
+.lineChart text {
+  fill: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+/* Bar value labels — amber figures in both themes. */
+.barChart .barNumber {
+  fill: var(--teacher-number);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Board header count + any inline figure — amber, theme-aware. */
+.amberNumber {
+  color: var(--teacher-number);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "What it means" label inside the shared InsightCallout footer. */
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* The callout's own `.callout { margin: 0 }` beats Tailwind's `mt-auto`, so the
+   bottom pin lives on this wrapper instead. */
+.footerSlot {
+  display: flex;
+  margin-top: auto;
+}
+
+/* The callout hugs its copy: the bottom pin lives on the wrapper, and the
+   row's callouts share the same baseline. */
+.interpretation {
+  flex: 1;
+}
+
+@media (max-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .gridWide {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

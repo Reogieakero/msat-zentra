@@ -14,6 +14,12 @@ export function gradeBandGuard(
      * hard 404 because it must provision a grade/section from the roster.
      */
     allowUnresolved?: boolean;
+    /**
+     * Let non-student accounts through untouched. Approval uses this so parent
+     * sign-ups (which have no LRN or roster entry) can be activated by either
+     * desk instead of failing with STUDENT_NOT_FOUND.
+     */
+    allowNonStudent?: boolean;
   },
 ) {
   return async (req: Request, _res: Response, next: NextFunction) => {
@@ -22,6 +28,14 @@ export function gradeBandGuard(
 
     try {
       const studentId = await resolveStudentId(req);
+
+      if (options?.allowNonStudent) {
+        const target = await prisma.user.findUnique({
+          where: { id: studentId },
+          select: { role: true },
+        });
+        if (target && target.role !== "student") return next();
+      }
 
       if (studentId.startsWith("roster:")) {
         const entry = await prisma.studentRoster.findUnique({

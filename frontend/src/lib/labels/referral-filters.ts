@@ -1,4 +1,4 @@
-import { isEndorsed, isWithdrawn } from "./referral-status";
+import { isEndorsed, isWithdrawn, isCaseDone, hasOpenBooking } from "./referral-status";
 export function buildTypeOptions(tracks: string[]): { value: string; label: string }[] {
   return [{ value: "", label: "All types" }, ...tracks.map((t) => ({ value: t, label: t }))];
 }
@@ -41,7 +41,7 @@ export function matchesActionFilter(
     case "followup":
       return row.type === "ADM" && row.status === "follow_up";
     case "booked":
-      return row.type === "ADM" && row.sessions.length > 0;
+      return row.type === "ADM" && hasOpenBooking(row);
     case "reject":
       return row.type === "ADM" && row.status === "dismissed" && !isWithdrawn(row);
     case "adm_cancelled":
@@ -49,9 +49,9 @@ export function matchesActionFilter(
     case "clinic_needs":
       return row.type === "Clinic" && row.status === "pending";
     case "clinic_booked":
-      return row.type === "Clinic" && row.sessions.length > 0;
+      return row.type === "Clinic" && hasOpenBooking(row);
     case "clinic_done":
-      return row.type === "Clinic" && row.sessions.some((s) => s.status === "completed");
+      return row.type === "Clinic" && isCaseDone(row);
     case "clinic_followup":
       return row.type === "Clinic" && row.status === "follow_up";
     case "clinic_cancelled":
@@ -83,8 +83,8 @@ export function matchesGuidanceFilters(
   if (params.status !== "" && row.status !== params.status) return false;
   if (params.type === "adm" && row.type !== "ADM") return false;
   if (params.type === "counseling" && row.type !== "Counseling") return false;
-  if (params.booked && row.sessions.length === 0) return false;
-  if (params.completed && !row.sessions.some((s) => s.status === "completed")) return false;
+  if (params.booked && !hasOpenBooking(row)) return false;
+  if (params.completed && !isCaseDone(row)) return false;
   if (params.open && (row.status === "resolved" || row.status === "dismissed")) return false;
   if (params.withdrawn && !isWithdrawn(row)) return false;
   if (!params.withdrawn && params.status === "dismissed" && isWithdrawn(row)) return false;

@@ -4,6 +4,8 @@ import type { NurseAlertItem } from "@/services/nurse/nurse.types";
 import {
   isEndorsed,
   isWithdrawn,
+  isCaseDone,
+  hasOpenBooking,
   matchesActionFilter,
   type ActionFilter,
   type ActionValue,
@@ -19,6 +21,7 @@ export function useNurseAlertFilters({
   serverPage,
   serverTotal,
   serverTotalPages,
+  search = "",
   pageSize = PAGE_SIZE,
 }: {
   alerts: NurseAlertItem[];
@@ -28,6 +31,8 @@ export function useNurseAlertFilters({
   serverPage?: number;
   serverTotal?: number;
   serverTotalPages?: number;
+  /** Live search text — filters the loaded page as the user types. */
+  search?: string;
   /** Records per page. Defaults to the global 15; the ADM kanban pages 16. */
   pageSize?: number;
 }) {
@@ -53,9 +58,19 @@ export function useNurseAlertFilters({
       ? highlightPage
       : page;
   const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
     const rows = alerts.filter((a) => {
       if (typeFilter !== "" && a.row.type !== typeFilter) return false;
       if (actionFilter !== "" && !matchesActionFilter(a.row, actionFilter)) return false;
+      // Instant search on the loaded page (the debounced server query then
+      // brings in matches from the rest of the desk).
+      if (
+        q !== "" &&
+        !`${a.row.student} ${a.row.lrn} ${a.row.section} ${a.row.reason} ${a.row.category}`
+          .toLowerCase()
+          .includes(q)
+      )
+        return false;
       return true;
     });
     rows.sort((a, b) => {
@@ -66,7 +81,7 @@ export function useNurseAlertFilters({
       return b.sortTime - a.sortTime;
     });
     return rows;
-  }, [alerts, typeFilter, actionFilter]);
+  }, [alerts, typeFilter, actionFilter, search]);
   const actionCounts = React.useMemo(() => {
     const counts: Record<ActionValue, number> = {
       adm_needs: 0,
@@ -86,24 +101,31 @@ export function useNurseAlertFilters({
         if (a.row.status === "pending") counts.adm_needs += 1;
         if (isEndorsed(a.row.type, a.row.status)) counts.endorse += 1;
         if (a.row.status === "follow_up") counts.followup += 1;
-        if (a.row.sessions.length > 0) counts.booked += 1;
+        if (hasOpenBooking(a.row)) counts.booked += 1;
         if (a.row.status === "dismissed" && !isWithdrawn(a.row)) counts.reject += 1;
         if (isWithdrawn(a.row)) counts.adm_cancelled += 1;
       } else if (a.row.type === "Clinic") {
         if (a.row.status === "pending") counts.clinic_needs += 1;
-        if (a.row.sessions.length > 0) counts.clinic_booked += 1;
-        if (a.row.sessions.some((s) => s.status === "completed")) counts.clinic_done += 1;
+        if (hasOpenBooking(a.row)) counts.clinic_booked += 1;
+        if (isCaseDone(a.row)) counts.clinic_done += 1;
         if (a.row.status === "follow_up") counts.clinic_followup += 1;
         if (isWithdrawn(a.row)) counts.clinic_cancelled += 1;
       }
     }
     return counts;
   }, [alerts]);
-  const total = serverDriven ? (serverTotal ?? filtered.length) : filtered.length;
+  const total = serverDriven
+    ? actionFilter !== ""
+      ? filtered.length
+      : (serverTotal ?? filtered.length)
+    : filtered.length;
   const totalPages = serverDriven
-    ? Math.max(1, serverTotalPages ?? 1)
+    ? actionFilter !== ""
+      ? 1
+      : Math.max(1, serverTotalPages ?? 1)
     : Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(effPage, totalPages);
+  const safePage =
+    actionFilter !== "" ? 1 : Math.min(effPage, totalPages);
   return {
     typeFilter,
     setTypeFilter,

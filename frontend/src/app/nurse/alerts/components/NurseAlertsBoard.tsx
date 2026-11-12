@@ -7,7 +7,6 @@ import {
   CalendarClock,
   CalendarPlus,
   Check,
-  ChevronDown,
   CircleCheck,
   CircleX,
   Clock,
@@ -15,109 +14,52 @@ import {
   FileText,
   Flag,
   Hourglass,
-  Inbox,
   SearchIcon,
-  SearchX,
   Send,
-  Stethoscope,
 } from "lucide-react";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { NurseActionBadge, waitingElapsed } from "../../overview/components/nurse-action-badge";
 import { useNowMs } from "../../overview/components/use-now-ms";
 import { NurseQueueRowActions } from "../../overview/components/NurseQueueRowActions";
-import { anecdotalCategoryPillClass } from "../../referrals/components/nurse-referrals-format";
 import { Pagination } from "@/components/shared/pagination";
-import { cn } from "@/lib/utils";
-import { deriveActionStatus } from "@/services/nurse/labels";
 import type {
   NurseAlertItem,
   NurseRiskLevel,
 } from "@/services/nurse/nurse.types";
 import styles from "./nurse-alerts.module.css";
 
-type RiskFilter = "" | NurseRiskLevel | "none";
+type RiskFilter = "" | "High" | "Moderate";
 
 /** Server-side case-type filter — matches the API's ?track= param. */
-export type TypeTrack = "" | "adm" | "clinic";
+export type TypeTrack = "adm" | "clinic";
 
-/* Single shared pill metric for the case rows — rectangle pills (rounded-md),
-   same as the overview's latest-referrals board. */
-const PILL_BASE =
-  "inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-xs font-medium whitespace-nowrap";
-const PILL_SECONDARY = "border-border bg-secondary text-secondary-foreground";
-const PILL_MUTED = "border-border bg-muted text-muted-foreground";
+/* Category colour coding shared with the overview / referrals / anecdotal
+   pages — one tone per anecdotal category. */
+const CATEGORY_TONE: Record<string, PillTone> = {
+  behavioral: "amber",
+  bullying: "red",
+  academic: "blue",
+  attendance: "green",
+  health: "violet",
+};
 
+/* Risk levels offered by the risk tab strip — High / Moderate only (plus the
+   reset tab); low-risk cases aren't actionable on this desk. */
 const RISK_OPTIONS: { value: RiskFilter; label: string }[] = [
   { value: "", label: "All risks" },
   { value: "High", label: "High" },
   { value: "Moderate", label: "Moderate" },
-  { value: "Low", label: "Low" },
-  { value: "none", label: "No level" },
 ];
-
-/* Legend dots for the risk filter menu — same colours as the row risk
-   badges (High red, Moderate amber, Low green, no snapshot muted). */
-const RISK_DOT_CLASS: Record<RiskFilter, string> = {
-  "": "border border-muted-foreground/50",
-  High: "bg-red-500",
-  Moderate: "bg-amber-500",
-  Low: "bg-green-500",
-  none: "bg-muted-foreground/40",
-};
-
-/* Amber "selected" style shared by the header's ADM / Clinic icon toggles
-   and the centered stage tabs. The dark: classes re-override the outline
-   variant's dark input tint (which would otherwise win in dark mode). */
-const SELECTED_AMBER_CLASS =
-  "border-amber-500/40 bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 hover:text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/25 dark:hover:text-amber-400";
-
-/* Canonical order for the stage tabs — review first, then the active
-   stages, then the closed ones; unknown keys sink to the end. */
-const STAGE_ORDER = [
-  "needs_review",
-  "escalated",
-  "booked",
-  "endorsed",
-  "followup",
-  "done_session",
-  "in_progress",
-  "info_requested",
-  "done",
-  "rejected",
-];
-
-function stageRank(key: string): number {
-  const i = STAGE_ORDER.indexOf(key);
-  return i === -1 ? STAGE_ORDER.length : i;
-}
-
-/* Stage tab pills — rectangle pills matching the row pill metric, but
-   interactive (hover / focus ring / pressed state). */
-const STAGE_TAB_CLASS =
-  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-muted-foreground whitespace-nowrap outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
-const STAGE_TAB_ACTIVE_CLASS = `${SELECTED_AMBER_CLASS} font-semibold`;
 
 export function statusVariant(
   status: string
@@ -171,11 +113,11 @@ export function RiskBadge({
     );
   if (!level) return <span className={styles.noRisk}>—</span>;
 
-  const variant = level === "High" ? "red" : level === "Moderate" ? "amber" : "green";
+  const tone = level === "High" ? "red" : level === "Moderate" ? "amber" : "green";
   return (
-    <Badge variant={variant} className="rounded-md">
+    <Pill tone={tone} label="Risk level">
       {level}
-    </Badge>
+    </Pill>
   );
 }
 
@@ -216,22 +158,25 @@ export function NurseAlertsBoardSkeleton() {
       }
       ariaLabel="Loading referred cases"
       description={<Skeleton className={styles.skelPanelDesc} />}
-      headerCenter={
-        <span className="flex items-center gap-1.5" aria-hidden="true">
-          <Skeleton className={styles.skelTab} />
-          <Skeleton className={styles.skelTab} />
-          <Skeleton className={styles.skelTab} />
-        </span>
-      }
       actions={
         <div
           className="flex max-w-[70vw] flex-wrap items-center justify-end gap-2"
           aria-hidden="true"
         >
           <Skeleton className={styles.skelSearch} />
-          <Skeleton className={styles.skelDrop} />
-          <Skeleton className={styles.skelIconBtn} />
-          <Skeleton className={styles.skelIconBtn} />
+        </div>
+      }
+      headerCenter={
+        <div
+          className={`${styles.filterRow} ${styles.filterRowScroll} max-w-[52vw]`}
+          aria-hidden="true"
+        >
+          <Skeleton className={styles.skelTab} />
+          <Skeleton className={styles.skelTab} />
+          <span className={styles.filterDivider}>|</span>
+          <Skeleton className={styles.skelTab} />
+          <Skeleton className={styles.skelTab} />
+          <Skeleton className={styles.skelTab} />
         </div>
       }
       footer={
@@ -250,8 +195,13 @@ export function NurseAlertsBoardSkeleton() {
           <li key={i} className={styles.caseRow} aria-hidden="true">
             <div className={styles.caseInfo}>
               <Skeleton className={styles.skelAvatar} />
-              <Skeleton className={styles.skelCaseName} />
-              <Skeleton className={styles.skelPill} />
+              <div className={styles.caseNameBlock}>
+                <Skeleton className={styles.skelCaseName} />
+                <div className={styles.caseMeta}>
+                  <Skeleton className={styles.skelPill} />
+                  <Skeleton className={styles.skelPillShort} />
+                </div>
+              </div>
             </div>
             <div className={styles.cellActions}>
               <Skeleton className={styles.skelPill} />
@@ -299,21 +249,19 @@ export function NurseAlertsBoard({
 }) {
   const [internalQuery, setInternalQuery] = React.useState("");
   const [risk, setRisk] = React.useState<RiskFilter>("");
-  const [stage, setStage] = React.useState("");
   const nowMs = useNowMs();
   const query = controlledQuery ?? internalQuery;
   const setQuery = onQueryChange ?? setInternalQuery;
 
   const filtered = React.useMemo(() => {
-    const q = serverPaged ? "" : query.trim().toLowerCase();
+    // Filter the loaded page instantly as the nurse types (same feel as the
+    // teacher desks); the debounced server query then swaps in matches from
+    // the rest of the desk.
+    const q = query.trim().toLowerCase();
     return alerts.filter((a) => {
       if (risk !== "") {
         const level = a.studentId ? riskByStudent[a.studentId] : undefined;
-        if (risk === "none") {
-          if (level !== undefined) return false;
-        } else if (level !== risk) {
-          return false;
-        }
+        if (level !== risk) return false;
       }
       if (
         q !== "" &&
@@ -324,50 +272,11 @@ export function NurseAlertsBoard({
         return false;
       return true;
     });
-  }, [alerts, query, risk, riskByStudent, serverPaged]);
-
-  // Stage tabs (centered in the board header): one pill per stage that
-  // actually has cases in the filtered rows — a stage with no cases never
-  // renders a pill, and the strip hides entirely when no stage remains.
-  const stageTabs = React.useMemo(() => {
-    const counts = new Map<string, { label: string; count: number }>();
-    for (const a of filtered) {
-      const { key, label } = deriveActionStatus(a.row.type, a.row.status, a.row.sessions);
-      const existing = counts.get(key);
-      if (existing) existing.count += 1;
-      else counts.set(key, { label, count: 1 });
-    }
-    return [...counts.entries()]
-      .map(([key, { label, count }]) => ({ key, label, count }))
-      .sort((a, b) => stageRank(a.key) - stageRank(b.key) || a.label.localeCompare(b.label));
-  }, [filtered]);
-
-  // Drop the selection while its stage has no cases any more (search / risk
-  // changed) or while a lone stage remains — a single tab filters nothing.
-  // Derived, not synced in an effect, so no cascading renders.
-  const activeStage =
-    stageTabs.length > 1 && stageTabs.some((t) => t.key === stage) ? stage : "";
-
-  const visible = React.useMemo(
-    () =>
-      activeStage === ""
-        ? filtered
-        : filtered.filter(
-            (a) => deriveActionStatus(a.row.type, a.row.status, a.row.sessions).key === activeStage
-          ),
-    [filtered, activeStage]
-  );
+  }, [alerts, query, risk, riskByStudent]);
 
   const total = serverPaged ? (totalProp ?? filtered.length) : filtered.length;
-  const riskLabel =
-    RISK_OPTIONS.find((o) => o.value === risk)?.label ?? "All risks";
-  const hasActiveFilters = query.trim() !== "" || risk !== "" || track !== "";
-  const trackLabel =
-    track === "adm"
-      ? "ADM cases"
-      : track === "clinic"
-        ? "Clinic cases"
-        : "Every ADM and clinic matter";
+  const hasActiveFilters = query.trim() !== "" || risk !== "";
+  const trackLabel = track === "adm" ? "ADM cases" : "Clinic cases";
   const emptyFiltered = (alerts.length === 0 || filtered.length === 0) && hasActiveFilters;
 
   return (
@@ -378,7 +287,6 @@ export function NurseAlertsBoard({
           <BellRing size={14} />
         </span>
       }
-      count={total}
       ariaLabel="Referred cases"
       description={`${trackLabel} on your desk — ${total} case${total === 1 ? "" : "s"}${
         serverPaged &&
@@ -388,31 +296,59 @@ export function NurseAlertsBoard({
           : ""
       }.`}
       headerCenter={
-        stageTabs.length > 1 ? (
+        /* Board-header filter strip (centered like the principal schedule
+           selector): ADM/Clinic type tabs (amber), a rule, then the risk pill
+           tabs (blue when active). Inline tabs — no dropdown. */
+        <div className={`${styles.filterRow} ${styles.filterRowScroll} max-w-[52vw]`}>
           <div
-            className="flex max-w-[36vw] items-center gap-1.5 overflow-x-auto"
+            className={styles.filterGroup}
             role="group"
-            aria-label="Filter cases by stage"
+            aria-label="Filter cases by desk"
           >
-            {stageTabs.map((tab) => (
+            <button
+              type="button"
+              aria-pressed={track === "adm"}
+              onClick={() => onTrackChange("adm")}
+              className={styles.filterButton}
+            >
+              <Pill tone={track === "adm" ? "amber" : "neutral"}>ADM</Pill>
+            </button>
+            <button
+              type="button"
+              aria-pressed={track === "clinic"}
+              onClick={() => onTrackChange("clinic")}
+              className={styles.filterButton}
+            >
+              <Pill tone={track === "clinic" ? "amber" : "neutral"}>
+                Clinic
+              </Pill>
+            </button>
+          </div>
+          <span className={styles.filterDivider} aria-hidden>
+            |
+          </span>
+          <div
+            className={styles.filterGroup}
+            role="group"
+            aria-label="Filter cases by risk level"
+          >
+            {RISK_OPTIONS.map((option) => (
               <button
-                key={tab.key}
+                key={option.label}
                 type="button"
-                aria-pressed={activeStage === tab.key}
+                aria-pressed={risk === option.value}
                 onClick={() => {
-                  setStage(activeStage === tab.key ? "" : tab.key);
+                  setRisk(option.value);
                 }}
-                className={cn(
-                  STAGE_TAB_CLASS,
-                  activeStage === tab.key && STAGE_TAB_ACTIVE_CLASS
-                )}
+                className={styles.filterButton}
               >
-                {tab.label}
-                <span className="tabular-nums opacity-60">{tab.count}</span>
+                <Pill tone={risk === option.value ? "blue" : "neutral"}>
+                  {option.label}
+                </Pill>
               </button>
             ))}
           </div>
-        ) : null
+        </div>
       }
       actions={
         <div className="flex max-w-[70vw] flex-wrap items-center justify-end gap-2">
@@ -429,78 +365,6 @@ export function NurseAlertsBoard({
               <SearchIcon />
             </InputGroupAddon>
           </InputGroup>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label={`Filter cases by risk level, currently showing: ${riskLabel}`}
-                className={`${styles.filterBtn} ${risk !== "" ? styles.filterActive : ""}`}
-              >
-                {risk === "" ? "Risk" : riskLabel}
-                {risk !== "" && (
-                  <span className={styles.filterDot} aria-hidden />
-                )}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              {RISK_OPTIONS.map((item, index) => (
-                <React.Fragment key={item.label}>
-                  <DropdownMenuItem
-                    className={cn(
-                      "gap-2",
-                      risk === item.value &&
-                        "bg-accent font-medium text-accent-foreground"
-                    )}
-                    onSelect={() => {
-                      setRisk(item.value);
-                    }}
-                  >
-                    <span
-                      className={cn(
-                        "size-1.5 shrink-0 rounded-full",
-                        RISK_DOT_CLASS[item.value]
-                      )}
-                      aria-hidden
-                    />
-                    {item.label}
-                  </DropdownMenuItem>
-                  {index === 0 && <DropdownMenuSeparator />}
-                </React.Fragment>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                className={cn(track === "adm" && SELECTED_AMBER_CLASS)}
-                aria-pressed={track === "adm"}
-                aria-label="Show ADM cases only"
-                onClick={() => onTrackChange(track === "adm" ? "" : "adm")}
-              >
-                <Inbox aria-hidden />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">ADM cases</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                className={cn(track === "clinic" && SELECTED_AMBER_CLASS)}
-                aria-pressed={track === "clinic"}
-                aria-label="Show clinic cases only"
-                onClick={() => onTrackChange(track === "clinic" ? "" : "clinic")}
-              >
-                <Stethoscope aria-hidden />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Clinic cases</TooltipContent>
-          </Tooltip>
         </div>
       }
       footer={
@@ -513,7 +377,7 @@ export function NurseAlertsBoard({
     >
       {alerts.length > 0 && filtered.length > 0 ? (
         <ul className={styles.caseList}>
-          {visible.map((alert) => {
+          {filtered.map((alert) => {
             const row = alert.row;
             const level = alert.studentId
               ? riskByStudent[alert.studentId]
@@ -537,49 +401,47 @@ export function NurseAlertsBoard({
                     character={row.mascot ?? undefined}
                     size={32}
                   />
-                  <p className={styles.cellMain}>{row.student}</p>
-                  <span
-                    className={`${PILL_BASE} ${PILL_SECONDARY} tabular-nums`}
-                    title={row.lrn}
-                  >
-                    {row.lrn}
-                  </span>
-                  {row.grade !== "—" && (
-                    <span className={`${PILL_BASE} ${PILL_MUTED}`}>
-                      {row.grade}
-                    </span>
-                  )}
-                  {row.category !== "—" && (
-                    <span
-                      className={`${PILL_BASE} ${
-                        anecdotalCategoryPillClass(row.category) ??
-                        PILL_SECONDARY
-                      }`}
-                    >
-                      {row.category}
-                    </span>
-                  )}
+                  <div className={styles.caseNameBlock}>
+                    <p className={styles.cellMain}>{row.student}</p>
+                    <div className={styles.caseMeta}>
+                      <Pill label="LRN" className="tabular-nums">
+                        {row.lrn}
+                      </Pill>
+                      {row.grade !== "—" && (
+                        <Pill label="Grade level">{row.grade}</Pill>
+                      )}
+                      {row.category !== "—" && (
+                        <Pill
+                          tone={
+                            CATEGORY_TONE[row.category.trim().toLowerCase()] ??
+                            "neutral"
+                          }
+                          label="Category"
+                        >
+                          {row.category}
+                        </Pill>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className={styles.cellActions}>
                   {row.type === "ADM" ? (
-                    <Badge variant="blue" className="rounded-md">
+                    <Pill tone="blue" label="Referral type">
                       ADM case
-                    </Badge>
+                    </Pill>
                   ) : (
-                    <Badge variant="secondary" className="rounded-md">
-                      Clinic
-                    </Badge>
+                    <Pill label="Referral type">Clinic</Pill>
                   )}
-                  <NurseActionBadge row={row} className="rounded-md" />
+                  <NurseActionBadge row={row} />
                   <RiskBadge level={level} loading={riskLoading} />
                   {wait !== "—" && (
-                    <span
-                      className={`${PILL_BASE} ${PILL_MUTED} gap-1 tabular-nums`}
-                      title={`Waiting since ${row.date}`}
+                    <Pill
+                      label={`Waiting since ${row.date}`}
+                      className="gap-1 tabular-nums"
                     >
                       <Clock size={11} aria-hidden />
                       {wait}
-                    </span>
+                    </Pill>
                   )}
                   <NurseQueueRowActions
                     row={row}
@@ -594,11 +456,12 @@ export function NurseAlertsBoard({
           })}
         </ul>
       ) : emptyFiltered ? (
-        <NurseEmptyState
-          icon={SearchX}
-          title="No cases match your search"
-          hint="Try a different name or keyword, or clear the search and filters."
-        />
+        <div className="flex w-full justify-center py-6">
+          <InsightCallout role="status" className="w-full max-w-xl text-left">
+            <strong>No cases match your search.</strong> Try a different name,
+            LRN, or category — or clear the search to see every referred case.
+          </InsightCallout>
+        </div>
       ) : (
         <NurseEmptyState
           icon={BellRing}

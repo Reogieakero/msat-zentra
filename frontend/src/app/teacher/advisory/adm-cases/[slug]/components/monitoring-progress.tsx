@@ -51,22 +51,36 @@ export function MonitoringProgress({
   ];
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border bg-card p-4" aria-label="Module progress">
+    <section className="flex min-w-0 flex-col gap-3" aria-label="Module progress">
+      <header className="flex items-center gap-2">
+        <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground">
+          <ListChecks size={13} aria-hidden />
+          <span className="truncate">Module progress</span>
+        </span>
+        <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+          {percent}% complete
+        </span>
+      </header>
+
       <div className="grid grid-cols-2 gap-2">
         {stats.map(({ label, value, hint, icon: Icon, tone }) => (
-          <div key={label} className="min-w-0 rounded-md border bg-background px-3 py-2">
-            <p className="m-0 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              <Icon size={12} className={tone} aria-hidden /> {label}
+          <div
+            key={label}
+            className="flex min-w-0 flex-col items-center gap-1 rounded-md border bg-background px-3 py-2 text-center"
+          >
+            <p className="m-0 flex min-w-0 items-center justify-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <Icon size={12} className={tone} aria-hidden /> <span className="truncate">{label}</span>
             </p>
-            <p className="m-0 truncate text-base font-bold text-foreground" title={value}>
+            <p className="m-0 w-full truncate text-base font-bold text-foreground" title={value}>
               {value}
             </p>
-            <p className="m-0 truncate text-[11px] text-muted-foreground" title={hint}>
+            <p className="m-0 w-full truncate text-[11px] text-muted-foreground" title={hint}>
               {hint}
             </p>
           </div>
         ))}
       </div>
+
       <div>
         <div
           className="h-2 w-full overflow-hidden rounded-full bg-muted"
@@ -82,11 +96,11 @@ export function MonitoringProgress({
           />
         </div>
         {total === 0 ? (
-          <p className="m-0 mt-1 text-[11px] text-muted-foreground">
+          <p className="m-0 mt-1 text-center text-[11px] text-muted-foreground">
             No modules yet — release one from the advisory Modules desk.
           </p>
         ) : (
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5">
             <Pill tone="blue" label="Modules submitted">
               {submitted} of {total} modules submitted
             </Pill>

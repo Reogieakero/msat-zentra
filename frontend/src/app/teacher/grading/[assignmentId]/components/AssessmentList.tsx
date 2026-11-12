@@ -16,7 +16,7 @@ import type {
   ClassStudent,
   ComponentType,
 } from "@/services/teacher/grading.types";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 import styles from "./AssessmentList.module.css";
 
 const DOT: Record<string, string> = {
@@ -100,17 +100,14 @@ export function AssessmentList({ students, components, query, audience, onSelect
   };
 
   if (unfilteredTotal === 0) {
+    // Empty stage: the shared amber insight callout, centered in the content
+    // area — no board/card chrome of its own.
     return (
-      <div className={`${assign.card} mx-auto w-full max-w-md`}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className="relative flex flex-col items-center gap-2 py-8 text-center">
-          <p className="font-semibold">No assessments yet</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Use the Add assessment card to create your first quiz, activity, or exam.
-          </p>
-        </div>
+      <div className={emptyStyles.emptyWrap}>
+        <InsightCallout className="mx-auto w-full max-w-md text-center">
+          No assessments yet — use the Add assessment card to create your first quiz,
+          activity, or exam.
+        </InsightCallout>
       </div>
     );
   }

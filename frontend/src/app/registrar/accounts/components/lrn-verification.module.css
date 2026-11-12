@@ -1,5 +1,5 @@
 /* Comparison content for the LRN verification dock (chrome lives in the
-   shared ProgressDock component). */
+   shared ProgressDock component) and the overview verification dialog. */
 
 /* Actions sit on the right below the comparison. */
 .actions {
@@ -142,4 +142,88 @@
 .loadingText {
   font-size: 0.8125rem;
   color: var(--muted-foreground);
+}
+
+/* ── Overview dialog (LrnVerifyDialog) ── */
+.process {
+  padding: 0.5rem 0;
+}
+
+.processTitle {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.steps {
+  margin: 0;
+  padding: 0 0 0 1.25rem;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.step {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+.stepNum {
+  flex: none;
+  width: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.verdict {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.verdictMatch {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border: 1px solid var(--primary);
+}
+
+.verdictMismatch {
+  background-color: var(--muted);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.verdictNotFound {
+  background-color: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--foreground);
+}
+
+.value {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+@media (max-width: 480px) {
+  .compareHead,
+  .compareRow {
+    grid-template-columns: 1fr;
+  }
+  .compareCol:first-child {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+  }
 }

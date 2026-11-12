@@ -44,6 +44,8 @@ export type AnecdotalRecordMinAggregateOutputType = {
   signedBy: string | null
   signedAt: Date | null
   signatureImageUrl: string | null
+  deletedAt: Date | null
+  deletedBy: string | null
 }
 
 export type AnecdotalRecordMaxAggregateOutputType = {
@@ -66,6 +68,8 @@ export type AnecdotalRecordMaxAggregateOutputType = {
   signedBy: string | null
   signedAt: Date | null
   signatureImageUrl: string | null
+  deletedAt: Date | null
+  deletedBy: string | null
 }
 
 export type AnecdotalRecordCountAggregateOutputType = {
@@ -88,6 +92,8 @@ export type AnecdotalRecordCountAggregateOutputType = {
   signedBy: number
   signedAt: number
   signatureImageUrl: number
+  deletedAt: number
+  deletedBy: number
   _all: number
 }
 
@@ -112,6 +118,8 @@ export type AnecdotalRecordMinAggregateInputType = {
   signedBy?: true
   signedAt?: true
   signatureImageUrl?: true
+  deletedAt?: true
+  deletedBy?: true
 }
 
 export type AnecdotalRecordMaxAggregateInputType = {
@@ -134,6 +142,8 @@ export type AnecdotalRecordMaxAggregateInputType = {
   signedBy?: true
   signedAt?: true
   signatureImageUrl?: true
+  deletedAt?: true
+  deletedBy?: true
 }
 
 export type AnecdotalRecordCountAggregateInputType = {
@@ -156,6 +166,8 @@ export type AnecdotalRecordCountAggregateInputType = {
   signedBy?: true
   signedAt?: true
   signatureImageUrl?: true
+  deletedAt?: true
+  deletedBy?: true
   _all?: true
 }
 
@@ -251,6 +263,8 @@ export type AnecdotalRecordGroupByOutputType = {
   signedBy: string | null
   signedAt: Date | null
   signatureImageUrl: string | null
+  deletedAt: Date | null
+  deletedBy: string | null
   _count: AnecdotalRecordCountAggregateOutputType | null
   _min: AnecdotalRecordMinAggregateOutputType | null
   _max: AnecdotalRecordMaxAggregateOutputType | null
@@ -294,6 +308,8 @@ export type AnecdotalRecordWhereInput = {
   signedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   signedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
   signatureImageUrl?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  deletedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
+  deletedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
   roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   observer?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -324,6 +340,8 @@ export type AnecdotalRecordOrderByWithRelationInput = {
   signedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   signedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   student?: Prisma.StudentProfileOrderByWithRelationInput
   roster?: Prisma.StudentRosterOrderByWithRelationInput
   observer?: Prisma.UserOrderByWithRelationInput
@@ -357,6 +375,8 @@ export type AnecdotalRecordWhereUniqueInput = Prisma.AtLeast<{
   signedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   signedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
   signatureImageUrl?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  deletedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
+  deletedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
   roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   observer?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -387,6 +407,8 @@ export type AnecdotalRecordOrderByWithAggregationInput = {
   signedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   signedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.AnecdotalRecordCountOrderByAggregateInput
   _max?: Prisma.AnecdotalRecordMaxOrderByAggregateInput
   _min?: Prisma.AnecdotalRecordMinOrderByAggregateInput
@@ -415,6 +437,8 @@ export type AnecdotalRecordScalarWhereWithAggregatesInput = {
   signedBy?: Prisma.StringNullableWithAggregatesFilter<"AnecdotalRecord"> | string | null
   signedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AnecdotalRecord"> | Date | string | null
   signatureImageUrl?: Prisma.StringNullableWithAggregatesFilter<"AnecdotalRecord"> | string | null
+  deletedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AnecdotalRecord"> | Date | string | null
+  deletedBy?: Prisma.StringNullableWithAggregatesFilter<"AnecdotalRecord"> | string | null
 }
 
 export type AnecdotalRecordCreateInput = {
@@ -431,6 +455,8 @@ export type AnecdotalRecordCreateInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
@@ -461,6 +487,8 @@ export type AnecdotalRecordUncheckedCreateInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -479,6 +507,8 @@ export type AnecdotalRecordUpdateInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -509,6 +539,8 @@ export type AnecdotalRecordUncheckedUpdateInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -533,6 +565,8 @@ export type AnecdotalRecordCreateManyInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
 }
 
 export type AnecdotalRecordUpdateManyMutationInput = {
@@ -549,6 +583,8 @@ export type AnecdotalRecordUpdateManyMutationInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordUncheckedUpdateManyInput = {
@@ -571,6 +607,8 @@ export type AnecdotalRecordUncheckedUpdateManyInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordListRelationFilter = {
@@ -603,6 +641,8 @@ export type AnecdotalRecordCountOrderByAggregateInput = {
   signedBy?: Prisma.SortOrder
   signedAt?: Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
+  deletedBy?: Prisma.SortOrder
 }
 
 export type AnecdotalRecordMaxOrderByAggregateInput = {
@@ -625,6 +665,8 @@ export type AnecdotalRecordMaxOrderByAggregateInput = {
   signedBy?: Prisma.SortOrder
   signedAt?: Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
+  deletedBy?: Prisma.SortOrder
 }
 
 export type AnecdotalRecordMinOrderByAggregateInput = {
@@ -647,6 +689,8 @@ export type AnecdotalRecordMinOrderByAggregateInput = {
   signedBy?: Prisma.SortOrder
   signedAt?: Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
+  deletedBy?: Prisma.SortOrder
 }
 
 export type AnecdotalRecordScalarRelationFilter = {
@@ -956,6 +1000,8 @@ export type AnecdotalRecordCreateWithoutObserverInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
@@ -984,6 +1030,8 @@ export type AnecdotalRecordUncheckedCreateWithoutObserverInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -1037,6 +1085,8 @@ export type AnecdotalRecordScalarWhereInput = {
   signedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   signedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
   signatureImageUrl?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  deletedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
+  deletedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
 }
 
 export type AnecdotalRecordCreateWithoutStudentInput = {
@@ -1053,6 +1103,8 @@ export type AnecdotalRecordCreateWithoutStudentInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
@@ -1081,6 +1133,8 @@ export type AnecdotalRecordUncheckedCreateWithoutStudentInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -1125,6 +1179,8 @@ export type AnecdotalRecordCreateWithoutTermInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
@@ -1153,6 +1209,8 @@ export type AnecdotalRecordUncheckedCreateWithoutTermInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -1197,6 +1255,8 @@ export type AnecdotalRecordCreateWithoutSectionInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
@@ -1225,6 +1285,8 @@ export type AnecdotalRecordUncheckedCreateWithoutSectionInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -1269,6 +1331,8 @@ export type AnecdotalRecordCreateWithoutRosterInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
@@ -1297,6 +1361,8 @@ export type AnecdotalRecordUncheckedCreateWithoutRosterInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -1341,6 +1407,8 @@ export type AnecdotalRecordCreateWithoutFolderInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
@@ -1369,6 +1437,8 @@ export type AnecdotalRecordUncheckedCreateWithoutFolderInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -1413,6 +1483,8 @@ export type AnecdotalRecordCreateWithoutFollowupsInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
@@ -1442,6 +1514,8 @@ export type AnecdotalRecordUncheckedCreateWithoutFollowupsInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
 
@@ -1475,6 +1549,8 @@ export type AnecdotalRecordUpdateWithoutFollowupsInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -1504,6 +1580,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutFollowupsInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
 
@@ -1521,6 +1599,8 @@ export type AnecdotalRecordCreateWithoutReferralsInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
@@ -1550,6 +1630,8 @@ export type AnecdotalRecordUncheckedCreateWithoutReferralsInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
 
@@ -1583,6 +1665,8 @@ export type AnecdotalRecordUpdateWithoutReferralsInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -1612,6 +1696,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutReferralsInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
 
@@ -1634,6 +1720,8 @@ export type AnecdotalRecordCreateManyObserverInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
 }
 
 export type AnecdotalRecordUpdateWithoutObserverInput = {
@@ -1650,6 +1738,8 @@ export type AnecdotalRecordUpdateWithoutObserverInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -1678,6 +1768,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutObserverInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1701,6 +1793,8 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutObserverInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordCreateManyStudentInput = {
@@ -1722,6 +1816,8 @@ export type AnecdotalRecordCreateManyStudentInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
 }
 
 export type AnecdotalRecordUpdateWithoutStudentInput = {
@@ -1738,6 +1834,8 @@ export type AnecdotalRecordUpdateWithoutStudentInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -1766,6 +1864,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutStudentInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1789,6 +1889,8 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutStudentInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordCreateManyTermInput = {
@@ -1810,6 +1912,8 @@ export type AnecdotalRecordCreateManyTermInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
 }
 
 export type AnecdotalRecordUpdateWithoutTermInput = {
@@ -1826,6 +1930,8 @@ export type AnecdotalRecordUpdateWithoutTermInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -1854,6 +1960,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutTermInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1877,6 +1985,8 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutTermInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordCreateManySectionInput = {
@@ -1898,6 +2008,8 @@ export type AnecdotalRecordCreateManySectionInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
 }
 
 export type AnecdotalRecordUpdateWithoutSectionInput = {
@@ -1914,6 +2026,8 @@ export type AnecdotalRecordUpdateWithoutSectionInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -1942,6 +2056,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutSectionInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1965,6 +2081,8 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutSectionInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordCreateManyRosterInput = {
@@ -1986,6 +2104,8 @@ export type AnecdotalRecordCreateManyRosterInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
 }
 
 export type AnecdotalRecordUpdateWithoutRosterInput = {
@@ -2002,6 +2122,8 @@ export type AnecdotalRecordUpdateWithoutRosterInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -2030,6 +2152,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutRosterInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -2053,6 +2177,8 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutRosterInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordCreateManyFolderInput = {
@@ -2074,6 +2200,8 @@ export type AnecdotalRecordCreateManyFolderInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  deletedAt?: Date | string | null
+  deletedBy?: string | null
 }
 
 export type AnecdotalRecordUpdateWithoutFolderInput = {
@@ -2090,6 +2218,8 @@ export type AnecdotalRecordUpdateWithoutFolderInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -2118,6 +2248,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutFolderInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -2141,6 +2273,8 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutFolderInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -2203,6 +2337,8 @@ export type AnecdotalRecordSelect<ExtArgs extends runtime.Types.Extensions.Inter
   signedBy?: boolean
   signedAt?: boolean
   signatureImageUrl?: boolean
+  deletedAt?: boolean
+  deletedBy?: boolean
   student?: boolean | Prisma.AnecdotalRecord$studentArgs<ExtArgs>
   roster?: boolean | Prisma.AnecdotalRecord$rosterArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2234,6 +2370,8 @@ export type AnecdotalRecordSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   signedBy?: boolean
   signedAt?: boolean
   signatureImageUrl?: boolean
+  deletedAt?: boolean
+  deletedBy?: boolean
   student?: boolean | Prisma.AnecdotalRecord$studentArgs<ExtArgs>
   roster?: boolean | Prisma.AnecdotalRecord$rosterArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2262,6 +2400,8 @@ export type AnecdotalRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   signedBy?: boolean
   signedAt?: boolean
   signatureImageUrl?: boolean
+  deletedAt?: boolean
+  deletedBy?: boolean
   student?: boolean | Prisma.AnecdotalRecord$studentArgs<ExtArgs>
   roster?: boolean | Prisma.AnecdotalRecord$rosterArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2290,9 +2430,11 @@ export type AnecdotalRecordSelectScalar = {
   signedBy?: boolean
   signedAt?: boolean
   signatureImageUrl?: boolean
+  deletedAt?: boolean
+  deletedBy?: boolean
 }
 
-export type AnecdotalRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "rosterId" | "observerId" | "sectionId" | "observationDatetime" | "descriptionOfIncident" | "descriptionOfLocation" | "notesRecommendationsActions" | "classPerformance" | "attendanceSummary" | "attachmentUrl" | "termId" | "category" | "confidentialityLevel" | "folderId" | "signedBy" | "signedAt" | "signatureImageUrl", ExtArgs["result"]["anecdotalRecord"]>
+export type AnecdotalRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "rosterId" | "observerId" | "sectionId" | "observationDatetime" | "descriptionOfIncident" | "descriptionOfLocation" | "notesRecommendationsActions" | "classPerformance" | "attendanceSummary" | "attachmentUrl" | "termId" | "category" | "confidentialityLevel" | "folderId" | "signedBy" | "signedAt" | "signatureImageUrl" | "deletedAt" | "deletedBy", ExtArgs["result"]["anecdotalRecord"]>
 export type AnecdotalRecordInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   student?: boolean | Prisma.AnecdotalRecord$studentArgs<ExtArgs>
   roster?: boolean | Prisma.AnecdotalRecord$rosterArgs<ExtArgs>
@@ -2353,6 +2495,8 @@ export type $AnecdotalRecordPayload<ExtArgs extends runtime.Types.Extensions.Int
     signedBy: string | null
     signedAt: Date | null
     signatureImageUrl: string | null
+    deletedAt: Date | null
+    deletedBy: string | null
   }, ExtArgs["result"]["anecdotalRecord"]>
   composites: {}
 }
@@ -2803,6 +2947,8 @@ export interface AnecdotalRecordFieldRefs {
   readonly signedBy: Prisma.FieldRef<"AnecdotalRecord", 'String'>
   readonly signedAt: Prisma.FieldRef<"AnecdotalRecord", 'DateTime'>
   readonly signatureImageUrl: Prisma.FieldRef<"AnecdotalRecord", 'String'>
+  readonly deletedAt: Prisma.FieldRef<"AnecdotalRecord", 'DateTime'>
+  readonly deletedBy: Prisma.FieldRef<"AnecdotalRecord", 'String'>
 }
     
 

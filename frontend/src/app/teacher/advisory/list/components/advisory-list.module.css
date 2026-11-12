@@ -1,3 +1,127 @@
+/* Page-locked view: the document never scrolls here. The panel fills the
+   viewport frame (3rem navbar + 2rem shell padding) and the roster table is
+   the only scrolling surface — its thin amber scrollbar appears on hover. */
+.pageLock {
+  height: calc(100dvh - 5rem);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pageLock > div {
+  height: 100%;
+  min-height: 0;
+  align-items: stretch;
+}
+
+/* Page actions row (top-right gutter) stacked above the board card. */
+.boardLayout {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.pageLock .panel {
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.pageLock .split {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.pageLock .left,
+.pageLock .right {
+  min-height: 0;
+}
+
+.pageLock .lane {
+  flex: 1;
+  min-height: 0;
+}
+
+.pageLock .tableWrap {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* Hidden until the pointer is over the list. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.pageLock .tableWrap:hover {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, #f59e0b 65%, transparent) transparent;
+}
+
+.pageLock .tableWrap::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.pageLock .tableWrap::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.pageLock .tableWrap:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, #f59e0b 65%, transparent);
+}
+
+@media (max-width: 767px) {
+  .pageLock {
+    height: calc(100dvh - 7.5rem);
+  }
+}
+
+/* Stacked layout (split collapses to one column): the page scrolls normally
+   again — only the desktop two-pane board is viewport-locked. */
+@media (max-width: 72rem) {
+  .pageLock {
+    height: auto;
+    overflow: visible;
+  }
+
+  .pageLock .boardLayout {
+    height: auto;
+    grid-template-rows: none;
+  }
+
+  .pageLock .panel {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .pageLock .split {
+    grid-template-rows: none;
+  }
+
+  .pageLock .lane {
+    flex: none;
+  }
+
+  .pageLock .tableWrap {
+    overflow-y: visible;
+  }
+}
+
 /* Single card panel split in two: slim list (left, ~30%) + insight (right),
    divided by a vertical line. */
 .panel {
@@ -169,6 +293,36 @@
 }
 
 .tableWrap [data-slot="table-container"]::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, #f59e0b 85%, transparent);
+}
+
+/* Thin amber scrollbar for overlay lists (same bar as the roster table). */
+.thinScrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, #f59e0b 65%, transparent) transparent;
+}
+
+.thinScrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.thinScrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.thinScrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thinScrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, #f59e0b 65%, transparent);
+  border-radius: 999px;
+}
+
+.thinScrollbar::-webkit-scrollbar-thumb:hover {
   background: color-mix(in oklch, #f59e0b 85%, transparent);
 }
 

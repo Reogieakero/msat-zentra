@@ -261,6 +261,12 @@
   color: var(--muted-foreground);
 }
 
+/* "What it means" label inside the shared InsightCallout footer. */
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
 /* Numeric facts inside an interpretation line — amber, so figures pop out
    of the surrounding prose. */
 .numAccent {

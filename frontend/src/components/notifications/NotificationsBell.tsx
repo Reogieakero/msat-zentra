@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { Bell, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
@@ -68,7 +69,7 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleF
   const [viewAllOpen, setViewAllOpen] = React.useState(false);
   const targets = refreshKeys ?? [queryKey];
 
-  const notificationsQuery = useQuery({
+  const notificationsQuery = useLiveQuery({
     queryKey,
     queryFn: ({ signal }) => fetchBellNotices(signal),
     staleTime: 30_000,
@@ -76,7 +77,7 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleF
 
   // Badge uses a dedicated count so it reflects the true unread total, not just
   // the unread items within the first page of the list.
-  const unreadQuery = useQuery({
+  const unreadQuery = useLiveQuery({
     queryKey: [...queryKey, "unread-count"],
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.get<{ count: number }>(

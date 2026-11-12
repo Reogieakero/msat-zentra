@@ -8,10 +8,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { RecordKeeperSidebar } from "@/components/record-keeper-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import {
-  Command,
-  CommandInput,
-} from "@/components/ui/command";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
@@ -21,6 +17,7 @@ import {
   RecordKeeperPaletteGate,
   useRecordKeeperProfileSettings,
 } from "@/services/settings/profile-settings";
+import { RecordKeeperGlobalSearch } from "./components/RecordKeeperGlobalSearch";
 import { RecordKeeperNotificationsBell } from "./components/RecordKeeperNotificationsBell";
 import { useRecordKeeperRealtime } from "@/lib/realtime/recordKeeperChannel";
 import styles from "./record-keeper.module.css";
@@ -28,7 +25,6 @@ import styles from "./record-keeper.module.css";
 function RecordKeeperShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [query, setQuery] = React.useState("");
   const profile = useRecordKeeperProfileSettings();
   const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.record-keeper.sidebar.collapsed");
@@ -61,13 +57,7 @@ function RecordKeeperShell({ children }: { children: React.ReactNode }) {
         <ActiveTermBadge />
 
         <div className={styles.search}>
-          <Command shouldFilter={false} className={styles.searchCommand}>
-            <CommandInput
-              value={query}
-              onValueChange={setQuery}
-              placeholder="Search…"
-            />
-          </Command>
+          <RecordKeeperGlobalSearch />
         </div>
 
         <RecordKeeperNotificationsBell />

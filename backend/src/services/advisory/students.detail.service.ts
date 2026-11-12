@@ -1,19 +1,78 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
+import { isArchivedAdvisoryLearner } from "../../lib/learnerVisibility.js";
+import { termHasStarted } from "../attendance.js";
 import { assertAdvisee } from "./students.auth.js";
 import { resolveGradeOwnerIds, sharingMap, canBypassSharing } from "../teacher/dataShare.service.js";
 import type { AdvisoryContext } from "./advisory.types.js";
 
-export async function getStudentAnecdotal(ctx: AdvisoryContext, studentId: string) {
+export async function getStudentAnecdotal(ctx: AdvisoryContext, rawId: string) {
   const teacherId = ctx.userId;
   const termId = ctx.termId;
   if (!termId) {
     throw new AppError(404, "NO_ACTIVE_TERM", "No active term");
   }
-  const student = await assertAdvisee(teacherId, studentId);
+  // Enlisted learners without an account are addressed as `roster:<id>` and
+  // their records hang off `rosterId`, not `studentId` — same dual-identity
+  // split as the advisory roster and `getStudentAcademic`.
+  const isRoster = rawId.startsWith("roster:");
+  const student = isRoster
+    ? await (async () => {
+        const entry = await prisma.studentRoster.findUnique({
+          where: { id: rawId.slice("roster:".length) },
+          include: {
+            section: { select: { id: true, name: true, adviserId: true } },
+          },
+        });
+        if (
+          !entry ||
+          entry.section?.adviserId !== teacherId ||
+          (await isArchivedAdvisoryLearner({ rosterId: entry.id }))
+        ) {
+          throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
+        }
+        return {
+          userId: rawId,
+          fullName: entry.fullName,
+          lrn: entry.lrn,
+          section: entry.section,
+          rosterId: entry.id,
+          studentId: null as string | null,
+        };
+      })()
+    : await (async () => {
+        const profile = await assertAdvisee(teacherId, rawId);
+        return {
+          userId: profile.userId,
+          fullName: profile.user.fullName,
+          lrn: profile.lrn,
+          section: profile.section,
+          rosterId: null as string | null,
+          studentId: profile.userId,
+        };
+      })();
+
+  const term = await prisma.term.findUnique({
+    where: { id: termId },
+    select: { startDate: true },
+  });
+  // A not-yet-started term has no in-scope anecdotal records yet.
+  if (!termHasStarted(term?.startDate)) {
+    return {
+      student: {
+        studentId: student.userId,
+        name: student.fullName,
+        lrn: student.lrn,
+        section: student.section?.name ?? "",
+      },
+      records: [],
+    };
+  }
 
   const records = await prisma.anecdotalRecord.findMany({
-    where: { studentId, termId },
+    where: isRoster
+      ? { rosterId: student.rosterId as string, termId, deletedAt: null }
+      : { studentId: student.studentId as string, termId, deletedAt: null },
     include: {
       observer: { select: { id: true, fullName: true } },
       followups: {
@@ -27,7 +86,7 @@ export async function getStudentAnecdotal(ctx: AdvisoryContext, studentId: strin
   return {
     student: {
       studentId: student.userId,
-      name: student.user.fullName,
+      name: student.fullName,
       lrn: student.lrn,
       section: student.section?.name ?? "",
     },
@@ -75,7 +134,11 @@ export async function getStudentAcademic(ctx: AdvisoryContext, rawId: string) {
             section: { select: { id: true, name: true, adviserId: true } },
           },
         });
-        if (!entry || entry.section?.adviserId !== teacherId) {
+        if (
+          !entry ||
+          entry.section?.adviserId !== teacherId ||
+          (await isArchivedAdvisoryLearner({ rosterId: entry.id }))
+        ) {
           throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
         }
         return {
@@ -98,6 +161,26 @@ export async function getStudentAcademic(ctx: AdvisoryContext, rawId: string) {
           studentId: profile.userId,
         };
       })();
+
+  const term = await prisma.term.findUnique({
+    where: { id: termId },
+    select: { startDate: true },
+  });
+  // A not-yet-started term is outside its scope period: seeded/staged finals
+  // must not read as live academics.
+  if (!termHasStarted(term?.startDate)) {
+    return {
+      student: {
+        studentId: student.userId,
+        name: student.fullName,
+        lrn: student.lrn,
+        section: student.section?.name ?? "",
+      },
+      grades: [],
+      hiddenCount: 0,
+      summary: { subjects: 0, graded: 0, passed: 0, failed: 0, average: null },
+    };
+  }
 
   const gradeWhere = isRoster
     ? { rosterId: student.rosterId as string, termId }
@@ -241,7 +324,7 @@ export async function getStudentDetail(ctx: AdvisoryContext, studentId: string) 
         },
       },
       anecdotalRecords: {
-        where: { termId },
+        where: { termId, deletedAt: null },
         select: { confidentialityLevel: true, category: true },
       },
       referrals: {
@@ -264,6 +347,42 @@ export async function getStudentDetail(ctx: AdvisoryContext, studentId: string) 
   });
   if (!student || student.section?.adviserId !== teacherId) {
     throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
+  }
+  if (await isArchivedAdvisoryLearner({ studentId })) {
+    throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
+  }
+
+  const term = await prisma.term.findUnique({
+    where: { id: termId },
+    select: { startDate: true },
+  });
+  // A term that has not started yet reports no records; only the learner's
+  // identity/section stays visible.
+  if (!termHasStarted(term?.startDate)) {
+    return {
+      studentId: student.userId,
+      name: student.user.fullName,
+      lrn: student.lrn,
+      birthdate: student.birthdate,
+      gender: student.gender,
+      section: student.section.name,
+      gradeLevel: student.section.gradeLevel,
+      grades: [],
+      hiddenGradesCount: 0,
+      attendance: {
+        rate: 0,
+        present: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+        total: 0,
+        restricted: false,
+      },
+      anecdotal: { count: 0, tiers: [], categories: [] },
+      referrals: [],
+      admCases: [],
+      gradeFlags: [],
+    };
   }
 
   // Sharing filter for grades: hide subjects whose owners are all private.

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "@/lib/api/live";
 import { BookPlus, UserPlus } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
@@ -38,7 +38,7 @@ export function CatalogCards({
   const [subjectOpen, setSubjectOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const [teacherListOpen, setTeacherListOpen] = useState(false);
-  const subjectsQuery = useQuery<{ subjects: ScheduleSubject[] }>({
+  const subjectsQuery = useLiveQuery<{ subjects: ScheduleSubject[] }>({
     queryKey: ["teacher-schedule-subjects", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ subjects: ScheduleSubject[] }>(
@@ -48,7 +48,7 @@ export function CatalogCards({
     },
     enabled: subjectsProp === undefined,
   });
-  const teachersQuery = useQuery<{ teachers: Teacher[] }>({
+  const teachersQuery = useLiveQuery<{ teachers: Teacher[] }>({
     queryKey: ["teacher-schedule-teachers", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ teachers: Teacher[] }>(

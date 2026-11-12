@@ -22,7 +22,7 @@ export interface DeskIdentity {
   employeePrefix: string;
 }
 
-export type AdmContext = BaseContext;
+export type AdmContext = BaseContext & { schoolYearId?: string | null };
 export type AnecdotalContext = BaseContext;
 export type InterventionContext = BaseContext;
 export type ReferralContext = BaseContext;

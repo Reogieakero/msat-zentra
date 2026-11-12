@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,35 +68,31 @@ function formatCountdown(targetMs: number, nowMs: number): string {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
+/** Session state → shared Pill tone (blue upcoming, green done, red cancelled). */
+const STATUS_TONE: Record<string, PillTone> = {
+  completed: "green",
+  cancelled: "red",
+  upcoming: "blue",
+  ready: "green",
+};
+
 function StatusPill({ status, started }: { status: string; started: boolean }) {
-  if (status === "completed") {
-    return (
-      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600 dark:border-[#1c5a37] dark:bg-[#0f2a1c] dark:text-[#86efac]">
-        <Check className="size-3" strokeWidth={3} aria-hidden="true" />
-        Done
-      </span>
-    );
-  }
-  if (status === "cancelled") {
-    return (
-      <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-        Cancelled
-      </span>
-    );
-  }
-  if (started) {
-    return (
-      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600 dark:border-[#1c5a37] dark:bg-[#0f2a1c] dark:text-[#86efac]">
-        <Check className="size-3" strokeWidth={3} aria-hidden="true" />
-        Ready to record
-      </span>
-    );
-  }
+  const key = status === "completed" ? "completed" : status === "cancelled" ? "cancelled" : started ? "ready" : "upcoming";
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-800 dark:border-[#1e3a6e] dark:bg-[#0f1a33] dark:text-[#bfdbfe]">
-      <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-      Upcoming
-    </span>
+    <Pill tone={STATUS_TONE[key] ?? "neutral"} label="Session status">
+      {key === "completed" || key === "ready" ? (
+        <Check className="size-3" strokeWidth={3} aria-hidden="true" />
+      ) : key === "upcoming" ? (
+        <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+      ) : null}
+      {key === "completed"
+        ? "Done"
+        : key === "cancelled"
+          ? "Cancelled"
+          : key === "ready"
+            ? "Ready to record"
+            : "Upcoming"}
+    </Pill>
   );
 }
 
@@ -127,6 +124,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
   gateOnStart = false,
   manageable,
   disabled = false,
+  hideScheduledActions = false,
   onAction,
 }: {
   title: string;
@@ -140,6 +138,12 @@ export function SessionPlanCard<T extends PlanSessionItem>({
   gateOnStart?: boolean;
   manageable: boolean;
   disabled?: boolean;
+  /**
+   * Suppress the "…" menu and "Move" control on scheduled sessions. Used by the
+   * guidance ADM board, where reschedule/cancel live on the case card instead.
+   * "Mark done" stays.
+   */
+  hideScheduledActions?: boolean;
   onAction: (session: T, action: PlanSessionAction) => void;
 }) {
   return (
@@ -168,7 +172,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                  card anatomy: kind + status on top, facts, countdown, actions. */
               <li
                 key={s.id}
-                className="flex min-w-0 flex-col gap-2.5 rounded-md border border-border bg-card p-2.5"
+                className="flex min-w-0 flex-col gap-2.5 rounded-md p-2.5"
               >
                 <div className="flex items-center gap-2">
                   <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground">
@@ -276,66 +280,70 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                       <div className="mt-auto flex flex-wrap items-center justify-end gap-1.5 pt-0.5">
                         {isScheduled ? (
                           <>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
+                            {hideScheduledActions ? null : (
+                              <>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="outline"
+                                      className="size-6 rounded-md"
+                                      disabled={disabled}
+                                      aria-label={`More actions for the ${formatDate(s.date)} session`}
+                                    >
+                                      <MoreHorizontal aria-hidden="true" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="z-[60] w-[250px] rounded-xl p-1.5"
+                                  >
+                                    {docsSupported ? (
+                                      <DropdownMenuItem
+                                        disabled={disabled || locked}
+                                        title={
+                                          locked
+                                            ? "Documentation unlocks once the session time arrives"
+                                            : s.status === "completed"
+                                              ? "View or file documentation for this session"
+                                              : "File documentation for this session"
+                                        }
+                                        onSelect={() => onAction(s, "docs")}
+                                      >
+                                        <FileText aria-hidden="true" />
+                                        {docsLabel}
+                                        {locked ? (
+                                          <Lock
+                                            className="ml-auto size-3.5"
+                                            aria-hidden="true"
+                                          />
+                                        ) : null}
+                                      </DropdownMenuItem>
+                                    ) : null}
+                                    {docsSupported ? <DropdownMenuSeparator /> : null}
+                                    <DropdownMenuItem
+                                      variant="destructive"
+                                      disabled={disabled}
+                                      className={`${styles.cancelItem} font-medium`}
+                                      onSelect={() => onAction(s, "cancel")}
+                                    >
+                                      Cancel session
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                                 <Button
                                   type="button"
-                                  size="icon"
+                                  size="xs"
                                   variant="outline"
-                                  className="size-6 rounded-md"
+                                  className="h-6 rounded-md px-2.5 text-xs"
                                   disabled={disabled}
-                                  aria-label={`More actions for the ${formatDate(s.date)} session`}
+                                  onClick={() => onAction(s, "move")}
                                 >
-                                  <MoreHorizontal aria-hidden="true" />
+                                  Move
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="end"
-                                className="z-[60] w-[250px] rounded-xl p-1.5"
-                              >
-                                {docsSupported ? (
-                                  <DropdownMenuItem
-                                    disabled={disabled || locked}
-                                    title={
-                                      locked
-                                        ? "Documentation unlocks once the session time arrives"
-                                        : s.status === "completed"
-                                          ? "View or file documentation for this session"
-                                          : "File documentation for this session"
-                                    }
-                                    onSelect={() => onAction(s, "docs")}
-                                  >
-                                    <FileText aria-hidden="true" />
-                                    {docsLabel}
-                                    {locked ? (
-                                      <Lock
-                                        className="ml-auto size-3.5"
-                                        aria-hidden="true"
-                                      />
-                                    ) : null}
-                                  </DropdownMenuItem>
-                                ) : null}
-                                {docsSupported ? <DropdownMenuSeparator /> : null}
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  disabled={disabled}
-                                  className={`${styles.cancelItem} font-medium`}
-                                  onSelect={() => onAction(s, "cancel")}
-                                >
-                                  Cancel session
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="outline"
-                              className="h-6 rounded-md px-2.5 text-xs"
-                              disabled={disabled}
-                              onClick={() => onAction(s, "move")}
-                            >
-                              Move
-                            </Button>
+                              </>
+                            )}
                             <Button
                               type="button"
                               size="xs"
@@ -349,7 +357,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                               className={
                                 locked
                                   ? "h-6 rounded-md bg-muted px-2.5 text-xs text-muted-foreground"
-                                  : "h-6 rounded-md bg-[#2563eb] px-2.5 text-xs font-semibold text-white hover:bg-[#1d4ed8]"
+                                  : "h-6 rounded-md px-2.5 text-xs"
                               }
                             >
                               Mark done
@@ -359,7 +367,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                           <Button
                             type="button"
                             size="xs"
-                            variant="outline"
+                            variant="default"
                             className="h-6 rounded-md px-2.5 text-xs"
                             disabled={disabled || locked}
                             title={

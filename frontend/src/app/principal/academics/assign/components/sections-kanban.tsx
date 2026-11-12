@@ -4,15 +4,15 @@ import * as React from "react";
 import {
   Check,
   Copy,
-  Inbox,
   Loader2,
-  Plus,
   RefreshCw,
   Share2,
+  UserRoundPlus,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import type { GradeLevel, Section } from "@/services/principal/assign.types";
 import styles from "./sections-kanban.module.css";
@@ -76,66 +76,75 @@ export function SectionsKanban({
     });
   }, [sections, grade]);
 
+  // Whole school year is empty — the board chrome (title, grade filter) would
+  // only be noise; the create action and the callout are the whole page.
+  const boardEmpty = sections.length === 0;
+
   return (
     <section className={styles.board} aria-label="Section advisers">
-      <header className={styles.toolbar}>
-        <div className={styles.toolbarText}>
-          <div className={styles.titleRow}>
-            <span className={styles.titleIcon} aria-hidden>
-              <Users size={15} />
-            </span>
-            <h2 className={styles.title}>Section advisers</h2>
-            <Pill tone="neutral" label="Sections">
-              {sections.length}
-            </Pill>
-          </div>
-        </div>
-        <div className={styles.tabs} role="tablist" aria-label="Filter by grade level">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={grade == null}
-            className={styles.tab}
-            onClick={() => onGradeChange(null)}
-          >
-            <Pill tone={grade == null ? "blue" : "neutral"} className={styles.tabPill}>
-              All grades
-            </Pill>
-          </button>
-          {GRADES.map((g) => {
-            const active = grade === g;
-            return (
+      <header className={styles.toolbar} data-empty={boardEmpty || undefined}>
+        {!boardEmpty ? (
+          <>
+            <div className={styles.toolbarText}>
+              <div className={styles.titleRow}>
+                <span className={styles.titleIcon} aria-hidden>
+                  <Users size={15} />
+                </span>
+                <h2 className={styles.title}>Section advisers</h2>
+                <Pill tone="neutral" label="Sections">
+                  {sections.length}
+                </Pill>
+              </div>
+            </div>
+            <div className={styles.tabs} role="tablist" aria-label="Filter by grade level">
               <button
-                key={g}
                 type="button"
                 role="tab"
-                aria-selected={active}
+                aria-selected={grade == null}
                 className={styles.tab}
-                onClick={() => onGradeChange(g)}
+                onClick={() => onGradeChange(null)}
               >
-                <Pill tone={active ? "blue" : "neutral"} className={styles.tabPill}>
-                  Grade {g}
+                <Pill tone={grade == null ? "blue" : "neutral"} className={styles.tabPill}>
+                  All grades
                 </Pill>
               </button>
-            );
-          })}
-        </div>
+              {GRADES.map((g) => {
+                const active = grade === g;
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    className={styles.tab}
+                    onClick={() => onGradeChange(g)}
+                  >
+                    <Pill tone={active ? "blue" : "neutral"} className={styles.tabPill}>
+                      Grade {g}
+                    </Pill>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
         <div className={styles.toolbarEnd}>
-          <Button size="xs" onClick={onCreate} disabled={busy}>
-            <Plus size={13} aria-hidden />
+          <Button size="xs" className={styles.createBtn} onClick={onCreate} disabled={busy}>
+            <UserRoundPlus size={13} aria-hidden />
             Assign Advisory
           </Button>
         </div>
       </header>
 
       {visibleSections.length === 0 ? (
-        <div className={styles.emptyCard}>
-          <Inbox size={18} aria-hidden />
-          <span>
+        // Empty board reads as a plain insight callout, centered in the page
+        // (same treatment as the academics section board).
+        <div className={styles.emptyCallout}>
+          <InsightCallout role="status">
             {grade == null
-              ? "No sections yet for this school year."
+              ? "No sections yet for this school year. Use “Assign Advisory” to create one."
               : `No Grade ${grade} sections yet.`}
-          </span>
+          </InsightCallout>
         </div>
       ) : (
         <div className={styles.grid} aria-label="Sections" key={grade ?? "all"}>

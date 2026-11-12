@@ -103,6 +103,9 @@ export const coordinatorPhotoSchema = z.object({
 export const admReferralsQuerySchema = paginationQuerySchema().extend({
   stage: z.string().trim().max(40).optional(),
   eligibility: z.enum(["eligible", "ineligible", "pending"]).optional(),
+  // Full-cohort mode for the principal desk, which filters and pages the
+  // endorsed-case list in memory (instant search, no stale-result stacking).
+  all: z.enum(["1"]).optional(),
 });
 
 export const admApprovalsQuerySchema = paginationQuerySchema();

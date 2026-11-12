@@ -6,8 +6,8 @@ import type {
   AtRiskStudentItem,
   CounselingSessionType,
   GuidanceInterventionsSummary,
-  RiskLevelFilter,
 } from "@/services/guidance/interventions.types";
+import type { InterventionStatusFilter } from "./intervention-row-helpers";
 import {
   InterventionDialogs,
 } from "./intervention-dialogs";
@@ -26,10 +26,8 @@ export function GuidanceInterventionsTable({
   onPageChange,
   query,
   onQueryChange,
-  level,
-  onLevelChange,
-  onRetry,
-  isRetrying,
+  status,
+  onStatusChange,
   isNavigating,
   highlightId = null,
 }: GuidanceInterventionsTableProps) {
@@ -65,7 +63,6 @@ export function GuidanceInterventionsTable({
     activeFollowUp,
     activeSession,
     closeDialog,
-    openStart,
     openChange,
     openOutcome,
     openOutcomeResolved,
@@ -74,7 +71,7 @@ export function GuidanceInterventionsTable({
     clearActive,
     closeAllDialogs,
   } = dialogState;
-  const { invalidateGuidance, actionMutation, isBusy, rowLocked, isActionPending, runAction } =
+  const { invalidateGuidance, isBusy, rowLocked, isActionPending, runAction } =
     useInterventionActions(() => {
       closeAllDialogs();
       clearActive();
@@ -103,13 +100,10 @@ export function GuidanceInterventionsTable({
         onPageChange={onPageChange}
         query={query}
         onQueryChange={onQueryChange}
-        level={level}
-        onLevelChange={onLevelChange}
-        onRetry={onRetry}
-        isRetrying={isRetrying}
+        status={status}
+        onStatusChange={onStatusChange}
         isNavigating={isNavigating}
         highlightId={highlightId}
-        actionIsError={actionMutation.isError}
         expandedKey={expandedKey}
         onToggleDetails={(key) =>
           setExpandedKey((prev) => (prev === key ? null : key))
@@ -118,7 +112,6 @@ export function GuidanceInterventionsTable({
         locked={rowLocked}
         isBusy={isBusy}
         isActionPending={isActionPending}
-        onStart={openStart}
         onChange={openChange}
         onOutcome={openOutcome}
         onMarkDone={openOutcomeResolved}
@@ -198,12 +191,36 @@ export function GuidanceInterventionsTable({
           });
         }}
         onSubmitSchedule={(fields) => {
-          if (!activeKey || !activeFollowUpId || isActionPending) return;
-          runAction(activeKey, "schedule", {
-            followUpId: activeFollowUpId,
+          if (!activeKey || isActionPending) return;
+          // At most one live booking per learner on this desk.
+          if (
+            activeFollowUp?.sessions.some((s) => s.status === "scheduled")
+          ) {
+            return;
+          }
+          const firstSession = {
             scheduledAt: fields.scheduledAt,
             sessionType: fields.sessionType as CounselingSessionType,
             ...(fields.venue ? { venue: fields.venue } : {}),
+          };
+          // No plan yet: booking a session opens the follow-up first, exactly
+          // like the alerts board does.
+          if (!activeFollowUpId) {
+            runAction(activeKey, "start", {
+              recommendedAction: "Schedule a counseling session",
+              priority:
+                activeRow?.riskLevel === "High"
+                  ? "high"
+                  : activeRow?.riskLevel === "Moderate"
+                    ? "normal"
+                    : "low",
+              firstSession,
+            });
+            return;
+          }
+          runAction(activeKey, "schedule", {
+            followUpId: activeFollowUpId,
+            ...firstSession,
           });
         }}
         onSubmitFinish={(fields) => {
@@ -284,10 +301,8 @@ interface GuidanceInterventionsTableProps {
   onPageChange: (page: number) => void;
   query: string;
   onQueryChange: (value: string) => void;
-  level: RiskLevelFilter;
-  onLevelChange: (value: RiskLevelFilter) => void;
-  onRetry: () => void;
-  isRetrying: boolean;
+  status: InterventionStatusFilter;
+  onStatusChange: (value: InterventionStatusFilter) => void;
   isNavigating: boolean;
   highlightId?: string | null;
 }

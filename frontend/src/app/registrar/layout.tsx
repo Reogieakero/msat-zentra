@@ -12,23 +12,19 @@ import {
   RegistrarPaletteGate,
   useRegistrarProfileSettings,
 } from "@/services/settings/profile-settings";
-import {
-  Command,
-  CommandInput,
-} from "@/components/ui/command";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { RegistrarNotificationsBell } from "./components/RegistrarNotificationsBell";
+import { RegistrarGlobalSearch } from "./components/RegistrarGlobalSearch";
 import { useRegistrarRealtime } from "@/lib/realtime/registrarChannel";
 import styles from "./registrar.module.css";
 
 function RegistrarShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [query, setQuery] = React.useState("");
   const profile = useRegistrarProfileSettings();
   const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.registrar.sidebar.collapsed");
@@ -61,13 +57,7 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
         <ActiveTermBadge />
 
         <div className={styles.search}>
-          <Command shouldFilter={false} className={styles.searchCommand}>
-            <CommandInput
-              value={query}
-              onValueChange={setQuery}
-              placeholder="Search…"
-            />
-          </Command>
+          <RegistrarGlobalSearch />
         </div>
 
         <RegistrarNotificationsBell />

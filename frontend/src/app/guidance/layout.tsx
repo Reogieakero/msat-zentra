@@ -8,10 +8,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { GuidanceSidebar } from "@/components/guidance-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import {
-  Command,
-  CommandInput,
-} from "@/components/ui/command";
 import { UserRound } from "lucide-react";
 import { KanbanAccountMenu } from "@/components/account/kanban-account-menu";
 import { useCollapsibleSidebar } from "@/components/nav/use-collapsible-sidebar";
@@ -19,6 +15,8 @@ import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { AppBreadcrumbs } from "@/components/nav/AppBreadcrumbs";
 import { useGuidanceRealtime } from "@/lib/realtime/guidanceChannel";
 import { GuidanceNotificationsBell } from "./components/GuidanceNotificationsBell";
+import { GuidanceRiskAlertMonitor } from "./components/GuidanceRiskAlertMonitor";
+import { GuidanceGlobalSearch } from "./components/GuidanceGlobalSearch";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
 import {
   GuidancePaletteGate,
@@ -34,7 +32,6 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
 
   useGuidanceRealtime(allowed);
   const profile = useGuidanceProfileSettings();
-  const [query, setQuery] = React.useState("");
   const { collapsed: sidebarCollapsed } =
     useCollapsibleSidebar("zentra.guidance.sidebar.collapsed");
 
@@ -73,14 +70,10 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
         <ActiveTermBadge />
 
         <div className={styles.search}>
-          <Command shouldFilter={false} className={styles.searchCommand}>
-            <CommandInput
-              value={query}
-              onValueChange={setQuery}
-              placeholder="Search…"
-            />
-          </Command>
+          <GuidanceGlobalSearch />
         </div>
+
+        <GuidanceRiskAlertMonitor />
 
         <GuidanceNotificationsBell />
 

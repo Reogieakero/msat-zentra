@@ -16,6 +16,7 @@ export const roleKindToRoles: Record<string, Role[]> = {
   student: ["student"],
   staff: STAFF_ROLES,
   parent: ["parent"],
+  admin: ["admin"],
 };
 
 export function gradeBandForRole(role: string): "7-10" | "11-12" | null {

@@ -1,0 +1,21 @@
+.btn {
+  width: 100%;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
