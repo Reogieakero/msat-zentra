@@ -15,6 +15,8 @@ export interface QueueQuery {
   q: string;
   page: number;
   pageSize: number;
+  /** Board order: risk-first (default) or newest detection first. */
+  sort?: "risk" | "detected";
   /** Internal-only: lets an aggregate desk load the whole queue in one pass.
       Never wired to a client query param — the route keeps its 16/page ceiling. */
   unbounded?: boolean;
@@ -76,14 +78,30 @@ export async function listQueue(ctx: InterventionContext, query: QueueQuery, ter
 
   const levelRank = (level: string) =>
     level === "High" ? 0 : level === "Moderate" ? 1 : 2;
-  const listed = cohort.students
-    .filter(matches)
-    .sort(
+  const listed = cohort.students.filter(matches);
+  if (query.sort === "detected") {
+    // Newest detection first (snapshot time, which the live cohort already
+    // backfills from plan/evidence/enrolment). Risk level only breaks ties.
+    listed.sort((a, b) => {
+      const at = a.snapshotDate ? new Date(a.snapshotDate).getTime() : NaN;
+      const bt = b.snapshotDate ? new Date(b.snapshotDate).getTime() : NaN;
+      if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
+      if (Number.isNaN(at)) return 1;
+      if (Number.isNaN(bt)) return -1;
+      return (
+        bt - at ||
+        levelRank(a.riskLevel) - levelRank(b.riskLevel) ||
+        a.studentName.localeCompare(b.studentName)
+      );
+    });
+  } else {
+    listed.sort(
       (a, b) =>
         levelRank(a.riskLevel) - levelRank(b.riskLevel) ||
         b.riskCount - a.riskCount ||
         a.studentName.localeCompare(b.studentName)
     );
+  }
 
   const total = listed.length;
   const effPageSize = query.unbounded

@@ -47,6 +47,30 @@ export function markSelfNotified(sourceId: string) {
   selfSaved.set(sourceId, Date.now());
 }
 
+/**
+ * Fired when one of the signed-in adviser's own advisees is detected at risk.
+ * `AdviserRiskAlertMonitor` treats it as a **board refetch hint** — the sound
+ * itself is decided by diffing the adviser's interventions board, so a learner
+ * rings once per detection and never again for a later card/session/outcome
+ * update. Dispatched from the notification fanout (`intervention_detected`) and
+ * from the direct `RiskSnapshot` frames, so the board re-reads while the tab is
+ * hidden or parked on another site — realtime frames are not throttled like
+ * timers.
+ */
+export const ADVISER_RISK_ALERT_EVENT = "zentra:adviser-risk-alert";
+
+function ringAdviserRisk(notificationId?: string) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent(ADVISER_RISK_ALERT_EVENT, {
+        detail: notificationId ? { id: notificationId } : null,
+      }),
+    );
+  } catch {
+    /* CustomEvent unavailable — the monitor's board poll still sees it. */
+  }
+}
+
 function currentUserId(): string | null {
   try {
     const token = window.localStorage.getItem("zentra.access");
@@ -122,6 +146,17 @@ export function useTeacherRealtime(enabled = true) {
           description: msg,
         });
       }
+      // An advisee was flagged at risk — refresh the monitor's interventions
+      // board so a brand-new learner rings immediately (the board diff decides
+      // whether the sound plays; a later card update stays silent).
+      // Own-action echoes are excluded (a teacher cannot detect their advisee).
+      if (
+        (row.type ?? "").toLowerCase() === "intervention_detected" &&
+        !isSelfNotification(row) &&
+        !isOwnEcho
+      ) {
+        ringAdviserRisk(row.id);
+      }
       invalidate([...scopesForNotification(row), "notifications"]);
     }
 
@@ -132,8 +167,9 @@ export function useTeacherRealtime(enabled = true) {
         const supabase = createClient();
         // Direct table subscriptions: some desks mirror rows that other people
         // write without emitting a teacher notification (a risk snapshot that
-        // adds a "no plan yet" card, a plan updated by its assignee). RLS
-        // (0001_rls.sql) scopes each stream to the adviser's own section.
+        // adds a "no plan yet" card, a plan updated by its assignee, a referral
+        // the receiving desk moved on). RLS (0001_rls.sql) scopes each stream
+        // to the adviser's own section / the filer's own referrals.
         const ch = supabase
           .channel(`teacher-desk-${userId}`)
           .on(
@@ -142,11 +178,23 @@ export function useTeacherRealtime(enabled = true) {
               event: "INSERT",
               schema: "public",
               table: "Notification",
-              filter: `userId=eq.${userId}`,
+              // No `filter`: Supabase Realtime cannot filter on the camelCase
+              // "userId" column — it lowercases the identifier, the binding is
+              // rejected with "invalid column for filter userId", and that
+              // rejected binding takes the whole channel's CDC stream down
+              // (so Referral / Intervention / RiskSnapshot frames never arrived
+              // either, and the adviser risk alert stayed silent). Notification
+              // is RLS-scoped to the caller's rows (`notification_own`) and
+              // `notify()` still drops rows that belong to another user.
             },
             (payload) => {
               notify((payload as unknown as { new?: TeacherNotification }).new as TeacherNotification);
             },
+          )
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "Referral" },
+            () => invalidate(scopesForRealtimeTable("Referral")),
           )
           .on(
             "postgres_changes",
@@ -161,7 +209,15 @@ export function useTeacherRealtime(enabled = true) {
           .on(
             "postgres_changes",
             { event: "*", schema: "public", table: "RiskSnapshot" },
-            () => invalidate(scopesForRealtimeTable("RiskSnapshot")),
+            (payload) => {
+              // RLS scopes this stream to the adviser's own learners, so a
+              // High/Moderate snapshot here means one of their advisees was
+              // just detected — refresh the board even if no notification row
+              // was fanned out.
+              const level = (payload as { new?: { riskLevel?: unknown } }).new?.riskLevel;
+              if (level === "High" || level === "Moderate") ringAdviserRisk();
+              invalidate(scopesForRealtimeTable("RiskSnapshot"));
+            },
           )
           .subscribe((status) => {
             if (!cancelled && status !== "SUBSCRIBED") {
@@ -194,16 +250,28 @@ export function useTeacherRealtime(enabled = true) {
         if (fresh.length === 0) return;
         if (fresh.length > MAX_TOASTS_PER_POLL) {
           // Burst: one summary toast, then refresh everything the burst
-          // touched (and the bell) instead of spamming toasts.
+          // touched (and the bell) instead of spamming toasts. The board
+          // refetch hint still fires — a risk sweep can flag several advisees
+          // at once, and those detections must not be swallowed by the summary
+          // path.
           const scopes = new Set<TeacherInvalidateScope>(["notifications"]);
+          let detected = false;
           for (const n of fresh) {
             seenIds.current.add(n.id);
             for (const s of scopesForNotification(n)) scopes.add(s);
+            if (
+              (n.type ?? "").toLowerCase() === "intervention_detected" &&
+              !isSelfNotification(n) &&
+              !/^you\b/i.test(n.message ?? "")
+            ) {
+              detected = true;
+            }
           }
           toast.info({
             title: `${fresh.length} new updates`,
             description: "Open the notifications bell to review them.",
           });
+          if (detected) ringAdviserRisk();
           invalidate([...scopes]);
           return;
         }

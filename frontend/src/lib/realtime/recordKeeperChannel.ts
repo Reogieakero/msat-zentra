@@ -105,13 +105,13 @@ export function useRecordKeeperRealtime(enabled = true) {
     let channel: { unsubscribe: () => void } | null = null;
     let cancelled = false;
 
-    function notify(row: RecordKeeperNotification) {
+    function notify(row: RecordKeeperNotification, { silent = false } = {}) {
       if (!row || row.userId !== userId || seenIds.current.has(row.id)) return;
       seenIds.current.add(row.id);
 
       const selfConfirmed =
         !!row.sourceId && Date.now() - (selfSaved.get(row.sourceId) ?? 0) < SELF_SUPPRESS_MS;
-      if (!selfConfirmed) {
+      if (!selfConfirmed && !silent) {
         toast.info({
           title: recordKeeperNotificationTitle({
             type: row.type,
@@ -134,7 +134,10 @@ export function useRecordKeeperRealtime(enabled = true) {
             event: "INSERT",
             schema: "public",
             table: "Notification",
-            filter: `userId=eq.${userId}`,
+            // No `filter`: Supabase Realtime cannot filter on the camelCase
+            // "userId" column (it lowercases it, the binding is rejected and
+            // takes the whole channel's CDC stream down). Notification is RLS-
+            // scoped to the caller's rows; `notify()` drops other users' rows.
           },
           (payload) => {
             notify((payload as unknown as { new?: RecordKeeperNotification }).new as RecordKeeperNotification);
@@ -171,9 +174,12 @@ export function useRecordKeeperRealtime(enabled = true) {
         const fresh = mine.filter((n) => !seenIds.current.has(n.id));
         if (fresh.length === 0) return;
 
-        const ordered = [...fresh].reverse().slice(0, MAX_TOASTS_PER_POLL);
-        for (const n of ordered) notify(n);
-
+        const ordered = [...fresh].reverse();
+        // Only the newest few toast; the overflow still routes through
+        // `notify()` silently, because that is what rings the referral /
+        // cancelled clip — a burst used to be dropped by the toast cap.
+        ordered.slice(0, MAX_TOASTS_PER_POLL).forEach((n) => notify(n));
+        ordered.slice(MAX_TOASTS_PER_POLL).forEach((n) => notify(n, { silent: true }));
         for (const n of fresh) seenIds.current.add(n.id);
         void invalidate(fresh);
       } catch {

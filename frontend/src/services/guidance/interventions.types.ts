@@ -112,6 +112,8 @@ export interface GuidanceInterventionsParams {
   factor?: FactorFilter;
   outcome?: FollowUpStatusFilter;
   mine?: boolean;
+  /** Board order: risk-first (default) or newest detection first. */
+  sort?: "risk" | "detected";
   page?: number;
   pageSize?: number;
 }

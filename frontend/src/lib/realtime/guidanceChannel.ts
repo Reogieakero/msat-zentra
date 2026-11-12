@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/api/client";
 import { markRealtimeUpdate } from "@/lib/api/fresh";
 import { toast } from "@/components/ui/sonner";
 import { guidanceNotificationTitle } from "@/lib/notifications/label";
+import { isIncomingReferral, isReferralCancelled } from "@/lib/notify/deskSounds";
 import {
   invalidateGuidanceQueries,
   type GuidanceScope,
@@ -26,33 +27,63 @@ const FALLBACK_POLL_MS = 5_000;
 const MAX_TOASTS_PER_POLL = 3;
 
 /**
- * Fired when a guidance-visible case changes (new at-risk detection, new or
- * updated referral, intervention/session/ADM movement). The shell's risk alert
- * monitor hooks into this to ring immediately — including while the tab is in
- * the background, because realtime WebSocket frames are not throttled like
- * timers are.
+ * Fired only when the interventions desk's data changes (a new at-risk
+ * detection or an intervention move). The shell's risk alert monitor hooks
+ * into this to ring immediately — including while the tab is in the
+ * background, because realtime WebSocket frames are not throttled like timers
+ * are. It is dispatched both from notification rows and directly from the
+ * `Intervention` / `CounselingSession` / `RiskSnapshot` realtime frames, so the
+ * desk still rings when it is not the open page (or site) and when the change
+ * emitted no notification. Referrals have their own event/clip; alerts-only,
+ * ADM and anecdote housekeeping never ring the risk alarm.
  */
 export const GUIDANCE_RISK_ALERT_EVENT = "zentra:guidance-risk-alert";
 
 /**
- * Source tables whose inbound rows are worth an audible alert. Everything else
- * (academics/schedule/SF10 housekeeping) only refreshes caches — ringing for it
- * would make the sound meaningless.
+ * Fired when a referral just landed on the guidance desk. The shell's alert
+ * monitor rings `/sounds/referrals.mp3` from here — the same unlocked audio
+ * element that plays the risk alarm, so the referral clip has identical
+ * playback behaviour (works hidden, unlocked by the first gesture).
  */
-const ALERTING_SOURCES = new Set([
-  "referrals",
-  "interventions",
-  "counseling_sessions",
-  "session_attachments",
-  "adm_learner_profiles",
-  "adm_parent_meetings",
-  "adm_devices",
-  "anecdotal_record_followups",
-]);
+export const GUIDANCE_REFERRAL_EVENT = "zentra:guidance-referral";
+
+/**
+ * Source tables whose inbound rows ring the risk alarm. Only the interventions
+ * desk qualifies — a new at-risk learner / intervention move. Referrals ring
+ * their own clip, and alerts-only, counseling-session, ADM and anecdote
+ * housekeeping only refresh caches.
+ */
+const RISK_ALERT_SOURCES = new Set(["interventions"]);
 
 /** "you did X" echoes of the counselor's own actions never ring. */
 function isSelfEcho(row: { type: string; message: string }): boolean {
   return /_self$/.test(row.type) || /^you\b/i.test(row.message ?? "");
+}
+
+/**
+ * Rings the risk alarm from a realtime row (not a notification). WebSocket
+ * frames are delivered while the tab is hidden and while the counselor is on
+ * another page or another site — unlike the board's own 15s poll, which stops
+ * once nothing observes the query — so the interventions desk sounds in real
+ * time exactly like the referral clip does.
+ */
+function ringRisk() {
+  try {
+    window.dispatchEvent(new CustomEvent(GUIDANCE_RISK_ALERT_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the nav-counts poll still rings. */
+  }
+}
+
+/** `new` row of a postgres_changes payload (empty on DELETE with default replica identity). */
+function changedRow(payload: unknown): Record<string, unknown> | null {
+  const row = (payload as { new?: unknown } | null)?.new;
+  return row && typeof row === "object" ? (row as Record<string, unknown>) : null;
+}
+
+function textField(row: Record<string, unknown> | null, field: string): string | null {
+  const value = row?.[field];
+  return typeof value === "string" && value ? value : null;
 }
 
 const selfSaved = new Map<string, number>();
@@ -86,7 +117,9 @@ function currentUserId(): string | null {
 function scopesForTable(table: string): GuidanceScope[] {
   switch (table) {
     case "Referral":
-      return ["referrals", "alerts", "adm", "overview", "notifications"];
+      // A new referral can also surface a learner on the interventions board,
+      // so that queue re-reads too instead of waiting out its 15s poll.
+      return ["referrals", "interventions", "alerts", "adm", "overview", "notifications"];
     case "Intervention":
       return ["interventions", "alerts", "overview", "notifications"];
     case "CounselingSession":
@@ -104,7 +137,8 @@ function scopesForTable(table: string): GuidanceScope[] {
 
 function scopesForRow(row: GuidanceInboxRow): GuidanceScope[] {
   const table = row.sourceTable ?? "";
-  if (table === "referrals") return ["referrals", "alerts", "adm", "overview", "notifications"];
+  if (table === "referrals")
+    return ["referrals", "interventions", "alerts", "adm", "overview", "notifications"];
   if (table === "counseling_sessions") {
     return ["referrals", "interventions", "overview", "documents", "notifications"];
   }
@@ -185,14 +219,14 @@ export function useGuidanceRealtime(enabled = true) {
     let channel: { unsubscribe: () => void } | null = null;
     let cancelled = false;
 
-    function notify(row: GuidanceInboxRow) {
+    function notify(row: GuidanceInboxRow, { silent = false } = {}) {
       if (!row || row.userId !== userId || seenIds.current.has(row.id)) return;
       seenIds.current.add(row.id);
       const selfConfirmed =
         !!row.sourceId &&
         /^you\b/i.test(row.message ?? "") &&
         Date.now() - (selfSaved.get(row.sourceId) ?? 0) < SELF_SUPPRESS_MS;
-      if (!selfConfirmed) {
+      if (!silent && !selfConfirmed) {
         toast.info({
           title: guidanceNotificationTitle({ type: row.type, message: row.message }),
           description: row.message,
@@ -200,9 +234,24 @@ export function useGuidanceRealtime(enabled = true) {
       }
       // Case updates ring even when the toast is suppressed by seen-id /
       // self-confirmation logic, and even when this tab is not the active one.
+      // Referrals use the referral clip (the same one the other desks ring);
+      // everything else on the desk keeps the risk-alert clip.
+      const selfEcho = isSelfEcho(row);
+      if (
+        !selfEcho &&
+        (isIncomingReferral(row) || isReferralCancelled(row))
+      ) {
+        try {
+          window.dispatchEvent(
+            new CustomEvent(GUIDANCE_REFERRAL_EVENT, { detail: row }),
+          );
+        } catch {
+          /* CustomEvent unavailable — the poll fallback still rings. */
+        }
+      }
       const rings =
         row.type === "intervention_detected" ||
-        (!isSelfEcho(row) && ALERTING_SOURCES.has(row.sourceTable ?? ""));
+        (!selfEcho && RISK_ALERT_SOURCES.has(row.sourceTable ?? ""));
       if (rings) {
         try {
           window.dispatchEvent(
@@ -247,12 +296,26 @@ export function useGuidanceRealtime(enabled = true) {
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "Intervention" },
-          () => void invalidate(scopesForTable("Intervention"))
+          (payload) => {
+            // A case opened/moved/updated by somebody else is a change on the
+            // interventions desk — ring now instead of waiting for the board to
+            // be open and poll. The counselor's own save must stay silent.
+            const id = textField(changedRow(payload), "id");
+            if (id && !isSelfNotified(id)) ringRisk();
+            void invalidate(scopesForTable("Intervention"));
+          }
         )
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "CounselingSession" },
-          () => void invalidate(scopesForTable("CounselingSession"))
+          (payload) => {
+            // A session booked/completed/rewritten on an intervention changes
+            // that case's plan (the board renders sessions + outcome), so the
+            // desk rings for it too — unless the counselor booked it themselves.
+            const interventionId = textField(changedRow(payload), "interventionId");
+            if (interventionId && !isSelfNotified(interventionId)) ringRisk();
+            void invalidate(scopesForTable("CounselingSession"));
+          }
         )
         .on(
           "postgres_changes",
@@ -262,7 +325,7 @@ export function useGuidanceRealtime(enabled = true) {
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "RiskSnapshot" },
-          () => {
+          (payload) => {
             // Detection signal for the shell's risk sound: re-read the live
             // counters immediately, bypassing the scope throttle so a busy
             // sweep can never swallow the alert.
@@ -271,6 +334,12 @@ export function useGuidanceRealtime(enabled = true) {
               queryKey: ["guidance-alerts", "count"],
             });
             void invalidate(scopesForTable("RiskSnapshot"));
+            // A new at-risk snapshot is a learner landing on the interventions
+            // desk. The board is a live cohort, so a learner with **no plan
+            // yet** produces neither an Intervention row nor a notification —
+            // this frame is the only "new work" signal the desk gets.
+            const level = textField(changedRow(payload), "riskLevel");
+            if (level === "High" || level === "Moderate") ringRisk();
           }
         )
         .subscribe((status) => {
@@ -307,9 +376,14 @@ export function useGuidanceRealtime(enabled = true) {
         }
         const fresh = mine.filter((n) => !seenIds.current.has(n.id));
         if (fresh.length === 0) return;
-        const ordered = [...fresh].reverse().slice(0, MAX_TOASTS_PER_POLL);
-        for (const n of ordered) notify(n);
-        for (const n of fresh) seenIds.current.add(n.id);
+        const ordered = [...fresh].reverse();
+        // Only the newest few toast; the rest still route through `notify()`
+        // silently, because that is what rings the referral / cancelled /
+        // risk clips. A burst (several referrals at once, or a risk sweep
+        // flagging a whole section) used to be dropped by the toast cap and
+        // rang nothing at all.
+        ordered.slice(0, MAX_TOASTS_PER_POLL).forEach((n) => notify(n));
+        ordered.slice(MAX_TOASTS_PER_POLL).forEach((n) => notify(n, { silent: true }));
         if (fresh.length > MAX_TOASTS_PER_POLL) void invalidate();
       } catch {
       }

@@ -112,10 +112,23 @@ function AdviserInterventionsPageInner() {
         return true;
       })
       .sort(
-        (a, b) =>
-          (LEVEL_RANK[a.riskLevel] ?? 9) - (LEVEL_RANK[b.riskLevel] ?? 9) ||
-          b.riskCount - a.riskCount ||
-          a.name.localeCompare(b.name),
+        // Newest detection first: the desk's question is "who was just
+        // flagged", so a card detected today must not sit below an older one.
+        // Rows without a timestamp sink to the bottom; level and risk count
+        // only break ties.
+        (a, b) => {
+          const aAt = a.detectedAt ? Date.parse(a.detectedAt) : NaN;
+          const bAt = b.detectedAt ? Date.parse(b.detectedAt) : NaN;
+          const aHas = Number.isFinite(aAt);
+          const bHas = Number.isFinite(bAt);
+          if (aHas !== bHas) return aHas ? -1 : 1;
+          if (aHas && bHas && aAt !== bAt) return bAt - aAt;
+          return (
+            (LEVEL_RANK[a.riskLevel] ?? 9) - (LEVEL_RANK[b.riskLevel] ?? 9) ||
+            b.riskCount - a.riskCount ||
+            a.name.localeCompare(b.name)
+          );
+        },
       );
   }, [allRows, sectionId, level, factor, outcome, queryInput]);
 

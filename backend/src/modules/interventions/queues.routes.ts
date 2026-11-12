@@ -41,6 +41,7 @@ router.get(
           ? String(query.outcome)
           : "";
       const q = typeof query.q === "string" ? query.q.trim().toLowerCase() : "";
+      const sort = query.sort === "detected" ? ("detected" as const) : undefined;
       const page = Math.max(1, Number(query.page) || 1);
       const pageSize = Math.max(
         1,
@@ -56,6 +57,7 @@ router.get(
             mineOnly,
             outcome: outcomeFilter,
             q,
+            sort,
             page,
             pageSize,
           },

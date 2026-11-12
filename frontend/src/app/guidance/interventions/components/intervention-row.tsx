@@ -41,7 +41,6 @@ interface InterventionTableRowProps {
   expanded: boolean;
   onToggleDetails: () => void;
   now: number;
-  onStart: () => void;
   onChange: () => void;
   onOutcome: () => void;
   onMarkDone: () => void;
@@ -63,7 +62,6 @@ export function InterventionTableRow({
   expanded,
   onToggleDetails,
   now,
-  onStart,
   onChange,
   onOutcome,
   onMarkDone,
@@ -254,10 +252,11 @@ export function InterventionTableRow({
             ) : null}
 
             {(!followUp || (workable && !hasUpcoming)) && (
-              <button
+              <Button
                 type="button"
-                className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[0.6875rem] font-semibold outline-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
-                style={{ backgroundColor: "rgb(59 130 246 / 0.15)", color: "#1d4ed8" }}
+                size="xs"
+                variant="default"
+                className="h-6 gap-1 px-2 text-[0.6875rem] font-semibold"
                 disabled={
                   locked ||
                   isActionPending ||
@@ -268,14 +267,11 @@ export function InterventionTableRow({
                     ? "This follow-up is closed"
                     : "Book a counseling session"
                 }
-                onClick={() => {
-                  if (!followUp) onStart();
-                  else onSchedule();
-                }}
+                onClick={onSchedule}
               >
                 <CalendarPlus size={11} aria-hidden />
                 Book session
-              </button>
+              </Button>
             )}
 
             {closed ? (
@@ -284,9 +280,11 @@ export function InterventionTableRow({
                 Done
               </Pill>
             ) : (
-              <button
+              <Button
                 type="button"
-                className={styles.markDoneBtn}
+                size="xs"
+                variant="outline"
+                className="h-6 px-2 text-[0.6875rem] font-medium"
                 disabled={!canMarkDone || isBusy("outcome")}
                 title={markDoneHint ?? "Record the outcome as resolved"}
                 aria-label={
@@ -297,7 +295,7 @@ export function InterventionTableRow({
                 onClick={onMarkDone}
               >
                 {isBusy("outcome") ? "Saving…" : "Mark done"}
-              </button>
+              </Button>
             )}
           </div>
           <SessionListDialog
@@ -344,10 +342,10 @@ export function InterventionTableRow({
                   title="Start the follow-up and book the first session"
                   onClick={() => {
                     onToggleDetails();
-                    onStart();
+                    onSchedule();
                   }}
                 >
-                  {isBusy("start") ? "Saving…" : "Book session"}
+                  {isBusy("schedule") ? "Saving…" : "Book session"}
                 </Button>
               )}
               {isUnbooked && (

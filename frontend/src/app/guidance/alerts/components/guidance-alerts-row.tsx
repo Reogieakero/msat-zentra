@@ -365,8 +365,8 @@ export function CaseKanbanRow({
   const statusText = allDone ? "Done" : rowStatusLabel(r.type, r.status, r);
   const statusVar = allDone ? "success" : referralStatusVariant(r.type, r.status);
   // The timestamp column reports when the case entered the desk (referral
-  // date), not the latest action — that stays on the action glyph tooltip.
-  const referredRaw = r.date || "";
+  // filing time), not the anecdote's incident date — that stays on the record.
+  const referredRaw = r.referredAt || r.date || "";
   const referredText = referredRaw ? formatActionTime(referredRaw) : "";
   const referredMs = referredRaw ? msSince(referredRaw, now) : null;
   return (

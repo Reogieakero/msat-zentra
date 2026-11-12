@@ -293,7 +293,7 @@ export function GuidanceCaseDetailDialog({
     const allDone = doneCount > 0 && !r.sessions.some((s) => s.status === "scheduled");
     statusText = allDone ? "Done" : rowStatusLabel(r.type, r.status, r);
     statusVariant = allDone ? "success" : "default";
-    detectedText = formatActionTime(r.date);
+    detectedText = formatActionTime(r.referredAt || r.date);
     sessions = r.sessions;
     note = [r.reason, r.recommendations].filter((t) => t && t.trim() !== "").join(" — ") || null;
     fullCaseHref =
@@ -452,7 +452,7 @@ export function GuidanceCaseDetailDialog({
                 <dl className="grid grid-cols-1 gap-3 rounded-xl border border-border/70 bg-card p-4 sm:grid-cols-2">
                   <DetailField label="Category" value={row.referral.category} />
                   <DetailField label="Referred by" value={row.referral.referredBy} />
-                  <DetailField label="Date referred" value={formatActionTime(row.referral.date)} />
+                  <DetailField label="Date referred" value={formatActionTime(row.referral.referredAt || row.referral.date)} />
                   <DetailField label="Location" value={row.referral.location} />
                   <DetailField label="Priority" value={row.referral.priority} />
                   <DetailField label="Confidentiality" value={row.referral.confidentiality} />

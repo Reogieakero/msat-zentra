@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { KanbanBoard } from "@/components/ui/kanban-board";
+import { Pill, type PillTone } from "@/components/ui/pill";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { useTerm } from "@/lib/term/TermContext";
 import { useTeacherInvalidate } from "../../../components/use-teacher-invalidate";
@@ -14,39 +15,25 @@ import { sileo } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
 import refStyles from "./referrals.module.css";
 
-const CATEGORY_COLORS: Record<string, string> = {
-  behavioral: "#f59e0b",
-  bullying: "#ef4444",
-  academic: "#3b82f6",
-  attendance: "#22c55e",
-  health: "#8b5cf6",
+/** Anecdotal categories mapped onto the shared Pill palette. */
+const CATEGORY_PILL_TONES: Record<string, PillTone> = {
+  behavioral: "amber",
+  bullying: "red",
+  academic: "blue",
+  attendance: "green",
+  health: "violet",
 };
 
-function LrnPill({ lrn }: { lrn: string }) {
-  return (
-    <span
-      className="inline-flex shrink-0 items-center rounded-md border border-border bg-secondary px-1.5 py-px text-xs font-medium text-secondary-foreground"
-      title={lrn}
-    >
-      {lrn}
-    </span>
-  );
-}
-
 function CategoryPill({ category }: { category: string }) {
-  const color = CATEGORY_COLORS[category] ?? "var(--muted-foreground)";
+  const label = categoryLabel(category);
   return (
-    <span
-      className="inline-flex shrink-0 items-center rounded-md border px-1.5 py-px text-xs font-semibold leading-tight"
-      style={{
-        color,
-        borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
-        backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
-      }}
-      title={categoryLabel(category)}
+    <Pill
+      tone={CATEGORY_PILL_TONES[category] ?? "neutral"}
+      label={label}
+      title={`Anecdotal category: ${label}`}
     >
-      {categoryLabel(category)}
-    </span>
+      {label}
+    </Pill>
   );
 }
 import { useReferableRecords } from "./use-referable-records";
@@ -201,7 +188,7 @@ export function ReferForm({
                     <span className="min-w-0 truncate text-sm font-medium" title={studentLabel(student)}>
                       {student.studentName}
                     </span>
-                    <LrnPill lrn={student.lrn} />
+                    <Pill label="LRN">{student.lrn}</Pill>
                   </span>
                 ) : undefined
               }
@@ -223,7 +210,7 @@ export function ReferForm({
                         <span className="truncate text-sm font-medium" title={studentLabel(s)}>
                           {s.studentName}
                         </span>
-                        <LrnPill lrn={s.lrn} />
+                        <Pill label="LRN">{s.lrn}</Pill>
                       </span>
                       {s.key === studentKey ? (
                         <Check size={16} className="shrink-0" aria-hidden />

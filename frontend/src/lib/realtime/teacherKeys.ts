@@ -300,9 +300,17 @@ export function isSelfNotification(row: { type?: string | null }): boolean {
  */
 export function scopesForRealtimeTable(table: string): readonly TeacherInvalidateScope[] {
   switch (table) {
+    // A referral row moves whenever the receiving desk accepts, escalates,
+    // resolves or dismisses it — the filing teacher's board mirrors that row
+    // directly, so refresh it without waiting for a fanout notification.
+    case "Referral":
+      return ["referrals"];
     case "Intervention":
-    case "CounselingSession":
       return ["interventions"];
+    // A booked/completed counseling session rewrites the referral's status and
+    // timeline, so the filing teacher's board has to move too.
+    case "CounselingSession":
+      return ["interventions", "referrals"];
     case "RiskSnapshot":
       return ["risk", "overview"];
     default:

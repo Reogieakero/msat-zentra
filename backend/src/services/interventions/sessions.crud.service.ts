@@ -21,6 +21,19 @@ export async function bookSession(
   if (!isSessionType(input.sessionType)) {
     throw new AppError(400, "INVALID_ACTION", "Unknown session type");
   }
+  // One live booking per learner/plan: the desk hides the Book-session action
+  // while a session is scheduled, and this guard keeps a stale tab or a direct
+  // API call from stacking a second one.
+  const alreadyBooked = await prisma.counselingSession.count({
+    where: { interventionId: row.id, status: "scheduled" },
+  });
+  if (alreadyBooked > 0) {
+    throw new AppError(
+      409,
+      "SESSION_ALREADY_BOOKED",
+      "This learner already has a booked session. Finish or cancel it before booking another one.",
+    );
+  }
   const created = await prisma.counselingSession.create({
     data: {
       interventionId: row.id,

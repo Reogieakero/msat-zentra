@@ -68,7 +68,6 @@ export function GuidanceInterventionsTable({
     activeFollowUp,
     activeSession,
     closeDialog,
-    openStart,
     openChange,
     openOutcome,
     openOutcomeResolved,
@@ -123,7 +122,6 @@ export function GuidanceInterventionsTable({
         locked={rowLocked}
         isBusy={isBusy}
         isActionPending={isActionPending}
-        onStart={openStart}
         onChange={openChange}
         onOutcome={openOutcome}
         onMarkDone={openOutcomeResolved}
@@ -203,12 +201,36 @@ export function GuidanceInterventionsTable({
           });
         }}
         onSubmitSchedule={(fields) => {
-          if (!activeKey || !activeFollowUpId || isActionPending) return;
-          runAction(activeKey, "schedule", {
-            followUpId: activeFollowUpId,
+          if (!activeKey || isActionPending) return;
+          // At most one live booking per learner on this desk.
+          if (
+            activeFollowUp?.sessions.some((s) => s.status === "scheduled")
+          ) {
+            return;
+          }
+          const firstSession = {
             scheduledAt: fields.scheduledAt,
             sessionType: fields.sessionType as CounselingSessionType,
             ...(fields.venue ? { venue: fields.venue } : {}),
+          };
+          // No plan yet: booking a session opens the follow-up first, exactly
+          // like the alerts board does.
+          if (!activeFollowUpId) {
+            runAction(activeKey, "start", {
+              recommendedAction: "Schedule a counseling session",
+              priority:
+                activeRow?.riskLevel === "High"
+                  ? "high"
+                  : activeRow?.riskLevel === "Moderate"
+                    ? "normal"
+                    : "low",
+              firstSession,
+            });
+            return;
+          }
+          runAction(activeKey, "schedule", {
+            followUpId: activeFollowUpId,
+            ...firstSession,
           });
         }}
         onSubmitFinish={(fields) => {

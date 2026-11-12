@@ -464,9 +464,7 @@ export default function TeacherAdvisoryListPage() {
       toast.error({ title: "Could not restore student", description: message });
     },
     onSuccess: (_data, archiveIds) => {
-      // The overlay closes itself — no manual close needed.
-      setRestoreOpen(false);
-      setRestoreSelected(new Set());
+      // The overlay already closed on confirm; just report the result.
       if (restoreDockTaskRef.current) {
         dock.completeTask(restoreDockTaskRef.current, "Student restored to the advisory list.");
         restoreDockTaskRef.current = null;
@@ -539,6 +537,10 @@ export default function TeacherAdvisoryListPage() {
 
   function handleRestoreStudents(targets: ArchivedAdvisee[]) {
     if (targets.length === 0 || restoreMutation.isPending) return;
+    // Close on confirm: the optimistic update already drops the rows, so the
+    // overlay would otherwise sit there empty while the requests settle.
+    setRestoreOpen(false);
+    setRestoreSelected(new Set());
     restoreDockTaskRef.current = dock.startTask({
       kind: "generic",
       title: targets.length === 1 ? "Restoring student" : `Restoring ${targets.length} students`,

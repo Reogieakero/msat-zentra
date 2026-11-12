@@ -68,4 +68,6 @@ export const interventionsQueueQuerySchema = paginationQuerySchema(
   factor: z.enum(["Academic", "Attendance", "Behavioral"]).optional(),
   mine: z.enum(["true", "false"]).optional(),
   outcome: z.enum(["ongoing", "resolved", "unresolved", "all"]).optional(),
+  /** Board order: risk-first (default) or newest detection first. */
+  sort: z.enum(["risk", "detected"]).optional(),
 });

@@ -28,6 +28,8 @@ interface ClinicDatePickerProps {
   min?: string;
   /** Extra classes for the field label (e.g. a denser size on boards). */
   labelClassName?: string;
+  /** Extra classes for the calendar popover (e.g. a higher z-index on overlays). */
+  popoverClassName?: string;
 }
 
 export function ClinicDatePicker({
@@ -37,6 +39,7 @@ export function ClinicDatePicker({
   onChange,
   min,
   labelClassName,
+  popoverClassName,
 }: ClinicDatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const selected = parseDateInput(value);
@@ -60,7 +63,7 @@ export function ClinicDatePicker({
             {selected ? format(selected, "MMM d, yyyy") : "Pick a date"}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-auto p-0">
+        <PopoverContent align="start" className={cn("w-auto p-0", popoverClassName)}>
           <Calendar
             mode="single"
             selected={selected}
@@ -84,6 +87,10 @@ interface ClinicTimePickerProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  /** Extra classes for the clock popover (e.g. a higher z-index on overlays). */
+  popoverClassName?: string;
+  /** Earliest pickable "HH:MM"; earlier clock values are disabled. */
+  minTime?: string;
 }
 
 export function ClinicTimePicker({
@@ -91,6 +98,8 @@ export function ClinicTimePicker({
   label,
   value,
   onChange,
+  popoverClassName,
+  minTime,
 }: ClinicTimePickerProps) {
   return (
     <div>
@@ -101,6 +110,8 @@ export function ClinicTimePicker({
         onChange={onChange}
         placeholder="Pick a time"
         className="mt-1"
+        contentClassName={popoverClassName}
+        minTime={minTime}
       />
     </div>
   );

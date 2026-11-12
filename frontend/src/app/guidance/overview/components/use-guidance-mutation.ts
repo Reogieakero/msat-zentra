@@ -140,6 +140,14 @@ export function useGuidanceMutation<TData = unknown, TVariables = void>(
     onMutate: async (variables) => {
       // Instant UI update — runs before the network request resolves.
       await queryClient.cancelQueries();
+      // Mark the case as the counselor's own *before* the write lands: the
+      // realtime frame can reach the desk before this mutation's response, and
+      // it must not ring the risk alarm for the user's own save.
+      const selfId =
+        typeof options.sourceId === "function"
+          ? options.sourceId(variables)
+          : options.sourceId;
+      if (typeof selfId === "string" && selfId) markSelfNotified(selfId);
       const rollback = options.optimisticUpdate?.(queryClient, variables);
 
       let dockTaskId: string | undefined;

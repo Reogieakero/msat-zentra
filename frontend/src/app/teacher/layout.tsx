@@ -30,6 +30,7 @@ import { DeleteAssessmentSaveProvider } from "./grading/[assignmentId]/component
 import { WeightsSaveProvider } from "./grading/[assignmentId]/components/weights-save-context";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
 import { useTeacherRealtime } from "@/lib/realtime/teacherChannel";
+import { AdviserRiskAlertMonitor } from "./components/AdviserRiskAlertMonitor";
 import styles from "./record-teacher.module.css";
 
 function TeacherShell({ children }: { children: React.ReactNode }) {
@@ -46,6 +47,7 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
     </React.Suspense>
 
       <AdviserClaimGate />
+      <AdviserRiskAlertMonitor />
       <BookingReminderStack desk="teacher" />
     </WeightsSaveProvider>
     </DeleteAssessmentSaveProvider>

@@ -78,6 +78,8 @@ export interface GuidanceReferralItem {
   sessions: CounselingSessionItem[];
   completedSessions: number;
 
+  /** When the referral was filed (null for legacy rows with no audit trail). */
+  referredAt?: string | null;
   lastActionAt: string;
   lastActionType: string;
 

@@ -93,7 +93,6 @@ export interface InterventionTableViewProps {
   locked: (key: string) => boolean;
   isBusy: (key: string, action: string) => boolean;
   isActionPending: boolean;
-  onStart: (row: AtRiskStudentItem) => void;
   onChange: (row: AtRiskStudentItem) => void;
   onOutcome: (row: AtRiskStudentItem) => void;
   onMarkDone: (row: AtRiskStudentItem) => void;
@@ -130,7 +129,6 @@ export function InterventionTableView({
   locked,
   isBusy,
   isActionPending,
-  onStart,
   onChange,
   onOutcome,
   onMarkDone,
@@ -266,7 +264,6 @@ export function InterventionTableView({
                 expanded={expandedKey === row.studentKey}
                 onToggleDetails={() => onToggleDetails(row.studentKey)}
                 now={now}
-                onStart={() => onStart(row)}
                 onChange={() => onChange(row)}
                 onOutcome={() => onOutcome(row)}
                 onMarkDone={() => onMarkDone(row)}

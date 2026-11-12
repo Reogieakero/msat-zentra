@@ -67,6 +67,10 @@ export function GuidanceBookedSessionButton({
   const hasSessions = sessions.length > 0;
   const hasActiveSession = sessions.some((s) => s.status === "scheduled");
 
+  // A live booking is already surfaced by the row's status/session pills — drop
+  // the extra calendar icon so the actions column stays uncluttered.
+  if (hasActiveSession) return null;
+
   const submit = async (fields: BookSessionFields) => {
     const followUpId = item.intervention?.id ?? null;
     const sessionType = (fields.sessionType || "individual") as CounselingSessionType;

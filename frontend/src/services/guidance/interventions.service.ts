@@ -26,6 +26,7 @@ export async function fetchGuidanceInterventions(
   if (params.factor) search.set("factor", params.factor);
   if (params.outcome) search.set("outcome", params.outcome);
   if (params.mine) search.set("mine", "true");
+  if (params.sort) search.set("sort", params.sort);
   if (params.page) search.set("page", String(params.page));
   if (params.pageSize) search.set("pageSize", String(params.pageSize));
   const query = search.toString();
@@ -53,6 +54,8 @@ export async function fetchAllGuidanceInterventions(
       pageSize: FETCH_ALL_PAGE_SIZE,
       level: "All",
       outcome: "all",
+      // Board reads newest detection first (ties keep risk order).
+      sort: "detected",
     },
     opts
   );
@@ -66,6 +69,7 @@ export async function fetchAllGuidanceInterventions(
           pageSize: FETCH_ALL_PAGE_SIZE,
           level: "All",
           outcome: "all",
+          sort: "detected",
         },
         opts
       )

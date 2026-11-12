@@ -66,22 +66,27 @@ export async function referRecord(
     throw new AppError(400, "INVALID_ACTION", "A consultation reviewer can only be picked for ADM cases");
   }
 
-  if (input.referredToRole === "adm_coordinator") {
-    const studentMatch = record.studentId
-      ? { studentId: record.studentId }
-      : { rosterId: record.rosterId };
-    const existingAdm = await prisma.referral.findFirst({
-      where: {
-        referredToRole: "adm_coordinator",
-        status: { notIn: ["dismissed", "resolved"] },
-        termId,
-        ...studentMatch,
-      },
-      select: { id: true },
-    });
-    if (existingAdm) {
-      throw new AppError(409, "ADM_CASE_EXISTS", "This student already has an open ADM case — only one ADM referral per student");
-    }
+  // One live referral per learner per desk (type). The learner can be referred
+  // again only once the existing one is done (resolved or dismissed); a
+  // pending / in-progress / escalated case blocks a duplicate. Deliberately
+  // not term-scoped: an unfinished case still blocks until it is closed.
+  const studentMatch = record.studentId
+    ? { studentId: record.studentId }
+    : { rosterId: record.rosterId };
+  const existingOpen = await prisma.referral.findFirst({
+    where: {
+      referredToRole: input.referredToRole,
+      status: { notIn: ["dismissed", "resolved"] },
+      ...studentMatch,
+    },
+    select: { id: true },
+  });
+  if (existingOpen) {
+    throw new AppError(
+      409,
+      "REFERRAL_ALREADY_OPEN",
+      "This student already has an open referral of this type — resolve or dismiss it before referring again",
+    );
   }
 
   const referral = await prisma.referral.create({

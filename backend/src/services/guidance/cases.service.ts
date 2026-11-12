@@ -325,6 +325,11 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     }
   }
   const lastActionById = new Map<string, { type: string; at: string }>();
+  // When the case actually entered the desk. Referral has no createdAt column,
+  // so the first audit row (written in the same call as the create) is the
+  // filing time. Logs come back newest-first, so the last write per referral
+  // wins. The anecdote's observationDatetime is the incident date, not this.
+  const referredAtById = new Map<string, string>();
   if (refIds.length > 0 || sessIds.length > 0) {
     const latestLogs = await prisma.auditLog.findMany({
       where: {
@@ -345,7 +350,11 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
         log.sourceTable === "referrals"
           ? log.sourceId
           : (sessionToReferral.get(log.sourceId) ?? null);
-      if (!referralId || lastActionById.has(referralId)) continue;
+      if (!referralId) continue;
+      if (log.sourceTable === "referrals") {
+        referredAtById.set(referralId, log.createdAt.toISOString());
+      }
+      if (lastActionById.has(referralId)) continue;
       lastActionById.set(referralId, {
         type: String(log.actionType),
         at: log.createdAt.toISOString(),
@@ -354,6 +363,7 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
   }
   const withAction = mapped.map((r) => ({
     ...r,
+    referredAt: referredAtById.get(r.id) ?? null,
     lastActionAt: lastActionById.get(r.id)?.at ?? null,
     lastActionType: lastActionById.get(r.id)?.type ?? null,
     dismissedByRole: dismissedByRole.get(r.id) ?? null,

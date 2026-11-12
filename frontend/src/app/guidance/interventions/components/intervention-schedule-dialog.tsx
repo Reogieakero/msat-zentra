@@ -23,6 +23,12 @@ export function InterventionScheduleDialog({
       open
       onClose={onClose}
       onSubmit={(fields) => onSubmit(fields)}
+      title="Book session"
+      description={
+        studentCard?.name
+          ? `Schedule a counseling session for ${studentCard.name}.`
+          : "Schedule a counseling session."
+      }
       studentCard={studentCard}
       fetchTakenTimes={(dateKey, signal) => fetchDaySchedule(dateKey, { signal })}
       venueHint="Held at the guidance office unless another venue is given."

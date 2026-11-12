@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { CalendarDays, ClipboardList, Clock, Loader2, MapPin, X } from "lucide-react";
+import { CalendarDays, CalendarPlus, ClipboardList, Clock, Loader2, MapPin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CardModal } from "@/components/ui/CardModal";
@@ -134,9 +134,25 @@ function formatSummaryDate(key: string): string {
   return `${DAY_NAMES[d.getUTCDay()]}, ${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
-function nowTimeKey(): string {
-  const n = new Date();
-  return `${String(n.getUTCHours()).padStart(2, "0")}:${String(n.getUTCMinutes()).padStart(2, "0")}`;
+/** "13:05" → "1:05 PM" for the footer summary. */
+function formatTimeKey(key: string): string {
+  const match = /^(\d{2}):(\d{2})$/.exec(key);
+  if (!match) return key;
+  const h24 = Number(match[1]);
+  return `${h24 % 12 || 12}:${match[2]} ${h24 < 12 ? "AM" : "PM"}`;
+}
+
+
+/**
+ * True when `dateKey` + `HH:MM` is already behind us. The current minute still
+ * counts as bookable ("today at this time" is allowed, the past is not).
+ */
+function isPastMoment(dateKey: string, time: string): boolean {
+  if (!dateKey || !time) return false;
+  const at = new Date(`${dateKey}T${time}:00`).getTime();
+  if (!Number.isFinite(at)) return false;
+  const nowMinute = Math.floor(Date.now() / 60_000) * 60_000;
+  return at < nowMinute;
 }
 
 export interface BookSessionDialogProps {
@@ -189,7 +205,18 @@ export interface BookSessionDialogProps {
 }
 
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  // Local calendar day — the booking values are written as local wall-clock
+  // time, so "today" has to be local too or the past-time guard drifts.
+  const n = new Date();
+  const m = String(n.getMonth() + 1).padStart(2, "0");
+  const d = String(n.getDate()).padStart(2, "0");
+  return `${n.getFullYear()}-${m}-${d}`;
+}
+
+/** Local current time as "HH:MM" — the floor for today's clock picker. */
+function currentTimeKey(): string {
+  const n = new Date();
+  return `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
 }
 
 function toScheduledAt(date: string, time: string): string | null {
@@ -248,8 +275,7 @@ export function BookSessionDialog({
   const [step, setStep] = React.useState(1);
 
   const boardMode = variant === "board";
-  const [mounted, setMounted] = React.useState(false);
-  const panelRef = React.useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = React.useState(false);  const panelRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     // Portal target only exists after mount (no document during prerender).
@@ -301,8 +327,6 @@ export function BookSessionDialog({
 
   const dayCards = nextDayCards(3, todayKey());
   const today = todayKey();
-  const isToday = date === today;
-  const nowKey = nowTimeKey();
   const timeIsCustom = time !== "" && !TIME_SLOTS.some((s) => s.key === time);
 
   React.useEffect(() => {
@@ -347,7 +371,9 @@ export function BookSessionDialog({
   if (!open) return null;
 
   const isStepped = showInvites;
-  const effectiveTime = timeIsCustom ? customTime : time;
+  // Board mode always uses the clock picker's `time`; the card mode keeps the
+  // quick slots plus its own custom-time field.
+  const effectiveTime = boardMode ? time : timeIsCustom ? customTime : time;
   const selectedSlot = TIME_SLOTS.find((s) => s.key === time);
   const kindLabel =
     sessionTypeOptions.find((o) => o.value === sessionType)?.label ?? sessionType;
@@ -358,6 +384,11 @@ export function BookSessionDialog({
     setError(null);
     setTaken([]);
     setTakenLoading(true);
+    // Switching to today can strand a time that has already passed.
+    if (key === todayKey() && isPastMoment(key, timeIsCustom ? customTime : time)) {
+      setTime("");
+      setCustomTime("");
+    }
   }
 
   function pickTime(key: string) {
@@ -366,9 +397,50 @@ export function BookSessionDialog({
     setError(null);
   }
 
+  function pickCustomDate(value: string) {
+    setDate(value);
+    setError(null);
+    setTaken([]);
+    setTakenLoading(true);
+    if (value === todayKey() && isPastMoment(value, timeIsCustom ? customTime : time)) {
+      setTime("");
+      setCustomTime("");
+    }
+  }
+
+  function pickCustomTime(value: string) {
+    setError(null);
+    if (isPastMoment(date, value)) {
+      // Never hold a past time in the form — the footer error explains why.
+      setTime("");
+      setCustomTime("");
+      setError("Pick the current time or a later date and time.");
+      return;
+    }
+    setTime(value);
+    setCustomTime("");
+  }
+
+  /** Clock picker used by the board — mirrors the other desk time pickers. */
+  function pickClockTime(value: string) {
+    setError(null);
+    if (taken.includes(value)) {
+      setTime("");
+      setError("That time is already booked. Pick another time.");
+      return;
+    }
+    if (isPastMoment(date, value)) {
+      setTime("");
+      setError("Pick the current time or a later date and time.");
+      return;
+    }
+    setTime(value);
+    setCustomTime("");
+  }
+
   function slotDisabled(slot: TimeSlot): string | null {
     if (taken.includes(slot.key)) return "Already taken";
-    if (isToday && slot.key <= nowKey) return "Already passed";
+    if (isPastMoment(date, slot.key)) return "Already passed";
     return null;
   }
 
@@ -378,8 +450,12 @@ export function BookSessionDialog({
       setError("Pick both a date and a time for the session.");
       return;
     }
-    if (new Date(scheduledAt).getTime() <= Date.now()) {
-      setError("Session must be set in the future.");
+    if (isPastMoment(date, effectiveTime)) {
+      setError("Pick the current time or a later date and time.");
+      return;
+    }
+    if (taken.includes(effectiveTime)) {
+      setError("That time is already booked. Pick another time.");
       return;
     }
     setError(null);
@@ -392,8 +468,12 @@ export function BookSessionDialog({
       setError("Pick both a date and a time for the session.");
       return;
     }
-    if (new Date(scheduledAt).getTime() <= Date.now()) {
-      setError("Session must be set in the future.");
+    if (isPastMoment(date, effectiveTime)) {
+      setError("Pick the current time or a later date and time.");
+      return;
+    }
+    if (taken.includes(effectiveTime)) {
+      setError("That time is already booked. Pick another time.");
       return;
     }
     if (hasActiveSession) {
@@ -413,7 +493,7 @@ export function BookSessionDialog({
     date && effectiveTime && selectedSlot
       ? `${formatSummaryDate(date)} · ${selectedSlot.label}`
       : date && effectiveTime
-        ? `${formatSummaryDate(date)} · ${effectiveTime}`
+        ? `${formatSummaryDate(date)} · ${formatTimeKey(effectiveTime)}`
         : "Pick a date and time";
 
   if (boardMode) {
@@ -513,7 +593,7 @@ export function BookSessionDialog({
                       aria-labelledby={`${idPrefix}-board-date-label`}
                     >
                       {dayCards.map((d) => {
-                        const selected = date === d.key;
+                        const selected = !useCustomDate && date === d.key;
                         return (
                           <button
                             key={d.key}
@@ -543,13 +623,9 @@ export function BookSessionDialog({
                           id={`${idPrefix}-board-date`}
                           label="Custom date"
                           value={date}
-                          onChange={(v) => {
-                            setDate(v);
-                            setError(null);
-                            setTaken([]);
-                            setTakenLoading(true);
-                          }}
+                          onChange={pickCustomDate}
                           min={today}
+                          popoverClassName="z-[70]"
                         />
                       </div>
                     ) : null}
@@ -570,49 +646,20 @@ export function BookSessionDialog({
                     {takenLoading
                       ? "Checking…"
                       : taken.length > 0
-                        ? "Crossed-out = taken"
+                        ? "Booked times can't be reused"
                         : ""}
                   </span>
                 </div>
                 <div className={board.laneCards}>
                   <div className={styles.field}>
-                    <div
-                      className={board.timeStack}
-                      role="group"
-                      aria-label="Time"
-                    >
-                      {TIME_SLOTS.map((slot) => {
-                        const selected = time === slot.key && !timeIsCustom;
-                        const reason = slotDisabled(slot);
-                        return (
-                          <button
-                            key={slot.key}
-                            type="button"
-                            className={`${styles.timePill}${selected ? ` ${styles.timeSelected} ${board.chipSelected}` : ""}${reason ? ` ${styles.timeTaken}` : ""}`}
-                            aria-pressed={selected}
-                            disabled={reason !== null || busy}
-                            title={reason ?? slot.label}
-                            onClick={() => pickTime(slot.key)}
-                          >
-                            {slot.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {timeIsCustom || customTime !== "" ? (
-                      <div className={styles.customDate}>
-                        <ClinicTimePicker
-                          id={`${idPrefix}-board-time`}
-                          label="Custom time"
-                          value={timeIsCustom ? time : customTime}
-                          onChange={(v) => {
-                            setTime(v);
-                            setCustomTime("");
-                            setError(null);
-                          }}
-                        />
-                      </div>
-                    ) : null}
+                    <ClinicTimePicker
+                      id={`${idPrefix}-board-time`}
+                      label="Time"
+                      value={time}
+                      onChange={pickClockTime}
+                      popoverClassName="z-[70]"
+                      minTime={date === today ? currentTimeKey() : undefined}
+                    />
                   </div>
                 </div>
               </section>
@@ -756,17 +803,17 @@ export function BookSessionDialog({
                 ) : null}
                 {effectiveTime ? (
                   <span className={board.summaryPill}>
-                    {selectedSlot?.label ?? effectiveTime}
+                    {selectedSlot?.label ?? formatTimeKey(effectiveTime)}
                   </span>
                 ) : null}
                 {!date && !effectiveTime ? (
                   <span className={board.summaryEmpty}>Pick a date and time</span>
                 ) : null}
               </div>
-              <p className={styles.summarySub}>
-                {showSessionType ? `${kindLabel} · ` : ""}
-                {venue.trim() || "No venue set"}
-              </p>
+              <div className={board.summaryPills}>
+                {showSessionType ? <Pill label="Session kind">{kindLabel}</Pill> : null}
+                <Pill label="Venue">{venue.trim() || "No venue set"}</Pill>
+              </div>
             </div>
             <div className={board.actions}>
               <Button
@@ -775,7 +822,11 @@ export function BookSessionDialog({
                 aria-busy={busy || undefined}
                 className={board.footerBtn}
               >
-                {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                {busy ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <CalendarPlus className="size-3.5" aria-hidden />
+                )}
                 {busy ? (busyLabel ?? "Booking…") : submitLabel}
               </Button>
             </div>
@@ -867,7 +918,7 @@ export function BookSessionDialog({
                   aria-labelledby={`${idPrefix}-date-label`}
                 >
                   {dayCards.map((d) => {
-                    const selected = date === d.key;
+                    const selected = !useCustomDate && date === d.key;
                     return (
                       <button
                         key={d.key}
@@ -897,12 +948,7 @@ export function BookSessionDialog({
                       id={`${idPrefix}-date`}
                       label="Custom date"
                       value={date}
-                      onChange={(v) => {
-                        setDate(v);
-                        setError(null);
-                        setTaken([]);
-                        setTakenLoading(true);
-                      }}
+                      onChange={pickCustomDate}
                       min={today}
                     />
                   </div>
@@ -951,11 +997,8 @@ export function BookSessionDialog({
                       id={`${idPrefix}-time`}
                       label="Custom time"
                       value={timeIsCustom ? time : customTime}
-                      onChange={(v) => {
-                        setTime(v);
-                        setCustomTime("");
-                        setError(null);
-                      }}
+                      onChange={pickCustomTime}
+                      minTime={date === today ? currentTimeKey() : undefined}
                     />
                   </div>
                 ) : null}

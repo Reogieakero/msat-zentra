@@ -98,6 +98,15 @@ export function InterventionDialogs({
   canSubmitOutcome,
 }: InterventionDialogsProps) {
   const followUp = activeRow?.intervention ?? null;
+  const studentCard = activeRow
+    ? {
+        name: activeRow.student,
+        sub: [activeRow.grade, activeRow.section].filter(Boolean).join(" · "),
+        lrn: activeRow.lrn,
+        section: activeRow.section,
+        grade: activeRow.grade,
+      }
+    : null;
   return (
     <>
       <InterventionStartDialog
@@ -150,17 +159,7 @@ export function InterventionDialogs({
       <InterventionScheduleDialog
         open={open.schedule}
         onClose={() => onClose("schedule")}
-        studentCard={
-          activeRow
-            ? {
-                name: activeRow.student,
-                sub: [activeRow.grade, activeRow.section].filter(Boolean).join(" · "),
-                lrn: activeRow.lrn,
-                section: activeRow.section,
-                grade: activeRow.grade,
-              }
-            : null
-        }
+        studentCard={studentCard}
         hasActiveSession={
           !!activeRow?.intervention?.sessions.some((s) => s.status === "scheduled")
         }
@@ -178,6 +177,7 @@ export function InterventionDialogs({
       <InterventionMoveDialog
         open={open.move}
         onClose={() => onClose("move")}
+        studentCard={studentCard}
         activeSession={activeSession}
         isActionPending={isActionPending}
         onSubmit={onSubmitMove}
