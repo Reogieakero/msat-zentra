@@ -22,7 +22,6 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  overscroll-behavior: contain;
   padding-right: 0.25rem;
   /* Scrolling stays, but the bar itself is hidden. */
   scrollbar-width: none;

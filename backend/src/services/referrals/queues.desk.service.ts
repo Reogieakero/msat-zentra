@@ -1,4 +1,8 @@
 import { prisma } from "../../lib/prisma.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+} from "../../lib/learnerVisibility.js";
 import { sessionCancelledByRole } from "../../lib/sessionActors.js";
 import { NURSE_QUEUE_MAX_PAGE_SIZE } from "../../modules/referrals/referrals.repository.js";
 import type { ReferralContext } from "./referral.types.js";
@@ -83,6 +87,13 @@ export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
   const scopeClauses: any[] = [];
   if (roleWhere) scopeClauses.push(roleWhere);
   if (scopeTermId) scopeClauses.push({ termId: scopeTermId });
+
+  /* An adviser can remove a learner from their advisory list. That learner's
+     referral must leave every desk board (guidance ADM queue included), the
+     same way roster/attendance/anecdotal reads honour the archive. */
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const archivedClause = excludeArchivedLearnerRows(archivedLearners);
+  if (Object.keys(archivedClause).length > 0) scopeClauses.push(archivedClause);
 
   if (track === "adm") scopeClauses.push({ referredToRole: "adm_coordinator" });
   else if (track === "clinic")

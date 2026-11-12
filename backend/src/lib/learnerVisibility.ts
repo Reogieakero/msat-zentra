@@ -14,6 +14,25 @@ const TTL_MS = 10_000;
 let cache: { at: number; ids: ArchivedLearnerIds } | null = null;
 
 /**
+ * Prisma `where` fragment that hides counseling sessions belonging to
+ * archived (adviser-removed) learners. Sessions ride either a referral or an
+ * intervention, so both pipelines have to be covered — otherwise a deleted
+ * learner keeps blocking slots on the counselor's booking calendar.
+ */
+export function excludeArchivedSessionLearners(ids: ArchivedLearnerIds): any {
+  const branches: any[] = [];
+  if (ids.studentIds.length > 0) {
+    branches.push({ referral: { studentId: { in: ids.studentIds } } });
+    branches.push({ intervention: { studentId: { in: ids.studentIds } } });
+  }
+  if (ids.rosterIds.length > 0) {
+    branches.push({ referral: { rosterId: { in: ids.rosterIds } } });
+    branches.push({ intervention: { rosterId: { in: ids.rosterIds } } });
+  }
+  return branches.length > 0 ? { NOT: { OR: branches } } : {};
+}
+
+/**
  * Learners their section adviser removed from the advisory list.
  *
  * `AdviserArchivedStudent` is per adviser, so a row only applies while that
@@ -89,6 +108,22 @@ export async function archivedAdvisoryLearnerIds(): Promise<ArchivedLearnerIds> 
 /** Drop the memo so an archive/restore shows up on the next read. */
 export function clearArchivedLearnerCache(): void {
   cache = null;
+}
+
+/**
+ * True when the learner is currently hidden by their own section adviser.
+ * Detail routes gate on `section.adviserId === requester`, so membership here
+ * means *this* adviser archived them — their per-student endpoints must 404
+ * exactly like they do for a learner outside the advisory.
+ */
+export async function isArchivedAdvisoryLearner(ref: {
+  studentId?: string | null;
+  rosterId?: string | null;
+}): Promise<boolean> {
+  const ids = await archivedAdvisoryLearnerIds();
+  if (ref.studentId && ids.studentIds.includes(ref.studentId)) return true;
+  if (ref.rosterId && ids.rosterIds.includes(ref.rosterId)) return true;
+  return false;
 }
 
 /** Prisma fragment for `StudentProfile` queries. */

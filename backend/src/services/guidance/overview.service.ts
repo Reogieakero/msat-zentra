@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import {
   archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
   excludeArchivedProfiles,
   excludeArchivedRosters,
 } from "../../lib/learnerVisibility.js";
@@ -40,6 +41,14 @@ export async function getOverview(ctx: GuidanceContext) {
     : "No active term";
 
   const archivedLearners = await archivedAdvisoryLearnerIds();
+  /* An adviser's removal hides the learner from this desk too — including the
+     referral/intervention/ADM lists and every KPI count derived from them. */
+  const archivedClause = excludeArchivedLearnerRows(archivedLearners);
+  const hasArchived =
+    archivedLearners.studentIds.length > 0 || archivedLearners.rosterIds.length > 0;
+  const admProfileArchivedClause: any = hasArchived
+    ? { referral: archivedClause }
+    : {};
   const [
     pendingAdm,
     pendingCounseling,
@@ -60,6 +69,7 @@ export async function getOverview(ctx: GuidanceContext) {
       where: {
         status: "pending",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
         OR: [
           { referredToRole: "guidance_counselor", escalatedTo: "adm_coordinator" },
           {
@@ -74,6 +84,7 @@ export async function getOverview(ctx: GuidanceContext) {
         status: "pending",
         referredToRole: "guidance_counselor",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
 
         OR: [{ escalatedTo: null }, { NOT: { escalatedTo: "adm_coordinator" } }],
       },
@@ -83,6 +94,7 @@ export async function getOverview(ctx: GuidanceContext) {
       where: {
         status: "in_progress",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
         OR: [
           { referredToRole: "guidance_counselor", escalatedTo: "adm_coordinator" },
           {
@@ -96,6 +108,7 @@ export async function getOverview(ctx: GuidanceContext) {
       where: {
         referredToRole: "guidance_counselor",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
       },
 
       orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
@@ -128,6 +141,7 @@ export async function getOverview(ctx: GuidanceContext) {
       where: {
         outcomeStatus: "ongoing",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
       },
     }),
     prisma.intervention.count({
@@ -135,12 +149,14 @@ export async function getOverview(ctx: GuidanceContext) {
         assignedTo: counselorId,
         outcomeStatus: "ongoing",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
       },
     }),
     prisma.intervention.findMany({
       where: {
         outcomeStatus: "ongoing",
         ...(termId ? { termId } : {}),
+        ...archivedClause,
       },
       orderBy: [{ assignedAt: "desc" }, { id: "desc" }],
       take: 5,
@@ -172,6 +188,7 @@ export async function getOverview(ctx: GuidanceContext) {
     prisma.referral.findMany({
       where: {
         ...(termId ? { termId } : {}),
+        ...archivedClause,
         OR: [
           { referredToRole: "guidance_counselor" },
           {
@@ -212,7 +229,7 @@ export async function getOverview(ctx: GuidanceContext) {
       },
     }),
     prisma.admLearnerProfile.findMany({
-      where: termId ? { termId } : undefined,
+      where: { ...(termId ? { termId } : {}), ...admProfileArchivedClause },
       orderBy: { createdAt: "desc" },
       take: 5,
       select: {
@@ -236,6 +253,7 @@ export async function getOverview(ctx: GuidanceContext) {
         status: { in: ["pending", "in_progress"] },
         admProfiles: { none: {} },
         ...(termId ? { termId } : {}),
+        ...archivedClause,
       },
       orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
       take: 5,

@@ -47,6 +47,11 @@ export interface TrackableReferral {
   devicesReturned?: number;
   certificationAt?: string | null;
   resolvedAt?: string | null;
+  bookedSession?: {
+    scheduledAt: string;
+    sessionType: string;
+    venue: string | null;
+  } | null;
 }
 
 function humanize(value: string): string {
@@ -60,6 +65,34 @@ function formatDateTime(iso: string): string {
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return iso.slice(0, 10);
   return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · ${d.toTimeString().slice(0, 5)}`;
+}
+
+/** Short pill text for a booked session slot. */
+function formatSessionShort(iso: string): string {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return iso.slice(0, 10);
+  return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })} · ${d.toLocaleTimeString(
+    "en-US",
+    { hour: "numeric", minute: "2-digit" },
+  )}`;
+}
+
+/** Full tooltip text for the booked-session pill. */
+function bookedSessionTooltip(
+  session: NonNullable<TrackableReferral["bookedSession"]>,
+): string {
+  const d = new Date(session.scheduledAt);
+  const slot = Number.isFinite(d.getTime())
+    ? `${d.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })} at ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+    : session.scheduledAt;
+  const kind = humanize(session.sessionType);
+  return `Session booked · ${slot}${kind ? ` · ${kind}` : ""}${
+    session.venue?.trim() ? ` · ${session.venue.trim()}` : ""
+  }`;
 }
 
 /** Status tone carried by the shared Pill, same map as the referrals table. */
@@ -215,6 +248,11 @@ export function ReferralTrackDialog({
           <Pill tone={isAdmTrack ? "amber" : "blue"} label="Referral type">
             {referral.typeLabel}
           </Pill>
+          {referral.bookedSession && referral.status !== "dismissed" ? (
+            <Pill tone="teal" label={bookedSessionTooltip(referral.bookedSession)}>
+              Session {formatSessionShort(referral.bookedSession.scheduledAt)}
+            </Pill>
+          ) : null}
           <span className="text-[11px] text-muted-foreground">to {deskNow}</span>
         </div>
 

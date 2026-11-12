@@ -72,6 +72,7 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
       devicesReturned: r.devicesReturned ?? 0,
       certificationAt: r.certificationAt ?? null,
       resolvedAt: r.resolvedAt ?? null,
+      bookedSession: r.bookedSession ?? null,
     });
   }, []);
   return (

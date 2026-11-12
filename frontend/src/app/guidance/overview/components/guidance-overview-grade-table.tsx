@@ -103,9 +103,9 @@ export function GuidanceOverviewGradeTable({
                 style={{ animationDelay: `${450 + Math.min(index, 11) * 140}ms` }}
               >
                 <Link
-                  href={`/guidance/interventions?grade=${row.short}&level=All`}
+                  href="/guidance/interventions?status=all"
                   className={styles.rowLink}
-                  aria-label={`${row.grade}: ${row.atRisk} at-risk students — open interventions filtered to this grade`}
+                  aria-label={`${row.grade}: ${row.atRisk} at-risk students — open all intervention cases`}
                 >
                   <div className={styles.caseInfo}>
                     <Pill

@@ -16,6 +16,11 @@ import {
 } from "@/app/nurse/overview/components/ClinicDateTimePicker";
 import styles from "./BookSessionDialog.module.css";
 import board from "./BookSessionDialog.board.module.css";
+import {
+  findOverlappingBooking,
+  formatClockLabel,
+  sessionConflictNote,
+} from "@/lib/sessions/conflicts";
 
 export interface BookSessionFields {
   scheduledAt: string;
@@ -417,6 +422,13 @@ export function BookSessionDialog({
       setError("Pick the current time or a later date and time.");
       return;
     }
+    const clash = findOverlappingBooking(value, taken);
+    if (clash) {
+      setTime("");
+      setCustomTime("");
+      setError(sessionConflictNote(clash));
+      return;
+    }
     setTime(value);
     setCustomTime("");
   }
@@ -424,9 +436,10 @@ export function BookSessionDialog({
   /** Clock picker used by the board — mirrors the other desk time pickers. */
   function pickClockTime(value: string) {
     setError(null);
-    if (taken.includes(value)) {
+    const clash = findOverlappingBooking(value, taken);
+    if (clash) {
       setTime("");
-      setError("That time is already booked. Pick another time.");
+      setError(sessionConflictNote(clash));
       return;
     }
     if (isPastMoment(date, value)) {
@@ -439,7 +452,10 @@ export function BookSessionDialog({
   }
 
   function slotDisabled(slot: TimeSlot): string | null {
-    if (taken.includes(slot.key)) return "Already taken";
+    const clash = findOverlappingBooking(slot.key, taken);
+    if (clash) {
+      return `Overlaps the session booked at ${formatClockLabel(clash)}`;
+    }
     if (isPastMoment(date, slot.key)) return "Already passed";
     return null;
   }
@@ -454,8 +470,9 @@ export function BookSessionDialog({
       setError("Pick the current time or a later date and time.");
       return;
     }
-    if (taken.includes(effectiveTime)) {
-      setError("That time is already booked. Pick another time.");
+    const clash = findOverlappingBooking(effectiveTime, taken);
+    if (clash) {
+      setError(sessionConflictNote(clash));
       return;
     }
     setError(null);
@@ -472,8 +489,9 @@ export function BookSessionDialog({
       setError("Pick the current time or a later date and time.");
       return;
     }
-    if (taken.includes(effectiveTime)) {
-      setError("That time is already booked. Pick another time.");
+    const clash = findOverlappingBooking(effectiveTime, taken);
+    if (clash) {
+      setError(sessionConflictNote(clash));
       return;
     }
     if (hasActiveSession) {
@@ -646,7 +664,7 @@ export function BookSessionDialog({
                     {takenLoading
                       ? "Checking…"
                       : taken.length > 0
-                        ? "Booked times can't be reused"
+                        ? "Booked sessions block their hour"
                         : ""}
                   </span>
                 </div>
@@ -964,7 +982,7 @@ export function BookSessionDialog({
                     {takenLoading
                       ? "Checking availability…"
                       : taken.length > 0
-                        ? "Crossed-out times are already taken"
+                        ? "Crossed-out times overlap a booked session"
                         : null}
                   </span>
                 </div>

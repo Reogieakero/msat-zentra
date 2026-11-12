@@ -68,10 +68,10 @@ function formatCountdown(targetMs: number, nowMs: number): string {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
-/** Session state → shared Pill tone (blue upcoming, green done, neutral cancelled). */
+/** Session state → shared Pill tone (blue upcoming, green done, red cancelled). */
 const STATUS_TONE: Record<string, PillTone> = {
   completed: "green",
-  cancelled: "neutral",
+  cancelled: "red",
   upcoming: "blue",
   ready: "green",
 };
@@ -124,6 +124,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
   gateOnStart = false,
   manageable,
   disabled = false,
+  hideScheduledActions = false,
   onAction,
 }: {
   title: string;
@@ -137,6 +138,12 @@ export function SessionPlanCard<T extends PlanSessionItem>({
   gateOnStart?: boolean;
   manageable: boolean;
   disabled?: boolean;
+  /**
+   * Suppress the "…" menu and "Move" control on scheduled sessions. Used by the
+   * guidance ADM board, where reschedule/cancel live on the case card instead.
+   * "Mark done" stays.
+   */
+  hideScheduledActions?: boolean;
   onAction: (session: T, action: PlanSessionAction) => void;
 }) {
   return (
@@ -273,66 +280,70 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                       <div className="mt-auto flex flex-wrap items-center justify-end gap-1.5 pt-0.5">
                         {isScheduled ? (
                           <>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
+                            {hideScheduledActions ? null : (
+                              <>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="outline"
+                                      className="size-6 rounded-md"
+                                      disabled={disabled}
+                                      aria-label={`More actions for the ${formatDate(s.date)} session`}
+                                    >
+                                      <MoreHorizontal aria-hidden="true" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="z-[60] w-[250px] rounded-xl p-1.5"
+                                  >
+                                    {docsSupported ? (
+                                      <DropdownMenuItem
+                                        disabled={disabled || locked}
+                                        title={
+                                          locked
+                                            ? "Documentation unlocks once the session time arrives"
+                                            : s.status === "completed"
+                                              ? "View or file documentation for this session"
+                                              : "File documentation for this session"
+                                        }
+                                        onSelect={() => onAction(s, "docs")}
+                                      >
+                                        <FileText aria-hidden="true" />
+                                        {docsLabel}
+                                        {locked ? (
+                                          <Lock
+                                            className="ml-auto size-3.5"
+                                            aria-hidden="true"
+                                          />
+                                        ) : null}
+                                      </DropdownMenuItem>
+                                    ) : null}
+                                    {docsSupported ? <DropdownMenuSeparator /> : null}
+                                    <DropdownMenuItem
+                                      variant="destructive"
+                                      disabled={disabled}
+                                      className={`${styles.cancelItem} font-medium`}
+                                      onSelect={() => onAction(s, "cancel")}
+                                    >
+                                      Cancel session
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                                 <Button
                                   type="button"
-                                  size="icon"
+                                  size="xs"
                                   variant="outline"
-                                  className="size-6 rounded-md"
+                                  className="h-6 rounded-md px-2.5 text-xs"
                                   disabled={disabled}
-                                  aria-label={`More actions for the ${formatDate(s.date)} session`}
+                                  onClick={() => onAction(s, "move")}
                                 >
-                                  <MoreHorizontal aria-hidden="true" />
+                                  Move
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="end"
-                                className="z-[60] w-[250px] rounded-xl p-1.5"
-                              >
-                                {docsSupported ? (
-                                  <DropdownMenuItem
-                                    disabled={disabled || locked}
-                                    title={
-                                      locked
-                                        ? "Documentation unlocks once the session time arrives"
-                                        : s.status === "completed"
-                                          ? "View or file documentation for this session"
-                                          : "File documentation for this session"
-                                    }
-                                    onSelect={() => onAction(s, "docs")}
-                                  >
-                                    <FileText aria-hidden="true" />
-                                    {docsLabel}
-                                    {locked ? (
-                                      <Lock
-                                        className="ml-auto size-3.5"
-                                        aria-hidden="true"
-                                      />
-                                    ) : null}
-                                  </DropdownMenuItem>
-                                ) : null}
-                                {docsSupported ? <DropdownMenuSeparator /> : null}
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  disabled={disabled}
-                                  className={`${styles.cancelItem} font-medium`}
-                                  onSelect={() => onAction(s, "cancel")}
-                                >
-                                  Cancel session
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="outline"
-                              className="h-6 rounded-md px-2.5 text-xs"
-                              disabled={disabled}
-                              onClick={() => onAction(s, "move")}
-                            >
-                              Move
-                            </Button>
+                              </>
+                            )}
                             <Button
                               type="button"
                               size="xs"

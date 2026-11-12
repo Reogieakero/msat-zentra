@@ -2,8 +2,40 @@
 
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ADVISER_RISK_ALERT_EVENT } from "@/lib/realtime/teacherChannel";
-import { playDeskSound, primeDeskSounds } from "@/lib/notify/deskSounds";
+import {
+  ADVISER_ADM_BOOKED_EVENT,
+  ADVISER_ADM_REJECTED_EVENT,
+  ADVISER_ADM_RESCHEDULED_EVENT,
+  ADVISER_COUNSELING_BOOKED_EVENT,
+  ADVISER_COUNSELING_REJECTED_EVENT,
+  ADVISER_COUNSELING_RESCHEDULED_EVENT,
+  ADVISER_REFERRAL_CLOSED_EVENT,
+  ADVISER_REFERRAL_UPDATE_EVENT,
+  ADVISER_RISK_ALERT_EVENT,
+  ADVISER_SESSION_ALERT_EVENT,
+  ADVISER_SESSION_CANCELLED_EVENT,
+  ADVISER_SESSION_RESCHED_EVENT,
+} from "@/lib/realtime/teacherChannel";
+import {
+  playDeskSound,
+  primeDeskSounds,
+  isAdviserAdmBooked,
+  isAdviserAdmRejected,
+  isAdviserAdmRescheduled,
+  isAdviserCounselingBooked,
+  isAdviserCounselingRejected,
+  isAdviserCounselingRescheduled,
+  isAdviserReferralClosed,
+  isAdviserReferralEndorsed,
+  isAdviserReferralSessionBooked,
+  isAdviserReferralSessionCancelled,
+  isAdviserReferralSessionRescheduled,
+  isAdviserSessionBooked,
+  isAdviserSessionCancelled,
+  isAdviserSessionRescheduled,
+} from "@/lib/notify/deskSounds";
+import { useDeskCatchUp } from "@/lib/notify/deskCatchUp";
+import { useDeskSoundTitle } from "@/lib/notify/useDeskSoundTitle";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
@@ -28,10 +60,12 @@ import {
  * of those. If the learner leaves detection (resolved / corrected data) and
  * later comes back, they ring again. The alerted set resets per term.
  *
- * The realtime event and the `intervention_detected` notification fanout are
- * therefore only *refresh signals*: they make the board re-read immediately so
- * a brand-new learner rings sub-second, but they never play the clip themselves
- * — that is what used to re-ring the same student on every notification.
+ * The realtime events are the delivery path: a `RiskSnapshot` insert or an
+ * `Intervention` write makes the board re-read immediately so a brand-new
+ * learner rings sub-second. The `intervention_detected` notification fanout is
+ * only a fallback when Supabase realtime is off. None of them play the clip
+ * themselves — the board diff below decides — so a learner cannot re-ring on
+ * every later card/session/outcome update.
  *
  * Who already rang is persisted per adviser + term (`zentra.adviser.risk.rung.*`)
  * so a reload does not replay every learner on the board, while an advisee
@@ -73,6 +107,7 @@ const BOARD_QUERY_KEY = ["advisory-interventions", "queue"] as const;
 
 export function AdviserRiskAlertMonitor() {
   const queryClient = useQueryClient();
+  useDeskSoundTitle();
   // Only advisers receive advisee detections — subject teachers must not add
   // background polls for a sound they can never ring. Shares the overview query
   // the shell's sidebar already runs.
@@ -83,14 +118,124 @@ export function AdviserRiskAlertMonitor() {
   const boardEnabled = isAdviser && termReady;
 
   // Create + arm the shared clips (and the first-gesture unlock) for this shell.
-  // This desk only ever rings its own adviser clip.
+  // This desk only ever rings its own adviser clips.
   React.useEffect(() => {
-    primeDeskSounds(["adviserRisk"]);
+    primeDeskSounds([
+      "adviserRisk",
+      "adviserSession",
+      "adviserSessionResched",
+      "adviserSessionCancelled",
+      "adviserReferralUpdate",
+      "adviserReferralClosed",
+      "adviserAdmRejected",
+      "adviserAdmBooked",
+      "adviserAdmRescheduled",
+      "adviserCounselingBooked",
+      "adviserCounselingRejected",
+      "adviserCounselingRescheduled",
+    ]);
   }, []);
 
-  // Delivery path 1: realtime frames (a `intervention_detected` fanout or a
-  // High/Moderate `RiskSnapshot`). Only refreshes the board — the diff below
-  // decides whether this is a learner who has not rung yet.
+  // Guidance booked, moved or dropped an intervention session for one of this
+  // adviser's advisees — the notification fanout (or the realtime
+  // `CounselingSession` frame) fires the matching event. Referral-pipeline
+  // actions on a referral the teacher filed (ADM endorse/reject, session
+  // booked/moved/dropped) fire the same session events plus the referral ones.
+  React.useEffect(() => {
+    if (!isAdviser) return;
+    const onSessionBooked = () => playDeskSound("adviserSession");
+    const onSessionResched = () => playDeskSound("adviserSessionResched");
+    const onSessionCancelled = () => playDeskSound("adviserSessionCancelled");
+    const onReferralUpdate = () => playDeskSound("adviserReferralUpdate");
+    const onReferralClosed = () => playDeskSound("adviserReferralClosed");
+    const onAdmRejected = () => playDeskSound("adviserAdmRejected");
+    const onAdmBooked = () => playDeskSound("adviserAdmBooked");
+    const onAdmRescheduled = () => playDeskSound("adviserAdmRescheduled");
+    const onCounselingBooked = () => playDeskSound("adviserCounselingBooked");
+    const onCounselingRejected = () => playDeskSound("adviserCounselingRejected");
+    const onCounselingRescheduled = () =>
+      playDeskSound("adviserCounselingRescheduled");
+    window.addEventListener(ADVISER_SESSION_ALERT_EVENT, onSessionBooked);
+    window.addEventListener(ADVISER_SESSION_RESCHED_EVENT, onSessionResched);
+    window.addEventListener(ADVISER_SESSION_CANCELLED_EVENT, onSessionCancelled);
+    window.addEventListener(ADVISER_REFERRAL_UPDATE_EVENT, onReferralUpdate);
+    window.addEventListener(ADVISER_REFERRAL_CLOSED_EVENT, onReferralClosed);
+    window.addEventListener(ADVISER_ADM_REJECTED_EVENT, onAdmRejected);
+    window.addEventListener(ADVISER_ADM_BOOKED_EVENT, onAdmBooked);
+    window.addEventListener(ADVISER_ADM_RESCHEDULED_EVENT, onAdmRescheduled);
+    window.addEventListener(ADVISER_COUNSELING_BOOKED_EVENT, onCounselingBooked);
+    window.addEventListener(
+      ADVISER_COUNSELING_REJECTED_EVENT,
+      onCounselingRejected,
+    );
+    window.addEventListener(
+      ADVISER_COUNSELING_RESCHEDULED_EVENT,
+      onCounselingRescheduled,
+    );
+    return () => {
+      window.removeEventListener(ADVISER_SESSION_ALERT_EVENT, onSessionBooked);
+      window.removeEventListener(ADVISER_SESSION_RESCHED_EVENT, onSessionResched);
+      window.removeEventListener(ADVISER_SESSION_CANCELLED_EVENT, onSessionCancelled);
+      window.removeEventListener(ADVISER_REFERRAL_UPDATE_EVENT, onReferralUpdate);
+      window.removeEventListener(ADVISER_REFERRAL_CLOSED_EVENT, onReferralClosed);
+      window.removeEventListener(ADVISER_ADM_REJECTED_EVENT, onAdmRejected);
+      window.removeEventListener(ADVISER_ADM_BOOKED_EVENT, onAdmBooked);
+      window.removeEventListener(ADVISER_ADM_RESCHEDULED_EVENT, onAdmRescheduled);
+      window.removeEventListener(
+        ADVISER_COUNSELING_BOOKED_EVENT,
+        onCounselingBooked,
+      );
+      window.removeEventListener(
+        ADVISER_COUNSELING_REJECTED_EVENT,
+        onCounselingRejected,
+      );
+      window.removeEventListener(
+        ADVISER_COUNSELING_RESCHEDULED_EVENT,
+        onCounselingRescheduled,
+      );
+    };
+  }, [isAdviser]);
+
+  // Login catch-up: if a "session booked"/"session moved"/"session cancelled"/
+  // referral decision landed while the adviser was signed out (or on another
+  // device), ring it once on arrival instead of staying silent until the next
+  // live change.
+  useDeskCatchUp({
+    role: "adviser",
+    userId: session?.sub ?? null,
+    enabled: isAdviser,
+    title: "Updates for your advisees",
+    clipFor: (row) =>
+      isAdviserCounselingBooked(row)
+        ? "adviserCounselingBooked"
+        : isAdviserCounselingRejected(row)
+          ? "adviserCounselingRejected"
+          : isAdviserCounselingRescheduled(row)
+            ? "adviserCounselingRescheduled"
+            : isAdviserAdmBooked(row)
+              ? "adviserAdmBooked"
+              : isAdviserAdmRejected(row)
+                ? "adviserAdmRejected"
+                : isAdviserReferralClosed(row)
+                  ? "adviserReferralClosed"
+                  : isAdviserReferralEndorsed(row)
+                    ? "adviserReferralUpdate"
+                    : isAdviserSessionCancelled(row) || isAdviserReferralSessionCancelled(row)
+                      ? "adviserSessionCancelled"
+                      : isAdviserAdmRescheduled(row)
+                        ? "adviserAdmRescheduled"
+                        : isAdviserSessionRescheduled(row) || isAdviserReferralSessionRescheduled(row)
+                          ? "adviserSessionResched"
+                          : isAdviserSessionBooked(row) || isAdviserReferralSessionBooked(row)
+                            ? "adviserSession"
+                            : null,
+  });
+
+  // Delivery path 1: realtime frames (`RiskSnapshot` inserts and `Intervention`
+  // writes — live, not throttled like a timer). Only refreshes the board — the
+  // diff below decides whether this is a learner who has not rung yet. The
+  // `intervention_detected` notification fanout is a fallback for setups
+  // without Supabase realtime, never the trigger while push is available.
   React.useEffect(() => {
     if (!isAdviser) return;
     const onAlert = () => {

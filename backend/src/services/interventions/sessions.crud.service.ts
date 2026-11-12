@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { assertSessionSlotFree } from "../../lib/sessionConflict.js";
 import { ensureWorkable, formatSession, formatWhen, getIntervention, getInterventionSession, isSessionType, notifyInterventionAdviser, parseScheduledAt, truncate, adviserOf } from "../../modules/interventions/interventions.repository.js";
 import type { InterventionContext } from "./intervention.types.js";
 
@@ -34,11 +35,13 @@ export async function bookSession(
       "This learner already has a booked session. Finish or cancel it before booking another one.",
     );
   }
+  const scheduledAt = parseScheduledAt(input.scheduledAt);
+  await assertSessionSlotFree(prisma, { scheduledAt, counselorId: ctx.userId });
   const created = await prisma.counselingSession.create({
     data: {
       interventionId: row.id,
       sessionType: input.sessionType,
-      scheduledAt: parseScheduledAt(input.scheduledAt),
+      scheduledAt,
       venue: input.venue?.trim() || null,
       status: "scheduled",
       createdBy: ctx.userId,
@@ -111,11 +114,13 @@ export async function completeSession(
     });
     let created: { id: string; sessionType: string; scheduledAt: Date } | null = null;
     if (input.followUpSession) {
+      const nextAt = parseScheduledAt(input.followUpSession.scheduledAt);
+      await assertSessionSlotFree(tx, { scheduledAt: nextAt, counselorId: ctx.userId });
       created = await tx.counselingSession.create({
         data: {
           interventionId: row.id,
           sessionType: input.followUpSession.sessionType,
-          scheduledAt: parseScheduledAt(input.followUpSession.scheduledAt),
+          scheduledAt: nextAt,
           venue: input.followUpSession.venue?.trim() || null,
           status: "scheduled",
           createdBy: ctx.userId,
@@ -194,6 +199,11 @@ export async function rescheduleSession(
     throw new AppError(400, "INVALID_ACTION", "Only an upcoming session can be moved");
   }
   const nextDate = parseScheduledAt(scheduledAt);
+  await assertSessionSlotFree(prisma, {
+    scheduledAt: nextDate,
+    counselorId: ctx.userId,
+    excludeSessionId: session.id,
+  });
   const updated = await prisma.counselingSession.update({
     where: { id: session.id },
     data: { scheduledAt: nextDate },

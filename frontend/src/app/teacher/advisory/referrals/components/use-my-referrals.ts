@@ -43,6 +43,12 @@ export interface ReferralRow {
   devicesReturned?: number;
   certificationAt?: string | null;
   resolvedAt?: string | null;
+  /** Booked-but-not-yet-held session on an ADM case (guidance/nurse booked it). */
+  bookedSession?: {
+    scheduledAt: string;
+    sessionType: string;
+    venue: string | null;
+  } | null;
 }
 export interface MyReferralsPage {
   referrals: ReferralRow[];

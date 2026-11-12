@@ -10,7 +10,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  IconRailSkeleton,
   KanbanBoardSkeleton,
 } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import page from "./ClassWorkspace.module.css";
@@ -56,21 +55,29 @@ function EncodeCardSkeleton() {
 export function ClassWorkspaceSkeleton() {
   return (
     <section className={page.page} aria-busy="true" aria-label="Loading class workspace">
-      {/* Toolbar row mirrors the real SubjectRail switcher + assessment search. */}
-      <div className="flex flex-wrap items-center justify-between gap-3" aria-hidden="true">
-        <div className="flex min-w-0 flex-1 flex-row gap-2 overflow-x-auto pb-0.5">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-[54px] w-40 shrink-0 rounded-lg" />
-          ))}
-        </div>
-        <Skeleton className="h-8 w-40 shrink-0 rounded-[16px]" />
-      </div>
-      {/* Real grid is [main 1fr | gutter 2.75rem]; the main column comes first. */}
+      {/* Two panels mirror the real workspace: subject list left, grades right. */}
       <div className={page.layout} aria-hidden="true">
+        <aside className={page.subjectsPanel}>
+          <div className={page.subjects}>
+            <Skeleton className="h-8 w-full rounded-[16px]" />
+            <Skeleton className="h-3 w-20" />
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-[54px] w-full rounded-lg" />
+            ))}
+          </div>
+        </aside>
         <div className={page.main}>
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-6 w-24 rounded-[6px]" />
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-6 w-14 rounded-full" />
+          </div>
           <EncodeCardSkeleton />
         </div>
-        <IconRailSkeleton count={4} />
       </div>
     </section>
   );

@@ -126,6 +126,7 @@ function statusHelp(record: GuidanceAnecdotalRecord): string {
 export function GuidanceAnecdotalFolders({
   records,
   page,
+  pageSize,
   total,
   onPageChange,
   query,
@@ -239,6 +240,7 @@ export function GuidanceAnecdotalFolders({
           <Pagination
             currentPage={page}
             totalItems={total}
+            pageSize={pageSize}
             onPageChange={onPageChange}
           />
         </div>

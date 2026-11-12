@@ -21,6 +21,11 @@ import { cn } from "@/lib/utils";
 import { ClinicDatePicker } from "@/app/nurse/overview/components/ClinicDateTimePicker";
 import type { FinishSessionFields } from "@/components/session-booking/FinishSessionDialog";
 import { SESSION_KIND_OPTIONS } from "@/lib/labels/sessions";
+import {
+  findOverlappingBooking,
+  formatClockLabel,
+  sessionConflictNote,
+} from "@/lib/sessions/conflicts";
 import { fetchDaySchedule } from "@/services/guidance/sessions.service";
 import type { CounselingSessionItem } from "@/services/guidance/interventions.types";
 import {
@@ -136,6 +141,11 @@ export function InterventionFinishDialog({
       const scheduledAt = toScheduledAt(followDate, followTime);
       if (!scheduledAt) {
         setError("Pick both a date and a time for the follow-up.");
+        return;
+      }
+      const clash = findOverlappingBooking(followTime, taken);
+      if (clash) {
+        setError(sessionConflictNote(clash));
         return;
       }
       followUpSession = {
@@ -353,20 +363,21 @@ export function InterventionFinishDialog({
                       Follow-up time
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {taken.length > 0 ? "Crossed-out times are already taken" : ""}
+                      {taken.length > 0 ? "Crossed-out times overlap a booked session" : ""}
                     </span>
                   </div>
                   <div className="mt-1.5 grid grid-cols-4 gap-2" role="group" aria-labelledby="iv-done-time-label">
                     {TIME_SLOTS.map((slot) => {
                       const selected = followTime === slot.key;
-                      const isTaken = taken.includes(slot.key);
+                      const clash = findOverlappingBooking(slot.key, taken);
+                      const isTaken = clash !== null;
                       return (
                         <button
                           key={slot.key}
                           type="button"
                           aria-pressed={selected}
                           disabled={isTaken || isActionPending}
-                          title={isTaken ? "Already taken" : slot.label}
+                          title={isTaken ? `Overlaps the ${formatClockLabel(clash)} session` : slot.label}
                           onClick={() => setFollowTime(slot.key)}
                           className={cn(
                             "h-[38px] whitespace-nowrap rounded-[10px] border border-border px-1 text-[13px] font-medium text-foreground",

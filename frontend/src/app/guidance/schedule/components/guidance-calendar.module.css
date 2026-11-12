@@ -1,0 +1,647 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 0.25rem 2rem;
+  min-height: 100%;
+  background-color: var(--background);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+:global(.dark) .page {
+  background-color: transparent;
+}
+
+/* Layout — board + day rail (rail sticky, like every guidance desk). */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 21rem;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mainCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.boardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.boardEmpty {
+  padding: 0.25rem 0;
+}
+
+/* Toolbar ------------------------------------------------------------------ */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.navGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.navButton {
+  height: 1.875rem;
+  width: 1.875rem;
+}
+
+.monthLabel {
+  min-width: 9.5rem;
+  padding: 0 0.125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.segmentButton,
+.filterButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.segmentButton:focus-visible,
+.filterButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.searchWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 13rem;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  height: 0.875rem;
+  width: 0.875rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.search {
+  height: 1.875rem;
+  padding-left: 1.875rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  padding-top: 0.125rem;
+}
+
+.pillCount {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+/* Track accents — one colour per case type, used by every event card.
+   Intervention = blue, counseling = violet, ADM case = amber,
+   ADM parent meeting = teal (dashed edge). */
+.chip,
+.weekEvent,
+.railCard {
+  --accent: #3b82f6;
+}
+
+.chip[data-track="counseling"],
+.weekEvent[data-track="counseling"],
+.railCard[data-track="counseling"] {
+  --accent: #8b5cf6;
+}
+
+.chip[data-track="adm"],
+.weekEvent[data-track="adm"],
+.railCard[data-track="adm"] {
+  --accent: #f59e0b;
+}
+
+.chip[data-track="adm_meeting"],
+.weekEvent[data-track="adm_meeting"],
+.railCard[data-track="adm_meeting"] {
+  --accent: #14b8a6;
+}
+
+/* Month -------------------------------------------------------------------- */
+
+.weekdayRow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.weekday {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-rows: repeat(6, minmax(6.5rem, 1fr));
+}
+
+.weekRow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.weekRow:last-child {
+  border-bottom: none;
+}
+
+.dayCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  min-height: 6.5rem;
+  padding: 0.375rem;
+  border-right: 1px solid var(--border);
+  background-color: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+
+.dayCell:last-child {
+  border-right: none;
+}
+
+.dayCell:hover {
+  background-color: color-mix(in oklch, var(--muted) 40%, transparent);
+}
+
+.dayCellOut {
+  background-color: color-mix(in oklch, var(--muted) 22%, transparent);
+}
+
+.dayCellOut .dayNumber {
+  color: color-mix(in oklch, var(--muted-foreground) 70%, transparent);
+}
+
+.dayCellSelected {
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.dayNumberRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-bottom: 0.0625rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.dayNumberToday {
+  font-weight: 700;
+  color: var(--primary-foreground);
+  background-color: var(--primary);
+  border-radius: 9999px;
+}
+
+.moreChip {
+  padding: 0.0625rem 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  text-align: left;
+}
+
+.moreChip:hover {
+  color: var(--foreground);
+}
+
+/* Event chips -------------------------------------------------------------- */
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  overflow: hidden;
+  padding: 0.1875rem 0.3125rem;
+  border: 1px solid color-mix(in oklch, var(--accent) 32%, var(--border));
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--accent) 12%, var(--card));
+  color: var(--foreground);
+  text-align: left;
+  transition: border-color 120ms ease-out, background-color 120ms ease-out;
+}
+
+.chip:hover {
+  background-color: color-mix(in oklch, var(--accent) 20%, var(--card));
+}
+
+.chipDot {
+  flex-shrink: 0;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--accent);
+}
+
+.chipTime {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.chipName {
+  overflow: hidden;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipCancelled {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+/* Week --------------------------------------------------------------------- */
+
+.weekScroll {
+  overflow-x: auto;
+}
+
+.weekHead {
+  display: grid;
+  grid-template-columns: 3.25rem repeat(7, minmax(6.5rem, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.weekHeadCorner {
+  border-right: 1px solid var(--border);
+}
+
+.weekDayHead {
+  padding: 0.4375rem 0.375rem;
+  border-right: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition: background-color 120ms ease-out;
+}
+
+.weekDayHead:hover {
+  background-color: color-mix(in oklch, var(--muted) 40%, transparent);
+}
+
+.weekDayHead:last-child {
+  border-right: none;
+}
+
+.weekDayHeadToday {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.weekDayName {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.weekBody {
+  display: grid;
+  grid-template-columns: 3.25rem repeat(7, minmax(6.5rem, 1fr));
+}
+
+.hours {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+}
+
+.hourLabel {
+  height: 3rem;
+  padding-right: 0.375rem;
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  text-align: right;
+  transform: translateY(-0.5em);
+}
+
+.dayCol {
+  position: relative;
+  border-right: 1px solid var(--border);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--border) 0 1px,
+    transparent 1px 3rem
+  );
+  cursor: pointer;
+}
+
+.dayCol:last-child {
+  border-right: none;
+}
+
+.dayCol[data-selected="true"] {
+  background-color: color-mix(in oklch, var(--primary) 4%, transparent);
+}
+
+.weekEvent {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  overflow: hidden;
+  padding: 0.1875rem 0.3125rem;
+  border: 1px solid color-mix(in oklch, var(--accent) 32%, var(--border));
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--accent) 12%, var(--card));
+  color: var(--foreground);
+  text-align: left;
+  transition: background-color 120ms ease-out;
+}
+
+.weekEvent:hover {
+  background-color: color-mix(in oklch, var(--accent) 20%, var(--card));
+}
+
+.weekEventTime {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.weekEventName {
+  overflow: hidden;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Day rail ----------------------------------------------------------------- */
+
+.rail {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background-color: var(--card);
+}
+
+.railHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.railEyebrow {
+  margin: 0;
+  font-size: 0.6563rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.railTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.railCount {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.railList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.railCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.625rem 0.6875rem;
+  border: 1px solid color-mix(in oklch, var(--accent) 28%, var(--border));
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--accent) 6%, var(--card));
+  cursor: pointer;
+  transition: background-color 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+.railCard:hover {
+  background-color: color-mix(in oklch, var(--accent) 12%, var(--card));
+}
+
+.railCard:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.railCard[data-selected="true"] {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.railCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.railPerson {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.railPersonText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.railWhen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.railLearner {
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.railPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.railAction {
+  align-self: flex-start;
+  height: 1.5rem;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+/* States ------------------------------------------------------------------- */
+
+.skeletonBoard {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background-color: var(--card);
+}
+
+.skelGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  padding: 0.5rem;
+}
+
+.skelCell {
+  height: 5rem;
+}
+
+.errorCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background-color: var(--card);
+}
+
+.errorTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.errorHint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.retryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.875rem;
+  width: 1.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip,
+  .weekEvent,
+  .railCard,
+  .dayCell,
+  .weekDayHead {
+    transition: none;
+  }
+  .spin {
+    animation: none;
+  }
+}

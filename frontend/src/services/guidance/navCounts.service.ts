@@ -18,6 +18,7 @@ export interface GuidanceNavQueues {
   counseling: GuidanceNavEntry[];
   overview: GuidanceNavEntry[];
   insights: GuidanceNavEntry[];
+  schedule: GuidanceNavEntry[];
   anecdotal: GuidanceNavEntry[];
   documents: GuidanceNavEntry[];
   report: GuidanceNavEntry[];
@@ -38,6 +39,7 @@ const ROUTE_KEYS: Record<string, keyof GuidanceNavQueues> = {
   "/guidance/alerts": "alerts",
   "/guidance/interventions": "interventions",
   "/guidance/interventions/insights": "insights",
+  "/guidance/schedule": "schedule",
   "/guidance/referrals/adm": "adm",
   "/guidance/referrals/counseling": "counseling",
   "/guidance/anecdotal": "anecdotal",
@@ -58,6 +60,7 @@ export const NAV_QUEUE_QUERY_KEYS: Record<
   alerts: [["guidance-alerts"]],
   interventions: [["guidance-interventions"]],
   insights: [["guidance-intervention-insights"]],
+  schedule: [["guidance-calendar"]],
   adm: [["guidance-adm"], ["guidance-referrals"], ["guidance-referrals-highlight"]],
   counseling: [["guidance-referrals"], ["guidance-referrals-highlight"]],
   anecdotal: [["guidance-anecdotal"], ["guidance-risk-behavioral"]],
@@ -120,6 +123,7 @@ const QUEUE_KEYS: (keyof GuidanceNavQueues)[] = [
   "alerts",
   "interventions",
   "insights",
+  "schedule",
   "adm",
   "counseling",
   "anecdotal",
@@ -132,6 +136,7 @@ const EMPTY_QUEUES: GuidanceNavQueues = {
   alerts: [],
   interventions: [],
   insights: [],
+  schedule: [],
   adm: [],
   counseling: [],
   anecdotal: [],

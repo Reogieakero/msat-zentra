@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { FolderOpen, Loader2 } from "lucide-react";
+import { ArrowUpRight, FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ZentraPaginationSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
@@ -148,17 +148,20 @@ function GuidanceSessionDocumentsPageInner() {
   const hasActiveFilters = queryInput.trim() !== "" || type !== "";
   if (allRecords.length === 0 && !hasActiveFilters) {
     return (
-      <section className={styles.page} aria-label="Session documents">
+      <section className={`${styles.page} relative`} aria-label="Session documents">
+        {/* Page-level action sits top-right, like the other desk empty states;
+            the callout itself stays centered. */}
+        <Button asChild size="sm" className="absolute right-0 top-0 h-6 gap-1 px-2 text-xs">
+          <Link href="/guidance/referrals">
+            <ArrowUpRight className="size-3.5" aria-hidden="true" />
+            View referrals
+          </Link>
+        </Button>
         <GuidanceEmptyCard
           icon={FolderOpen}
           title="No session files yet"
           hint="Images attached to counseling sessions — on referrals or interventions — will appear here."
           label="Session documents"
-          action={
-            <Button asChild size="sm" className="mt-2">
-              <Link href="/guidance/referrals">View referrals</Link>
-            </Button>
-          }
           centered
         />
       </section>

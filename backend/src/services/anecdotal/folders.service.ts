@@ -1,5 +1,9 @@
 import { prisma } from "../../lib/prisma.js";
 import { assertOwnFolder } from "../../modules/anecdotal/anecdotal.repository.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+} from "../../lib/learnerVisibility.js";
 import type { AnecdotalContext } from "./anecdotal.types.js";
 
 export async function listFolders(ownerId: string) {
@@ -68,6 +72,7 @@ export async function listMine(
     select: { id: true },
   });
   const sectionIds = advised.map((s) => s.id);
+  const archivedLearners = await archivedAdvisoryLearnerIds();
   // Classes (and the advisees) are shared by all three terms of a school year,
   // so the desk shows every record filed this school year — switching term
   // must not hide last term's records. The record's own term travels with it
@@ -78,11 +83,15 @@ export async function listMine(
     term?: { schoolYearId: string };
     termId?: string;
     OR?: object[];
+    NOT?: { OR: object[] };
   } = {
     observerId: ownerId,
     // The desk shows live records; the "Deleted" view passes deleted: true to
     // list only the soft-deleted ones the teacher can restore.
     deletedAt: opts.deleted ? { not: null } : null,
+    // A learner the adviser removed from the advisory list must not resurface
+    // here through records they filed earlier.
+    ...excludeArchivedLearnerRows(archivedLearners),
   };
   if (scope.schoolYearId) where.term = { schoolYearId: scope.schoolYearId };
   else if (scope.termId) where.termId = scope.termId;

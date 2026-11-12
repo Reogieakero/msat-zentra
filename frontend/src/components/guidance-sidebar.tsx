@@ -36,6 +36,7 @@ export const NAV: NavGroup[] = [
     items: [
       { title: "Overview", href: "/guidance/overview", icon: NAV_ICONS.overview },
       { title: "Alerts", href: "/guidance/alerts", icon: NAV_ICONS.alerts },
+      { title: "Schedule", href: "/guidance/schedule", icon: NAV_ICONS.schedule },
       {
         title: "Interventions",
         href: "/guidance/interventions",
@@ -103,6 +104,7 @@ const QUEUE_FOR_HREF: Record<string, keyof GuidanceNavDots> = {
   "/guidance/alerts": "alerts",
   "/guidance/interventions": "interventions",
   "/guidance/interventions/insights": "insights",
+  "/guidance/schedule": "schedule",
   "/guidance/referrals/adm": "adm",
   "/guidance/referrals/counseling": "counseling",
   "/guidance/anecdotal": "anecdotal",

@@ -54,7 +54,16 @@ export const DEFAULT_ADM_REVIEW_COPY: AdmReviewCopy = {
   rejectFailed: "Could not reject this case. Try again.",
 };
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  // Local calendar day — bookings are written as local wall-clock time, so
+  // "today" (and the past-time floor) has to be local too.
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+}
+
+/** Local current time as "HH:MM" — the floor for today's clock picker. */
+function currentTimeKey(): string {
+  const n = new Date();
+  return `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
 }
 /* Amber — the official-report folder accent (same as the SF10 record cards). */
 const REPORT_FOLDER_COLOR = "#f59e0b";
@@ -78,6 +87,7 @@ export function AdmReviewDialog({
   hasActiveSession,
   copy: copyOverrides,
   formatError,
+  fetchTakenTimes,
   onBookSession,
   onReject,
   onCreateReferral,
@@ -102,6 +112,8 @@ export function AdmReviewDialog({
   hasActiveSession: boolean;
   copy?: Partial<AdmReviewCopy>;
   formatError?: (err: unknown, fallback: string) => string;
+  /** Async lookup of booked `HH:MM` slots for a date — omit for no availability check. */
+  fetchTakenTimes?: (dateKey: string, signal: AbortSignal) => Promise<string[]>;
   onBookSession: (scheduledAt: string) => Promise<void>;
   onReject: (recommendation: string) => Promise<void>;
   onCreateReferral: (draft: AdmReviewDraft) => void;
@@ -112,13 +124,15 @@ export function AdmReviewDialog({
   const [sectionName, sectionGrade] = sectionLine
     .split("·")
     .map((part) => part.trim());
+  const [taken, setTaken] = React.useState<string[]>([]);
+  const [takenLoading, setTakenLoading] = React.useState(false);
   const {
     recommendation,
     setRecommendation,
     sessionDate,
-    setSessionDate,
     sessionTime,
-    setSessionTime,
+    chooseSessionDate,
+    chooseSessionTime,
     acting,
     booking,
     confirmFor,
@@ -139,6 +153,7 @@ export function AdmReviewDialog({
     student,
     sessionNoun,
     hasActiveSession,
+    taken,
     copy,
     formatError,
     onBookSession,
@@ -146,9 +161,33 @@ export function AdmReviewDialog({
     onCreateReferral,
     onClose,
   });
+  // Availability for the picked day — same block rule as the interventions
+  // desk, so an ADM consultation can't be booked on top of another session.
+  React.useEffect(() => {
+    if (!open || !fetchTakenTimes || !sessionDate || !takenLoading) return;
+    const controller = new AbortController();
+    fetchTakenTimes(sessionDate, controller.signal)
+      .then((rows) => {
+        if (!controller.signal.aborted) setTaken(rows);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setTaken([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setTakenLoading(false);
+      });
+    return () => controller.abort();
+  }, [open, sessionDate, fetchTakenTimes, takenLoading]);
+
+  function pickSessionDate(next: string) {
+    chooseSessionDate(next);
+    setTaken([]);
+    setTakenLoading(!!fetchTakenTimes && !!next);
+  }
   // Kanban-style overlay: the dark backdrop and Escape close it — never
   // while a request is in flight, or while a nested overlay (confirm /
   // blocked / report preview) owns the top layer.
+  const today = todayKey();
   const locked = acting || booking;
   const nestedOverlayOpen =
     confirmFor !== null || blockedOpen || previewId !== null;
@@ -351,16 +390,28 @@ export function AdmReviewDialog({
                     label="Date"
                     labelClassName="text-xs"
                     value={sessionDate}
-                    onChange={setSessionDate}
-                    min={todayKey()}
+                    onChange={pickSessionDate}
+                    min={today}
                   />
                   <div>
                     <Label className="text-xs">Time</Label>
                     <div className="mt-1">
                       {/* Clock-face picker — same control as the chat's
-                          anecdotal flow ("when it happened"). */}
-                      <TimePickers value={sessionTime} onChange={setSessionTime} />
+                          anecdotal flow ("when it happened"), floored to the
+                          current time when booking for today. */}
+                      <TimePickers
+                        value={sessionTime}
+                        onChange={chooseSessionTime}
+                        minTime={sessionDate === today ? currentTimeKey() : undefined}
+                      />
                     </div>
+                    {takenLoading ? (
+                      <p className={styles.fieldHint}>Checking availability…</p>
+                    ) : sessionDate && taken.length > 0 ? (
+                      <p className={styles.fieldHint}>
+                        Crossed-out times overlap a booked session
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               </KanbanBoard>

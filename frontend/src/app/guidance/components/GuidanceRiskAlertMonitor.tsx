@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchGuidanceAlertCounts } from "@/services/guidance/alerts.service";
 import {
@@ -15,6 +16,7 @@ import {
   isSelfNotified,
 } from "@/lib/realtime/guidanceChannel";
 import {
+  hasDeskSoundGesture,
   isDeskSoundPlaying,
   isIncomingReferral,
   isReferralCancelled,
@@ -25,6 +27,7 @@ import {
 import {
   useDeskCatchUp,
 } from "@/lib/notify/deskCatchUp";
+import { useDeskSoundTitle } from "@/lib/notify/useDeskSoundTitle";
 import { useSession } from "@/lib/auth/useSession";
 import { markRealtimeUpdate } from "@/lib/api/fresh";
 import { guidanceLiveQueryOptions } from "@/lib/api/live";
@@ -41,9 +44,10 @@ import type {
  * Rings `/sounds/referrals.mp3` for an arriving (or withdrawn) referral and
  * `/sounds/risk alert.mp3` only when the interventions desk's data changes —
  * a new at-risk learner or an intervention move. Alerts-only, counseling,
- * ADM and anecdote changes refresh caches without ringing. It also prefixes
- * the browser tab title with the live High/Moderate count. Two independent
- * triggers feed the risk alarm, so it survives either one being unavailable:
+ * ADM and anecdote changes refresh caches without ringing. While a clip is
+ * audible it also shows the speaker icon in the browser tab title. Two
+ * independent triggers feed the risk alarm, so it survives either one being
+ * unavailable:
  *
  *  - the realtime channel (`GUIDANCE_RISK_ALERT_EVENT`), which fires from
  *    WebSocket frames — not throttled while the tab is hidden, so the sound
@@ -59,11 +63,25 @@ import type {
  *    the alarm sound on every guidance page and on other sites.
  *
  * All three triggers only *refresh* the board; the sound is decided in one
- * place by diffing the board payload. A learner rings once when they appear in
- * intervention detection and stays silent while they remain on the board, no
- * matter how many cards/sessions/outcomes update. If they leave detection
- * (resolved, corrected data) and later come back, they ring again. Opening or
- * clicking a card never rings.
+ * place by diffing the board payload — the fanout notification (e.g. "New
+ * Moderate-risk intervention") never rings on its own, so the clip can only
+ * start when the interventions page's data actually changes. A learner rings
+ * once when they enter intervention detection and stays silent while they
+ * remain at risk, no matter how many cards/sessions/outcomes update. Leaving
+ * detection (recovered, resolved, corrected data) re-arms them, so a relapse
+ * rings again — even while their "Low + ongoing" card is still on the board.
+ * A ring only counts as delivered when playback actually started, so a clip
+ * blocked by the audio policy or throttled by a burst is retried on the next
+ * poll instead of muting that learner for the term. Opening or clicking a card
+ * never rings.
+ *
+ * `/guidance/alerts` is the triage board: a case that lands or moves there is
+ * announced by its sidebar dot in realtime, never by the risk alarm — the dot
+ * already tells the counselor something new arrived, and the alerts desk is
+ * where several sources (referrals, detections, follow-ups) land at once, so a
+ * clip there would fire for work the desk itself just opened. The learner is
+ * still marked as alerted, so they stay silent when the counselor moves to
+ * another page.
  *
  * Browsers only allow programmatic audio after a user gesture — the first
  * click/key anywhere on the desk primes the element so later background alerts
@@ -82,9 +100,34 @@ const COUNT_POLL_MS = 10_000;
 const NAV_POLL_MS = 5_000;
 /** One ring per burst — the hourly sweep can flag several learners at once. */
 const MIN_REPLAY_MS = 12_000;
-const TITLE_PREFIX = /^\(\d+\+?\)\s*/;
 
 const RISK_RANK: Record<string, number> = { High: 0, Moderate: 1, Low: 2 };
+
+/** Learners this desk already rang for (per user + school year), persisted so a
+ *  reload does not replay the board while a detection that landed offline still
+ *  rings once on arrival — the same contract as the adviser monitor's
+ *  `zentra.adviser.risk.rung.*`. */
+const RUNG_KEY_PREFIX = "zentra.guidance.risk.rung";
+
+function readRung(key: string): Set<string> | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return new Set(parsed.filter((value): value is string => typeof value === "string"));
+  } catch {
+    return null;
+  }
+}
+
+function writeRung(key: string, keys: Set<string>) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify([...keys]));
+  } catch {
+    /* storage unavailable — the in-memory set still prevents a double ring */
+  }
+}
 
 /** The parts of an interventions card the counselor can see change. */
 interface BoardRow {
@@ -113,7 +156,11 @@ const BOARD_QUERY_KEY = ["guidance-interventions", "queue"] as const;
 export function GuidanceRiskAlertMonitor() {
   const queryClient = useQueryClient();
   const session = useSession();
-  const { activeTerm, termReady } = useTerm();
+  useDeskSoundTitle();
+  const { activeTerm, termReady, activeSchoolYear } = useTerm();
+  const pathname = usePathname();
+  /** The alerts desk shows detections as triage cards — dot only, no clip. */
+  const onAlertsDesk = (pathname ?? "").replace(/\/+$/, "") === "/guidance/alerts";
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const referralAudioRef = React.useRef<HTMLAudioElement | null>(null);
   const cancelAudioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -172,7 +219,11 @@ export function GuidanceRiskAlertMonitor() {
     // Also arms the shared desk-sound players + gesture flag, so the login
     // catch-up ring below can tell when playback is allowed. Only this desk's
     // clips are primed — never the adviser alert.
-    primeDeskSounds(["referral", "cancelled", "risk"]);
+    primeDeskSounds([
+      "referral",
+      "cancelled",
+      "risk",
+    ]);
     const risk = new Audio(SOUND_SRC);
     risk.preload = "auto";
     risk.volume = 0.9;
@@ -230,23 +281,34 @@ export function GuidanceRiskAlertMonitor() {
     };
   }, []);
 
+  /**
+   * Ring the risk clip. Returns whether playback actually started, so the caller
+   * only marks the learner as announced when the desk really heard it — a
+   * blocked/throttled clip stays pending and the next poll retries.
+   */
   const play = React.useCallback(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio) return false;
     // Never restart/overlap a clip that is already ringing — one update must be
     // one sound even when several triggers (realtime frame + poll + counter)
     // report the same change, and a referral clip must never talk over it.
-    if (isDeskSoundPlaying()) return;
+    if (isDeskSoundPlaying()) return false;
+    // Browsers reject programmatic audio until the first gesture. Reporting
+    // "delivered" here would mark the learner as heard for the term even though
+    // nothing played, so leave them pending — the next poll (after the user
+    // clicks/keypresses anywhere) rings for that detection instead.
+    if (!hasDeskSoundGesture()) return false;
     const now = Date.now();
-    if (now - lastPlayedRef.current < MIN_REPLAY_MS) return;
+    if (now - lastPlayedRef.current < MIN_REPLAY_MS) return false;
     lastPlayedRef.current = now;
     try {
       audio.currentTime = 0;
       void audio.play().catch(() => {
         /* No gesture yet or audio policy — next detection retries. */
       });
+      return true;
     } catch {
-      /* ignore */
+      return false;
     }
   }, []);
 
@@ -336,58 +398,88 @@ export function GuidanceRiskAlertMonitor() {
   // and stays silent while they remain on the board. It runs on any guidance
   // page and while the tab sits on another site because this poll runs in the
   // shell.
-  const boardRowsRef = React.useRef<Map<string, BoardRow> | null>(null);
-  /** Term the baseline belongs to — a new term is a new board. */
-  const boardTermRef = React.useRef<string | null>(null);
-  /** Learners already rung for in this term, so a card update stays silent. */
-  const alertedStudentsRef = React.useRef<Set<string>>(new Set());
+  //
+  // Who already rang is persisted per user + school year, exactly like the
+  // adviser monitor: the first ever visit seeds silently (no backlog replay),
+  // but a reload or re-login no longer swallows a learner detected a moment
+  // before the counselor opened the desk — they are still not in the stored set
+  // and ring on the first poll.
+  const rungRef = React.useRef<Set<string> | null>(null);
+  /** Storage key the current `rungRef` belongs to (user + school year). */
+  const rungKeyRef = React.useRef<string | null>(null);
   const boardStudents = boardQuery.data?.students;
+  /** Changes on every successful poll, even when the payload is deep-equal —
+   *  that is what re-runs the diff below so a clip that could not start yet
+   *  (no gesture, another clip ringing) is retried on the next refresh instead
+   *  of muting that learner until they leave detection. */
+  const boardUpdatedAt = boardQuery.dataUpdatedAt;
+  const rungKey = session?.sub
+    ? `${RUNG_KEY_PREFIX}.${session.sub}.${activeSchoolYear?.id ?? ""}`
+    : null;
   React.useEffect(() => {
-    if (!Array.isArray(boardStudents)) return;
+    if (!Array.isArray(boardStudents) || !rungKey) return;
     const next = new Map<string, BoardRow>();
     for (const student of boardStudents) next.set(student.studentKey, boardRow(student));
 
-    // A term switch re-seeds the baseline and re-arms every learner — a learner
-    // carried into the new term has not rung there yet.
-    if (boardTermRef.current !== termKey) {
-      boardTermRef.current = termKey;
-      boardRowsRef.current = next;
-      alertedStudentsRef.current = new Set();
+    if (rungKeyRef.current !== rungKey) {
+      rungKeyRef.current = rungKey;
+      rungRef.current = readRung(rungKey);
+    }
+    const stored = rungRef.current;
+    // First ever visit to this desk: seed silently — signing in must not ring
+    // for the whole backlog.
+    if (stored === null) {
+      const seed = new Set<string>();
+      for (const [key, row] of next) if (row.rank <= 1) seed.add(key);
+      rungRef.current = seed;
+      writeRung(rungKey, seed);
       return;
     }
 
-    const previous = boardRowsRef.current;
-    boardRowsRef.current = next;
-    // First payload only seeds the baseline — signing in must not ring for
-    // every case that was already on the board.
-    if (!previous) return;
-
-    // A learner who left detection is forgotten, so coming back rings again.
-    const alerted = alertedStudentsRef.current;
-    for (const key of [...alerted]) {
-      if (!next.has(key)) alerted.delete(key);
+    // `stored` means "already heard **while in detection**". A learner who is no
+    // longer High/Moderate is dropped (their recovered "Low + ongoing" card can
+    // stay on the board), so a relapse rings again; leaving the board forgets
+    // them the same way.
+    for (const key of [...stored]) {
+      if (!next.has(key)) stored.delete(key);
     }
-
-    let ring = false;
+    const pending: string[] = [];
     for (const [key, row] of next) {
-      if (alerted.has(key)) continue;
+      if (row.rank > 1) {
+        stored.delete(key);
+        continue;
+      }
+      if (stored.has(key)) continue;
       // The counselor's own save already patched its card optimistically and
       // must never ring — but mark it as heard so a later poll stays silent too.
-      alerted.add(key);
-      const self = row.interventionId ? isSelfNotified(row.interventionId) : false;
-      if (self) continue;
-      // Only a learner newly in detection rings. A change to a card that was
-      // already on the board (higher risk, booked session, new outcome) is an
-      // update to work the counselor has already been alerted to.
-      if (!previous.has(key)) ring = true;
+      if (row.interventionId && isSelfNotified(row.interventionId)) {
+        stored.add(key);
+        continue;
+      }
+      pending.push(key);
     }
-    if (ring) play();
-  }, [boardStudents, termKey, play]);
+    if (pending.length === 0) {
+      writeRung(rungKey, stored);
+      return;
+    }
 
-  // Keep the tab title in sync and pull the at-risk boards forward so
-  // `/guidance/interventions` shows a new learner at the same moment the sound
-  // rings instead of waiting out its own poll. The alert counter itself never
-  // rings — the risk alarm follows the interventions board only.
+    // The alerts desk is dot-only. Mark heard, stay silent.
+    if (onAlertsDesk) {
+      for (const key of pending) stored.add(key);
+      writeRung(rungKey, stored);
+      return;
+    }
+    // Mark the learners as announced only if the clip actually started; a
+    // throttled / busy / not-yet-unlocked ring stays pending so the next poll
+    // retries instead of muting that learner until they leave detection.
+    if (play()) for (const key of pending) stored.add(key);
+    writeRung(rungKey, stored);
+  }, [boardStudents, boardUpdatedAt, rungKey, play, onAlertsDesk]);
+
+  // Pull the at-risk boards forward so `/guidance/interventions` shows a new
+  // learner at the same moment the sound rings instead of waiting out its own
+  // poll. The alert counter itself never rings — the risk alarm follows the
+  // interventions board only.
   React.useEffect(() => {
     if (!countsQuery.isSuccess) return;
     const previous = lastTotalRef.current;
@@ -402,19 +494,12 @@ export function GuidanceRiskAlertMonitor() {
   }, [countsQuery.isSuccess, total, queryClient]);
 
   React.useEffect(() => {
-    const base = document.title.replace(TITLE_PREFIX, "");
-    const next = total > 0 ? `(${total}) ${base}` : base;
-    if (document.title !== next) document.title = next;
-    return () => {
-      document.title = base;
-    };
-  }, [total]);
-
-  React.useEffect(() => {
-    // A realtime detection / risk-factor frame only refreshes the board; the
-    // board diff above decides whether this is a learner who has not rung yet.
-    // Playing here directly would re-ring an already-alerted learner every time
-    // their plan, session or outcome changed.
+    // A realtime detection / risk-factor frame (including the `intervention_detected`
+    // notification fanout) only refreshes the board; the board diff above decides
+    // whether this is a learner who has not rung yet. Playing here directly would
+    // ring for a fanout even when the interventions page shows no new data, and
+    // would re-ring an already-alerted learner every time their plan, session or
+    // outcome changed.
     const onAlert = () => {
       markRealtimeUpdate();
       void queryClient.invalidateQueries({ queryKey: [...BOARD_QUERY_KEY] });

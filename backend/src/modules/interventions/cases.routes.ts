@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
-import { invalidateTags } from "../../lib/cache.js";
+import {
+  invalidateInterventionCaches,
+  INTERVENTION_WRITE_TAGS,
+} from "./interventions.repository.js";
 import { validate } from "../../middleware/validate.js";
 import { resolveActiveTermId } from "../../services/risk.js";
-import { INTERVENTION_WRITE_TAGS } from "./interventions.repository.js";
 import {
   assignSchema,
   outcomeSchema,
@@ -51,7 +53,7 @@ router.post(
         intakeNotes: body.intakeNotes,
         firstSession: body.firstSession,
       }, termId);
-      await invalidateTags(INTERVENTION_WRITE_TAGS);
+      await invalidateInterventionCaches();
       res.status(201).json(created);
     } catch (e) {
       next(e);
@@ -74,7 +76,7 @@ router.post(
         decision: body.decision,
         recommendedAction: body.recommendedAction,
       });
-      await invalidateTags(INTERVENTION_WRITE_TAGS);
+      await invalidateInterventionCaches();
       res.json(updated);
     } catch (e) {
       next(e);
@@ -91,7 +93,7 @@ router.post(
     try {
       const assigneeId: string | null = (req.body as { assigneeId: string | null }).assigneeId || null;
       const updated = await assignIntervention(ctxOf(req), String(req.params.id), assigneeId);
-      await invalidateTags(INTERVENTION_WRITE_TAGS);
+      await invalidateInterventionCaches();
       res.json(updated);
     } catch (e) {
       next(e);
@@ -116,7 +118,7 @@ router.post(
         { outcomeStatus: body.outcomeStatus, outcomeNotes: body.outcomeNotes },
         () => resolveActiveTermId(req),
       );
-      await invalidateTags(INTERVENTION_WRITE_TAGS);
+      await invalidateInterventionCaches();
       res.json(updated);
     } catch (e) {
       next(e);

@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
+import { isArchivedAdvisoryLearner } from "../../lib/learnerVisibility.js";
 import { buildDayAxis, isWeekendKey, schoolDaysToDate, termHasStarted } from "../attendance.js";
 import { loadSubjectMeetups } from "../attendance/sections.service.js";
 import { assertAdvisee } from "./students.auth.js";
@@ -21,7 +22,11 @@ export async function getStudentAttendance(ctx: AdvisoryContext, rawId: string) 
             section: { select: { id: true, name: true, adviserId: true } },
           },
         });
-        if (!entry || entry.section?.adviserId !== teacherId) {
+        if (
+          !entry ||
+          entry.section?.adviserId !== teacherId ||
+          (await isArchivedAdvisoryLearner({ rosterId: entry.id }))
+        ) {
           throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
         }
         return {

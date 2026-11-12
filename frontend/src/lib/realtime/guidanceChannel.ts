@@ -144,6 +144,9 @@ function scopesForRow(row: GuidanceInboxRow): GuidanceScope[] {
   }
   if (table === "interventions") return ["interventions", "alerts", "overview", "notifications"];
   if (table === "adm_learner_profiles") return ["adm", "alerts", "overview", "notifications"];
+  // AdmParentMeeting is not a published realtime table — the meeting lands
+  // here as a notification, so the calendar/ADM desk re-read on that frame.
+  if (table === "adm_parent_meetings") return ["adm", "referrals", "overview", "notifications"];
   return ["notifications"];
 }
 

@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
+import { assertSessionSlotFree } from "../../lib/sessionConflict.js";
 import { actorName, ensureOpen, formatSession, formatWhen, getSession, getSessionReferral, isSessionType, parseScheduledAt, referralCard } from "../../modules/referrals/referrals.repository.js";
 import type { ReferralContext } from "./referral.types.js";
 
@@ -42,11 +43,17 @@ export async function bookSession(ctx: ReferralContext, referralId: string, inpu
         "This referral already has a session that is not done yet — finish or cancel it before booking another one"
       );
     }
+    const scheduledAt = parseScheduledAt(input.scheduledAt);
+    // Same counselor, overlapping hour → refuse; the desks share one calendar.
+    await assertSessionSlotFree(tx, {
+      scheduledAt,
+      counselorId: ctx.userId,
+    });
     const row = await tx.counselingSession.create({
       data: {
         referralId: referral.id,
         sessionType: input.sessionType,
-        scheduledAt: parseScheduledAt(input.scheduledAt),
+        scheduledAt,
         venue: input.venue?.trim() || null,
         status: "scheduled",
         createdBy: ctx.userId,
@@ -77,9 +84,22 @@ export async function bookSession(ctx: ReferralContext, referralId: string, inpu
     ctx.role === "nurse"
       ? `${actor} (Clinic)`
       : `${actor} (Guidance)`;
+  // Sessions booked on the ADM track (the case is on the ADM desk, or was
+  // escalated there) are announced with "ADM consultation" in the wording so
+  // the filing adviser's desk can ring its dedicated ADM-booked clip instead
+  // of the generic session-booked one (`isAdviserAdmBooked` in deskSounds).
+  const isAdmTrack =
+    referral.referredToRole === "adm_coordinator" ||
+    referral.escalatedTo === "adm_coordinator";
 
   if (referral.referredBy && referral.referredBy !== ctx.userId) {
-    const message = `${actorLabel} booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`;
+    const message = isAdmTrack
+      ? `${actorLabel} booked an ADM consultation session for ${card.who} (${created.sessionType}, ${when}${where}).`
+      : ctx.role === "guidance_counselor"
+        // "counseling session" — the adviser desk rings the dedicated
+        // counseling-booked clip for guidance desks (`isAdviserCounselingBooked`).
+        ? `${actorLabel} booked a counseling session for ${card.who} (${created.sessionType}, ${when}${where}).`
+        : `${actorLabel} booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`;
     void fanoutNotification({
       userId: referral.referredBy,
       sourceTable: "referrals",
@@ -141,6 +161,11 @@ export async function rescheduleSession(
     throw new AppError(400, "INVALID_ACTION", "Only an upcoming session can be moved");
   }
   const nextDate = parseScheduledAt(scheduledAt);
+  await assertSessionSlotFree(prisma, {
+    scheduledAt: nextDate,
+    counselorId: ctx.userId,
+    excludeSessionId: session.id,
+  });
   const updated = await prisma.counselingSession.update({
     where: { id: session.id },
     data: { scheduledAt: nextDate },
@@ -153,15 +178,24 @@ export async function rescheduleSession(
   const card = await referralCard(referral);
   const was = formatWhen(session.scheduledAt);
   const now = formatWhen(nextDate);
+  // ADM-track moves keep the "ADM consultation" wording so the filing adviser's
+  // desk rings its dedicated reschedule clip (`isAdviserAdmRescheduled`).
+  const isAdmTrack =
+    referral.referredToRole === "adm_coordinator" ||
+    referral.escalatedTo === "adm_coordinator";
   if (referral.referredBy && referral.referredBy !== ctx.userId) {
+    const message = isAdmTrack
+      ? ctx.role === "nurse"
+        ? `Clinic rescheduled an ADM consultation session for ${card.who} — now ${now} (was ${was}).`
+        : `Guidance rescheduled an ADM consultation session for ${card.who} — now ${now} (was ${was}).`
+      : ctx.role === "nurse"
+        ? `Clinic rescheduled a session for ${card.who} — now ${now} (was ${was}).`
+        : `Guidance rescheduled a counseling session for ${card.who} — now ${now} (was ${was}).`;
     void fanoutNotification({
       userId: referral.referredBy,
       sourceTable: "referrals",
       action: "status",
-      message:
-        ctx.role === "nurse"
-          ? `Clinic rescheduled a session for ${card.who} — now ${now} (was ${was}).`
-          : `Guidance rescheduled a session for ${card.who} — now ${now} (was ${was}).`,
+      message,
       sourceId: referral.id,
     });
   }

@@ -388,24 +388,6 @@
   color: var(--muted-foreground);
 }
 
-.errorBlock {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.625rem;
-  padding: 0.75rem 0.875rem;
-  border: 1px solid var(--destructive, #dc2626);
-  border-radius: var(--radius-md);
-  background-color: color-mix(in oklch, var(--destructive, #dc2626), transparent 94%);
-}
-
-.errorText {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
 .empty {
   display: flex;
   flex-direction: column;

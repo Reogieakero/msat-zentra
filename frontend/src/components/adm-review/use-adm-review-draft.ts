@@ -1,12 +1,32 @@
 "use client";
 import * as React from "react";
 import { useDock } from "@/components/dock/dock-store";
+import {
+  findOverlappingBooking,
+  sessionConflictNote,
+} from "@/lib/sessions/conflicts";
 import type { AdmReviewCopy } from "./AdmReviewDialog";
+
+/** True when dateKey + HH:MM is already behind us (the current minute still counts). */
+function isPastMoment(dateKey: string, time: string): boolean {
+  if (!dateKey || !time) return false;
+  const at = new Date(`${dateKey}T${time}:00`).getTime();
+  if (!Number.isFinite(at)) return false;
+  return at < Math.floor(Date.now() / 60_000) * 60_000;
+}
+
+/** Local calendar day — bookings are written as local wall-clock time. */
+function localTodayKey(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+}
+
 export function useAdmReviewDraft({
   open,
   student,
   sessionNoun,
   hasActiveSession,
+  taken = [],
   copy,
   formatError,
   onBookSession,
@@ -18,6 +38,9 @@ export function useAdmReviewDraft({
   student: string;
   sessionNoun: "clinic" | "counseling";
   hasActiveSession: boolean;
+  /** Booked `HH:MM` slots on the picked day — the same block check the
+   *  interventions desk uses. Empty = no availability lookup (e.g. nurse). */
+  taken?: readonly string[];
   copy: AdmReviewCopy;
   formatError?: (err: unknown, fallback: string) => string;
   onBookSession: (scheduledAt: string) => Promise<void>;
@@ -65,11 +88,41 @@ export function useAdmReviewDraft({
       setError(copy.invalidSession);
       return null;
     }
+    const clash = findOverlappingBooking(sessionTime, taken);
+    if (clash) {
+      setError(sessionConflictNote(clash));
+      return null;
+    }
     if (at.getTime() <= Date.now()) {
       setError(copy.pastSession);
       return null;
     }
     return `${sessionDate}T${sessionTime}:00`;
+  }
+  /** Date change: keep a stale past time from riding along into today. */
+  function chooseSessionDate(next: string) {
+    setSessionDate(next);
+    setError(null);
+    if (next === localTodayKey() && isPastMoment(next, sessionTime)) {
+      setSessionTime("");
+    }
+  }
+  /** Clock-picker change: reject a past or overlapping time right away, like
+   *  the interventions booking overlay. */
+  function chooseSessionTime(next: string) {
+    setError(null);
+    if (isPastMoment(sessionDate, next)) {
+      setSessionTime("");
+      setError(copy.pastSession);
+      return;
+    }
+    const clash = findOverlappingBooking(next, taken);
+    if (clash) {
+      setSessionTime("");
+      setError(sessionConflictNote(clash));
+      return;
+    }
+    setSessionTime(next);
   }
   function askBook() {
     if (!sessionDate || !sessionTime) {
@@ -204,6 +257,8 @@ export function useAdmReviewDraft({
     setSessionDate,
     sessionTime,
     setSessionTime,
+    chooseSessionDate,
+    chooseSessionTime,
     acting,
     booking,
     confirmFor,

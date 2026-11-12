@@ -110,6 +110,33 @@ function formatReferredDate(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Short pill text + full tooltip text for a booked session slot. */
+function formatSessionSlot(iso: string): { short: string; full: string } {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { short: iso.slice(0, 10), full: iso };
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return {
+    short: `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })} · ${time}`,
+    full: `${d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })} at ${time}`,
+  };
+}
+
+/** Text for the booked-session pill on an ADM case. */
+function bookedSessionPill(session: NonNullable<ReferralRow["bookedSession"]>) {
+  const slot = formatSessionSlot(session.scheduledAt);
+  const kind = humanize(session.sessionType);
+  return {
+    text: `Session ${slot.short}`,
+    tooltip: `Session booked · ${slot.full}${kind ? ` · ${kind}` : ""}${
+      session.venue?.trim() ? ` · ${session.venue.trim()}` : ""
+    }`,
+  };
+}
+
 export function ReferralsTable({
   referrals,
   unfilteredTotal,
@@ -179,10 +206,23 @@ export function ReferralsTable({
         size: 120,
         cell: ({ row }) => {
           const type = typeForDesk(row.original.targetRole);
+          const session =
+            row.original.status === "dismissed" ? null : row.original.bookedSession;
           return (
-            <Pill tone={type.key === "adm" ? "amber" : "blue"} label="Referral type">
-              {type.label}
-            </Pill>
+            <div className="flex min-w-0 flex-wrap items-center gap-1">
+              <Pill tone={type.key === "adm" ? "amber" : "blue"} label="Referral type">
+                {type.label}
+              </Pill>
+              {session ? (
+                <Pill
+                  tone="teal"
+                  label={bookedSessionPill(session).tooltip}
+                  className="max-w-full overflow-hidden"
+                >
+                  <span className="truncate">{bookedSessionPill(session).text}</span>
+                </Pill>
+              ) : null}
+            </div>
           );
         },
       },

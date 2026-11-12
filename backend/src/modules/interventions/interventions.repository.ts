@@ -1,6 +1,8 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { invalidateTags } from "../../lib/cache.js";
+import { bumpRiskCohortVersion } from "../../lib/riskCohortCache.js";
 import { GRADE_LABELS } from "../../lib/grades.js";
 
 export { GRADE_LABELS };
@@ -23,6 +25,25 @@ export const INTERVENTION_WRITE_TAGS = [
   "nurse-adm",
   "nurse-risk",
 ];
+
+/**
+ * Bust every cache that mirrors an intervention write.
+ *
+ * `INTERVENTION_WRITE_TAGS` clears the Redis GET cache, but the guidance desks
+ * read the live risk cohort, which keeps an in-process ~20s memo of the whole
+ * scan — including each learner's counseling sessions and attachment counts
+ * (`liveCohortCache` in `modules/risk/interventions.service.ts`). That memo is
+ * only re-keyed when the risk engine bumps the cohort version, so a booking,
+ * reschedule, completion, cancellation or attachment upload would otherwise
+ * keep serving the pre-write plan until the memo expired — the board looked
+ * frozen even though the write had landed and the notification had rung.
+ *
+ * Always call this instead of a bare `invalidateTags(INTERVENTION_WRITE_TAGS)`.
+ */
+export async function invalidateInterventionCaches(): Promise<void> {
+  bumpRiskCohortVersion();
+  await invalidateTags(INTERVENTION_WRITE_TAGS);
+}
 
 export const SESSION_TYPES = ["individual", "parent_conference", "group", "home_visit"] as const;
 

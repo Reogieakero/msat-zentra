@@ -58,7 +58,9 @@ export function GuidanceEntryDocsHost({
       <Dialog open={sessOpen} onOpenChange={onSessOpenChange}>
         <DialogContent
           showCloseButton={false}
-          className={`max-h-[85vh] overflow-y-auto shadow-none ${sessionBoardDialogWidth(count)}`}
+          // The dialog is only a frame for the sessions board — drop its own
+          // card chrome so the kanban board is the only surface on screen.
+          className={`max-h-[85vh] overflow-y-auto border-0 bg-transparent p-0 shadow-none ${sessionBoardDialogWidth(count)}`}
         >
           {/* Title/description live on the kanban board below (the sr-only
               pair keeps the dialog labelled for screen readers). */}
@@ -69,6 +71,7 @@ export function GuidanceEntryDocsHost({
             {count} {count === 1 ? "session" : "sessions"} on this case.
           </DialogDescription>
           <KanbanBoard
+            className="relative bg-card"
             title={`Counseling sessions for ${row.student}`}
             icon={<CalendarClock className="size-3.5" aria-hidden="true" />}
             actions={
@@ -101,6 +104,10 @@ export function GuidanceEntryDocsHost({
               docsSupported
               gateOnStart
               manageable={canManageSessions}
+              // Reschedule/cancel live on the case card itself, so the
+              // sessions overlay keeps only "Mark done" — same for ADM and
+              // counseling cases.
+              hideScheduledActions
               disabled={actionPending}
               onAction={(s, action) => {
                 if (action === "docs") {

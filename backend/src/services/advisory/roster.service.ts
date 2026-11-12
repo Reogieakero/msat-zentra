@@ -4,6 +4,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { clearArchivedLearnerCache } from "../../lib/learnerVisibility.js";
+import { bumpRiskCohortVersion } from "../../lib/riskCohortCache.js";
 import { mascotForUnique, sectionTakenMascots } from "../mascot.js";
 import {
   adviserSectionsOr404,
@@ -448,6 +449,12 @@ const ADVISORY_CACHE_TAGS = [
   "overview",
   "principal",
   "teacher",
+  /* Other desks hide the learner's referral/ADM boards the moment the adviser
+     removes them, so those cached reads must be dropped here. */
+  "referrals",
+  "guidance",
+  "alerts",
+  "adm",
 ];
 
 /** Background audit, wider cache bust and self-notification tail for roster archive/restore writes. */
@@ -459,6 +466,13 @@ async function afterRosterArchiveWrite(
   notification: string,
 ) {
   try {
+    // The guidance boards (interventions queue, alerts desk) read the live risk
+    // cohort, which memoizes the whole scan — including the archived-learner
+    // filter — for ~20s and is only re-keyed by this version bump. Without it a
+    // learner the adviser just removed from the advisory list keeps sitting on
+    // those boards until the memo expires, so the invalidation below would hand
+    // back a pre-archive cohort.
+    bumpRiskCohortVersion();
     await invalidateTags(ADVISORY_CACHE_TAGS);
     await writeAudit({
       userId: teacherId,

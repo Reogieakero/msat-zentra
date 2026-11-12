@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
+import { isArchivedAdvisoryLearner } from "../../lib/learnerVisibility.js";
 import { termHasStarted } from "../attendance.js";
 import { assertAdvisee } from "./students.auth.js";
 import { resolveGradeOwnerIds, sharingMap, canBypassSharing } from "../teacher/dataShare.service.js";
@@ -23,7 +24,11 @@ export async function getStudentAnecdotal(ctx: AdvisoryContext, rawId: string) {
             section: { select: { id: true, name: true, adviserId: true } },
           },
         });
-        if (!entry || entry.section?.adviserId !== teacherId) {
+        if (
+          !entry ||
+          entry.section?.adviserId !== teacherId ||
+          (await isArchivedAdvisoryLearner({ rosterId: entry.id }))
+        ) {
           throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
         }
         return {
@@ -129,7 +134,11 @@ export async function getStudentAcademic(ctx: AdvisoryContext, rawId: string) {
             section: { select: { id: true, name: true, adviserId: true } },
           },
         });
-        if (!entry || entry.section?.adviserId !== teacherId) {
+        if (
+          !entry ||
+          entry.section?.adviserId !== teacherId ||
+          (await isArchivedAdvisoryLearner({ rosterId: entry.id }))
+        ) {
           throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
         }
         return {
@@ -337,6 +346,9 @@ export async function getStudentDetail(ctx: AdvisoryContext, studentId: string) 
     },
   });
   if (!student || student.section?.adviserId !== teacherId) {
+    throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
+  }
+  if (await isArchivedAdvisoryLearner({ studentId })) {
     throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
   }
 

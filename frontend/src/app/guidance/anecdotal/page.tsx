@@ -22,11 +22,12 @@ import type {
 import { useTerm } from "@/lib/term/TermContext";
 import { liveQueryOptions } from "@/lib/api/live";
 import styles from "./components/guidance-anecdotal.module.css";
-import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 import { useSearchParams } from "next/navigation";
 
-const GUIDANCE_ANECDOTAL_PAGE_SIZE = PAGE_SIZE;
+// Guidance folder boards lay out a 4×4 card grid, so they page at 16 instead of
+// the global 15 (same exception as the referrals/interventions guidance queues).
+const GUIDANCE_ANECDOTAL_PAGE_SIZE = 16;
 
 function readTypeParam(raw: string | null): TypeFilter {
   if (raw === "adm" || raw === "ADM") return "ADM";

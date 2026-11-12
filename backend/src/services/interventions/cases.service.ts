@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { assertSessionSlotFree } from "../../lib/sessionConflict.js";
 import {
   evaluateRisk,
   evaluateRosterRisk,
@@ -66,6 +67,14 @@ export async function startIntervention(
   }
   if (input.firstSession && !isSessionType(input.firstSession.sessionType)) {
     throw new AppError(400, "INVALID_ACTION", "Unknown session type");
+  }
+  // Validate the first booking before the follow-up row exists, so a clash
+  // never leaves an intervention with no session behind it.
+  if (input.firstSession) {
+    await assertSessionSlotFree(prisma, {
+      scheduledAt: parseScheduledAt(input.firstSession.scheduledAt),
+      counselorId: ctx.userId,
+    });
   }
   const created = await prisma.intervention.create({
     data: {

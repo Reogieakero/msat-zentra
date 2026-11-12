@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { assertSessionSlotFree } from "../../lib/sessionConflict.js";
 import { ensureNoActiveSession, ensureOpen, ensureSessionStarted, formatSession, formatWhen, getSession, getSessionReferral, isSessionType, parseScheduledAt, referralCard } from "../../modules/referrals/referrals.repository.js";
 import type { ReferralContext } from "./referral.types.js";
 
@@ -31,6 +32,11 @@ export async function completeSession(
 
   if (input.followUpSession) {
     await ensureNoActiveSession(referral.id, session.id);
+    // Follow-up bookings obey the same calendar as the first booking.
+    await assertSessionSlotFree(prisma, {
+      scheduledAt: parseScheduledAt(input.followUpSession.scheduledAt),
+      counselorId: ctx.userId,
+    });
   }
   const updated = await prisma.counselingSession.update({
     where: { id: session.id },

@@ -15,6 +15,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/sonner";
+import { apiErrorMessage } from "@/lib/api/errors";
 import { SESSION_KIND_OPTIONS } from "@/lib/labels/sessions";
 import { fetchDaySchedule } from "@/services/guidance/sessions.service";
 import {
@@ -61,7 +64,6 @@ export function GuidanceBookedSessionButton({
   const dock = useDock();
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
-  const [serverError, setServerError] = React.useState<string | null>(null);
 
   const sessions = item.intervention?.sessions ?? [];
   const hasSessions = sessions.length > 0;
@@ -74,7 +76,6 @@ export function GuidanceBookedSessionButton({
   const submit = async (fields: BookSessionFields) => {
     const followUpId = item.intervention?.id ?? null;
     const sessionType = (fields.sessionType || "individual") as CounselingSessionType;
-    setServerError(null);
     setBusy(true);
     setOpen(false);
     // Confirm always dismisses every alert overlay — the booking board and any
@@ -122,13 +123,15 @@ export function GuidanceBookedSessionButton({
       await queryClient.invalidateQueries({ queryKey: ["guidance-alerts"] });
       await queryClient.invalidateQueries({ queryKey: ["guidance-interventions"] });
     } catch (error) {
-      const message =
-        error instanceof Error && error.message
-          ? error.message
-          : "Could not book this session. Please try again.";
+      const message = apiErrorMessage(
+        error,
+        "We couldn't book this session. Please try again.",
+      );
       if (taskId) dock.failTask(taskId, message);
-      setServerError(message);
-      setOpen(true);
+      toast.error({
+        title: "Couldn't book the session",
+        description: message,
+      });
     } finally {
       setBusy(false);
     }
@@ -145,7 +148,6 @@ export function GuidanceBookedSessionButton({
             onClick={(event) => {
               event.stopPropagation();
               if (!keepOverlayOnOpen) onBeforeOpen?.();
-              setServerError(null);
               setOpen(true);
             }}
           >
@@ -161,48 +163,57 @@ export function GuidanceBookedSessionButton({
       </Tooltip>
     </TooltipProvider>
   ) : (
-    <button
+    <Button
       type="button"
-      className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[0.6875rem] font-semibold outline-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      style={{ backgroundColor: "rgb(59 130 246 / 0.15)", color: "#1d4ed8" }}
+      size="xs"
+      variant="default"
+      className="h-6 shrink-0 gap-1 px-2 text-[0.6875rem] font-semibold"
       onClick={(event) => {
         event.stopPropagation();
         if (!keepOverlayOnOpen) onBeforeOpen?.();
-        setServerError(null);
         setOpen(true);
       }}
       aria-label={`Book a session for ${item.student}`}
     >
       <CalendarPlus size={13} aria-hidden />
       Book session
-    </button>
+    </Button>
   );
 
   return (
     <>
       {control}
-      <BookSessionDialog
-        open={open}
-        onClose={() => {
-          if (busy) return;
-          setOpen(false);
-          setServerError(null);
-        }}
-        onSubmit={submit}
-        title="Book session"
-        description={`Schedule a counseling session for ${item.student}.`}
-        studentCard={studentCardOf(item)}
-        fetchTakenTimes={(dateKey, signal) => fetchDaySchedule(dateKey, { signal })}
-        venueHint="Held at the guidance office unless another venue is given."
-        venuePlaceholder="Guidance office"
-        showSessionType
-        sessionTypeOptions={SESSION_KIND_OPTIONS}
-        hasActiveSession={hasActiveSession}
-        busy={busy}
-        serverError={serverError}
-        idPrefix="alerts-book"
-        variant="board"
-      />
+      {/*
+        The board dialog portals to <body>, but React still bubbles its clicks
+        through this tree — stop them here so picking a date/time never reaches
+        the alert row's "open case" handler.
+      */}
+      <div
+        style={{ display: "contents" }}
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <BookSessionDialog
+          open={open}
+          onClose={() => {
+            if (busy) return;
+            setOpen(false);
+          }}
+          onSubmit={submit}
+          title="Book session"
+          description={`Schedule a counseling session for ${item.student}.`}
+          studentCard={studentCardOf(item)}
+          fetchTakenTimes={(dateKey, signal) => fetchDaySchedule(dateKey, { signal })}
+          venueHint="Held at the guidance office unless another venue is given."
+          venuePlaceholder="Guidance office"
+          showSessionType
+          sessionTypeOptions={SESSION_KIND_OPTIONS}
+          hasActiveSession={hasActiveSession}
+          busy={busy}
+          idPrefix="alerts-book"
+          variant="board"
+        />
+      </div>
     </>
   );
 }

@@ -83,7 +83,19 @@ export async function dismissReferral(ctx: ReferralContext, referralId: string, 
       userId: referral.referredBy,
       sourceTable: "referrals",
       action: "status",
-      message: `Your referral for ${card.who} was dismissed.`,
+      // Keep "ADM" in the message: the adviser desk routes ADM rejections to
+      // the dedicated reject clip and everything else to the cancelled one.
+      // ADM type = the referral was routed/escorted to the ADM coordinator
+      // (same rule the desks use; `Referral` has no `type` column).
+      message:
+        referral.referredToRole === "adm_coordinator" ||
+        referral.escalatedTo === "adm_coordinator"
+          ? `Your ADM referral for ${card.who} was dismissed.`
+          : referral.referredToRole === "guidance_counselor"
+            // "counseling referral" — the adviser desk rings the dedicated
+            // counseling-reject clip (`isAdviserCounselingRejected`).
+            ? `Your counseling referral for ${card.who} was dismissed.`
+            : `Your referral for ${card.who} was dismissed.`,
       sourceId: referral.id,
     });
   }

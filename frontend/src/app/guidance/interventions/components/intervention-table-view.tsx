@@ -1,6 +1,5 @@
 "use client";
 import { HeartHandshake, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InsightCallout } from "@/components/ui/insight-callout";
 import { Pill } from "@/components/ui/pill";
@@ -8,30 +7,22 @@ import { KanbanBoard } from "@/components/ui/kanban-board";
 import type {
   AtRiskStudentItem,
   CounselingSessionItem,
-  GradeFilter,
   GuidanceInterventionsSummary,
-  RiskLevelFilter,
 } from "@/services/guidance/interventions.types";
+import type { InterventionStatusFilter } from "./intervention-row-helpers";
 import { InterventionTableRow } from "./intervention-row";
-import { Busy } from "./busy";
 import { Pagination } from "@/components/shared/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./guidance-interventions.module.css";
 
-const LEVEL_OPTIONS: { value: RiskLevelFilter; label: string }[] = [
-  { value: "All", label: "All at-risk" },
-  { value: "High", label: "High risk" },
-  { value: "Moderate", label: "Moderate risk" },
-];
-
-const GRADE_OPTIONS: { value: GradeFilter; label: string }[] = [
-  { value: "", label: "All grades" },
-  { value: "G7", label: "G7" },
-  { value: "G8", label: "G8" },
-  { value: "G9", label: "G9" },
-  { value: "G10", label: "G10" },
-  { value: "G11", label: "G11" },
-  { value: "G12", label: "G12" },
+const STATUS_OPTIONS: { value: InterventionStatusFilter; label: string }[] = [
+  { value: "no_action", label: "No action yet" },
+  { value: "booked", label: "Booked session" },
+  { value: "session_done", label: "Session done" },
+  { value: "follow_up", label: "Follow-up session" },
+  { value: "done", label: "Done" },
+  { value: "discontinued", label: "Discontinued" },
+  { value: "risk_cleared", label: "No longer at risk" },
 ];
 
 /** Pill tab group — same markup/behaviour as the alerts desk FilterTabs. */
@@ -79,14 +70,9 @@ export interface InterventionTableViewProps {
   onPageChange: (page: number) => void;
   query: string;
   onQueryChange: (value: string) => void;
-  level: RiskLevelFilter;
-  onLevelChange: (value: RiskLevelFilter) => void;
-  grade: GradeFilter;
-  onGradeChange: (value: GradeFilter) => void;
-  onRetry: () => void;
-  isRetrying: boolean;
+  status: InterventionStatusFilter;
+  onStatusChange: (value: InterventionStatusFilter) => void;
   isNavigating: boolean;
-  actionIsError: boolean;
   expandedKey: string | null;
   onToggleDetails: (key: string) => void;
   now: number;
@@ -115,14 +101,9 @@ export function InterventionTableView({
   onPageChange,
   query,
   onQueryChange,
-  level,
-  onLevelChange,
-  grade,
-  onGradeChange,
-  onRetry,
-  isRetrying,
+  status,
+  onStatusChange,
   isNavigating,
-  actionIsError,
   expandedKey,
   onToggleDetails,
   now,
@@ -139,12 +120,8 @@ export function InterventionTableView({
   highlightId = null,
 }: InterventionTableViewProps) {
   const hasActiveSearch = query.trim() !== "";
-  const levelNoun =
-    level === "High"
-      ? "high-risk student"
-      : level === "Moderate"
-        ? "moderate-risk student"
-        : "at-risk student";
+  const statusLabel =
+    STATUS_OPTIONS.find((o) => o.value === status)?.label ?? "All statuses";
   return (
     <KanbanBoard
       title="Intervention cases"
@@ -157,25 +134,19 @@ export function InterventionTableView({
       headerCenter={
         <div className="flex flex-wrap items-center gap-2">
           <FilterTabs
-            label="Filter cases by risk level"
-            options={LEVEL_OPTIONS}
-            value={level}
-            onChange={onLevelChange}
-            tone="blue"
-          />
-          <span className="h-4 w-px bg-border" aria-hidden />
-          <FilterTabs
-            label="Filter cases by grade level"
-            options={GRADE_OPTIONS}
-            value={grade}
-            onChange={onGradeChange}
+            label="Filter cases by status"
+            options={STATUS_OPTIONS}
+            value={status}
+            onChange={onStatusChange}
             tone="amber"
           />
         </div>
       }
       description={
         total === 0
-          ? `No ${levelNoun}s right now`
+          ? status === "all"
+            ? "No intervention cases right now"
+            : `No cases in “${statusLabel}” right now`
           : `Students flagged by the risk engine who need a guidance follow-up.${
               summary.waitingReview > 0
                 ? ` ${summary.waitingReview} follow-up${summary.waitingReview === 1 ? "" : "s"} waiting for review.`
@@ -208,22 +179,6 @@ export function InterventionTableView({
         ) : null
       }
     >
-      {actionIsError && (
-        <div className={styles.errorBlock} role="alert">
-          <p className={styles.errorText}>
-            Sorry — that did not go through. Please try again.
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isRetrying}
-            onClick={() => onRetry()}
-          >
-            <Busy busy={isRetrying} />
-            {isRetrying ? "Loading…" : "Try again"}
-          </Button>
-        </div>
-      )}
       <div aria-busy={isNavigating || undefined}>
         {isNavigating ? (
           <div className={styles.caseList}>
@@ -244,7 +199,9 @@ export function InterventionTableView({
             <InsightCallout role="status">
               {hasActiveSearch
                 ? `No cases match “${query.trim()}”.`
-                : "No cases match your filters."}
+                : status === "all"
+                  ? "No cases match your filters."
+                  : `No cases in “${statusLabel}” right now.`}
             </InsightCallout>
           </div>
         ) : (

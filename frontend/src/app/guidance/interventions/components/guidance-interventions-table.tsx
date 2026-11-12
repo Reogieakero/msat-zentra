@@ -5,10 +5,9 @@ import { combineDateTime } from "../../referrals/components/guidance-referrals-t
 import type {
   AtRiskStudentItem,
   CounselingSessionType,
-  GradeFilter,
   GuidanceInterventionsSummary,
-  RiskLevelFilter,
 } from "@/services/guidance/interventions.types";
+import type { InterventionStatusFilter } from "./intervention-row-helpers";
 import {
   InterventionDialogs,
 } from "./intervention-dialogs";
@@ -27,12 +26,8 @@ export function GuidanceInterventionsTable({
   onPageChange,
   query,
   onQueryChange,
-  level,
-  onLevelChange,
-  grade,
-  onGradeChange,
-  onRetry,
-  isRetrying,
+  status,
+  onStatusChange,
   isNavigating,
   highlightId = null,
 }: GuidanceInterventionsTableProps) {
@@ -76,7 +71,7 @@ export function GuidanceInterventionsTable({
     clearActive,
     closeAllDialogs,
   } = dialogState;
-  const { invalidateGuidance, actionMutation, isBusy, rowLocked, isActionPending, runAction } =
+  const { invalidateGuidance, isBusy, rowLocked, isActionPending, runAction } =
     useInterventionActions(() => {
       closeAllDialogs();
       clearActive();
@@ -105,15 +100,10 @@ export function GuidanceInterventionsTable({
         onPageChange={onPageChange}
         query={query}
         onQueryChange={onQueryChange}
-        level={level}
-        onLevelChange={onLevelChange}
-        grade={grade}
-        onGradeChange={onGradeChange}
-        onRetry={onRetry}
-        isRetrying={isRetrying}
+        status={status}
+        onStatusChange={onStatusChange}
         isNavigating={isNavigating}
         highlightId={highlightId}
-        actionIsError={actionMutation.isError}
         expandedKey={expandedKey}
         onToggleDetails={(key) =>
           setExpandedKey((prev) => (prev === key ? null : key))
@@ -311,12 +301,8 @@ interface GuidanceInterventionsTableProps {
   onPageChange: (page: number) => void;
   query: string;
   onQueryChange: (value: string) => void;
-  level: RiskLevelFilter;
-  onLevelChange: (value: RiskLevelFilter) => void;
-  grade: GradeFilter;
-  onGradeChange: (value: GradeFilter) => void;
-  onRetry: () => void;
-  isRetrying: boolean;
+  status: InterventionStatusFilter;
+  onStatusChange: (value: InterventionStatusFilter) => void;
   isNavigating: boolean;
   highlightId?: string | null;
 }

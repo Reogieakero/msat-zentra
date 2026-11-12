@@ -8,6 +8,22 @@ import { markRealtimeUpdate } from "@/lib/api/fresh";
 import { toast } from "@/components/ui/sonner";
 import { teacherNotificationTitle } from "@/lib/notifications/label";
 import {
+  isAdviserAdmBooked,
+  isAdviserAdmRejected,
+  isAdviserAdmRescheduled,
+  isAdviserCounselingBooked,
+  isAdviserCounselingRejected,
+  isAdviserCounselingRescheduled,
+  isAdviserReferralClosed,
+  isAdviserReferralEndorsed,
+  isAdviserReferralSessionBooked,
+  isAdviserReferralSessionCancelled,
+  isAdviserReferralSessionRescheduled,
+  isAdviserSessionBooked,
+  isAdviserSessionCancelled,
+  isAdviserSessionRescheduled,
+} from "@/lib/notify/deskSounds";
+import {
   isSelfNotification,
   keysForScopes,
   scopesForNotification,
@@ -52,20 +68,191 @@ export function markSelfNotified(sourceId: string) {
  * `AdviserRiskAlertMonitor` treats it as a **board refetch hint** — the sound
  * itself is decided by diffing the adviser's interventions board, so a learner
  * rings once per detection and never again for a later card/session/outcome
- * update. Dispatched from the notification fanout (`intervention_detected`) and
- * from the direct `RiskSnapshot` frames, so the board re-reads while the tab is
- * hidden or parked on another site — realtime frames are not throttled like
- * timers.
+ * update.
+ *
+ * Dispatched from the **realtime frames** (`RiskSnapshot` INSERT and
+ * `Intervention` writes), not from the notification fanout: the fanout is only
+ * the no-Supabase fallback (see `PUSH_ENABLED`) plus the login catch-up. A
+ * `postgres_changes` frame is not throttled like a timer, so the board re-reads
+ * while the tab is hidden or parked on another site.
  */
 export const ADVISER_RISK_ALERT_EVENT = "zentra:adviser-risk-alert";
 
-function ringAdviserRisk(notificationId?: string) {
+/**
+ * Fired when guidance books an intervention session for one of the signed-in
+ * adviser's own advisees. `AdviserRiskAlertMonitor` plays
+ * `/sounds/intervention session alert booked.mp3` for it.
+ *
+ * Dispatched from the **`CounselingSession` realtime frame** (INSERT of a
+ * `scheduled` row), not from the notification fanout: the clip must land even
+ * if the notification row is late, throttled at the bell, or never fanned out.
+ * RLS (`counseling_session_visible` in `0001_rls.sql`) already scopes the
+ * stream to the adviser's own section, so anything that arrives here belongs to
+ * one of their advisees. The notification path is only the no-Supabase fallback
+ * (see `PUSH_ENABLED`) and the login catch-up.
+ */
+export const ADVISER_SESSION_ALERT_EVENT = "zentra:adviser-session-alert";
+
+/**
+ * Fired when guidance moves an intervention session for one of the signed-in
+ * adviser's own advisees (`AdviserRiskAlertMonitor` plays the reschedule clip).
+ * Same source as the booking event: an UPDATE of a `scheduled` session.
+ */
+export const ADVISER_SESSION_RESCHED_EVENT = "zentra:adviser-session-resched";
+
+/**
+ * Fired when guidance cancels an intervention session for one of the signed-in
+ * adviser's own advisees (`AdviserRiskAlertMonitor` plays the cancellation clip).
+ * Same source as the reschedule event: an UPDATE of a `scheduled` session whose
+ * new status is `cancelled`.
+ */
+export const ADVISER_SESSION_CANCELLED_EVENT = "zentra:adviser-session-cancelled";
+
+/**
+ * Fired when guidance endorsed the ADM consultation on a referral the teacher
+ * filed (the referral form was created/confirmed, case moves forward to the
+ * coordinator). The monitor plays `/sounds/guidance create referral.mp3`.
+ *
+ * Referral status rows are delivered as notifications (the `Notification`
+ * realtime stream), so this event is dispatched from the notification handler —
+ * a referral session booking cannot ride `CounselingSession` because RLS only
+ * publishes intervention sessions to the adviser.
+ */
+export const ADVISER_REFERRAL_UPDATE_EVENT = "zentra:adviser-referral-update";
+
+/**
+ * Fired when guidance rejected/closed a referral the teacher filed (ADM
+ * consultation not endorsed, or a desk dismissed the case). The monitor plays
+ * the cancelled-referral clip.
+ */
+export const ADVISER_REFERRAL_CLOSED_EVENT = "zentra:adviser-referral-closed";
+
+/**
+ * Fired when guidance rejected/dismissed an **ADM** referral the teacher filed.
+ * The monitor plays `/sounds/guidance adm reject.mp3` — a distinct clip from the
+ * generic cancelled-referral one, so the adviser hears that the ADM case was
+ * rejected rather than withdrawn.
+ */
+export const ADVISER_ADM_REJECTED_EVENT = "zentra:adviser-adm-rejected";
+
+/**
+ * Fired when guidance booked a session on the **ADM** case the teacher filed
+ * (booked without deciding yet). The monitor plays
+ * `/sounds/guidance adm booked session.mp3` — adviser-only; the guidance desk
+ * stays silent — instead of the generic session-booked one.
+ */
+export const ADVISER_ADM_BOOKED_EVENT = "zentra:adviser-adm-booked";
+
+/**
+ * Fired when guidance moved the session on the **ADM** case the teacher filed.
+ * The monitor plays `/sounds/guidance adm reschedule.mp3` — adviser-only; the
+ * guidance desk stays silent — instead of the generic session-reschedule clip.
+ */
+export const ADVISER_ADM_RESCHEDULED_EVENT = "zentra:adviser-adm-rescheduled";
+
+/**
+ * Fired when guidance booked, moved or rejected a **counseling** referral the
+ * teacher filed. Each action has its own adviser-only clip
+ * (`/sounds/guidance counseling session.mp3`,
+ * `/sounds/guidance counseling reschedule.mp3`,
+ * `/sounds/guidance counseling reject.mp3`), mirroring the ADM desk events.
+ */
+export const ADVISER_COUNSELING_BOOKED_EVENT = "zentra:adviser-counseling-booked";
+export const ADVISER_COUNSELING_RESCHEDULED_EVENT = "zentra:adviser-counseling-rescheduled";
+export const ADVISER_COUNSELING_REJECTED_EVENT = "zentra:adviser-counseling-rejected";
+
+function ringAdviserSession() {
   try {
-    window.dispatchEvent(
-      new CustomEvent(ADVISER_RISK_ALERT_EVENT, {
-        detail: notificationId ? { id: notificationId } : null,
-      }),
-    );
+    window.dispatchEvent(new CustomEvent(ADVISER_SESSION_ALERT_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up/board poll still lands. */
+  }
+}
+
+function ringAdviserSessionResched() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_SESSION_RESCHED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up/board poll still lands. */
+  }
+}
+
+function ringAdviserSessionCancelled() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_SESSION_CANCELLED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up/board poll still lands. */
+  }
+}
+
+function ringAdviserReferralUpdate() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_REFERRAL_UPDATE_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+function ringAdviserReferralClosed() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_REFERRAL_CLOSED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+function ringAdviserAdmRejected() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_ADM_REJECTED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+function ringAdviserAdmBooked() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_ADM_BOOKED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+function ringAdviserAdmRescheduled() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_ADM_RESCHEDULED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+
+function ringAdviserCounselingBooked() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_COUNSELING_BOOKED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+function ringAdviserCounselingRescheduled() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_COUNSELING_RESCHEDULED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+function ringAdviserCounselingRejected() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_COUNSELING_REJECTED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+function ringAdviserRisk() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_RISK_ALERT_EVENT));
   } catch {
     /* CustomEvent unavailable — the monitor's board poll still sees it. */
   }
@@ -146,16 +333,55 @@ export function useTeacherRealtime(enabled = true) {
           description: msg,
         });
       }
-      // An advisee was flagged at risk — refresh the monitor's interventions
-      // board so a brand-new learner rings immediately (the board diff decides
-      // whether the sound plays; a later card update stays silent).
+      // An advisee was flagged at risk. Live playback rides the realtime
+      // frames below (`RiskSnapshot` / `Intervention`) — the notification is
+      // only the delivery path when Supabase realtime is off. It is never the
+      // trigger for the sound while push is available, so a late/duplicated
+      // fanout can't make the alert depend on notification delivery.
       // Own-action echoes are excluded (a teacher cannot detect their advisee).
       if (
+        !PUSH_ENABLED &&
         (row.type ?? "").toLowerCase() === "intervention_detected" &&
         !isSelfNotification(row) &&
         !isOwnEcho
       ) {
-        ringAdviserRisk(row.id);
+        ringAdviserRisk();
+      }
+      // Guidance just booked an intervention session for one of this adviser's
+      // advisees — ring the dedicated "session booked" clip.
+      // Live playback comes from the `CounselingSession` frame below; the
+      // notification is only the delivery path when Supabase realtime is off.
+      if (!PUSH_ENABLED && isAdviserSessionBooked(row) && !isSelfNotification(row)) {
+        ringAdviserSession();
+      }
+      // Guidance moved an intervention session — distinct clip so the adviser
+      // knows the plan changed rather than hearing the new-booking sound.
+      if (!PUSH_ENABLED && isAdviserSessionRescheduled(row) && !isSelfNotification(row)) {
+        ringAdviserSessionResched();
+      }
+      // Guidance cancelled an intervention session the adviser already had on
+      // their board — its own clip, so a dropped slot never sounds like a new
+      // booking.
+      if (!PUSH_ENABLED && isAdviserSessionCancelled(row) && !isSelfNotification(row)) {
+        ringAdviserSessionCancelled();
+      }
+      // Referral pipeline the teacher filed: guidance/nurse decisions further
+      // down the line (ADM review, dismissals, session booking/move/drop).
+      // Referral sessions are not published to the adviser over realtime
+      // (`counseling_session_visible` is intervention-scoped), so this
+      // notification is the adviser's only path to the session clips here.
+      if (!isSelfNotification(row)) {
+        if (isAdviserCounselingBooked(row)) ringAdviserCounselingBooked();
+        else if (isAdviserAdmBooked(row)) ringAdviserAdmBooked();
+        else if (isAdviserReferralSessionBooked(row)) ringAdviserSession();
+        if (isAdviserCounselingRescheduled(row)) ringAdviserCounselingRescheduled();
+        else if (isAdviserAdmRescheduled(row)) ringAdviserAdmRescheduled();
+        else if (isAdviserReferralSessionRescheduled(row)) ringAdviserSessionResched();
+        if (isAdviserReferralSessionCancelled(row)) ringAdviserSessionCancelled();
+        if (isAdviserReferralEndorsed(row)) ringAdviserReferralUpdate();
+        if (isAdviserCounselingRejected(row)) ringAdviserCounselingRejected();
+        else if (isAdviserAdmRejected(row)) ringAdviserAdmRejected();
+        else if (isAdviserReferralClosed(row)) ringAdviserReferralClosed();
       }
       invalidate([...scopesForNotification(row), "notifications"]);
     }
@@ -199,12 +425,43 @@ export function useTeacherRealtime(enabled = true) {
           .on(
             "postgres_changes",
             { event: "*", schema: "public", table: "Intervention" },
-            () => invalidate(scopesForRealtimeTable("Intervention")),
+            () => {
+              // The plan itself moved (auto-opened by the risk engine, or opened
+              // / approved / reassigned by guidance). Refresh the adviser's board
+              // right away — the diff decides whether this is a learner who has
+              // not rung yet; an update to an already-alerted card stays silent.
+              // RLS (`intervention_visible`) scopes the stream to the adviser's
+              // own section, so a frame here always belongs to an advisee.
+              ringAdviserRisk();
+              invalidate(scopesForRealtimeTable("Intervention"));
+            },
           )
           .on(
             "postgres_changes",
             { event: "*", schema: "public", table: "CounselingSession" },
-            () => invalidate(scopesForRealtimeTable("CounselingSession")),
+            (payload) => {
+              // Session sounds are driven by the row itself, not the fanout
+              // notification (which can be late, throttled, or skipped when the
+              // counselor's own write path only emits a `_self` echo):
+              //   INSERT status=scheduled → guidance just booked → booked clip
+              //   UPDATE status=scheduled → guidance moved it → reschedule clip
+              //   UPDATE status=cancelled → guidance dropped it → cancelled clip
+              //   UPDATE completed → finishing work, no clip
+              // RLS (`counseling_session_visible`) scopes this stream to the
+              // adviser's own section, so a frame here is always their advisee.
+              const change = payload as unknown as {
+                eventType?: string;
+                new?: { status?: unknown };
+              };
+              const status = change.new?.status;
+              if (status === "scheduled") {
+                if (change.eventType === "INSERT") ringAdviserSession();
+                else if (change.eventType === "UPDATE") ringAdviserSessionResched();
+              } else if (status === "cancelled" && change.eventType === "UPDATE") {
+                ringAdviserSessionCancelled();
+              }
+              void invalidate(scopesForRealtimeTable("CounselingSession"));
+            },
           )
           .on(
             "postgres_changes",
@@ -250,21 +507,69 @@ export function useTeacherRealtime(enabled = true) {
         if (fresh.length === 0) return;
         if (fresh.length > MAX_TOASTS_PER_POLL) {
           // Burst: one summary toast, then refresh everything the burst
-          // touched (and the bell) instead of spamming toasts. The board
-          // refetch hint still fires — a risk sweep can flag several advisees
-          // at once, and those detections must not be swallowed by the summary
-          // path.
+          // touched (and the bell) instead of spamming toasts. The risk board
+          // refetch hint still fires when this shipped without realtime push —
+          // a risk sweep can flag several advisees at once, and those
+          // detections must not be swallowed by the summary path.
           const scopes = new Set<TeacherInvalidateScope>(["notifications"]);
           let detected = false;
+          let sessionBooked = false;
+          let sessionResched = false;
+          let sessionCancelled = false;
+          let referralUpdate = false;
+          let referralClosed = false;
+          let admRejected = false;
+          let admBooked = false;
+          let admResched = false;
+          let counselingBooked = false;
+          let counselingResched = false;
+          let counselingRejected = false;
           for (const n of fresh) {
             seenIds.current.add(n.id);
             for (const s of scopesForNotification(n)) scopes.add(s);
             if (
+              !PUSH_ENABLED &&
               (n.type ?? "").toLowerCase() === "intervention_detected" &&
               !isSelfNotification(n) &&
               !/^you\b/i.test(n.message ?? "")
             ) {
               detected = true;
+            }
+            if (
+              !PUSH_ENABLED &&
+              isAdviserSessionBooked(n) &&
+              !isSelfNotification(n)
+            ) {
+              sessionBooked = true;
+            }
+            if (
+              !PUSH_ENABLED &&
+              isAdviserSessionRescheduled(n) &&
+              !isSelfNotification(n)
+            ) {
+              sessionResched = true;
+            }
+            if (
+              !PUSH_ENABLED &&
+              isAdviserSessionCancelled(n) &&
+              !isSelfNotification(n)
+            ) {
+              sessionCancelled = true;
+            }
+            // Referral pipeline actions (see `notify`): always notification-
+            // driven, so they do not gate on PUSH_ENABLED.
+            if (!isSelfNotification(n)) {
+              if (isAdviserCounselingBooked(n)) counselingBooked = true;
+              else if (isAdviserAdmBooked(n)) admBooked = true;
+              else if (isAdviserReferralSessionBooked(n)) sessionBooked = true;
+              if (isAdviserCounselingRescheduled(n)) counselingResched = true;
+              else if (isAdviserAdmRescheduled(n)) admResched = true;
+              else if (isAdviserReferralSessionRescheduled(n)) sessionResched = true;
+              if (isAdviserReferralSessionCancelled(n)) sessionCancelled = true;
+              if (isAdviserReferralEndorsed(n)) referralUpdate = true;
+              if (isAdviserCounselingRejected(n)) counselingRejected = true;
+              else if (isAdviserAdmRejected(n)) admRejected = true;
+              else if (isAdviserReferralClosed(n)) referralClosed = true;
             }
           }
           toast.info({
@@ -272,6 +577,17 @@ export function useTeacherRealtime(enabled = true) {
             description: "Open the notifications bell to review them.",
           });
           if (detected) ringAdviserRisk();
+          if (counselingBooked) ringAdviserCounselingBooked();
+          if (counselingResched) ringAdviserCounselingRescheduled();
+          if (counselingRejected) ringAdviserCounselingRejected();
+          if (admBooked) ringAdviserAdmBooked();
+          if (admResched) ringAdviserAdmRescheduled();
+          if (sessionBooked) ringAdviserSession();
+          if (sessionResched) ringAdviserSessionResched();
+          if (sessionCancelled) ringAdviserSessionCancelled();
+          if (referralUpdate) ringAdviserReferralUpdate();
+          if (admRejected) ringAdviserAdmRejected();
+          if (referralClosed) ringAdviserReferralClosed();
           invalidate([...scopes]);
           return;
         }

@@ -10,13 +10,15 @@ import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { fetchAllGuidanceInterventions } from "@/services/guidance/interventions.service";
 import type {
   AtRiskStudentItem,
-  GradeFilter,
   GuidanceInterventionsData,
-  RiskLevelFilter,
 } from "@/services/guidance/interventions.types";
 import {
   GuidanceInterventionsTable,
 } from "./components/guidance-interventions-table";
+import {
+  interventionStatusKey,
+  type InterventionStatusFilter,
+} from "./components/intervention-row-helpers";
 import { useTerm } from "@/lib/term/TermContext";
 import { guidanceLiveQueryOptions } from "@/lib/api/live";
 import styles from "./components/guidance-interventions.module.css";
@@ -25,16 +27,8 @@ import { useUrlPager } from "@/components/shared/pagination/useUrlPager";
 // The board pages a 4×4 card grid; backend allow-lists 16 for this queue.
 const GUIDANCE_INTERVENTIONS_PAGE_SIZE = 16;
 
-const GRADE_QUERY = /^G(7|8|9|10|11|12)$/;
-
-const GRADE_LABELS: Record<Exclude<GradeFilter, "">, string> = {
-  G7: "Grade 7",
-  G8: "Grade 8",
-  G9: "Grade 9",
-  G10: "Grade 10",
-  G11: "Grade 11",
-  G12: "Grade 12",
-};
+const STATUS_QUERY =
+  /^(all|no_action|booked|session_done|follow_up|risk_cleared|done|discontinued)$/;
 
 function GuidanceInterventionsView({ highlightId }: { highlightId: string | null }) {
   const { activeTerm, termReady } = useTerm();
@@ -44,15 +38,17 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
   // Filters live in the URL so refresh/back-forward keep them, but the board
   // filters the already-loaded queue locally — typing never triggers a fetch.
   const [query, setQueryInput] = React.useState(() => searchParams.get("q") ?? "");
-  const [level, setLevelState] = React.useState<RiskLevelFilter>(() => {
-    const fromUrl = searchParams.get("level");
-    if (fromUrl === "High" || fromUrl === "Moderate" || fromUrl === "All") return fromUrl;
-    // Default board view is every at-risk learner, not just the High bucket.
-    return "All";
-  });
-  const [grade, setGradeState] = React.useState<GradeFilter>(() => {
-    const fromUrl = searchParams.get("grade");
-    return fromUrl && GRADE_QUERY.test(fromUrl) ? (fromUrl as GradeFilter) : "";
+  // One status filter for the whole board; "No action yet" is where the desk
+  // starts, since those are the cases still waiting to be picked up. Search and
+  // highlight deep links start unfiltered so the learner they point at is never
+  // hidden by the default bucket.
+  const [status, setStatusState] = React.useState<InterventionStatusFilter>(() => {
+    const fromUrl = searchParams.get("status");
+    if (fromUrl && STATUS_QUERY.test(fromUrl)) {
+      return fromUrl as InterventionStatusFilter;
+    }
+    const deepLinked = (searchParams.get("q") ?? "").trim() !== "" || !!highlightId;
+    return deepLinked ? "all" : "no_action";
   });
 
   // One request set for the whole queue, then search / tabs / paging are all
@@ -79,12 +75,7 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
   const filtered = React.useMemo(() => {
     const needle = query.trim().toLowerCase();
     return allStudents.filter((s: AtRiskStudentItem) => {
-      // Server parity: a recovered (ongoing, now Low) case stays visible on the
-      // High/Moderate tabs it graduated from.
-      const recovered =
-        s.riskLevel === "Low" && s.intervention?.outcomeStatus === "ongoing";
-      if (level !== "All" && s.riskLevel !== level && !recovered) return false;
-      if (grade && s.grade !== GRADE_LABELS[grade]) return false;
+      if (status !== "all" && interventionStatusKey(s) !== status) return false;
       if (needle) {
         const haystack = `${s.student} ${s.lrn} ${s.section} ${
           s.intervention?.recommendedAction ?? ""
@@ -93,11 +84,11 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
       }
       return true;
     });
-  }, [allStudents, level, grade, query]);
+  }, [allStudents, status, query]);
 
   const pager = useUrlPager(filtered.length, {}, {
     searchParam: "q",
-    extraParams: ["level", "grade"],
+    extraParams: ["status"],
     pageSize: GUIDANCE_INTERVENTIONS_PAGE_SIZE,
   });
   const page = pager.page;
@@ -110,14 +101,9 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
     if (page !== 1) setPage(1);
   };
 
-  const handleLevelChange = (value: RiskLevelFilter) => {
-    setLevelState(value);
-    pager.setFilters({ level: value === "All" ? undefined : value });
-  };
-
-  const handleGradeChange = (value: GradeFilter) => {
-    setGradeState(value);
-    pager.setFilters({ grade: value || undefined });
+  const handleStatusChange = (value: InterventionStatusFilter) => {
+    setStatusState(value);
+    pager.setFilters({ status: value === "no_action" ? undefined : value });
   };
 
   const handlePageChange = (next: number) => {
@@ -126,15 +112,24 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
 
   // Deep-link landing: every row is already loaded, so jump to the page that
   // holds the highlighted student instead of fanning out another request.
+  // The learner may not match the current status filter — reveal all statuses
+  // first so the deep link never lands on an empty board.
   const locatedFor = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!highlightId || locatedFor.current === highlightId) return;
     if (!data) return;
     locatedFor.current = highlightId;
-    const idx = allStudents.findIndex((s) => s.studentKey === highlightId);
-    if (idx >= 0) setPage(Math.floor(idx / GUIDANCE_INTERVENTIONS_PAGE_SIZE) + 1);
+    const idx = filtered.findIndex((s) => s.studentKey === highlightId);
+    if (idx >= 0) {
+      setPage(Math.floor(idx / GUIDANCE_INTERVENTIONS_PAGE_SIZE) + 1);
+      return;
+    }
+    if (status !== "all") {
+      setStatusState("all");
+      pager.setFilters({ status: "all" });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot deep-link landing sync
-  }, [highlightId, data, allStudents]);
+  }, [highlightId, data, filtered, status]);
 
   const totalPages = Math.max(
     1,
@@ -159,11 +154,7 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
                 <Skeleton className="h-3.5 w-32" />
               </span>
               <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-6 w-44 rounded-md" />
-                  <span className="h-4 w-px bg-border" aria-hidden />
-                  <Skeleton className="h-6 w-52 rounded-md" />
-                </div>
+                <Skeleton className="h-6 w-80 rounded-md" />
               </div>
               <span className="flex shrink-0 items-center justify-end gap-2">
                 <Skeleton className="h-8 w-64 max-w-full rounded-2xl" />
@@ -248,12 +239,8 @@ function GuidanceInterventionsView({ highlightId }: { highlightId: string | null
           onPageChange={handlePageChange}
           query={query}
           onQueryChange={handleQueryChange}
-          level={level}
-          onLevelChange={handleLevelChange}
-          grade={grade}
-          onGradeChange={handleGradeChange}
-          onRetry={() => refetch()}
-          isRetrying={isRefetching}
+          status={status}
+          onStatusChange={handleStatusChange}
           isNavigating={false}
           highlightId={highlightId}
         />

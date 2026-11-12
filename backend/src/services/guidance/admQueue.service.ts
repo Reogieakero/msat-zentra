@@ -1,4 +1,8 @@
 import { prisma } from "../../lib/prisma.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+} from "../../lib/learnerVisibility.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import {
   computeRiskFactors,
@@ -26,11 +30,22 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
   const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
   const needle = q.trim();
 
-  const profileScope: any = scopeTermId ? { termId: scopeTermId } : {};
+  /* Learners the adviser removed from the advisory list stay hidden here too,
+     including every count/trend derived from these scopes. */
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const archivedReferralClause = excludeArchivedLearnerRows(archivedLearners);
+  const hasArchived =
+    archivedLearners.studentIds.length > 0 || archivedLearners.rosterIds.length > 0;
+
+  const profileScope: any = {
+    ...(scopeTermId ? { termId: scopeTermId } : {}),
+    ...(hasArchived ? { referral: archivedReferralClause } : {}),
+  };
   const earlyScope: any = {
     referredToRole: "adm_coordinator",
     admProfiles: { none: {} },
     ...(scopeTermId ? { termId: scopeTermId } : {}),
+    ...(hasArchived ? archivedReferralClause : {}),
     OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
   };
 
@@ -465,6 +480,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
 
   const reviewerScope: any = {
     ...(scopeTermId ? { termId: scopeTermId } : {}),
+    ...(hasArchived ? { referral: archivedReferralClause } : {}),
     OR: [
       { referral: { consultReviewer: null } },
       { referral: { consultReviewer: "guidance_counselor" } },
@@ -504,6 +520,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
         referredToRole: "guidance_counselor",
         status: { in: ["pending", "in_progress"] },
         ...(scopeTermId ? { termId: scopeTermId } : {}),
+        ...(hasArchived ? archivedReferralClause : {}),
       },
     }),
     prisma.referral.findMany({
@@ -511,6 +528,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
         referredToRole: "guidance_counselor",
         status: { in: ["pending", "in_progress"] },
         ...(scopeTermId ? { termId: scopeTermId } : {}),
+        ...(hasArchived ? archivedReferralClause : {}),
       },
       orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
       take: 15,

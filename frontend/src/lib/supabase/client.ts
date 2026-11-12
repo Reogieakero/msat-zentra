@@ -13,6 +13,10 @@ const REALTIME_AUTH_ENABLED =
 // login/logout/user-switch silently invalidates it.
 let cached: { appToken: string | null; token: string; expiresAt: number } | null = null;
 
+// supabase-js calls the token supplier on construction and the realtime client
+// sync calls it again right after, so share one in-flight request.
+let inflight: { appToken: string; promise: Promise<string | null> } | null = null;
+
 function currentAppToken(): string | null {
   try {
     return window.localStorage.getItem("zentra.access");
@@ -28,19 +32,28 @@ async function getRealtimeToken(): Promise<string | null> {
   if (cached && cached.appToken === appToken && cached.expiresAt - 30_000 > now) {
     return cached.token;
   }
+  if (inflight && inflight.appToken === appToken) return inflight.promise;
+  const promise = (async () => {
+    try {
+      const { data } = await apiClient.get<{ token: string; expiresIn: number }>(
+        "/api/auth/realtime-token",
+      );
+      if (!data?.token) return null;
+      cached = {
+        appToken,
+        token: data.token,
+        expiresAt: now + (data.expiresIn ?? 900) * 1000,
+      };
+      return cached.token;
+    } catch {
+      return null;
+    }
+  })();
+  inflight = { appToken, promise };
   try {
-    const { data } = await apiClient.get<{ token: string; expiresIn: number }>(
-      "/api/auth/realtime-token",
-    );
-    if (!data?.token) return null;
-    cached = {
-      appToken,
-      token: data.token,
-      expiresAt: now + (data.expiresIn ?? 900) * 1000,
-    };
-    return cached.token;
-  } catch {
-    return null;
+    return await promise;
+  } finally {
+    if (inflight?.promise === promise) inflight = null;
   }
 }
 
@@ -65,7 +78,7 @@ export function createAuthClient() {
 }
 
 function createRealtimeClient() {
-  return createBrowserClient(
+  const client = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -76,6 +89,51 @@ function createRealtimeClient() {
       ...(REALTIME_AUTH_ENABLED ? { accessToken: getRealtimeToken } : {}),
     },
   );
+
+  if (!REALTIME_AUTH_ENABLED) return client;
+
+  // Supabase binds a channel's RLS identity when it JOINS. The token is fetched
+  // by the `accessToken` callback asynchronously, and `subscribe()` runs
+  // synchronously right after `createClient()` in every desk's effect, so the
+  // join used to go out before the token arrived — the channel then joined as
+  // `anon` and the server rejected every postgres_changes frame with
+  // `Error 401: Unauthorized` (pushing `access_token` afterwards does not
+  // re-authorize existing bindings). Hold each channel's `subscribe()` until
+  // the token is on the socket, so the join payload carries it.
+  const authReady = (async () => {
+    const token = await getRealtimeToken();
+    if (token) await client.realtime.setAuth(token);
+  })().catch(() => {
+    /* No token (signed out / backend down): fall back to the poll. */
+  });
+
+  const openChannel = client.channel.bind(client);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client.channel = ((name: string, params?: any) => {
+    const channel = openChannel(name, params);
+    const subscribe = channel.subscribe.bind(channel);
+    const unsubscribe = channel.unsubscribe.bind(channel);
+    // An effect can unmount before the token resolves; never join a channel
+    // the desk already tore down.
+    let disposed = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    channel.unsubscribe = ((...args: any[]) => {
+      disposed = true;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (unsubscribe as any)(...args);
+    }) as typeof channel.unsubscribe;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    channel.subscribe = ((callback?: any, timeout?: number) => {
+      void authReady.then(() => {
+        if (!disposed) subscribe(callback, timeout);
+      });
+      return channel;
+    }) as typeof channel.subscribe;
+    return channel;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }) as any;
+
+  return client;
 }
 
 let realtimeClient: ReturnType<typeof createRealtimeClient> | null = null;
