@@ -1,6 +1,42 @@
 "use client";
 
-import type { GuidanceCalendarEvent, GuidanceCalendarTrack } from "@/services/guidance/calendar.service";
+import type { PillTone } from "@/components/ui/pill";
+import type {
+  GuidanceCalendarEvent,
+  GuidanceCalendarTrack,
+} from "@/services/guidance/calendar.service";
+
+/**
+ * Shared event shape for the desk calendars. The guidance payload extends it
+ * (its `track` is a narrower union), and the nurse calendar reuses the same
+ * grids/week/rail with its own track family.
+ */
+export interface CalendarEvent {
+  id: string;
+  track: string;
+  learner: string;
+  lrn: string;
+  section: string;
+  sessionType: string;
+  /** ISO instant — render it in the browser's local time. */
+  start: string;
+  venue: string;
+  status: string;
+  outcome?: string;
+  referralId: string | null;
+  interventionId: string | null;
+  admProfileId: string | null;
+  invited: boolean | null;
+}
+
+/** Per-desk track family: order, labels, pill tones and case deep-links. */
+export interface CalendarTrackConfig {
+  tracks: readonly string[];
+  labels: Record<string, string>;
+  tones: Record<string, PillTone>;
+  eventHref: (event: CalendarEvent) => string | null;
+  trackLabel: (track: string) => string;
+}
 
 /** Local `YYYY-MM-DD` key — the calendar renders in the browser's timezone. */
 export function dateKey(date: Date): string {
@@ -25,8 +61,8 @@ export function formatTime(iso: string): string {
   });
 }
 
-export function groupByDay(events: GuidanceCalendarEvent[]): Map<string, GuidanceCalendarEvent[]> {
-  const map = new Map<string, GuidanceCalendarEvent[]>();
+export function groupByDay(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
+  const map = new Map<string, CalendarEvent[]>();
   for (const event of events) {
     const key = dateKey(new Date(event.start));
     const list = map.get(key);
@@ -40,9 +76,9 @@ export function groupByDay(events: GuidanceCalendarEvent[]): Map<string, Guidanc
 }
 
 export function eventsOnDay(
-  grouped: Map<string, GuidanceCalendarEvent[]>,
+  grouped: Map<string, CalendarEvent[]>,
   key: string,
-): GuidanceCalendarEvent[] {
+): CalendarEvent[] {
   return grouped.get(key) ?? [];
 }
 
@@ -57,7 +93,7 @@ export function sessionTypeLabel(type: string): string {
   return SESSION_TYPE_LABELS[type] ?? type.replaceAll("_", " ");
 }
 
-export function trackLabel(track: GuidanceCalendarTrack): string {
+export function trackLabel(track: GuidanceCalendarTrack | string): string {
   switch (track) {
     case "intervention":
       return "Intervention";
@@ -67,11 +103,13 @@ export function trackLabel(track: GuidanceCalendarTrack): string {
       return "ADM case";
     case "adm_meeting":
       return "ADM parent meeting";
+    default:
+      return track;
   }
 }
 
 /** Where "Open case" goes — booking stays in the existing desks. */
-export function eventHref(event: GuidanceCalendarEvent): string | null {
+export function eventHref(event: CalendarEvent | GuidanceCalendarEvent): string | null {
   if (event.track === "intervention" && event.lrn) {
     return `/guidance/interventions?q=${encodeURIComponent(event.lrn)}`;
   }
@@ -82,6 +120,6 @@ export function eventHref(event: GuidanceCalendarEvent): string | null {
   return null;
 }
 
-export function isClosed(event: GuidanceCalendarEvent): boolean {
+export function isClosed(event: CalendarEvent | GuidanceCalendarEvent): boolean {
   return event.status === "cancelled" || event.status === "completed";
 }

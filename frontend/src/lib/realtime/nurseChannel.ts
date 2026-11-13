@@ -92,7 +92,7 @@ export function markSelfNotified(sourceId: string) {
 function scopesFor(row: NurseNotification): NurseScope[] {
   const table = row.sourceTable ?? "";
   if (table === "referrals" || table === "counseling_sessions") {
-    return ["alerts", "overview", "risk", "notifications"];
+    return ["alerts", "overview", "risk", "notifications", "calendar"];
   }
   return ["notifications"];
 }
@@ -122,7 +122,7 @@ export function useNurseRealtime(enabled = true) {
     (scopes?: NurseScope | NurseScope[]) => {
       markRealtimeUpdate();
       const list: NurseScope[] = !scopes
-        ? (["alerts", "overview", "risk", "notifications"] as NurseScope[])
+        ? (["alerts", "overview", "risk", "notifications", "calendar"] as NurseScope[])
         : Array.isArray(scopes) ? scopes : [scopes];
       const now = Date.now();
       const due = list.filter((s) => {
@@ -238,7 +238,7 @@ export function useNurseRealtime(enabled = true) {
                 }
               }
             }
-            void invalidate(["alerts", "overview", "risk", "notifications"]);
+            void invalidate(["alerts", "overview", "risk", "notifications", "calendar"]);
           },
         )
         .subscribe((status) => {

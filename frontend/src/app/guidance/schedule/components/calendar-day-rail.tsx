@@ -9,15 +9,15 @@ import { InsightCallout } from "@/components/ui/insight-callout";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import {
   TRACK_TONES,
-  type GuidanceCalendarEvent,
 } from "@/services/guidance/calendar.service";
 import styles from "./guidance-calendar.module.css";
 import {
-  eventHref,
+  eventHref as defaultEventHref,
   formatTime,
   isClosed,
   sessionTypeLabel,
-  trackLabel,
+  trackLabel as defaultTrackLabel,
+  type CalendarEvent,
 } from "./calendar-utils";
 
 export function CalendarDayRail({
@@ -25,11 +25,18 @@ export function CalendarDayRail({
   events,
   selectedEventId,
   onSelectEvent,
+  tones = TRACK_TONES,
+  trackLabel = defaultTrackLabel,
+  eventHref = defaultEventHref,
 }: {
   day: Date;
-  events: GuidanceCalendarEvent[];
+  events: CalendarEvent[];
   selectedEventId: string | null;
-  onSelectEvent: (event: GuidanceCalendarEvent) => void;
+  onSelectEvent: (event: CalendarEvent) => void;
+  /** Track pill tones — defaults to the guidance palette. */
+  tones?: Record<string, import("@/components/ui/pill").PillTone>;
+  trackLabel?: (track: string) => string;
+  eventHref?: (event: CalendarEvent) => string | null;
 }) {
   return (
     <aside className={styles.rail} aria-label="Day agenda">
@@ -92,7 +99,7 @@ export function CalendarDayRail({
                       </div>
                     </div>
                     <div className={styles.railWhen}>
-                      <Pill tone={TRACK_TONES[event.track]} label="Case type">
+                      <Pill tone={tones[event.track] ?? "neutral"} label="Case type">
                         {trackLabel(event.track)}
                       </Pill>
                       <Pill tone="neutral" label="Scheduled at" className="tabular-nums">

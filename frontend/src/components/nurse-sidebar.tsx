@@ -36,6 +36,7 @@ const NAV: NavGroup[] = [
     items: [
       { title: "Overview", href: "/nurse/overview", icon: NAV_ICONS.overview },
       { title: "Alerts", href: "/nurse/alerts", icon: NAV_ICONS.alerts },
+      { title: "Schedule", href: "/nurse/schedule", icon: NAV_ICONS.schedule },
     ],
   },
   {

@@ -8,7 +8,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import type { GuidanceCalendarEvent } from "@/services/guidance/calendar.service";
+import type { CalendarEvent } from "./calendar-utils";
 import styles from "./guidance-calendar.module.css";
 import {
   dateKey,
@@ -32,7 +32,7 @@ export function CalendarMonth({
   selectedKey: string | null;
   grouped: ReturnType<typeof groupByDay>;
   onSelectDay: (key: string) => void;
-  onSelectEvent: (event: GuidanceCalendarEvent) => void;
+  onSelectEvent: (event: CalendarEvent) => void;
 }) {
   const monthStart = startOfMonth(cursor);
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });

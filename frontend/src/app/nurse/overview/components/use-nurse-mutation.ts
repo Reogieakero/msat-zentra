@@ -13,15 +13,17 @@ export const NURSE_QUERY_KEYS = [
   ["nurse-risk-levels"],
   ["nurse-risk-factors"],
   ["nurse-notifications"],
+  ["nurse-calendar"],
 ] as const;
 
-export type NurseScope = "alerts" | "overview" | "risk" | "notifications";
+export type NurseScope = "alerts" | "overview" | "risk" | "notifications" | "calendar";
 
 const NURSE_SCOPE_KEYS: Record<NurseScope, readonly (readonly string[])[]> = {
   alerts: [["nurse-alerts"]],
   overview: [["nurse-overview"]],
   risk: [["nurse-risk"], ["nurse-risk-levels"], ["nurse-risk-factors"]],
   notifications: [["nurse-notifications"]],
+  calendar: [["nurse-calendar"]],
 };
 
 export function invalidateNurseQueries(

@@ -54,10 +54,10 @@ function ToolbarSkeleton() {
   );
 }
 
-function FiltersSkeleton() {
+function FiltersSkeleton({ pills }: { pills: number[] }) {
   return (
     <div className={styles.filters} aria-hidden="true">
-      {FILTER_PILLS.map((width, i) => (
+      {pills.map((width, i) => (
         <Skeleton key={i} className="h-5 rounded-full" style={{ width: `${width}rem` }} />
       ))}
     </div>
@@ -204,9 +204,12 @@ function RailSkeleton() {
 export function GuidanceScheduleSkeleton({
   view = "month",
   cursor,
+  filterPills = FILTER_PILLS,
 }: {
   view?: CalendarView;
   cursor: Date;
+  /** One pill per track + the status pill (the nurse desk has one fewer). */
+  filterPills?: number[];
 }) {
   return (
     <div className={styles.body} aria-busy="true" aria-label="Loading schedule">
@@ -220,7 +223,7 @@ export function GuidanceScheduleSkeleton({
           }
           description={<Skeleton className="h-3 w-[26rem] max-w-full" />}
           headerToolbar={<ToolbarSkeleton />}
-          toolbar={<FiltersSkeleton />}
+          toolbar={<FiltersSkeleton pills={filterPills} />}
         >
           {view === "week" ? <WeekSkeleton /> : <MonthSkeleton cursor={cursor} />}
         </KanbanBoard>

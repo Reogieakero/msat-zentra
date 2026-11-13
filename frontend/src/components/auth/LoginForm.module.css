@@ -49,6 +49,41 @@
   text-underline-offset: 2px;
 }
 
+/* Password field with the show/hide eye button pinned inside the input. */
+.passwordWrap {
+  position: relative;
+}
+
+.passwordInput {
+  padding-right: 2.5rem;
+}
+
+.eyeButton {
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 120ms ease-out, background-color 120ms ease-out;
+}
+
+.eyeButton:hover {
+  color: var(--foreground);
+  background-color: var(--muted);
+}
+
+.eyeButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 .error {
   margin: 0;
   padding: 0.5rem 0.75rem;

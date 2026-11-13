@@ -1,6 +1,28 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth } from "../../middleware/auth.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+  type ArchivedLearnerIds,
+} from "../../lib/learnerVisibility.js";
+
+/**
+ * Reminder stack exclusion for ADM parent meetings: a meeting rides either a
+ * referral or an ADM learner profile, so both holders have to be covered (the
+ * profile side has no roster identity).
+ */
+function excludeArchivedInviteeMeetings(ids: ArchivedLearnerIds): any {
+  const branches: any[] = [];
+  if (ids.studentIds.length > 0) {
+    branches.push({ referral: { studentId: { in: ids.studentIds } } });
+    branches.push({ admLearnerProfile: { studentId: { in: ids.studentIds } } });
+  }
+  if (ids.rosterIds.length > 0) {
+    branches.push({ referral: { rosterId: { in: ids.rosterIds } } });
+  }
+  return branches.length > 0 ? { NOT: { OR: branches } } : {};
+}
 
 const router = Router();
 
@@ -129,6 +151,12 @@ router.get("/upcoming", requireAuth, async (req, res, next) => {
     const me = req.user!.id;
     const role = req.user!.role as string;
     const out: UpcomingSessionRow[] = [];
+    // A learner the adviser deleted must not ring the bottom-right reminder on
+    // any desk — the same archive filter every board and the guidance calendar
+    // already honour.
+    const archived = await archivedAdvisoryLearnerIds();
+    const archivedRows = excludeArchivedLearnerRows(archived);
+    const archivedMeetings = excludeArchivedInviteeMeetings(archived);
 
     const pushReferralSession = (
       r: {
@@ -179,6 +207,7 @@ router.get("/upcoming", requireAuth, async (req, res, next) => {
             { referredToRole: "nurse" },
             { referredToRole: "adm_coordinator", consultReviewer: "nurse" },
           ],
+          ...archivedRows,
         },
         select: { id: true, ...referralInclude },
       });
@@ -196,11 +225,12 @@ router.get("/upcoming", requireAuth, async (req, res, next) => {
                 OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
               },
             ],
+            ...archivedRows,
           },
           select: { id: true, ...referralInclude },
         }),
         prisma.intervention.findMany({
-          where: { assignedTo: me },
+          where: { assignedTo: me, ...archivedRows },
           select: {
             id: true,
             student: {
@@ -244,7 +274,7 @@ router.get("/upcoming", requireAuth, async (req, res, next) => {
     } else if (role === "adviser" || role === "subject_teacher") {
       const [referrals, interventions] = await Promise.all([
         prisma.referral.findMany({
-          where: { referredBy: me },
+          where: { referredBy: me, ...archivedRows },
           select: { id: true, ...referralInclude },
         }),
         prisma.intervention.findMany({
@@ -254,6 +284,7 @@ router.get("/upcoming", requireAuth, async (req, res, next) => {
               { student: { section: { adviserId: me } } },
               { roster: { section: { adviserId: me } } },
             ],
+            ...archivedRows,
           },
           select: {
             id: true,
@@ -299,6 +330,7 @@ router.get("/upcoming", requireAuth, async (req, res, next) => {
       const meetings = await prisma.admParentMeeting.findMany({
         where: {
           attended: false,
+          ...archivedMeetings,
           OR: [
             {
               referral: {
@@ -329,6 +361,7 @@ router.get("/upcoming", requireAuth, async (req, res, next) => {
           userId: me,
           meeting: {
             attended: false,
+            ...archivedMeetings,
             OR: [
               { referral: { status: { notIn: ["dismissed", "resolved"] } } },
               {

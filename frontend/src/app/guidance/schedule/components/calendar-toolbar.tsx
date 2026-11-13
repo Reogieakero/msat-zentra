@@ -9,8 +9,8 @@ import {
   ALL_CALENDAR_TRACKS,
   TRACK_LABELS,
   TRACK_TONES,
-  type GuidanceCalendarTrack,
 } from "@/services/guidance/calendar.service";
+import type { PillTone } from "@/components/ui/pill";
 import styles from "./guidance-calendar.module.css";
 
 export type CalendarView = "month" | "week";
@@ -103,16 +103,22 @@ export function CalendarFilters({
   onToggleTrack,
   status,
   onToggleStatus,
+  tracks = ALL_CALENDAR_TRACKS,
+  labels = TRACK_LABELS,
+  tones = TRACK_TONES,
 }: {
-  counts: Record<GuidanceCalendarTrack, number>;
-  enabledTracks: GuidanceCalendarTrack[];
-  onToggleTrack: (track: GuidanceCalendarTrack) => void;
+  counts: Record<string, number>;
+  enabledTracks: string[];
+  onToggleTrack: (track: string) => void;
   status: "all" | "scheduled";
   onToggleStatus: () => void;
+  tracks?: readonly string[];
+  labels?: Record<string, string>;
+  tones?: Record<string, PillTone>;
 }) {
   return (
     <div className={styles.filters} role="tablist" aria-label="Filter schedule by case type">
-      {ALL_CALENDAR_TRACKS.map((track) => {
+      {tracks.map((track) => {
         const active = enabledTracks.includes(track);
         return (
           <button
@@ -124,10 +130,10 @@ export function CalendarFilters({
             onClick={() => onToggleTrack(track)}
           >
             <Pill
-              tone={active ? TRACK_TONES[track] : "neutral"}
-              label={`${active ? "Hide" : "Show"} ${TRACK_LABELS[track].toLowerCase()}`}
+              tone={active ? tones[track] : "neutral"}
+              label={`${active ? "Hide" : "Show"} ${(labels[track] ?? track).toLowerCase()}`}
             >
-              {TRACK_LABELS[track]}
+              {labels[track] ?? track}
               <span className={styles.pillCount}>{counts[track] ?? 0}</span>
             </Pill>
           </button>

@@ -1,16 +1,54 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
-import { invalidateTags } from "../../lib/cache.js";
+import { cache, invalidateTags } from "../../lib/cache.js";
+import { etag } from "../../lib/etag.js";
+import { CACHE_TAGS, CACHE_TTLS } from "../../lib/cacheTags.js";
 import { writeAudit } from "../../lib/audit.js";
 import { registryProfileSchema } from "../registry/registry.schemas.js";
+import { getNurseCalendar } from "../../services/nurse/schedule.service.js";
 import navCountsRoutes from "./navCounts.routes.js";
 
 const router = Router();
 
 router.use(navCountsRoutes);
+
+function nurseContext(req: Request) {
+  return {
+    userId: req.user!.id,
+    termId: req.termScope?.termId ?? null,
+  };
+}
+
+/**
+ * The clinic desk calendar: every booked session/meeting in a date window, one
+ * merged payload. `from`/`to` are ISO instants (the client sends its local
+ * month/week boundaries) so the range never clips a session at a timezone edge.
+ */
+router.get(
+  "/calendar",
+  requireAuth,
+  requireRole("nurse"),
+  cache({
+    tags: [CACHE_TAGS.nurse, CACHE_TAGS.referrals],
+    // Live booking board — the same short TTL as the guidance calendar so a
+    // 15s poll never serves a pre-booking payload for long.
+    ttl: CACHE_TTLS.counts,
+  }),
+  etag(),
+  async (req, res, next) => {
+    try {
+      const from = typeof req.query.from === "string" ? req.query.from : "";
+      const to = typeof req.query.to === "string" ? req.query.to : "";
+      const status = req.query.status === "scheduled" ? "scheduled" : "all";
+      res.json(await getNurseCalendar(nurseContext(req), { from, to, status }));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 async function readNurseProfileSettings(nurseId: string) {
   const [user, profile] = await Promise.all([
