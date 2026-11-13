@@ -4,6 +4,8 @@
 // Bama is a guided wizard with pre-configured replies (NOT an LLM):
 // student -> class -> category -> tier -> datetime -> 5 texts -> preview -> file.
 
+import '../../shared/user_messages.dart';
+
 enum TextQuestion { incident, location, notes, classPerformance, attendance }
 
 const textQuestionLabels = {
@@ -196,23 +198,7 @@ Map<String, dynamic> buildAnecdotalBody({
   };
 }
 
-/// Format a backend error envelope for display: code + message + per-field
-/// detail, so validation failures name their field.
+/// Format a backend failure without exposing codes or schema field names.
 String formatApiFailure(Object? data, {required String fallback}) {
-  if (data is Map && data['error'] is Map) {
-    final err = Map<String, dynamic>.from(data['error'] as Map);
-    final code = err['code']?.toString();
-    final message = err['message']?.toString() ?? fallback;
-    final fields = err['fields'];
-    var detail = '';
-    if (fields is Map && fields.isNotEmpty) {
-      detail = fields.entries.map((e) {
-        final msgs = e.value is List ? (e.value as List).join(', ') : e.value.toString();
-        return '${e.key}: $msgs';
-      }).join('; ');
-    }
-    final head = code == null ? message : '[$code] $message';
-    return detail.isEmpty ? head : '$head ($detail)';
-  }
-  return fallback;
+  return userMessage(data is Map ? data : null, fallback: fallback);
 }

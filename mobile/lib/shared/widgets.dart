@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../design/tokens.dart';
+import 'user_messages.dart';
 
 // --- Legacy names kept (restyled to web tokens) ---
 
@@ -21,7 +22,7 @@ class LoadingView extends StatelessWidget {
 }
 
 class ErrorView extends StatelessWidget {
-  final String message;
+  final Object? message;
   final VoidCallback? onRetry;
   const ErrorView({super.key, required this.message, this.onRetry});
   @override
@@ -37,10 +38,10 @@ class ErrorView extends StatelessWidget {
             child: const Icon(Icons.error_outline, size: 20),
           ),
           const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
+          Semantics(liveRegion: true, child: Text(userMessage(message), textAlign: TextAlign.center, style: theme.textTheme.bodySmall)),
           if (onRetry != null) ...[
             const SizedBox(height: 12),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            FilledButton(onPressed: onRetry, child: const Text('Try again')),
           ],
         ]),
       ),

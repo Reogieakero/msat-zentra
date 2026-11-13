@@ -13,6 +13,7 @@ import '../../core/api_client.dart';
 import '../../core/sync_outbox.dart';
 import '../../shared/models.dart';
 import '../../shared/widgets.dart';
+import '../../shared/user_messages.dart';
 
 class GradebookPage extends ConsumerStatefulWidget {
   final String classId;
@@ -46,8 +47,7 @@ class _State extends ConsumerState<GradebookPage> {
         _busy = false;
       });
     } on DioException catch (e) {
-      final d = e.response?.data;
-      final msg = d is Map && d['error'] is Map ? d['error']['message'].toString() : 'Failed to load gradebook';
+      final msg = userMessage(e, fallback: 'We couldn’t load the gradebook. Please try again.');
       setState(() {
         _busy = false;
         _error = msg;
@@ -61,15 +61,14 @@ class _State extends ConsumerState<GradebookPage> {
     final conn = await Connectivity().checkConnectivity();
     if (conn.contains(ConnectivityResult.none)) {
       await ref.read(outboxProvider).enqueue(method: 'POST', path: '/api/grades/assessments/$assessmentId/score', body: body);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Offline — score queued.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You’re offline. The score is saved on this device and is waiting to be sent.')));
       return;
     }
     try {
       await api.dio.post('/api/grades/assessments/$assessmentId/score', data: body);
       await _load();
     } on DioException catch (e) {
-      final d = e.response?.data;
-      final msg = d is Map && d['error'] is Map ? d['error']['message'].toString() : 'Save failed';
+      final msg = userMessage(e, fallback: 'We couldn’t save this score. Please try again.');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
@@ -98,8 +97,7 @@ class _State extends ConsumerState<GradebookPage> {
       });
       await _load();
     } on DioException catch (e) {
-      final d = e.response?.data;
-      final msg = d is Map && d['error'] is Map ? d['error']['message'].toString() : 'Add failed';
+      final msg = userMessage(e, fallback: 'We couldn’t add the assessment. Please try again.');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }

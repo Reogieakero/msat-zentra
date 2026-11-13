@@ -19,6 +19,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../shared/models.dart';
 import '../../shared/widgets.dart';
+import '../../shared/user_messages.dart';
 import 'anecdotal_data.dart';
 import 'signature_block.dart';
 
@@ -102,7 +103,7 @@ class _PreviewState extends ConsumerState<RecordPreviewPage> {
     } on ApiException catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.message;
+          _error = userMessage(e);
           _busy = false;
         });
       }
@@ -132,7 +133,7 @@ class _PreviewState extends ConsumerState<RecordPreviewPage> {
     } on DioException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(anecdotalError(e, 'Could not export.'))));
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(userMessage(e))));
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not share the file.')));
     } finally {

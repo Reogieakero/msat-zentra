@@ -28,7 +28,7 @@ class GradebookDashboardPage extends ConsumerWidget {
     final secondary = ref.watch(overviewSecondaryProvider);
     return critical.when(
       loading: () => const Padding(padding: EdgeInsets.all(16), child: ZSkeletonList(count: 4)),
-      error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(overviewProvider)),
+      error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(overviewProvider)),
       data: (data) {
         final classes = [for (final c in (data['classes'] as List? ?? [])) ClassSlot.fromJson(c as Map<String, dynamic>)];
         final assessments = secondary.maybeWhen(

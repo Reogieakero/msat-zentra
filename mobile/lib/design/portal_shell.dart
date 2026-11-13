@@ -12,6 +12,7 @@ import '../core/session.dart';
 import '../services/portal_service.dart';
 import '../shared/models.dart';
 import '../shared/widgets.dart';
+import '../shared/user_messages.dart';
 import 'brand.dart';
 
 class PortalShell extends ConsumerWidget {
@@ -146,7 +147,7 @@ class _PortalInboxSheet extends ConsumerWidget {
               Expanded(
                 child: inbox.when(
                   loading: () => const ZSkeletonList(count: 4),
-                  error: (e, _) => ErrorView(message: e.toString()),
+                  error: (e, _) => ErrorView(message: e),
                   data: (list) {
                     if (list.isEmpty) {
                       return const ZEmpty(icon: Icons.notifications_none, title: 'No notifications yet');
@@ -301,7 +302,7 @@ class _PortalChildPicker extends ConsumerWidget {
     final selected = ref.watch(selectedChildProvider);
     return children.when(
       loading: () => const Padding(padding: EdgeInsets.all(12), child: LinearProgressIndicator()),
-      error: (e, _) => Padding(padding: const EdgeInsets.all(12), child: Text(e.toString(), style: const TextStyle(fontSize: 12))),
+      error: (e, _) => Padding(padding: const EdgeInsets.all(12), child: Text(userMessage(e), style: const TextStyle(fontSize: 12))),
       data: (list) {
         if (list.isEmpty) {
           return const Padding(padding: EdgeInsets.all(12), child: Text('No linked learners', style: TextStyle(fontSize: 12)));
@@ -341,7 +342,7 @@ class _PortalTermPicker extends ConsumerWidget {
         : ref.watch(studentTermsProvider);
     return terms.when(
       loading: () => const Padding(padding: EdgeInsets.all(12), child: LinearProgressIndicator()),
-      error: (e, _) => Padding(padding: const EdgeInsets.all(12), child: Text(e.toString(), style: const TextStyle(fontSize: 12))),
+      error: (e, _) => Padding(padding: const EdgeInsets.all(12), child: Text(userMessage(e), style: const TextStyle(fontSize: 12))),
       data: (list) {
         final selected = ref.watch(portalTermIdProvider);
         final effective = (selected != null && list.any((t) => t.id == selected)) ? selected : null;

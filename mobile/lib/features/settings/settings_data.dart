@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../shared/user_messages.dart';
 import '../../core/session.dart';
 import '../adviser/advisory_list_page.dart' show advisoryProvider, archivedAdvisoryProvider;
 
@@ -97,9 +98,7 @@ void _refreshSettings(WidgetRef ref) {
 }
 
 String settingsError(DioException e, String fallback) {
-  final d = e.response?.data;
-  if (d is Map && d['error'] is Map) return d['error']['message']?.toString() ?? fallback;
-  return fallback;
+  return userMessage(e, fallback: fallback);
 }
 
 Future<void> patchTeacherProfile(WidgetRef ref, Map<String, dynamic> body) async {

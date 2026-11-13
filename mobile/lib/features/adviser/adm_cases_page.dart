@@ -34,7 +34,7 @@ class AdmCasesPage extends ConsumerWidget {
     final cases = ref.watch(admCasesProvider);
     return cases.when(
       loading: () => const Padding(padding: EdgeInsets.all(16), child: ZSkeletonList()),
-      error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(admCasesProvider)),
+      error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(admCasesProvider)),
       data: (list) {
         if (list.isEmpty) {
           return const Padding(

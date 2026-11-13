@@ -8,6 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'api_client.dart';
 import 'config.dart';
 import '../shared/models.dart';
+import '../shared/user_messages.dart';
 
 class AuthState {
   final bool loading;
@@ -57,7 +58,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final data = res.data is Map ? res.data as Map : const {};
       final access = data['accessToken']?.toString();
       if (access == null || access.isEmpty) {
-        state = const AuthState(error: 'Sign-in failed: missing access token.');
+        state = const AuthState(error: 'We couldn’t complete your sign-in. Please try again shortly.');
         return false;
       }
       // The backend only sets the refresh token as an httpOnly cookie, so fall
@@ -78,11 +79,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       try {
         api.throwApi(e);
       } on ApiException catch (ae) {
-        state = AuthState(error: ae.message);
+        state = AuthState(error: userMessage(ae));
       }
       return false;
     } catch (e) {
-      state = AuthState(error: e.toString());
+      state = AuthState(error: userMessage(e));
       return false;
     }
   }

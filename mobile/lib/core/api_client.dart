@@ -127,8 +127,8 @@ class ApiClient {
     final data = e.response?.data;
     if (data is Map && data['error'] is Map) {
       final err = data['error'] as Map;
-      throw ApiException(err['code']?.toString() ?? 'UNKNOWN', err['message']?.toString() ?? 'Request failed');
+      return ApiException(err['code']?.toString() ?? 'UNKNOWN', err['message']?.toString() ?? 'Request failed', statusCode: e.response?.statusCode, cause: e);
     }
-    throw ApiException('NETWORK', e.message ?? 'Network error');
+    return ApiException(e.response == null ? 'NETWORK' : 'UNKNOWN', e.message ?? 'Request failed', statusCode: e.response?.statusCode, cause: e);
   }
 }

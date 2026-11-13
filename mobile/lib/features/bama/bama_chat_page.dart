@@ -17,6 +17,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
+import '../../shared/user_messages.dart';
 import '../../core/config.dart';
 import '../../core/session.dart';
 import '../../core/sync_outbox.dart';
@@ -258,11 +259,10 @@ class _State extends ConsumerState<BamaChatPage> {
       });
     } on DioException catch (e) {
       if (!mounted) return;
-      final d = e.response?.data;
-      final msg = d is Map && d['error'] is Map ? d['error']['message']?.toString() : null;
+      final msg = userMessage(e, fallback: 'We couldn’t load your learners. Please try again.');
       setState(() {
         _optionsPending = false;
-        _optionsError = msg ?? 'Couldn\'t load students. Check your connection.';
+        _optionsError = msg;
       });
     } catch (_) {
       if (!mounted) return;
@@ -624,14 +624,14 @@ class _State extends ConsumerState<BamaChatPage> {
       ref.invalidate(referableProvider);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Anecdotal record filed · $name · $categoryLabel.')));
     } on DioException catch (e) {
-      final msg = formatApiFailure(e.response?.data, fallback: 'Could not file this record.');
+      final msg = userMessage(e, fallback: 'We couldn’t file this record. Please try again.');
       if (!mounted) return;
       setState(() {
         _flowError = msg;
         _fileProgress = 0;
         _fileStage = '';
       });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not file record: $msg')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } finally {
       _progressTimer?.cancel();
       if (mounted) setState(() => _filing = false);

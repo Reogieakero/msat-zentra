@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/session.dart';
 import '../../shared/widgets.dart';
+import '../../shared/user_messages.dart';
 
 class FirstTimeGate extends ConsumerStatefulWidget {
   const FirstTimeGate({super.key});
@@ -46,9 +47,7 @@ class _GateState extends ConsumerState<FirstTimeGate> {
         _busy = false;
       });
     } on DioException catch (e) {
-      String msg = 'Failed to load workspace.';
-      final d = e.response?.data;
-      if (d is Map && d['error'] is Map) msg = d['error']['message']?.toString() ?? msg;
+      final msg = userMessage(e, fallback: 'We couldn’t load your workspace. Please try again.');
       setState(() {
         _busy = false;
         _error = msg;
@@ -62,8 +61,7 @@ class _GateState extends ConsumerState<FirstTimeGate> {
       await api.dio.post('/api/teacher/schedule/teachers/claim', data: {'code': _code.text.trim()});
       await _load();
     } on DioException catch (e) {
-      final d = e.response?.data;
-      final msg = d is Map && d['error'] is Map ? d['error']['message'].toString() : 'Claim failed';
+      final msg = userMessage(e, fallback: 'We couldn’t link your classes. Check your code and try again.');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
@@ -74,8 +72,7 @@ class _GateState extends ConsumerState<FirstTimeGate> {
       await api.dio.post('/api/teacher/schedule/teachers/verify-attendance', data: {'code': _code.text.trim()});
       await _load();
     } on DioException catch (e) {
-      final d = e.response?.data;
-      final msg = d is Map && d['error'] is Map ? d['error']['message'].toString() : 'Verification failed';
+      final msg = userMessage(e, fallback: 'We couldn’t verify your code. Check it and try again.');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
@@ -86,8 +83,7 @@ class _GateState extends ConsumerState<FirstTimeGate> {
       await api.dio.post('/api/teacher/schedule/teachers/term-grant', data: {});
       await _load();
     } on DioException catch (e) {
-      final d = e.response?.data;
-      final msg = d is Map && d['error'] is Map ? d['error']['message'].toString() : 'Failed';
+      final msg = userMessage(e, fallback: 'We couldn’t open your workspace. Please try again.');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
@@ -99,7 +95,7 @@ class _GateState extends ConsumerState<FirstTimeGate> {
     final overview = ref.watch(overviewProvider);
     return overview.when(
       loading: () => const Scaffold(body: LoadingView()),
-      error: (e, _) => Scaffold(body: ErrorView(message: e.toString(), onRetry: () => ref.invalidate(overviewProvider))),
+      error: (e, _) => Scaffold(body: ErrorView(message: e, onRetry: () => ref.invalidate(overviewProvider))),
       data: (data) {
         final isAdviser = data['isAdviser'] == true;
         final teacherName = _me?['teacherName'];

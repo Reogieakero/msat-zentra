@@ -43,7 +43,7 @@ class TermSelectPage extends ConsumerWidget {
           ])),
       body: years.when(
         loading: () => const LoadingView(),
-        error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(schoolYearsProvider)),
+        error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(schoolYearsProvider)),
         data: (list) {
           if (list.isEmpty) {
             return const Padding(

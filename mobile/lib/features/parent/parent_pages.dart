@@ -23,7 +23,7 @@ class _ParentPage extends ConsumerWidget {
       selectedPath: selectedPath,
       child: children.when(
         loading: () => const Padding(padding: EdgeInsets.all(16), child: ZSkeletonList(count: 5)),
-        error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: ErrorView(message: e.toString())),
+        error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: ErrorView(message: e)),
         data: (list) {
           if (list.isEmpty) {
             return const Center(

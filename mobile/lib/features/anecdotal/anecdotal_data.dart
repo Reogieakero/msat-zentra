@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../shared/user_messages.dart';
 
 // Folder body color per anecdotal category — web parity with
 // frontend/src/app/teacher/anecdotal/components/AnecdotalSideRail.tsx
@@ -118,9 +119,7 @@ void _refreshAnecdotal(WidgetRef ref) {
 }
 
 String anecdotalError(DioException e, String fallback) {
-  final d = e.response?.data;
-  if (d is Map && d['error'] is Map) return d['error']['message']?.toString() ?? fallback;
-  return fallback;
+  return userMessage(e, fallback: fallback);
 }
 
 Future<Map<String, dynamic>> fetchRecordDetail(WidgetRef ref, String id) async {

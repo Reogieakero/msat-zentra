@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../shared/user_messages.dart';
 import '../../shared/widgets.dart';
 
 final referralsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
@@ -38,9 +39,7 @@ final referableProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async
 });
 
 String _apiMessage(DioException e, String fallback) {
-  final d = e.response?.data;
-  if (d is Map && d['error'] is Map) return d['error']['message']?.toString() ?? fallback;
-  return fallback;
+  return userMessage(e, fallback: fallback);
 }
 
 String _humanize(String? v) {
@@ -138,7 +137,7 @@ class _State extends ConsumerState<ReferralPage> {
       const SizedBox(height: 8),
       list.when(
         loading: () => const ZSkeletonList(),
-        error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(referralsProvider)),
+        error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(referralsProvider)),
         data: (items) {
           final shown = items.where((r) {
             if (_q.isEmpty) return true;
@@ -306,7 +305,7 @@ class _ReferralCard extends ConsumerWidget {
 
   void _reopen(BuildContext context, WidgetRef ref) {
     if (_isAdm(referral)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancelled ADM cases cannot be re-submitted — start a new referral from scratch.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This ADM case was cancelled. Create a new referral if the learner still needs support.')));
       return;
     }
     String target = 'guidance_counselor';
@@ -525,7 +524,7 @@ class _ComposerState extends ConsumerState<_ComposerSheet> {
     } on DioException catch (e) {
       setState(() {
         _busy = false;
-        _error = _apiMessage(e, 'Refer failed.');
+        _error = _apiMessage(e, 'We couldn’t send the referral. Please try again.');
       });
     }
   }
@@ -537,7 +536,7 @@ class _ComposerState extends ConsumerState<_ComposerSheet> {
       padding: const EdgeInsets.all(16),
       child: referable.when(
         loading: () => const ZSkeletonList(count: 3),
-        error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(referableProvider)),
+        error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(referableProvider)),
         data: (records) {
           final open = records.where((r) => r['hasReferral'] != true).toList();
           final students = <String, Map<String, String>>{};

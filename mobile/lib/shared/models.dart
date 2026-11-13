@@ -171,7 +171,9 @@ class GradebookStudent {
 class ApiException implements Exception {
   final String code;
   final String message;
-  ApiException(this.code, this.message);
+  final int? statusCode;
+  final Object? cause;
+  ApiException(this.code, this.message, {this.statusCode, this.cause});
   @override
   String toString() => '$code: $message';
 }

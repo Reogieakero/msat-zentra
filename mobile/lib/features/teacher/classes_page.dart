@@ -15,7 +15,7 @@ class ClassesPage extends ConsumerWidget {
     final overview = ref.watch(overviewProvider);
     return overview.when(
       loading: () => const Padding(padding: EdgeInsets.all(16), child: ZSkeletonList()),
-      error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(overviewProvider)),
+      error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(overviewProvider)),
       data: (data) {
         final classes = (data['classes'] as List? ?? []);
         if (classes.isEmpty) {

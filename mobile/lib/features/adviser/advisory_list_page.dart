@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
+import '../../shared/user_messages.dart';
 import '../../core/sync_outbox.dart';
 import '../../shared/models.dart';
 import '../../shared/widgets.dart';
@@ -80,16 +81,14 @@ final archivedAdvisoryProvider = FutureProvider<AdvisoryRoster>((ref) async {
 });
 
 String _apiMessage(DioException e, String fallback) {
-  final d = e.response?.data;
-  if (d is Map && d['error'] is Map) return d['error']['message']?.toString() ?? fallback;
-  return fallback;
+  return userMessage(e, fallback: fallback);
 }
 
 Future<bool> _online(BuildContext context) async {
   final conn = await Connectivity().checkConnectivity();
   if (conn.contains(ConnectivityResult.none)) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Needs connection — enlisting and archiving are online-only.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connect to the internet to add or archive learners.')));
     }
     return false;
   }
@@ -308,7 +307,7 @@ class _State extends ConsumerState<AdvisoryListPage> {
         child: (_showArchived ? archived! : active).when(
           loading: () => const Padding(padding: EdgeInsets.all(16), child: ZSkeletonList()),
           error: (e, _) => ErrorView(
-              message: e.toString(),
+              message: e,
               onRetry: () => _showArchived ? ref.invalidate(archivedAdvisoryProvider) : ref.invalidate(advisoryProvider)),
           data: (roster) {
             final shown = roster.students.where((s) {

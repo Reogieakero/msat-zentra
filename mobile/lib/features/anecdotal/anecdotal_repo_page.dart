@@ -105,7 +105,7 @@ class _State extends ConsumerState<AnecdotalRepoPage> {
       Expanded(
         child: repo.when(
           loading: () => const Padding(padding: EdgeInsets.all(16), child: ZSkeletonList()),
-          error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(anecdotalMineProvider)),
+          error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(anecdotalMineProvider)),
           data: (records) {
             var shown = records.where((r) {
               if (_q.isEmpty) return true;

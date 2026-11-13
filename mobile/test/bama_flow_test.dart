@@ -80,10 +80,10 @@ void main() {
     expect(noTime['notesRecommendationsActions'], 'note');
   });
 
-  test('formatApiFailure surfaces code and field detail', () {
+  test('formatApiFailure uses friendly field labels without error codes', () {
     expect(
       formatApiFailure({'error': {'code': 'VALIDATION_ERROR', 'message': 'Invalid input', 'fields': {'observationDatetime': ['Invalid datetime']}}}, fallback: 'fb'),
-      '[VALIDATION_ERROR] Invalid input (observationDatetime: Invalid datetime)',
+      'Please check: Observation date and time.',
     );
     expect(formatApiFailure({'error': {'message': 'Nope'}}, fallback: 'fb'), 'Nope');
     expect(formatApiFailure('garbage', fallback: 'fb'), 'fb');

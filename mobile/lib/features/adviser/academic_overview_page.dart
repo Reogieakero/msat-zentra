@@ -31,7 +31,7 @@ class _State extends ConsumerState<AcademicOverviewPage> {
       Expanded(
         child: roster.when(
           loading: () => const Padding(padding: EdgeInsets.all(16), child: ZSkeletonList()),
-          error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(advisoryProvider)),
+          error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(advisoryProvider)),
           data: (r) {
             final shown = r.students.where((s) => _q.isEmpty || s.name.toLowerCase().contains(_q) || s.lrn.contains(_q)).toList()
               ..sort((a, b) => (a.academicGrade ?? 101).compareTo(b.academicGrade ?? 101));

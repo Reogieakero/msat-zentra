@@ -36,7 +36,7 @@ class AdviserSchedulePage extends ConsumerWidget {
     final slots = ref.watch(adviserScheduleProvider);
     return slots.when(
       loading: () => const Padding(padding: EdgeInsets.all(16), child: ZSkeletonList()),
-      error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(adviserScheduleProvider)),
+      error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(adviserScheduleProvider)),
       data: (list) {
         if (list.isEmpty) {
           return const Padding(

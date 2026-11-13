@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
+import '../../shared/user_messages.dart';
 import '../../core/session.dart';
 import '../../core/sync_outbox.dart';
 import '../../shared/widgets.dart';
@@ -117,7 +118,7 @@ class _State extends ConsumerState<WorkspaceAttendancePage> {
     } on DioException catch (e) {
       setState(() {
         _loading = false;
-        _error = _msg(e, 'Failed to load teaching load.');
+        _error = _msg(e, 'We couldn’t load your classes. Please try again.');
       });
     }
   }
@@ -157,7 +158,7 @@ class _State extends ConsumerState<WorkspaceAttendancePage> {
       });
       await _prefill();
     } on DioException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_msg(e, 'Failed to load section.'))));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_msg(e, 'We couldn’t load this section. Please try again.'))));
     }
   }
 
@@ -210,7 +211,7 @@ class _State extends ConsumerState<WorkspaceAttendancePage> {
     final conn = await Connectivity().checkConnectivity();
     if (conn.contains(ConnectivityResult.none)) {
       await ref.read(outboxProvider).enqueue(method: 'POST', path: '/api/attendance/bulk', body: body);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Offline — queued for sync.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You’re offline. Attendance is saved on this device and is waiting to be sent.')));
       return;
     }
     setState(() => _busy = true);
@@ -218,16 +219,14 @@ class _State extends ConsumerState<WorkspaceAttendancePage> {
       await ref.read(apiClientProvider).dio.post('/api/attendance/bulk', data: body);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Attendance submitted.')));
     } on DioException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_msg(e, 'Submit failed.'))));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_msg(e, 'We couldn’t submit attendance. Please try again.'))));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   String _msg(DioException e, String fallback) {
-    final d = e.response?.data;
-    if (d is Map && d['error'] is Map) return d['error']['message']?.toString() ?? fallback;
-    return fallback;
+    return userMessage(e, fallback: fallback);
   }
 
   @override

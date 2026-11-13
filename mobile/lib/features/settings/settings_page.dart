@@ -14,6 +14,7 @@ import '../../core/session.dart';
 import '../../design/brand.dart';
 import '../../design/theme_mode.dart';
 import '../../shared/widgets.dart';
+import '../../shared/user_messages.dart';
 import 'settings_data.dart';
 
 const _primaryPresets = ['#7c3aed', '#2563eb', '#0d9488', '#16a34a', '#d97706', '#ea580c', '#e11d48', '#db2777'];
@@ -150,7 +151,7 @@ class _State extends ConsumerState<SettingsPage> {
       _confirm.clear();
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated. Use your new password next time you sign in.')));
     } on DioException catch (e) {
-      setState(() => _passError = settingsError(e, 'Failed to update password.'));
+      setState(() => _passError = settingsError(e, 'We couldn’t update your password. Please try again.'));
     } finally {
       if (mounted) setState(() => _passBusy = false);
     }
@@ -173,7 +174,7 @@ class _State extends ConsumerState<SettingsPage> {
       const SizedBox(height: 12),
       profile.when(
         loading: () => const ZSkeletonList(count: 2),
-        error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(teacherProfileProvider)),
+        error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(teacherProfileProvider)),
         data: (p) {
           if (!_nameInit) {
             _name.text = p.fullName;
@@ -383,7 +384,7 @@ class _AdviserCard extends ConsumerWidget {
         const SizedBox(height: 8),
         sections.when(
           loading: () => const Text('Loading sections…', style: TextStyle(fontSize: 13)),
-          error: (e, _) => Text(e.toString(), style: TextStyle(color: theme.colorScheme.error, fontSize: 13)),
+          error: (e, _) => Text(userMessage(e), style: TextStyle(color: theme.colorScheme.error, fontSize: 13)),
           data: (list) {
             final mine = list.where((s) => s.advisedByMe).toList();
             return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

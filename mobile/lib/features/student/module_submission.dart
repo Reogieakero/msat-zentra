@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/api_client.dart';
 import '../../services/portal_service.dart';
 import '../../shared/models.dart';
+import '../../shared/user_messages.dart';
 
 class ModuleSubmissionSheet extends ConsumerStatefulWidget {
   final PortalModule module;
@@ -67,11 +68,7 @@ class _ModuleSubmissionSheetState extends ConsumerState<ModuleSubmissionSheet> {
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      String message = e.toString();
-      if (e is DioException) {
-        try { api.throwApi(e); } on ApiException catch (error) { message = error.message; }
-      }
-      setState(() => _error = message);
+      setState(() => _error = userMessage(e, fallback: 'We couldn’t submit your answer. Please try again.'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -101,7 +98,7 @@ class _ModuleSubmissionSheetState extends ConsumerState<ModuleSubmissionSheet> {
             final photo = await ImagePicker().pickImage(source: ImageSource.gallery);
             if (mounted && photo != null) setState(() => _photo = photo);
           } catch (e) {
-            if (mounted) setState(() => _error = 'Could not open photo library.');
+            if (mounted) setState(() => _error = userMessage(e, fallback: 'We couldn’t open your photos. Please try again.'));
           }
         },
       ),

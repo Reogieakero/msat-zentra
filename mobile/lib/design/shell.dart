@@ -17,6 +17,7 @@ import '../features/home/role_home.dart' show AdviserRoute, WorkspaceRoute;
 import '../features/settings/settings_data.dart' show teacherProfileProvider;
 import '../shared/models.dart' show Term;
 import '../shared/widgets.dart';
+import '../shared/user_messages.dart';
 import 'brand.dart';
 
 class ZentraShell extends ConsumerWidget {
@@ -200,7 +201,7 @@ void showZTermPicker(BuildContext context, WidgetRef ref) {
             Expanded(
               child: years.when(
                 loading: () => const Center(child: Text('Loading…')),
-                error: (e, _) => Center(child: Text(e.toString())),
+                error: (e, _) => Center(child: Text(userMessage(e))),
                 data: (list) {
                   if (list.isEmpty) return const Center(child: Text('No school years found. Ask the Principal to create one.'));
                   return ListView.builder(
@@ -301,7 +302,7 @@ void showZNotifications(BuildContext context, WidgetRef ref) {
                   try {
                     await markAllNotificationsRead(ref);
                   } catch (e) {
-                    if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(e.toString())));
+                    if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(userMessage(e))));
                   }
                 },
                 child: const Text('Mark all read', style: TextStyle(fontSize: 13)),
@@ -311,7 +312,7 @@ void showZNotifications(BuildContext context, WidgetRef ref) {
             Expanded(
               child: inbox.when(
                 loading: () => const ZSkeletonList(),
-                error: (e, _) => Center(child: Text(e.toString(), style: Theme.of(ctx).textTheme.bodySmall)),
+                error: (e, _) => Center(child: Text(userMessage(e), style: Theme.of(ctx).textTheme.bodySmall)),
                 data: (items) {
                   if (items.isEmpty) {
                     return const ZEmpty(
@@ -339,7 +340,7 @@ void showZNotifications(BuildContext context, WidgetRef ref) {
                           if (target != null) {
                             if (context.mounted) context.go(target);
                           } else if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No linked page — viewable on web.')));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This update is available on the Zentra website. Open Zentra in your browser to view it.')));
                           }
                         },
                         child: Row(children: [

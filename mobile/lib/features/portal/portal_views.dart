@@ -22,7 +22,7 @@ class PortalAsync<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => value.when(
         loading: () => const Padding(padding: EdgeInsets.all(16), child: ZSkeletonList(count: 5)),
-        error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: ErrorView(message: e.toString())),
+        error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: ErrorView(message: e)),
         data: builder,
       );
 }
