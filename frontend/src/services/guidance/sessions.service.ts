@@ -32,11 +32,12 @@ export async function completeSession(
 export async function rescheduleSession(
   id: string,
   sessionId: string,
-  scheduledAt: string
+  scheduledAt: string,
+  sessionType?: string
 ): Promise<unknown> {
   const { data } = await apiClient.post(
     `/api/referrals/${id}/sessions/${sessionId}/reschedule`,
-    { scheduledAt }
+    { scheduledAt, ...(sessionType ? { sessionType } : {}) }
   );
   return data;
 }

@@ -230,11 +230,12 @@ export async function completeFollowUpSession(
 export async function rescheduleFollowUpSession(
   followUpId: string,
   sessionId: string,
-  scheduledAt: string
+  scheduledAt: string,
+  sessionType?: string
 ): Promise<unknown> {
   const { data } = await apiClient.post(
     `/api/interventions/${followUpId}/sessions/${sessionId}/reschedule`,
-    { scheduledAt }
+    { scheduledAt, ...(sessionType ? { sessionType } : {}) }
   );
   return data;
 }

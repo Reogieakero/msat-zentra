@@ -109,6 +109,7 @@ router.post(
         String(req.params.id),
         String(req.params.sessionId),
         req.body.scheduledAt as string,
+        req.body.sessionType as string | undefined,
       );
       await invalidateInterventionCaches();
       res.json(updated);

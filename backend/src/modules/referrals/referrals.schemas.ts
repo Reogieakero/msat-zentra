@@ -108,6 +108,8 @@ export const completeSessionSchema = z.object({
 
 export const rescheduleSchema = z.object({
   scheduledAt: z.string().min(1),
+  // Optional: the move overlay also offers the session-kind picker.
+  sessionType: z.string().min(1).optional(),
 });
 
 export const cancelSessionSchema = z.object({

@@ -243,12 +243,13 @@ export function GuidanceInterventionsTable({
               : {}),
           });
         }}
-        onSubmitMove={(scheduledAt) => {
+        onSubmitMove={(fields) => {
           if (!activeKey || !activeFollowUpId || !activeSessionId) return;
           runAction(activeKey, "move", {
             followUpId: activeFollowUpId,
             sessionId: activeSessionId,
-            scheduledAt,
+            scheduledAt: fields.scheduledAt,
+            sessionType: fields.sessionType as CounselingSessionType,
           });
         }}
         onSubmitCancelSess={(reason) => {

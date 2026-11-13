@@ -27,7 +27,18 @@ export interface ReferralRow {
   /** Role that dismissed the referral (audit-derived). Teacher roles mean
       the filer withdrew it; anything else means the desk rejected it. */
   dismissedByRole?: string | null;
-  timeline: { label: string; detail?: string | null; date: string }[];
+  /** Latest desk/queue note persisted with the case (the dismissal reason
+      lands here when a desk rejects or the filer withdraws it). */
+  notes?: string | null;
+  timeline: {
+    label: string;
+    detail?: string | null;
+    /** Calendar date (YYYY-MM-DD) the step happened. */
+    date: string;
+    /** Full audit timestamp — the real moment the action ran. */
+    at?: string;
+    action?: string;
+  }[];
   track: "adm" | "general";
   consultReviewer?: string | null;
   admStage?: string | null;
@@ -43,7 +54,7 @@ export interface ReferralRow {
   devicesReturned?: number;
   certificationAt?: string | null;
   resolvedAt?: string | null;
-  /** Booked-but-not-yet-held session on an ADM case (guidance/nurse booked it). */
+  /** Booked-but-not-yet-held session on the case (guidance/nurse booked it). */
   bookedSession?: {
     scheduledAt: string;
     sessionType: string;

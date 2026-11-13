@@ -7,6 +7,7 @@ import {
   excludeArchivedRosters,
 } from "../../lib/learnerVisibility.js";
 import {
+  attendanceTotalFor,
   computeRiskFactors,
   isAtRisk,
   levelFromFlags,
@@ -310,6 +311,7 @@ export async function getOverview(ctx: GuidanceContext) {
         ...excludeArchivedRosters(archivedLearners),
       },
       select: {
+        id: true,
         lrn: true,
         gradeLevel: true,
         sectionId: true,
@@ -351,6 +353,8 @@ export async function getOverview(ctx: GuidanceContext) {
   const riskCohort: {
     gradeLevel: string;
     sectionId: string;
+    /** Roster learner id — drives the transferee attendance window. */
+    rosterId: string | null;
     enrolledFallback: number;
     finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
     attendanceRecords: { status: string }[];
@@ -359,6 +363,7 @@ export async function getOverview(ctx: GuidanceContext) {
     ...students.map((s) => ({
       gradeLevel: s.gradeLevel,
       sectionId: s.section?.id ?? "",
+      rosterId: null,
       enrolledFallback: s.section?._count.students ?? 0,
       finalGrades: s.finalGrades,
       attendanceRecords: s.attendanceRecords,
@@ -369,6 +374,7 @@ export async function getOverview(ctx: GuidanceContext) {
       .map((r) => ({
         gradeLevel: r.gradeLevel,
         sectionId: r.sectionId,
+        rosterId: r.id,
         enrolledFallback: 0,
         finalGrades: r.finalGrades,
         attendanceRecords: r.attendanceRecords,
@@ -393,7 +399,7 @@ export async function getOverview(ctx: GuidanceContext) {
     const flags = computeRiskFactors({
       finalGrades: s.finalGrades,
       attendance: s.attendanceRecords,
-      attendanceTotal: sectionTotals.get(s.sectionId),
+      attendanceTotal: attendanceTotalFor(sectionTotals, s.sectionId, s.rosterId),
       anecdotalCount: s.anecdotalCount,
       enrolled: headcounts.get(s.sectionId) ?? s.enrolledFallback,
     });

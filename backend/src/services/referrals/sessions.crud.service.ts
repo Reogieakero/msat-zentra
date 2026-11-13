@@ -153,12 +153,16 @@ export async function rescheduleSession(
   referralId: string,
   sessionId: string,
   scheduledAt: string,
+  sessionType?: string,
 ) {
   const referral = await getSessionReferral(referralId, ctx.role, ctx.termId);
   ensureOpen(referral);
   const session = await getSession(referral.id, sessionId);
   if (session.status !== "scheduled") {
     throw new AppError(400, "INVALID_ACTION", "Only an upcoming session can be moved");
+  }
+  if (sessionType !== undefined && !isSessionType(sessionType)) {
+    throw new AppError(400, "INVALID_ACTION", "Unknown session type");
   }
   const nextDate = parseScheduledAt(scheduledAt);
   await assertSessionSlotFree(prisma, {
@@ -168,13 +172,18 @@ export async function rescheduleSession(
   });
   const updated = await prisma.counselingSession.update({
     where: { id: session.id },
-    data: { scheduledAt: nextDate },
+    data: {
+      scheduledAt: nextDate,
+      // The move overlay shows the same kind picker as booking, so a changed
+      // kind is persisted instead of silently keeping the old one.
+      ...(sessionType ? { sessionType } : {}),
+    },
     include: {
       creator: { select: { fullName: true } },
       attachments: { orderBy: { uploadedAt: "asc" } },
     },
   });
-  await writeAudit({ userId: ctx.userId, actionType: "session_rescheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session moved", oldValue: { scheduledAt: session.scheduledAt }, newValue: { scheduledAt: nextDate } });
+  await writeAudit({ userId: ctx.userId, actionType: "session_rescheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session moved", oldValue: { scheduledAt: session.scheduledAt, sessionType: session.sessionType }, newValue: { scheduledAt: nextDate, sessionType: updated.sessionType } });
   const card = await referralCard(referral);
   const was = formatWhen(session.scheduledAt);
   const now = formatWhen(nextDate);

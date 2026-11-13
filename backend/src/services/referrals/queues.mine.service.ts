@@ -190,7 +190,7 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
         ? "resolved"
         : r.status;
     /* Booked-but-not-yet-held session (guidance/nurse schedules it on the
-       referral). ADM cases surface it to the adviser so they know the slot
+       referral). Every track surfaces it to the adviser so they know the slot
        without opening the case: earliest scheduled one wins. */
     const bookedSession =
       r.counselingSessions.find((s) => s.status === "scheduled") ?? null;
@@ -275,7 +275,7 @@ export async function listMine(ctx: ReferralContext, query: MineQuery) {
       })(),
       devicesReturned: (profile?.devices ?? []).filter((d) => d.returnedDate !== null).length,
       bookedSession:
-        isAdm && bookedSession && displayStatus !== "dismissed"
+        bookedSession && displayStatus !== "dismissed"
           ? {
               scheduledAt: bookedSession.scheduledAt.toISOString(),
               sessionType: bookedSession.sessionType,

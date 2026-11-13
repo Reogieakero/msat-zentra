@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   getCoreRowModel,
@@ -40,7 +39,6 @@ import { PAGE_SIZE } from "@/components/shared/pagination";
 import { useAdvisoryRoster } from "@/services/teacher/advisory.service";
 import type { AdviseeRow } from "@/services/teacher/advisory.types";
 import { compareSurnameFirst, formatSurnameFirst } from "@/lib/names";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import listStyles from "../list/components/advisory-list.module.css";
 import {
   AdvisoryGradesBoard,
@@ -249,27 +247,13 @@ export default function TeacherAdvisoryStudentsPage() {
       className={`${listStyles.pageLock} flex min-w-0 flex-col gap-3`}
     >
       {students.length === 0 ? (
-        <div className="flex h-full w-full items-center justify-center">
-          <div className={`${assign.card} w-full max-w-md`}>
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
-            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-                aria-hidden="true"
-              >
-                <Users size={24} className="text-muted-foreground" />
-              </span>
-              <p className="font-medium">No advisory students yet</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                Students enlisted in your advisory section will appear here with their live grades.
-              </p>
-              <Button asChild size="sm" className="mt-2">
-                <Link href="/teacher/advisory/list">Add student</Link>
-              </Button>
-            </div>
-          </div>
+        <div className="relative flex h-full min-h-[calc(100dvh-9rem)] w-full items-center justify-center">
+          <InsightCallout role="status" className="w-full max-w-xl self-center text-left">
+            <strong>No advisory students yet.</strong>{" "}
+            {sectionLabel
+              ? `${sectionLabel} has no enlisted learners this term.`
+              : "Students enlisted in your advisory section will appear here with their live grades."}
+          </InsightCallout>
         </div>
       ) : (
         <div className={listStyles.panel} aria-label="Advisory students board">

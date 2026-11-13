@@ -3,6 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { OutcomeStatus, RiskLevel } from "../../generated/prisma/client.js";
 import {
   resolveActiveTermId,
+  attendanceTotalFor,
   computeRiskFactors,
   levelFromFlags,
   sectionAttendanceTotals,
@@ -465,13 +466,14 @@ export async function getInterventionStudents(
 
   const mapped: RiskSnapshotStudent[] = deduped.map((st) => {
     const enrolled = headcounts.get(st.sectionId) ?? st.enrolledFallback;
+    const rosterId = st.studentId.startsWith("roster:") ? st.studentId.slice("roster:".length) : null;
     const flags = computeRiskFactors({
       finalGrades: st.finalGrades.map((g) => ({
         computedAverage: g.computedAverage,
         transmutedGrade: g.transmutedGrade,
       })),
       attendance: st.attendanceRecords.map((a) => ({ status: a.status, subjectId: a.subjectId })),
-      attendanceTotal: sectionTotals.get(st.sectionId),
+      attendanceTotal: attendanceTotalFor(sectionTotals, st.sectionId, rosterId),
       anecdotalCount: st.anecdotalCount,
       enrolled,
     });
@@ -1096,6 +1098,8 @@ async function loadLiveCohort(
     studentName: string;
     section: string;
     sectionId: string;
+    /** Roster learner id — drives the transferee attendance window. */
+    rosterId: string | null;
     enrolledFallback: number;
     gradeLevel: string;
     finalGrades: { computedAverage: number | null; transmutedGrade: number | null; subject: { name: string; code: string } }[];
@@ -1117,7 +1121,7 @@ async function loadLiveCohort(
         transmutedGrade: g.transmutedGrade,
       })),
       attendance: st.attendanceRecords.map((a) => ({ status: a.status, subjectId: a.subjectId })),
-      attendanceTotal: sectionTotals.get(st.sectionId),
+      attendanceTotal: attendanceTotalFor(sectionTotals, st.sectionId, st.rosterId),
       anecdotalCount: st.anecdotalCount,
       enrolled,
     });
@@ -1193,6 +1197,7 @@ async function loadLiveCohort(
       studentName: p.user.fullName,
       section: p.section?.name ?? "—",
       sectionId: p.section?.id ?? "",
+      rosterId: null,
       enrolledFallback: p.section?._count.students ?? 0,
       gradeLevel: p.section?.gradeLevel ?? p.gradeLevel,
       finalGrades: p.finalGrades,
@@ -1214,6 +1219,7 @@ async function loadLiveCohort(
       studentName: r.fullName,
       section: r.section?.name ?? "—",
       sectionId: r.sectionId ?? r.section?.id ?? "",
+      rosterId: r.id,
       enrolledFallback: 0,
       gradeLevel: r.section?.gradeLevel ?? r.gradeLevel,
       finalGrades: r.finalGrades,
