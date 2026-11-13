@@ -179,6 +179,12 @@ export interface BookSessionDialogProps {
 
   showSessionType?: boolean;
 
+  /**
+   * Hide the "Details" lane entirely (session kind + venue). Moves only change
+   * the date/time, so the clinic desk's "Move session" overlay leaves it out.
+   */
+  hideDetails?: boolean;
+
   sessionTypeLabel?: string;
   sessionTypeOptions?: { value: string; label: string }[];
   defaultSessionType?: string;
@@ -242,6 +248,7 @@ export function BookSessionDialog({
   venueLabel = "Venue (optional)",
   venuePlaceholder = "e.g. School clinic",
   showSessionType = false,
+  hideDetails = false,
   sessionTypeLabel = "Session kind",
   sessionTypeOptions = [],
   defaultSessionType = "individual",
@@ -586,7 +593,7 @@ export function BookSessionDialog({
               </div>
             ) : null}
 
-            <div className={board.lanes}>
+            <div className={`${board.lanes}${hideDetails ? ` ${board.lanesSingle}` : ""}`}>
               <section className={board.lane} aria-label="Schedule">
                 <div className={board.laneHead}>
                   <span className={board.laneTitle}>
@@ -682,6 +689,7 @@ export function BookSessionDialog({
                 </div>
               </section>
 
+              {hideDetails ? null : (
               <section className={board.lane} aria-label="Details">
                 <div className={board.laneHead}>
                   <span className={board.laneTitle}>
@@ -802,6 +810,7 @@ export function BookSessionDialog({
                   ) : null}
                 </div>
               </section>
+              )}
             </div>
           </div>
 

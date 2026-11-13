@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   Bell,
   BellRing,
@@ -18,7 +19,14 @@ import {
   Send,
 } from "lucide-react";
 import { NurseEmptyState } from "../../components/NurseEmptyCard";
-import { Pill, type PillTone } from "@/components/ui/pill";
+import { Pill } from "@/components/ui/pill";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   InputGroup,
   InputGroupAddon,
@@ -28,30 +36,35 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { InsightCallout } from "@/components/ui/insight-callout";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { StudentMascot } from "@/components/student-mascot/StudentMascot";
-import { NurseActionBadge, waitingElapsed } from "../../overview/components/nurse-action-badge";
 import { useNowMs } from "../../overview/components/use-now-ms";
-import { NurseQueueRowActions } from "../../overview/components/NurseQueueRowActions";
+import { NurseStartHandlingDialog } from "../../overview/components/NurseStartHandlingDialog";
+import { ScheduleSessionDialog } from "../../referrals/components/NurseSessionDialogs";
+import {
+  activeSessionOf,
+  caseStage,
+  latestActionOf,
+} from "../../referrals/components/nurse-referrals-format";
+import { deriveActionStatus } from "@/services/nurse/labels";
+import { formatElapsedShort, msSinceDate } from "@/lib/clock";
 import { Pagination } from "@/components/shared/pagination";
 import type {
   NurseAlertItem,
+  NurseQueueRow,
   NurseRiskLevel,
 } from "@/services/nurse/nurse.types";
 import styles from "./nurse-alerts.module.css";
+
+/* Rectangle pills (rounded-md) shared by the kanban rows — same values as the
+   guidance alerts board, so both desks read identically. */
+const PILL_BASE =
+  "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap";
+const PILL_MUTED = "bg-muted text-muted-foreground";
+const PILL_SECONDARY = "bg-secondary text-secondary-foreground";
 
 type RiskFilter = "" | "High" | "Moderate";
 
 /** Server-side case-type filter — matches the API's ?track= param. */
 export type TypeTrack = "adm" | "clinic";
-
-/* Category colour coding shared with the overview / referrals / anecdotal
-   pages — one tone per anecdotal category. */
-const CATEGORY_TONE: Record<string, PillTone> = {
-  behavioral: "amber",
-  bullying: "red",
-  academic: "blue",
-  attendance: "green",
-  health: "violet",
-};
 
 /* Risk levels offered by the risk tab strip — High / Moderate only (plus the
    reset tab); low-risk cases aren't actionable on this desk. */
@@ -145,6 +158,35 @@ export function actionIconFor(label: string): ActionIcon {
   return Bell;
 }
 
+/** Renders the latest-action glyph from its label. Branches inline (like the
+    guidance board's ActionGlyph) so no component is created during render. */
+export function ActionGlyph({ label, className }: { label: string; className?: string }) {
+  const text = label.toLowerCase();
+  const props = { className, "aria-hidden": true } as const;
+  if (text.includes("booked")) return <CalendarPlus {...props} />;
+  if (text.includes("moved")) return <CalendarClock {...props} />;
+  if (text.includes("done") || text.includes("resolv")) return <CircleCheck {...props} />;
+  if (text.includes("cancel") || text.includes("reject")) return <CircleX {...props} />;
+  if (text.includes("documentation") || text.includes("filed") || text.includes("note"))
+    return <FileText {...props} />;
+  if (text.includes("follow")) return <Flag {...props} />;
+  if (text.includes("accept")) return <Check {...props} />;
+  if (
+    text.includes("escalat") ||
+    text.includes("sent") ||
+    text.includes("endors") ||
+    text.includes("ready") ||
+    text.includes("forward") ||
+    text.includes("specialist") ||
+    text.includes("adm process") ||
+    text.includes("intervention")
+  )
+    return <Send {...props} />;
+  if (text.includes("review") || text.includes("needs")) return <Eye {...props} />;
+  if (text.includes("waiting") || text.includes("information")) return <Hourglass {...props} />;
+  return <Bell {...props} />;
+}
+
 /** Kanban-shaped loading placeholder — the board shell with its rows as
     skeleton bars, so the load and the loaded page read as one surface. */
 export function NurseAlertsBoardSkeleton() {
@@ -192,26 +234,361 @@ export function NurseAlertsBoardSkeleton() {
     >
       <ul className={styles.caseList}>
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <li key={i} className={styles.caseRow} aria-hidden="true">
-            <div className={styles.caseInfo}>
+          <li key={i} className={styles.skeletonRow} aria-hidden="true">
+            <div className={styles.caseStudent}>
               <Skeleton className={styles.skelAvatar} />
-              <div className={styles.caseNameBlock}>
+              <div className={styles.caseIdentity}>
                 <Skeleton className={styles.skelCaseName} />
-                <div className={styles.caseMeta}>
-                  <Skeleton className={styles.skelPill} />
+                <div className={styles.caseSubRow}>
+                  <Skeleton className={styles.skelPillShort} />
                   <Skeleton className={styles.skelPillShort} />
                 </div>
               </div>
             </div>
-            <div className={styles.cellActions}>
-              <Skeleton className={styles.skelPill} />
+            <div className={styles.caseStatusCell}>
+              <Skeleton className={styles.skelSplitPill} />
+            </div>
+            <div className={styles.caseTimeCell}>
               <Skeleton className={styles.skelPillShort} />
+            </div>
+            <div className={styles.caseActions}>
               <Skeleton className={styles.skelKebab} />
             </div>
           </li>
         ))}
       </ul>
     </KanbanBoard>
+  );
+}
+
+/* Status → text tone for the split status|risk pill (same palette as the
+   guidance alerts board: green done/endorsed, red rejected/escalated, blue
+   booked/follow-up, amber needs review). */
+const STATUS_TEXT_TONE: Record<string, string> = {
+  endorsed: "text-green-600 dark:text-green-400",
+  done: "text-green-600 dark:text-green-400",
+  done_session: "text-green-600 dark:text-green-400",
+  rejected: "text-red-600 dark:text-red-400",
+  escalated: "text-red-600 dark:text-red-400",
+  needs_review: "text-amber-600 dark:text-amber-400",
+  booked: "text-blue-600 dark:text-blue-400",
+  followup: "text-blue-600 dark:text-blue-400",
+};
+
+function riskTextTone(level: NurseRiskLevel | undefined): string {
+  if (level === "High") return "text-red-600 dark:text-red-400";
+  if (level === "Moderate") return "text-amber-600 dark:text-amber-400";
+  return "text-muted-foreground";
+}
+
+/** Colour code for the latest-action glyph — same semantic palette as the
+    guidance alerts board's `actionTone` (red = escalated/sent, green = done,
+    blue = booked, amber = waiting/follow-up). */
+function latestActionTone(label: string): string {
+  const text = label.toLowerCase();
+  if (text.includes("cancel") || text.includes("reject") || text.includes("escalat") || text.includes("sent"))
+    return "text-red-600 dark:text-red-400";
+  if (text.includes("done") || text.includes("resolv") || text.includes("accept") || text.includes("ready"))
+    return "text-green-600 dark:text-green-400";
+  if (text.includes("booked")) return "text-blue-600 dark:text-blue-400";
+  if (
+    text.includes("waiting") ||
+    text.includes("information") ||
+    text.includes("follow") ||
+    text.includes("moved") ||
+    text.includes("review") ||
+    text.includes("needs")
+  )
+    return "text-amber-600 dark:text-amber-400";
+  return "text-muted-foreground";
+}
+
+/** Track lead pill left of the mascot, same as the guidance alerts rows. */
+function RowTypeLabel({ type }: { type: string }) {
+  const adm = type === "ADM";
+  return (
+    <>
+      <span
+        className={`${styles.caseTypePill} ${
+          adm
+            ? "bg-blue-500/15 text-blue-700 dark:text-blue-400"
+            : "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+        }`}
+        aria-label="Case type"
+      >
+        {adm ? "ADM" : "Clinic"}
+      </span>
+      <span className={styles.caseSeparator} aria-hidden="true">
+        |
+      </span>
+    </>
+  );
+}
+
+/**
+ * Clinic booking control — the nurse equivalent of the guidance board's
+ * "Book session" button. Pending/escalated cases open the review overlay
+ * (accept + optional first session); an already-handled case with no live
+ * booking opens the plain schedule dialog. A live booking is already surfaced
+ * by the row's status pill, so no extra control is shown (guidance parity).
+ */
+function ClinicBookingControl({
+  row,
+  onChanged,
+}: {
+  row: NurseQueueRow;
+  onChanged: () => void;
+}) {
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
+  const [reviewOpen, setReviewOpen] = React.useState(false);
+  const stage = caseStage(row);
+  const closed = stage.key === "done" || stage.key === "cancelled" || stage.key === "reject";
+  if (row.type === "ADM" || closed) return null;
+
+  // Guidance drops the booking control once a session is scheduled — the
+  // status pill already says "Booked session".
+  if (activeSessionOf(row.sessions)) return null;
+
+  const needsReview = row.status === "pending" || row.status === "escalated";
+  return (
+    <>
+      <Button
+        type="button"
+        size="xs"
+        variant="default"
+        className="h-6 shrink-0 gap-1 px-2 text-[0.6875rem] font-semibold"
+        onClick={(event) => {
+          event.stopPropagation();
+          if (needsReview) setReviewOpen(true);
+          else setScheduleOpen(true);
+        }}
+        aria-label={`Book a session for ${row.student}`}
+      >
+        <CalendarPlus size={13} aria-hidden />
+        Book session
+      </Button>
+      {needsReview ? (
+        <NurseStartHandlingDialog
+          row={row}
+          open={reviewOpen}
+          onClose={() => setReviewOpen(false)}
+          onChanged={onChanged}
+        />
+      ) : (
+        <ScheduleSessionDialog
+          row={row}
+          open={scheduleOpen}
+          onClose={() => setScheduleOpen(false)}
+          onChanged={onChanged}
+        />
+      )}
+    </>
+  );
+}
+
+/** One case line: type lead + identity, status|risk split pill, referred time,
+    latest-action glyph and the clinic booking control. Mirrors the guidance
+    alerts board's row so both desks read the same way. */
+function NurseAlertRow({
+  alert,
+  index,
+  riskLevel,
+  riskLoading,
+  nowMs,
+  onChanged,
+}: {
+  alert: NurseAlertItem;
+  index: number;
+  riskLevel: NurseRiskLevel | undefined;
+  riskLoading: boolean;
+  nowMs: number;
+  onChanged: () => void;
+}) {
+  const router = useRouter();
+  const row = alert.row;
+  const status = deriveActionStatus(
+    row.type,
+    row.status,
+    row.sessions,
+    row.dismissedByRole,
+  );
+  const latest = latestActionOf(row, alert);
+  const doneCount = row.sessions.filter((s) => s.status === "completed").length;
+  const stage = caseStage(row);
+  const closed = stage.key === "done" || stage.key === "cancelled" || stage.key === "reject";
+  const referredMs = msSinceDate(row.referredAt, nowMs);
+  const homeBase =
+    row.type === "ADM" ? "/nurse/referrals/adm" : "/nurse/referrals/clinic";
+  const seeMoreHref = `${homeBase}?highlight=${row.id}`;
+
+  const open = () => router.push(seeMoreHref);
+
+  return (
+    <li
+      className={`${styles.caseRow} ${styles.caseRowInteractive}`}
+      style={{ animationDelay: `${450 + Math.min(index, 11) * 140}ms` }}
+      tabIndex={0}
+      aria-label={`Open case details for ${row.student}`}
+      onClick={open}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open();
+        }
+      }}
+    >
+      <div className={styles.caseStudent}>
+        <RowTypeLabel type={row.type} />
+        <StudentMascot
+          name={row.student}
+          seed={row.lrn}
+          character={row.mascot ?? undefined}
+          size={32}
+        />
+        <div className={styles.caseIdentity}>
+          <p className={styles.studentName}>{row.student}</p>
+          <p className={styles.cellSub}>
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Pill className="tabular-nums" tabIndex={0} aria-label="LRN">
+                    {row.lrn}
+                  </Pill>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={6}>
+                  <span className="font-medium">LRN</span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {row.grade !== "—" ? (
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Pill
+                      tone="amber"
+                      tabIndex={0}
+                      aria-label={`Grade level ${row.grade}`}
+                    >
+                      {row.section}
+                    </Pill>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={6}>
+                    <span className="font-medium">{row.grade}</span>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
+          </p>
+        </div>
+      </div>
+
+      <div className={styles.caseStatusCell}>
+        <span className={styles.splitPill}>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className={`${styles.splitPart} ${STATUS_TEXT_TONE[status.key] ?? "text-foreground"}`}
+                  tabIndex={0}
+                  aria-label="Status"
+                >
+                  {status.label}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>
+                <span className="font-medium">Status</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <span className={styles.splitDivider} aria-hidden="true" />
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className={`${styles.splitPart} ${riskTextTone(riskLevel)}`}
+                  tabIndex={0}
+                  aria-label="Risk level"
+                >
+                  {riskLoading && !riskLevel ? "…" : (riskLevel ?? "—")}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>
+                <span className="font-medium">Risk level</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </span>
+      </div>
+
+      <div className={styles.caseTimeCell}>
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className={`${PILL_BASE} ${PILL_SECONDARY} tabular-nums`}
+                tabIndex={0}
+                aria-label={
+                  referredMs === null
+                    ? "Referred time unknown"
+                    : `Referred ${formatElapsedShort(referredMs)} ago`
+                }
+              >
+                <Clock size={11} aria-hidden />
+                {referredMs === null ? "—" : `${formatElapsedShort(referredMs)} ago`}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6}>
+              <span className="font-medium">Referred at</span>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
+      <div
+        className={styles.caseActions}
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        {doneCount > 0 && !closed ? (
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className={`${PILL_BASE} ${PILL_MUTED} tabular-nums`}
+                  tabIndex={0}
+                  aria-label="Sessions done"
+                >
+                  {doneCount} session{doneCount === 1 ? "" : "s"} done
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>
+                <span className="font-medium">Sessions done</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : null}
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className={styles.actionIconButton}
+                aria-label={latest.label}
+                tabIndex={0}
+              >
+                <ActionGlyph
+                  label={latest.label}
+                  className={`${styles.actionIcon} ${latestActionTone(latest.label)}`}
+                />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6}>
+              <span className="font-medium">{latest.label}</span>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <ClinicBookingControl row={row} onChanged={onChanged} />
+      </div>
+    </li>
   );
 }
 
@@ -377,83 +754,19 @@ export function NurseAlertsBoard({
     >
       {alerts.length > 0 && filtered.length > 0 ? (
         <ul className={styles.caseList}>
-          {filtered.map((alert) => {
-            const row = alert.row;
-            const level = alert.studentId
-              ? riskByStudent[alert.studentId]
-              : undefined;
-            const wait = waitingElapsed(row.referredAt, nowMs);
-            const homeBase =
-              row.type === "ADM"
-                ? "/nurse/referrals/adm"
-                : "/nurse/referrals/clinic";
-            const seeMoreHref = `${homeBase}?highlight=${row.id}`;
-            const viewFormHref =
-              row.type === "ADM" && row.referralReady
-                ? `${seeMoreHref}&form=1`
-                : seeMoreHref;
-            return (
-              <li key={alert.key} className={styles.caseRow}>
-                <div className={styles.caseInfo}>
-                  <StudentMascot
-                    name={row.student}
-                    seed={row.lrn}
-                    character={row.mascot ?? undefined}
-                    size={32}
-                  />
-                  <div className={styles.caseNameBlock}>
-                    <p className={styles.cellMain}>{row.student}</p>
-                    <div className={styles.caseMeta}>
-                      <Pill label="LRN" className="tabular-nums">
-                        {row.lrn}
-                      </Pill>
-                      {row.grade !== "—" && (
-                        <Pill label="Grade level">{row.grade}</Pill>
-                      )}
-                      {row.category !== "—" && (
-                        <Pill
-                          tone={
-                            CATEGORY_TONE[row.category.trim().toLowerCase()] ??
-                            "neutral"
-                          }
-                          label="Category"
-                        >
-                          {row.category}
-                        </Pill>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.cellActions}>
-                  {row.type === "ADM" ? (
-                    <Pill tone="blue" label="Referral type">
-                      ADM case
-                    </Pill>
-                  ) : (
-                    <Pill label="Referral type">Clinic</Pill>
-                  )}
-                  <NurseActionBadge row={row} />
-                  <RiskBadge level={level} loading={riskLoading} />
-                  {wait !== "—" && (
-                    <Pill
-                      label={`Waiting since ${row.date}`}
-                      className="gap-1 tabular-nums"
-                    >
-                      <Clock size={11} aria-hidden />
-                      {wait}
-                    </Pill>
-                  )}
-                  <NurseQueueRowActions
-                    row={row}
-                    onChanged={onChanged}
-                    seeMoreHref={seeMoreHref}
-                    viewFormHref={viewFormHref}
-                    viewOnly
-                  />
-                </div>
-              </li>
-            );
-          })}
+          {filtered.map((alert, i) => (
+            <NurseAlertRow
+              key={alert.key}
+              alert={alert}
+              index={i}
+              riskLevel={
+                alert.studentId ? riskByStudent[alert.studentId] : undefined
+              }
+              riskLoading={riskLoading}
+              nowMs={nowMs}
+              onChanged={onChanged}
+            />
+          ))}
         </ul>
       ) : emptyFiltered ? (
         <div className="flex w-full justify-center py-6">

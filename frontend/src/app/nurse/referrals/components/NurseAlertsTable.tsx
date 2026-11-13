@@ -258,6 +258,7 @@ export function NurseAlertsTable({
                 }
                 onPreview={setPreviewId}
                 onPrivacy={setPrivacyFor}
+                onEndorsedNotice={setEndorsedFor}
                 onSession={(row, session, kind) => {
                   // Any session action overlay is single-overlay: the Clinic
                   // sessions board behind closes so the Mark session done /
@@ -273,7 +274,6 @@ export function NurseAlertsTable({
                 }}
                 onSchedule={setScheduleFor}
                 onCreateReferral={(row, draft) => setFormSheet({ row, draft })}
-                onViewForm={setViewFor}
                 onChanged={onChanged}
               />
             ))}

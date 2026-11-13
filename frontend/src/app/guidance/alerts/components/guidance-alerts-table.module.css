@@ -47,17 +47,29 @@
   flex-shrink: 0;
 }
 
-/* Skeleton rows shown while a filter / page request is in flight. */
-.skeletonRows {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.5rem 0.25rem;
+/* Loading row placeholders — reuse the live .caseRow grid tracks above; only
+   the leaves are invented so the rows keep their exact column geometry. */
+.skelTypePill {
+  width: 5.25rem;
+  height: 1.375rem;
+  border-radius: var(--radius-md);
 }
 
-.skeletonRow {
-  height: 2.75rem;
-  width: 100%;
+.skelSplitPill {
+  width: 9.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+}
+
+.skelTimePill {
+  width: 4.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+}
+
+.skelBookPill {
+  width: 6.5rem;
+  height: 1.5rem;
   border-radius: var(--radius-md);
 }
 

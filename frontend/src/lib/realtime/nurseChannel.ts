@@ -30,6 +30,54 @@ interface NurseNotification {
   createdAt?: string;
 }
 
+/** Shape of a `Referral` realtime row the nurse desk can receive. RLS only
+ *  publishes referrals addressed to the nurse role, picked as its consult
+ *  reviewer, filed by them, or advised by them — so a referral "landing" here
+ *  is a case on this desk. */
+interface NurseReferralRow {
+  id?: string;
+  referredBy?: string | null;
+  referredToRole?: string | null;
+  consultReviewer?: string | null;
+  status?: string | null;
+}
+
+/** True when the row is a case on this clinic desk. `consultReviewer` holds a
+ *  *role* ("nurse"), and legacy rows may hold a user id, so both are accepted. */
+function isOnNurseDesk(row: NurseReferralRow, userId: string): boolean {
+  return (
+    row.referredToRole === "nurse" ||
+    row.consultReviewer === "nurse" ||
+    row.consultReviewer === userId
+  );
+}
+
+/**
+ * Whether a realtime `old` payload carries more than the primary key. The
+ * table uses the default replica identity, so an UPDATE's `old` is just
+ * `{ id }` — comparing that against `new` would read as "not on the desk" and
+ * ring for every unrelated edit (a booked session, a note).
+ */
+function hasRowFields(row: NurseReferralRow | undefined): boolean {
+  return (
+    !!row &&
+    (row.referredToRole !== undefined ||
+      row.consultReviewer !== undefined ||
+      row.status !== undefined)
+  );
+}
+
+/** True when an update *moved* the case onto this desk (only knowable when the
+ *  old payload carries the routing fields). */
+function referralMovedToNurseDesk(
+  next: NurseReferralRow,
+  prev: NurseReferralRow,
+  userId: string,
+): boolean {
+  if (!isOnNurseDesk(next, userId)) return false;
+  return !isOnNurseDesk(prev, userId);
+}
+
 const FALLBACK_POLL_MS = 5_000;
 const MAX_TOASTS_PER_POLL = 3;
 
@@ -55,6 +103,9 @@ export function useNurseRealtime(enabled = true) {
   const userId = session?.sub ?? null;
   const lastInvalidatedByScope = React.useRef<Map<string, number>>(new Map());
   const seenIds = React.useRef<Set<string>>(new Set());
+  // Referral ids whose withdrawal already rang, so later edits to the same
+  // dismissed row don't replay the cancelled clip.
+  const cancelledSeen = React.useRef<Set<string>>(new Set());
 
   // Login catch-up: referrals that landed while the nurse was signed out ring
   // once on arrival instead of rejoining the backlog in silence.
@@ -80,7 +131,13 @@ export function useNurseRealtime(enabled = true) {
         lastInvalidatedByScope.current.set(s, now);
         return true;
       });
-      if (due.length) invalidateNurseQueries(queryClient, due);
+      if (due.length) {
+        // The nurse rail's "new or updated" dots read `/api/nurse/nav-counts`;
+        // any frame the desk receives may have moved a queue, so refresh it in
+        // the same tick as the page data instead of waiting for the 5s poll.
+        void queryClient.invalidateQueries({ queryKey: ["nurse-nav-counts"] });
+        invalidateNurseQueries(queryClient, due);
+      }
     },
     [queryClient],
   );
@@ -137,6 +194,51 @@ export function useNurseRealtime(enabled = true) {
           },
           (payload) => {
             notify((payload as unknown as { new?: NurseNotification }).new as NurseNotification);
+          },
+        )
+        .on(
+          "postgres_changes",
+          // The referral row itself — the same signal the notification carries,
+          // so a case that lands on (or is withdrawn from) the clinic rings even
+          // when the fanout notification is delayed or lost.
+          { event: "*", schema: "public", table: "Referral" },
+          (payload) => {
+            const p = payload as unknown as {
+              eventType?: string;
+              new?: NurseReferralRow;
+              old?: NurseReferralRow;
+            };
+            const next = p.new;
+            const prev = hasRowFields(p.old) ? (p.old as NurseReferralRow) : null;
+            if (next && next.id) {
+              const selfEcho =
+                Date.now() - (selfSaved.get(next.id) ?? 0) < SELF_SUPPRESS_MS;
+              if (!selfEcho) {
+                if (next.status === "dismissed") {
+                  // The filing teacher withdrew the case: the same
+                  // `/sounds/cancelled referral.mp3` the guidance desk rings.
+                  // Once per dismissal — later edits of the closed row stay
+                  // silent, and a re-opened case re-arms.
+                  if (!cancelledSeen.current.has(next.id)) {
+                    cancelledSeen.current.add(next.id);
+                    playDeskSound("cancelled");
+                  }
+                } else {
+                  cancelledSeen.current.delete(next.id);
+                  const landed =
+                    p.eventType === "INSERT" ||
+                    (prev ? referralMovedToNurseDesk(next, prev, userId) : false);
+                  if (
+                    landed &&
+                    isOnNurseDesk(next, userId) &&
+                    next.referredBy !== userId
+                  ) {
+                    playDeskSound("referral");
+                  }
+                }
+              }
+            }
+            void invalidate(["alerts", "overview", "risk", "notifications"]);
           },
         )
         .subscribe((status) => {

@@ -24,6 +24,8 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
     referrals,
     total,
     unfilteredTotal,
+    page,
+    setPage,
   } = useMyReferrals(highlightId);
   const [trackTarget, setTrackTarget] = React.useState<TrackableReferral | null>(null);
   const {
@@ -92,8 +94,12 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
               isPending: referralsQuery.isPending,
               isError: referralsQuery.isError,
               isFetching: referralsQuery.isFetching,
+              isPlaceholderData: referralsQuery.isPlaceholderData,
               refetch: () => void referralsQuery.refetch(),
             }}
+            page={page}
+            totalItems={total}
+            onPageChange={setPage}
             onTrack={handleTrack}
             onRequestCancel={requestCancel}
             onNewReferral={() => setReferralSeed({})}

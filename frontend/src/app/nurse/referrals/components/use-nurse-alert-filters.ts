@@ -94,6 +94,7 @@ export function useNurseAlertFilters({
       clinic_booked: 0,
       clinic_done: 0,
       clinic_followup: 0,
+      clinic_reject: 0,
       clinic_cancelled: 0,
     };
     for (const a of alerts) {
@@ -109,6 +110,12 @@ export function useNurseAlertFilters({
         if (hasOpenBooking(a.row)) counts.clinic_booked += 1;
         if (isCaseDone(a.row)) counts.clinic_done += 1;
         if (a.row.status === "follow_up") counts.clinic_followup += 1;
+        if (
+          (a.row.status === "dismissed" || a.row.status === "rejected") &&
+          !isWithdrawn(a.row)
+        ) {
+          counts.clinic_reject += 1;
+        }
         if (isWithdrawn(a.row)) counts.clinic_cancelled += 1;
       }
     }

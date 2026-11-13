@@ -22,13 +22,6 @@ import {
   MessageSquareText,
   Send,
 } from "lucide-react";
-import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
-import {
-  buildGcForm03Data,
-  consultRecommendation,
-} from "@/services/guidance/gcform03.service";
-import type { GcForm03Data } from "@/services/guidance/gcform03.types";
-import { GcForm03PreviewDialog } from "../../adm/components/GcForm03PreviewDialog";
 import type {
   CounselingSessionItem,
   GuidanceReferralItem,
@@ -48,7 +41,6 @@ import {
   rowStatusLabel,
   timeAgo,
 } from "./guidance-referrals-format";
-import { latestActionDay } from "./use-guidance-entry-meta";
 import { GuidanceEntryDocsHost } from "./guidance-entry-docs-host";
 
 /* Pill recipe (shape/palette) comes from the shared ui/Pill. */
@@ -147,8 +139,10 @@ function DetailHover({
  * student pills, folder and hover detail boards). ADM cases review from
  * the card; counseling cases review through the accept dialog while open —
  * read-only once a session is booked — and accepted cases book their next
- * session from the card. Sessions and the GCForm-03 referral form open from
- * the card.
+ * and accepted cases book their next
+ * session from the card. Sessions open from the card; the folder only opens
+ * the document while the case is still open (endorsed / finished cases explain
+ * that the record is no longer viewable instead).
  */
 export function GuidanceCaseKanbanCard({
   row,
@@ -160,6 +154,7 @@ export function GuidanceCaseKanbanCard({
   onBookSession,
   onPreview,
   onPrivacy,
+  onEndorsedNotice,
   onOpenSession,
   onChanged,
 }: {
@@ -172,6 +167,8 @@ export function GuidanceCaseKanbanCard({
   onBookSession: (row: GuidanceReferralItem) => void;
   onPreview: (recordId: string) => void;
   onPrivacy: (studentName: string) => void;
+  /** Endorsed case — the folder opens the "with the ADM coordinator" notice. */
+  onEndorsedNotice: (studentName: string) => void;
   onOpenSession: (
     referralId: string,
     session: CounselingSessionItem,
@@ -221,41 +218,9 @@ export function GuidanceCaseKanbanCard({
   const [sessOpen, setSessOpen] = React.useState(false);
   const [docsFor, setDocsFor] = React.useState<CounselingSessionItem | null>(null);
 
-  const [gcOpen, setGcOpen] = React.useState(false);
-  const [gcData, setGcData] = React.useState<GcForm03Data | null>(null);
-  const [gcLoading, setGcLoading] = React.useState(false);
-
-  async function openGcForm() {
-    if (gcLoading || gcOpen) return;
-    const stamped = (data: GcForm03Data): GcForm03Data => {
-      const day = latestActionDay(latest.time);
-      if (day) {
-        data.receivedDate = day;
-        data.counselorDate = day;
-      }
-      return data;
-    };
-    // Show the form immediately from the case card, then refine it once the
-    // full OCForm-01 report arrives.
-    if (gcData) {
-      setGcOpen(true);
-      return;
-    }
-    setGcData(stamped(buildGcForm03Data(row, null, consultRecommendation(row.notes))));
-    setGcOpen(true);
-    if (!row.anecdotalId) return;
-    setGcLoading(true);
-    try {
-      const report = await fetchOcForm01Detail(row.anecdotalId).catch(() => null);
-      if (report) {
-        setGcData(
-          stamped(buildGcForm03Data(row, report, consultRecommendation(row.notes))),
-        );
-      }
-    } finally {
-      setGcLoading(false);
-    }
-  }
+  /* The folder carries the case's latest document. Endorsed / finished cases
+     keep it as a visual record but clicking it explains that the document is
+     no longer viewable here instead of opening it. */
 
   const showsReferralForm = isEndorsedRow;
   const files: FolderFile[] = showsReferralForm
@@ -279,16 +244,17 @@ export function GuidanceCaseKanbanCard({
       : [];
 
   function openFile() {
-    if (showsReferralForm) {
-      void openGcForm();
+    /* Endorsed / finished cases stay clickable but never open the document:
+       the folder explains where the record went instead. */
+    if (isEndorsedRow) {
+      onEndorsedNotice(row.student);
       return;
     }
-    if (!row.anecdotalId) return;
-    if (isClosed) {
-      onPrivacy(row.student);
+    if (row.anecdotalId && !isClosed) {
+      onPreview(row.anecdotalId);
       return;
     }
-    onPreview(row.anecdotalId);
+    onPrivacy(row.student);
   }
 
   return (
@@ -360,9 +326,11 @@ export function GuidanceCaseKanbanCard({
               onFileClick={openFile}
               onCardClick={openFile}
               cardAriaLabel={
-                showsReferralForm
-                  ? `Open the referral form for ${row.student}`
-                  : `Open the anecdotal report (GCForm-01) for ${row.student}`
+                isEndorsedRow
+                  ? `Referral form for ${row.student} is no longer viewable — the case was endorsed`
+                  : isClosed
+                    ? `Report for ${row.student} is kept private because the case is finished`
+                    : `Open the anecdotal report (GCForm-01) for ${row.student}`
               }
             />
           </span>
@@ -537,17 +505,6 @@ export function GuidanceCaseKanbanCard({
         isClosed={isClosed}
         canManageSessions={canManageSessions}
       />
-
-      {gcOpen && gcData && (
-        <GcForm03PreviewDialog
-          open
-          data={gcData}
-          confirming={false}
-          onClose={() => setGcOpen(false)}
-          onConfirm={() => {}}
-          viewOnly
-        />
-      )}
     </article>
   );
 }

@@ -25,6 +25,7 @@ import { StudentMascot } from "@/components/student-mascot/StudentMascot";
 import { ANECDOTAL_CATEGORY_TONES } from "@/components/anecdotal/anecdotal-record-kanban-card";
 import {
   CalendarClock,
+  CalendarPlus,
   ChevronRight,
   Eye,
   FileText,
@@ -47,6 +48,7 @@ import {
   formatActionTime,
   caseStage,
   formatDate,
+  formatTime,
   hasScheduledSession,
   isCaseDone,
   isEndorsed,
@@ -146,11 +148,11 @@ export function NurseCaseKanbanCard({
   onBoardChange,
   onPreview,
   onPrivacy,
+  onEndorsedNotice,
   onSession,
   onDocs,
   onSchedule,
   onCreateReferral,
-  onViewForm,
   onChanged,
 }: {
   alert: NurseAlertItem;
@@ -162,6 +164,8 @@ export function NurseCaseKanbanCard({
   onBoardChange: (open: boolean) => void;
   onPreview: (recordId: string) => void;
   onPrivacy: (studentName: string) => void;
+  /** Endorsed case — the folder opens the "with the ADM coordinator" notice. */
+  onEndorsedNotice: (studentName: string) => void;
   onSession: (
     row: NurseQueueRow,
     session: NurseSessionItem,
@@ -170,16 +174,19 @@ export function NurseCaseKanbanCard({
   onDocs: (row: NurseQueueRow, session: NurseSessionItem) => void;
   onSchedule: (row: NurseQueueRow) => void;
   onCreateReferral: (row: NurseQueueRow, draft: AdmReviewDraft) => void;
-  onViewForm: (row: NurseQueueRow) => void;
   onChanged: () => void;
 }) {
   const row = alert.row;
   const isAdm = row.type === "ADM";
   const isPending = row.status === "pending";
-  const isClosed =
-    row.status === "resolved" ||
-    row.status === "dismissed" ||
-    (row.completedSessions > 0 && !hasScheduledSession(row.sessions));
+  /* Same closure rule as the guidance ADM card: only a resolved/rejected case
+     is closed. A case that merely has a completed session keeps its session
+     trail and card actions (it may still await endorsement). */
+  const isClosed = row.status === "resolved" || row.status === "dismissed";
+  /* Rejected / withdrawn cases drop their session trail from the card: a booked
+     session on a case the desk rejected (or the teacher withdrew) is history the
+     board does not surface. */
+  const hidesSessionInfo = row.status === "dismissed";
   const isEndorsedRow = isEndorsed(row.type, row.status);
   /* ADM cases stay reviewable until they are cancelled or rejected. */
   const canReviewAdm = isAdm && !isWithdrawn(row) && row.status !== "dismissed";
@@ -218,8 +225,9 @@ export function NurseCaseKanbanCard({
   /* The folder carries the case's latest document. The referral form
      (GCForm-03) only exists once the case is endorsed — before that the
      anecdotal report (GCForm-01) is what's on file, and a case with neither
-     shows no document. Clicking the folder or its file opens that document's
-     official preview overlay. */
+     shows no document. Endorsed / finished cases keep the folder as a visual
+     record but clicking it explains that the document is no longer viewable
+     here instead of opening it. */
   const showsReferralForm = isEndorsedRow;
   const docDate = row.anecdotal?.observedAt ?? row.date;
   const files: FolderFile[] = showsReferralForm
@@ -243,18 +251,17 @@ export function NurseCaseKanbanCard({
       : [];
 
   function openFile() {
-    if (showsReferralForm) {
-      onViewForm(row);
+    /* Endorsed / finished cases stay clickable but never open the document:
+       the folder explains where the record went instead. */
+    if (isEndorsedRow) {
+      onEndorsedNotice(row.student);
       return;
     }
-    if (!row.anecdotalId) return;
-    /* Only truly finished cases hide the report behind the privacy notice — a
-       case that merely has a completed session is still open here (it may be
-       waiting for endorsement), so it overlays its GCForm-01 record. */
     if (row.status === "resolved" || row.status === "dismissed") {
       onPrivacy(row.student);
       return;
     }
+    if (!row.anecdotalId) return;
     onPreview(row.anecdotalId);
   }
 
@@ -275,11 +282,11 @@ export function NurseCaseKanbanCard({
             aria-hidden
             style={{ color: categoryColor ?? "var(--muted-foreground)" }}
           />
-          <span className="truncate">{title}</span>
+          <span className="truncate capitalize">{title}</span>
         </span>
         <Pill
           tone={STAGE_TONE[stage.variant] ?? "neutral"}
-          label="Case stage"
+          label="Case status"
           className="shrink-0"
         >
           {stage.label}
@@ -332,9 +339,13 @@ export function NurseCaseKanbanCard({
               onFileClick={openFile}
               onCardClick={openFile}
               cardAriaLabel={
-                showsReferralForm
-                  ? `Open the referral form for ${row.student}`
-                  : `Open the anecdotal report (GCForm-01) for ${row.student}`
+                isEndorsedRow
+                  ? `Referral form for ${row.student} is no longer viewable — the case was endorsed`
+                  : row.status === "resolved" || row.status === "dismissed"
+                    ? `Report for ${row.student} is kept private because the case is finished`
+                    : showsReferralForm
+                      ? `Open the referral form for ${row.student}`
+                      : `Open the anecdotal report (GCForm-01) for ${row.student}`
               }
             />
           </span>
@@ -348,26 +359,27 @@ export function NurseCaseKanbanCard({
           {row.date && row.date !== "—" ? (
             <Pill label="Date referred">{formatDate(row.date)}</Pill>
           ) : null}
-          {waiting ? (
+          {row.referredAt ? <Pill>{formatTime(row.referredAt)}</Pill> : null}
+          {!isAdm && waiting ? (
             <Pill tone="red" label="Waiting time">
               {waiting}
             </Pill>
           ) : null}
         </span>
 
-        {row.followUpDate || booked || cancelled ? (
+        {row.followUpDate || (!hidesSessionInfo && (cancelled || (!isAdm && booked))) ? (
           <span className="flex min-w-0 flex-wrap items-center gap-1.5">
             {row.followUpDate ? (
               <Pill label="Follow-up date">
                 Follow-up {formatDate(row.followUpDate)}
               </Pill>
             ) : null}
-            {booked ? (
+            {!isAdm && !hidesSessionInfo && booked ? (
               <Pill tone="blue" label="Session status">
                 Session booked
               </Pill>
             ) : null}
-            {cancelled ? (
+            {!hidesSessionInfo && cancelled ? (
               <Pill tone="red" label="Session status">
                 Session cancelled
               </Pill>
@@ -376,88 +388,107 @@ export function NurseCaseKanbanCard({
         ) : null}
 
         {/* Detail blocks are icon buttons — hovering one floats its content
-            as a kanban board beside the card (hover card, no page overlay). */}
-        <span className="flex min-w-0 items-center gap-1.5">
-          <DetailHover
-            icon={<MessageSquareText size={14} aria-hidden />}
-            ariaLabel={`Show the reason ${row.student} was referred`}
-            boardTitle="Reason"
-            description="Why this learner was referred to the clinic."
-          >
-            {row.reason}
-          </DetailHover>
-
-          {incident ? (
+            as a kanban board beside the card (hover card, no page overlay).
+            The sessions strip shares the row, exactly like the guidance card. */}
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="flex shrink-0 items-center gap-1.5">
             <DetailHover
-              icon={<Eye size={14} aria-hidden />}
-              ariaLabel={`Show what was observed for ${row.student}`}
-              boardTitle="What was observed"
-              description="Recorded on the anecdotal report."
+              icon={<MessageSquareText size={14} aria-hidden />}
+              ariaLabel={`Show the reason ${row.student} was referred`}
+              boardTitle="Reason"
+              description="Why this learner was referred to the clinic."
             >
-              {incident}
+              {row.reason}
             </DetailHover>
-          ) : null}
 
-          <DetailHover
-            icon={<History size={14} aria-hidden />}
-            ariaLabel={`Show the latest update on ${row.student}'s case`}
-            boardTitle="Latest update"
-            description="Most recent activity recorded on this case."
-          >
-            {latest.label}
-            {latest.time && latest.time !== "—"
-              ? ` — ${formatActionTime(latest.time)}`
-              : ""}
-          </DetailHover>
+            {incident ? (
+              <DetailHover
+                icon={<Eye size={14} aria-hidden />}
+                ariaLabel={`Show what was observed for ${row.student}`}
+                boardTitle="What was observed"
+                description="Recorded on the anecdotal report."
+              >
+                {incident}
+              </DetailHover>
+            ) : null}
 
-          {row.escalationReason ? (
             <DetailHover
-              icon={<Send size={14} aria-hidden />}
-              ariaLabel={`Show why ${row.student}'s case was sent to the clinic`}
-              boardTitle="Sent to the clinic"
-              description="Why this case was escalated to the clinic for care."
+              icon={<History size={14} aria-hidden />}
+              ariaLabel={`Show the latest update on ${row.student}'s case`}
+              boardTitle="Latest update"
+              description="Most recent activity recorded on this case."
             >
-              {row.escalationReason}
+              {latest.label}
+              {latest.time && latest.time !== "—"
+                ? ` — ${formatActionTime(latest.time)}`
+                : ""}
             </DetailHover>
+
+            {row.escalationReason ? (
+              <DetailHover
+                icon={<Send size={14} aria-hidden />}
+                ariaLabel={`Show why ${row.student}'s case was escalated`}
+                boardTitle="Escalated case"
+                description="Why this case was sent to a higher office."
+              >
+                {row.escalationReason}
+              </DetailHover>
+            ) : null}
+          </span>
+
+          {row.sessions.length > 0 && !hidesSessionInfo ? (
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-left transition-colors hover:border-primary/60 hover:bg-muted"
+              aria-haspopup="dialog"
+              aria-label={`Clinic sessions for ${row.student}, ${row.sessions.length} ${row.sessions.length === 1 ? "session" : "sessions"} — click to view`}
+              onClick={() => onBoardChange(true)}
+            >
+              <CalendarClock
+                size={14}
+                className="shrink-0 text-muted-foreground"
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">
+                Clinic sessions
+              </span>
+              <span className="shrink-0 rounded-full bg-secondary px-1.5 text-[10px] font-semibold text-secondary-foreground">
+                {row.sessions.length}
+              </span>
+              <ChevronRight
+                size={13}
+                className="shrink-0 text-muted-foreground"
+                aria-hidden
+              />
+            </button>
           ) : null}
-        </span>
+        </div>
 
-        {row.sessions.length > 0 ? (
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-left transition-colors hover:border-primary/60 hover:bg-muted"
-            aria-haspopup="dialog"
-            aria-label={`Clinic sessions for ${row.student}, ${row.sessions.length} ${row.sessions.length === 1 ? "session" : "sessions"} — click to view`}
-            onClick={() => onBoardChange(true)}
-          >
-            <CalendarClock
-              size={14}
-              className="shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">
-              Clinic sessions
-            </span>
-            <span className="shrink-0 rounded-full bg-secondary px-1.5 text-[10px] font-semibold text-secondary-foreground">
-              {row.sessions.length}
-            </span>
-            <ChevronRight
-              size={13}
-              className="shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-          </button>
-        ) : null}
-
-        <div className="mt-auto flex flex-wrap items-center justify-end gap-1.5 pt-0.5">
-          {canReviewAdm || (!isAdm && isPending) ? (
+        <div className="mt-auto flex flex-wrap items-center justify-end gap-1.5 pt-1">
+          {booked && !isClosed && !isWithdrawn(row) ? (
             <Button
               type="button"
               size="xs"
-              variant="outline"
+              variant="secondary"
+              className="h-6 px-2 text-[11px]"
+              onClick={() => {
+                const scheduled = row.sessions.find(
+                  (s) => s.status === "scheduled",
+                );
+                if (scheduled) onSession(row, scheduled, "move");
+              }}
+            >
+              Reschedule session
+            </Button>
+          ) : null}
+          {canReviewAdm || (!isAdm && !isClosed && !isWithdrawn(row)) ? (
+            <Button
+              type="button"
+              size="xs"
+              variant="default"
               className="h-6 px-2 text-[11px]"
               onClick={() =>
-                isAdm ? setReviewOpen(true) : setClinicReviewOpen(true)
+                canReviewAdm ? setReviewOpen(true) : setClinicReviewOpen(true)
               }
             >
               {isAdm ? "Review ADM case" : "Review clinic case"}
@@ -473,6 +504,7 @@ export function NurseCaseKanbanCard({
               className="h-6 px-2 text-[11px]"
               onClick={() => onSchedule(row)}
             >
+              <CalendarPlus size={12} aria-hidden />
               Book session
             </Button>
           ) : null}
@@ -541,6 +573,9 @@ export function NurseCaseKanbanCard({
               docsSupported
               gateOnStart
               manageable={canManageSessions}
+              // Scheduled rows keep only "Mark done" — reschedule/cancel live on
+              // the case card, same as the guidance sessions board.
+              hideScheduledActions
               onAction={(s, action) =>
                 action === "docs" ? onDocs(row, s) : onSession(row, s, action)
               }

@@ -91,7 +91,7 @@ export function buildNurseAlerts(
     cases.push({
       key: r.id,
       severity: status === "resolved" || status === "dismissed" ? "done" : "info",
-      title: deriveActionStatus(row.type, status, row.sessions).label,
+      title: deriveActionStatus(row.type, status, row.sessions, row.dismissedByRole).label,
       detail: row.reason,
       waiting: waitingLine(row.waitingDays),
       date: row.date,

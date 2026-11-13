@@ -17,13 +17,13 @@ import {
   sessionTypeLabel,
 } from "./calendar-utils";
 
-const START_HOUR = 6;
-const END_HOUR = 21;
-const HOUR_REM = 3;
+export const START_HOUR = 6;
+export const END_HOUR = 21;
+export const HOUR_REM = 3;
 const DEFAULT_DURATION_MIN = 60;
-const DAY_HEIGHT_REM = (END_HOUR - START_HOUR) * HOUR_REM;
+export const DAY_HEIGHT_REM = (END_HOUR - START_HOUR) * HOUR_REM;
 
-const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
+export const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
 interface PositionedEvent {
   event: GuidanceCalendarEvent;

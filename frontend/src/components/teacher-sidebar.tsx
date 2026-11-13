@@ -15,6 +15,11 @@ import {
   useCachedMasterTeacher,
 } from "@/services/teacher/flagCache";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
+import {
+  useTeacherNavDots,
+  useTeacherNavDotInvalidation,
+  type TeacherNavDots,
+} from "@/services/teacher/navCounts.service";
 import { useSession } from "@/lib/auth/useSession";
 
 type NavItem = {
@@ -22,6 +27,8 @@ type NavItem = {
   href: string;
   icon: LucideIcon;
   badge?: string;
+  /** Red "new or updated since you last looked" dot. */
+  dot?: boolean;
 };
 
 type NavGroup = {
@@ -71,6 +78,32 @@ export function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup
   return groups;
 }
 
+/* Which live queue each nav entry watches. The dot comes from
+   `/api/teacher/nav-counts`; a page with nothing unseen shows no dot. */
+const QUEUE_FOR_HREF: Record<string, keyof TeacherNavDots> = {
+  "/teacher/overview": "overview",
+  "/teacher/advisory/list": "advisoryList",
+  "/teacher/advisory/attendance": "adviseeAttendance",
+  "/teacher/advisory/students": "adviseeAcademic",
+  "/teacher/anecdotal": "anecdotal",
+  "/teacher/advisory/referrals": "referrals",
+  "/teacher/advisory/interventions": "interventions",
+  "/teacher/advisory/adm-cases": "adm",
+  "/teacher/advisory/modules": "modules",
+  "/teacher/advisory/schedule": "schedule",
+  "/teacher/advisory/sf10-access": "sf10",
+};
+
+function withDots(groups: NavGroup[], dots?: TeacherNavDots): NavGroup[] {
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.map((item) => ({
+      ...item,
+      dot: Boolean(dots && QUEUE_FOR_HREF[item.href] ? dots[QUEUE_FOR_HREF[item.href]] : false),
+    })),
+  }));
+}
+
 export function TeacherSidebar({
   collapsed = true,
 }: {
@@ -86,8 +119,13 @@ export function TeacherSidebar({
     cachedMaster;
   const cachedAdviser = useCachedAdviser(session?.sub);
   const isAdviser = overview.data?.isAdviser ?? cachedAdviser ?? true;
-  const nav = buildNav(isMasterTeacher, isAdviser);
-  const tabs = nav.flatMap((group) => group.items);
+  const dots = useTeacherNavDots();
+  useTeacherNavDotInvalidation(dots);
+  const nav = React.useMemo(
+    () => withDots(buildNav(isMasterTeacher, isAdviser), dots),
+    [isMasterTeacher, isAdviser, dots],
+  );
+  const tabs = React.useMemo(() => nav.flatMap((group) => group.items), [nav]);
 
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -162,6 +200,7 @@ function TeacherRail({ groups }: { groups: NavGroup[] }) {
           value: t.href,
           label: t.title,
           href: t.href,
+          dot: t.dot,
           icon: <t.icon size={16} strokeWidth={1.8} aria-hidden="true" />,
         })),
       }))}
@@ -200,6 +239,8 @@ function TeacherNavbar({ tabs }: { tabs: NavItem[] }) {
               >
                 <item.icon className={styles.tabIcon} aria-hidden="true" />
                 <span className={styles.tabLabel}>{item.title}</span>
+                {item.dot ? <span className={styles.dot} aria-hidden="true" /> : null}
+                {item.dot ? <span className="sr-only">New activity</span> : null}
                 {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
               </Link>
             </li>

@@ -9,6 +9,9 @@ import {
   ADVISER_COUNSELING_BOOKED_EVENT,
   ADVISER_COUNSELING_REJECTED_EVENT,
   ADVISER_COUNSELING_RESCHEDULED_EVENT,
+  ADVISER_CLINIC_BOOKED_EVENT,
+  ADVISER_CLINIC_REJECTED_EVENT,
+  ADVISER_CLINIC_RESCHEDULED_EVENT,
   ADVISER_REFERRAL_CLOSED_EVENT,
   ADVISER_REFERRAL_UPDATE_EVENT,
   ADVISER_RISK_ALERT_EVENT,
@@ -20,11 +23,18 @@ import {
   playDeskSound,
   primeDeskSounds,
   isAdviserAdmBooked,
+  isAdviserAdmBookedClinic,
+  isAdviserAdmEndorsedClinic,
   isAdviserAdmRejected,
+  isAdviserAdmRejectedClinic,
   isAdviserAdmRescheduled,
+  isAdviserAdmRescheduledClinic,
   isAdviserCounselingBooked,
   isAdviserCounselingRejected,
   isAdviserCounselingRescheduled,
+  isAdviserClinicBooked,
+  isAdviserClinicRejected,
+  isAdviserClinicRescheduled,
   isAdviserReferralClosed,
   isAdviserReferralEndorsed,
   isAdviserReferralSessionBooked,
@@ -130,9 +140,16 @@ export function AdviserRiskAlertMonitor() {
       "adviserAdmRejected",
       "adviserAdmBooked",
       "adviserAdmRescheduled",
+      "adviserAdmRejectedClinic",
+      "adviserAdmBookedClinic",
+      "adviserAdmRescheduledClinic",
+      "adviserAdmEndorsedClinic",
       "adviserCounselingBooked",
       "adviserCounselingRejected",
       "adviserCounselingRescheduled",
+      "adviserClinicBooked",
+      "adviserClinicRejected",
+      "adviserClinicRescheduled",
     ]);
   }, []);
 
@@ -146,15 +163,26 @@ export function AdviserRiskAlertMonitor() {
     const onSessionBooked = () => playDeskSound("adviserSession");
     const onSessionResched = () => playDeskSound("adviserSessionResched");
     const onSessionCancelled = () => playDeskSound("adviserSessionCancelled");
-    const onReferralUpdate = () => playDeskSound("adviserReferralUpdate");
+    const isClinic = (event: Event) =>
+      (event as CustomEvent<{ clinic?: boolean } | undefined>).detail?.clinic === true;
+    const onReferralUpdate = (event: Event) =>
+      playDeskSound(isClinic(event) ? "adviserAdmEndorsedClinic" : "adviserReferralUpdate");
     const onReferralClosed = () => playDeskSound("adviserReferralClosed");
-    const onAdmRejected = () => playDeskSound("adviserAdmRejected");
-    const onAdmBooked = () => playDeskSound("adviserAdmBooked");
-    const onAdmRescheduled = () => playDeskSound("adviserAdmRescheduled");
+    const onAdmRejected = (event: Event) =>
+      playDeskSound(isClinic(event) ? "adviserAdmRejectedClinic" : "adviserAdmRejected");
+    const onAdmBooked = (event: Event) =>
+      playDeskSound(isClinic(event) ? "adviserAdmBookedClinic" : "adviserAdmBooked");
+    const onAdmRescheduled = (event: Event) =>
+      playDeskSound(
+        isClinic(event) ? "adviserAdmRescheduledClinic" : "adviserAdmRescheduled",
+      );
     const onCounselingBooked = () => playDeskSound("adviserCounselingBooked");
     const onCounselingRejected = () => playDeskSound("adviserCounselingRejected");
     const onCounselingRescheduled = () =>
       playDeskSound("adviserCounselingRescheduled");
+    const onClinicBooked = () => playDeskSound("adviserClinicBooked");
+    const onClinicRejected = () => playDeskSound("adviserClinicRejected");
+    const onClinicRescheduled = () => playDeskSound("adviserClinicRescheduled");
     window.addEventListener(ADVISER_SESSION_ALERT_EVENT, onSessionBooked);
     window.addEventListener(ADVISER_SESSION_RESCHED_EVENT, onSessionResched);
     window.addEventListener(ADVISER_SESSION_CANCELLED_EVENT, onSessionCancelled);
@@ -171,6 +199,12 @@ export function AdviserRiskAlertMonitor() {
     window.addEventListener(
       ADVISER_COUNSELING_RESCHEDULED_EVENT,
       onCounselingRescheduled,
+    );
+    window.addEventListener(ADVISER_CLINIC_BOOKED_EVENT, onClinicBooked);
+    window.addEventListener(ADVISER_CLINIC_REJECTED_EVENT, onClinicRejected);
+    window.addEventListener(
+      ADVISER_CLINIC_RESCHEDULED_EVENT,
+      onClinicRescheduled,
     );
     return () => {
       window.removeEventListener(ADVISER_SESSION_ALERT_EVENT, onSessionBooked);
@@ -193,6 +227,12 @@ export function AdviserRiskAlertMonitor() {
         ADVISER_COUNSELING_RESCHEDULED_EVENT,
         onCounselingRescheduled,
       );
+      window.removeEventListener(ADVISER_CLINIC_BOOKED_EVENT, onClinicBooked);
+      window.removeEventListener(ADVISER_CLINIC_REJECTED_EVENT, onClinicRejected);
+      window.removeEventListener(
+        ADVISER_CLINIC_RESCHEDULED_EVENT,
+        onClinicRescheduled,
+      );
     };
   }, [isAdviser]);
 
@@ -205,30 +245,33 @@ export function AdviserRiskAlertMonitor() {
     userId: session?.sub ?? null,
     enabled: isAdviser,
     title: "Updates for your advisees",
-    clipFor: (row) =>
-      isAdviserCounselingBooked(row)
-        ? "adviserCounselingBooked"
-        : isAdviserCounselingRejected(row)
-          ? "adviserCounselingRejected"
-          : isAdviserCounselingRescheduled(row)
-            ? "adviserCounselingRescheduled"
-            : isAdviserAdmBooked(row)
-              ? "adviserAdmBooked"
-              : isAdviserAdmRejected(row)
-                ? "adviserAdmRejected"
-                : isAdviserReferralClosed(row)
-                  ? "adviserReferralClosed"
-                  : isAdviserReferralEndorsed(row)
-                    ? "adviserReferralUpdate"
-                    : isAdviserSessionCancelled(row) || isAdviserReferralSessionCancelled(row)
-                      ? "adviserSessionCancelled"
-                      : isAdviserAdmRescheduled(row)
-                        ? "adviserAdmRescheduled"
-                        : isAdviserSessionRescheduled(row) || isAdviserReferralSessionRescheduled(row)
-                          ? "adviserSessionResched"
-                          : isAdviserSessionBooked(row) || isAdviserReferralSessionBooked(row)
-                            ? "adviserSession"
-                            : null,
+    clipFor: (row) => {
+      if (isAdviserClinicBooked(row)) return "adviserClinicBooked";
+      if (isAdviserClinicRejected(row)) return "adviserClinicRejected";
+      if (isAdviserClinicRescheduled(row)) return "adviserClinicRescheduled";
+      if (isAdviserCounselingBooked(row)) return "adviserCounselingBooked";
+      if (isAdviserCounselingRejected(row)) return "adviserCounselingRejected";
+      if (isAdviserCounselingRescheduled(row)) return "adviserCounselingRescheduled";
+      if (isAdviserAdmBookedClinic(row)) return "adviserAdmBookedClinic";
+      if (isAdviserAdmBooked(row)) return "adviserAdmBooked";
+      if (isAdviserAdmRejectedClinic(row)) return "adviserAdmRejectedClinic";
+      if (isAdviserAdmRejected(row)) return "adviserAdmRejected";
+      if (isAdviserReferralClosed(row)) return "adviserReferralClosed";
+      if (isAdviserAdmEndorsedClinic(row)) return "adviserAdmEndorsedClinic";
+      if (isAdviserReferralEndorsed(row)) return "adviserReferralUpdate";
+      if (isAdviserSessionCancelled(row) || isAdviserReferralSessionCancelled(row)) {
+        return "adviserSessionCancelled";
+      }
+      if (isAdviserAdmRescheduledClinic(row)) return "adviserAdmRescheduledClinic";
+      if (isAdviserAdmRescheduled(row)) return "adviserAdmRescheduled";
+      if (isAdviserSessionRescheduled(row) || isAdviserReferralSessionRescheduled(row)) {
+        return "adviserSessionResched";
+      }
+      if (isAdviserSessionBooked(row) || isAdviserReferralSessionBooked(row)) {
+        return "adviserSession";
+      }
+      return null;
+    },
   });
 
   // Delivery path 1: realtime frames (`RiskSnapshot` inserts and `Intervention`

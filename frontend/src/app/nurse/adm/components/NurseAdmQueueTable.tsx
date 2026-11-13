@@ -53,7 +53,12 @@ export function NurseAdmQueueTable({
         )
         .map((alert) => {
           const row = alert.row;
-          const actionStatus = deriveActionStatus(row.type, row.status, row.sessions);
+          const actionStatus = deriveActionStatus(
+            row.type,
+            row.status,
+            row.sessions,
+            row.dismissedByRole,
+          );
           const latest = latestActionOf(row, alert);
           return {
             id: row.id,

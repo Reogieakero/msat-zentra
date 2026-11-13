@@ -102,7 +102,7 @@ router.post(
     try {
       const body = req.body as {
         intakeNotes?: string;
-        clinicSession?: { scheduledAt: string; venue?: string };
+        clinicSession?: { scheduledAt: string; sessionType?: string; venue?: string };
       };
       const result = await acceptNurse(ctxOf(req), String(req.params.id), {
         intakeNotes: body.intakeNotes,

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { FolderLegendCard } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
 import {
@@ -13,6 +12,7 @@ import {
   TopReferredCard,
 } from "./components/guidance-anecdotal-siderail";
 import { GuidanceAnecdotalFolders } from "./components/guidance-anecdotal-folders";
+import { GuidanceAnecdotalSkeleton } from "./components/GuidanceAnecdotalSkeleton";
 import type { TypeFilter } from "./components/guidance-anecdotal-filters";
 import { fetchAllGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
 import type {
@@ -106,51 +106,7 @@ function GuidanceAnecdotalPageInner() {
   );
 
   if (isPending) {
-    return (
-      <section className={styles.page} aria-busy="true" aria-label="Loading referred records">
-        <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_2.75rem]">
-          <div className={`${styles.main} flex min-w-0 flex-col`}>
-            <div className={styles.skelPanel}>
-              <div className={styles.skelPanelHead}>
-                <div className={styles.skelPanelHeadText}>
-                  <div className={styles.skelPanelTitleRow}>
-                    <Skeleton className={styles.skelPanelTitle} />
-                    <Skeleton className={styles.skelHelpBtn} />
-                  </div>
-                  <Skeleton className={styles.skelPanelDesc} />
-                </div>
-                <div className={styles.skelPanelActions}>
-                  <Skeleton className={styles.skelSearch} />
-                  <Skeleton className={styles.skelDrop} />
-                </div>
-              </div>
-              <div className={styles.skelFolderGrid}>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className={styles.skelFolderCard}>
-                    <Skeleton className={styles.skelFolderBadge} />
-                    <Skeleton className={styles.skelFolder} />
-                    <Skeleton className={styles.skelFolderLabel} />
-                    <Skeleton className={styles.skelFolderSub} />
-                  </div>
-                ))}
-              </div>
-              <div className={styles.skelPager}>
-                <Skeleton className={styles.skelRange} />
-                <div className={styles.skelPagerBtns}>
-                  <Skeleton className={styles.skelBtn} />
-                  <Skeleton className={styles.skelPageLabel} />
-                  <Skeleton className={styles.skelBtn} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="hidden min-w-0 flex-col items-end gap-2 lg:flex" aria-hidden="true">
-            <Skeleton className="h-9 w-9 rounded-xl" />
-            <Skeleton className="h-9 w-9 rounded-xl" />
-          </div>
-        </div>
-      </section>
-    );
+    return <GuidanceAnecdotalSkeleton />;
   }
 
   if (isError || !data) {

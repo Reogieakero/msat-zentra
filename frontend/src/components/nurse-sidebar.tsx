@@ -10,12 +10,19 @@ import BranchedMenu from "./nav/BranchedMenu";
 import { NAV_ICONS } from "./nav/sidebar-icons";
 import { SidebarIconRail } from "./nav/SidebarIconRail";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
+import {
+  useNurseNavDots,
+  useNurseNavDotInvalidation,
+  type NurseNavDots,
+} from "@/services/nurse/navCounts.service";
 
 type NavItem = {
   title: string;
   href: string;
   icon: LucideIcon;
   badge?: string;
+  /** Red "new or updated since you last looked" dot. */
+  dot?: boolean;
 };
 
 type NavGroup = {
@@ -78,7 +85,26 @@ const NAV: NavGroup[] = [
   },
 ];
 
-const TABS: NavItem[] = NAV.flatMap((group) => group.items);
+/* Which live queue each nav entry watches. The dot comes from
+   `/api/nurse/nav-counts`; a page with nothing unseen shows no dot. */
+const QUEUE_FOR_HREF: Record<string, keyof NurseNavDots> = {
+  "/nurse/overview": "overview",
+  "/nurse/alerts": "alerts",
+  "/nurse/referrals/adm": "adm",
+  "/nurse/referrals/clinic": "clinic",
+  "/nurse/health-records": "records",
+  "/nurse/adm": "report",
+};
+
+function withDots(groups: NavGroup[], dots: NurseNavDots): NavGroup[] {
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.map((item) => ({
+      ...item,
+      dot: Boolean(QUEUE_FOR_HREF[item.href] && dots[QUEUE_FOR_HREF[item.href]]),
+    })),
+  }));
+}
 
 function useIsActive() {
   const pathname = usePathname();
@@ -112,6 +138,7 @@ function NurseRail({ groups }: { groups: NavGroup[] }) {
           value: t.href,
           label: t.title,
           href: t.href,
+          dot: t.dot,
           icon: <t.icon size={16} strokeWidth={1.8} aria-hidden="true" />,
         })),
       }))}
@@ -143,6 +170,8 @@ function NurseNavbar({ tabs }: { tabs: NavItem[] }) {
               >
                 <item.icon className={styles.tabIcon} aria-hidden="true" />
                 <span className={styles.tabLabel}>{item.title}</span>
+                {item.dot ? <span className={styles.dot} aria-hidden="true" /> : null}
+                {item.dot ? <span className="sr-only">New activity</span> : null}
                 {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
               </Link>
             </li>
@@ -160,7 +189,11 @@ export function NurseSidebar({
 } = {}) {
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
   const isActive = useIsActive();
-  const activeHref = TABS.find((t) => isActive(t.href))?.href ?? "/nurse/overview";
+  const dots = useNurseNavDots();
+  useNurseNavDotInvalidation(dots);
+  const nav = React.useMemo(() => withDots(NAV, dots), [dots]);
+  const tabs = React.useMemo(() => nav.flatMap((group) => group.items), [nav]);
+  const activeHref = tabs.find((t) => isActive(t.href))?.href ?? "/nurse/overview";
 
   return (
     <>
@@ -170,14 +203,14 @@ export function NurseSidebar({
       >
         {collapsed ? (
           <SidebarIconRail
-            groups={NAV}
+            groups={nav}
             ariaLabel="Nurse sections, icon only"
             activeHref={activeHref}
           />
         ) : (
           <>
             <div ref={railScrollRef} className={styles.railScroll}>
-              <NurseRail groups={NAV} />
+              <NurseRail groups={nav} />
             </div>
             <div className={styles.railHintWrap}>
               <ScrollDownHint
@@ -191,7 +224,7 @@ export function NurseSidebar({
         )}
       </aside>
       <div className={styles.tabsMobile}>
-        <NurseNavbar tabs={TABS} />
+        <NurseNavbar tabs={tabs} />
       </div>
     </>
   );

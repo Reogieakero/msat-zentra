@@ -60,17 +60,34 @@ function titleCase(raw: string): string {
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
+/** Dismissed splits into two bucket labels, matching the referral status:
+    the filing teacher withdrawing reads "Cancelled", the desk rejecting
+    reads "Rejected". */
+function dismissalBucket(
+  status: string,
+  dismissedByRole?: string | null,
+): { key: string; label: string } | null {
+  if (status !== "dismissed" && status !== "rejected") return null;
+  const withdrawn =
+    dismissedByRole === "adviser" || dismissedByRole === "subject_teacher";
+  return withdrawn
+    ? { key: "cancelled", label: "Cancelled" }
+    : { key: "rejected", label: "Rejected" };
+}
+
 export function deriveActionStatus(
   type: string,
   status: string,
   sessions: { status?: string | null }[],
+  dismissedByRole?: string | null,
 ): { key: string; label: string } {
   const hasScheduled = sessions.some((s) => s.status === "scheduled");
   const hasCompleted = sessions.some((s) => s.status === "completed");
   const isEndorsedCase = type === "ADM" && status === "in_progress";
 
   if (isEndorsedCase) return { key: "endorsed", label: "Endorsed" };
-  if (status === "dismissed") return { key: "rejected", label: "Rejected" };
+  const dismissal = dismissalBucket(status, dismissedByRole);
+  if (dismissal) return dismissal;
   if (status === "resolved") return { key: "done", label: "Done" };
   if (status === "follow_up") return { key: "followup", label: "Follow-up" };
   if (hasScheduled) return { key: "booked", label: "Booked session" };
@@ -84,13 +101,15 @@ export function chartBucketFor(
   type: string,
   status: string,
   sessions: { status?: string | null }[],
+  dismissedByRole?: string | null,
 ): { key: string; label: string } {
   const list = sessions ?? [];
   const hasScheduled = list.some((s) => s.status === "scheduled");
   const hasCompleted = list.some((s) => s.status === "completed");
 
   if (type === "ADM" && status === "in_progress") return { key: "endorsed", label: "Endorsed" };
-  if (status === "dismissed") return { key: "rejected", label: "Rejected" };
+  const dismissal = dismissalBucket(status, dismissedByRole);
+  if (dismissal) return dismissal;
   if (status === "resolved") return { key: "done", label: "Done" };
   if (status === "follow_up") return { key: "followup", label: "Follow-up" };
   if (hasScheduled) return { key: "booked", label: "Booked session" };
@@ -108,7 +127,7 @@ export function applyAdmEndorsedCase(old: unknown, row: NurseQueueRow): unknown 
   const data = old as NurseOverviewData;
   if (!Array.isArray(data.needsReview) || !data.kpis) return old;
   if (!data.needsReview.some((r) => r.id === row.id)) return old;
-  const fromBucket = chartBucketFor(row.type, row.status, row.sessions);
+  const fromBucket = chartBucketFor(row.type, row.status, row.sessions, row.dismissedByRole);
   const toBucket = chartBucketFor("ADM", "in_progress", []);
   return {
     ...data,
@@ -298,7 +317,7 @@ export function buildNurseOverview(referrals: RawReferral[]): NurseOverviewData 
     for (const r of referrals) {
       const type = r.consultReviewer ? "ADM" : "Clinic";
       const sessions = r.counselingSessions ?? [];
-      const action = chartBucketFor(type, r.status ?? "pending", sessions);
+      const action = chartBucketFor(type, r.status ?? "pending", sessions, r.dismissedByRole);
       const existing = counts.get(action.key);
       if (existing) {
         existing.count++;

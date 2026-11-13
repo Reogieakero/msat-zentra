@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { FolderOpen, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import {
   InputGroup,
   InputGroupAddon,
@@ -9,9 +9,9 @@ import {
 } from "@/components/ui/input-group";
 import { ImageViewer } from "@/components/image-viewer/ImageViewer";
 import { InsightCallout } from "@/components/ui/insight-callout";
+import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { type ClinicAttachment } from "@/services/nurse/nurse.types";
 import { type NurseAlertItem } from "@/services/nurse/nurse.types";
-import { NurseEmptyState } from "../../components/NurseEmptyCard";
 import { HealthRecordKanbanCard } from "./HealthRecordKanbanCard";
 import { DocumentaryDetails } from "./DocumentaryDetails";
 import {
@@ -74,11 +74,10 @@ export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] })
 
   if (entries.length === 0) {
     return (
-      <NurseEmptyState
-        icon={FolderOpen}
-        title="No files stored yet"
-        hint="Finished clinic sessions and resolved cases will appear here, one card per record."
-      />
+      <PageEmptyCallout>
+        <strong>No files stored yet.</strong> Finished clinic sessions and resolved
+        cases will appear here, one card per record.
+      </PageEmptyCallout>
     );
   }
 

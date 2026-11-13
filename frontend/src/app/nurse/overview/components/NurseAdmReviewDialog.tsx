@@ -85,6 +85,27 @@ export function NurseAdmReviewDialog({
   }
 
   const busy = bookMutation.isPending || rejectMutation.isPending;
+  const scheduled = row.sessions.some((s) => s.status === "scheduled");
+  // A finished review (endorsed / rejected / closed) can no longer be acted on:
+  // the overlay becomes a read-only message instead of showing the actions.
+  const lockedReason =
+    row.status === "pending"
+      ? null
+      : row.status === "dismissed" || row.status === "rejected"
+        ? "This case was rejected — it can no longer be booked, rejected again, or sent as a new referral."
+        : row.status === "resolved"
+          ? "This case is closed — no further ADM review actions are available."
+          : "This case has been endorsed to the ADM coordinator — booking a session, rejecting it, or creating another referral is no longer available.";
+  const createDisabledReason =
+    !lockedReason && scheduled
+      ? "A clinic session is already booked on this case — finish or cancel it before creating the referral."
+      : null;
+  // The report folder stays clickable on a locked case and opens the "kept
+  // private" notice instead of the OCForm-01 preview.
+  const privacyReason: "finished" | "endorsed" =
+    row.status === "dismissed" || row.status === "rejected" || row.status === "resolved"
+      ? "finished"
+      : "endorsed";
 
   return (
     <>
@@ -128,6 +149,9 @@ export function NurseAdmReviewDialog({
         sessionNoun="clinic"
         createConfirmHint="Confirming there endorses the case to the ADM coordinator at once."
         hasActiveSession={row.sessions.some((s) => s.status === "scheduled")}
+        lockedReason={lockedReason}
+        createDisabledReason={createDisabledReason}
+        privacyReason={privacyReason}
         copy={{
           askBookEmpty:
             "Pick a date and a time first — or leave both empty and carry the session into the referral form instead.",

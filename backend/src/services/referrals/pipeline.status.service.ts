@@ -93,6 +93,11 @@ export async function updateStatus(ctx: ReferralContext, referralId: string, inp
       );
     }
   }
+  const dismissing =
+    input.status === "dismissed" && referral.status !== "dismissed";
+  const dismissalReason = dismissing
+    ? (input.resolutionSummary ?? "").trim()
+    : "";
   const updated = await prisma.referral.update({
     where: { id: referral.id },
     data: {
@@ -109,10 +114,12 @@ export async function updateStatus(ctx: ReferralContext, referralId: string, inp
                 : {}),
               resolvedAt: new Date(),
             }
-          : {}),
+          : dismissing && dismissalReason
+            ? { notes: dismissalReason }
+            : {}),
     },
   });
-  await writeAudit({ userId: ctx.userId, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Status → ${input.status}`, oldValue: { status: referral.status }, newValue: { status: input.status } });
+  await writeAudit({ userId: ctx.userId, actionType: dismissing ? "referral_dismissed" : "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: dismissing && dismissalReason ? dismissalReason : `Status → ${input.status}`, oldValue: { status: referral.status }, newValue: { status: input.status } });
   const card = await referralCard(referral);
 
   if (referral.referredBy && referral.referredBy !== ctx.userId) {

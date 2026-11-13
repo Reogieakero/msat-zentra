@@ -4,51 +4,15 @@ import { Button } from "@/components/ui/button";
 import { KanbanModal } from "@/components/ui/kanban-modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileDown, ImageDown, Loader2, Printer } from "lucide-react";
-import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
-import { CONCERN_OPTIONS, type GcForm03Data } from "@/services/guidance/gcform03.types";
-import { buildGcForm03Data } from "@/services/guidance/gcform03.service";
-import type { GuidanceAdmCase } from "@/services/guidance/adm.types";
+import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 import sheetStyles from "@/app/guidance/adm/components/GcForm03PreviewDialog.module.css";
 import { apiErrorMessage } from "@/lib/api/errors";
-import {
-  forwardNurseAdmCase,
-  parseSavedNurseAdmForm,
-} from "@/services/nurse/referrals.service";
+import { forwardNurseAdmCase } from "@/services/nurse/referrals.service";
 import type { NurseQueueRow } from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "../../overview/components/use-nurse-mutation";
 import type { DialogProps } from "./NurseSessionDialogs";
 import styles from "./NurseReferralDialogs.module.css";
-function savedConcernsRecord(labels: string[]): GcForm03Data["concerns"] {
-  const record: GcForm03Data["concerns"] = {
-    absences: false,
-    academic: false,
-    personal: false,
-    family: false,
-    peer: false,
-    others: false,
-    othersText: "",
-  };
-  const extras: string[] = [];
-  for (const label of labels) {
-    if (label.startsWith("Others:")) {
-      record.others = true;
-      const text = label.slice("Others:".length).trim();
-      if (text) extras.push(text);
-      continue;
-    }
-    const opt = CONCERN_OPTIONS.find((c) => c.label === label);
-    if (opt && opt.key !== "others") {
-      record[opt.key] = true;
-    } else if (opt) {
-      record.others = true;
-    } else {
-      record.others = true;
-      extras.push(label);
-    }
-  }
-  if (extras.length > 0) record.othersText = extras.join(", ");
-  return record;
-}
+import { buildNurseGcForm03Data } from "./nurse-adm-form-data";
 /** File name for the exported PNG/JPG/PDF of the referral form. */
 function exportFilename(
   studentName: string,
@@ -98,56 +62,8 @@ export function NurseReferralFormViewModal({
     let cancelled = false;
     void (async () => {
       try {
-        const saved = parseSavedNurseAdmForm(row.notes);
-        let report = null;
-        if (row.anecdotalId) {
-          try {
-            report = await fetchOcForm01Detail(row.anecdotalId);
-          } catch {
-            report = null;
-          }
-        }
-        const adapter: GuidanceAdmCase = {
-          id: row.id,
-          student: row.student,
-          lrn: row.lrn,
-          section: row.section,
-          grade: row.grade,
-          stage: "consultation",
-          stageLabel: "Consultation and referral",
-          eligibility: "pending",
-          referralId: row.id,
-          referralStatus: row.status,
-          reason: row.reason,
-          referredBy: "",
-          preparedBy: "",
-          date: row.date,
-          meetingAttended: null,
-          hasHomeVisit: false,
-          approved: false,
-          approvedAt: null,
-          anecdotalId: row.anecdotalId ?? undefined,
-          category: row.category,
-          anecdotalExcerpt: row.anecdotal?.incident ?? "",
-          recommendations: row.anecdotal?.notes ?? "",
-        };
-        const base = buildGcForm03Data(adapter, report, saved?.recommendation ?? "", "");
-        const data: GcForm03Data = saved
-          ? {
-              ...base,
-              concerns: savedConcernsRecord(saved.concerns),
-              detailsOfConcern: saved.details || base.detailsOfConcern,
-              referrerActions: saved.actions
-                ? [
-                    { date: row.date, action: saved.actions },
-                    { date: "", action: "" },
-                    { date: "", action: "" },
-                  ]
-                : base.referrerActions,
-              guidanceRecommendations: saved.recommendation || base.guidanceRecommendations,
-              followUp: saved.followUp || base.followUp,
-            }
-          : base;
+        const base = await buildNurseGcForm03Data(row);
+        const data: GcForm03Data = base;
         const [{ buildFilledGcForm03Workbook }, { renderGcForm03SheetHtml }] =
           await Promise.all([
             import("@/app/guidance/adm/components/gcform03-workbook"),

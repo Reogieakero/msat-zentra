@@ -35,7 +35,7 @@ export function AdmReviewDialog({
   onClose,
   onChanged,
   onCreateReferral,
-
+  caseStatus,
   mode = "queue",
 }: {
   referralId: string;
@@ -46,6 +46,8 @@ export function AdmReviewDialog({
   onClose: () => void;
   onChanged: () => void;
   onCreateReferral: (draft: AdmReviewDraft) => void;
+  /** Referral status — a finished review locks the overlay's actions. */
+  caseStatus?: string | null;
   mode?: "queue" | "desk";
 }) {
   const invalidateGuidance = useGuidanceInvalidate();
@@ -164,6 +166,27 @@ export function AdmReviewDialog({
   const category = info?.category?.trim() || "—";
   const referred = info?.date?.trim() || "—";
 
+  // A finished review (endorsed / rejected / closed) can no longer be acted on:
+  // the overlay becomes a read-only message instead of showing the actions.
+  const lockedReason =
+    !caseStatus || caseStatus === "pending"
+      ? null
+      : caseStatus === "dismissed" || caseStatus === "rejected"
+        ? "This case was rejected — it can no longer be booked, rejected again, or sent as a new referral."
+        : caseStatus === "resolved"
+          ? "This case is closed — no further ADM review actions are available."
+          : "This case has been endorsed to the ADM coordinator — booking a session, rejecting it, or creating another referral is no longer available.";
+  const createDisabledReason =
+    !lockedReason && bookedScheduled
+      ? "A counseling session is already booked on this case — finish or cancel it before creating the referral."
+      : null;
+  // The report folder stays clickable on a locked case and opens the "kept
+  // private" notice instead of the OCForm-01 preview.
+  const privacyReason: "finished" | "endorsed" =
+    caseStatus === "dismissed" || caseStatus === "rejected" || caseStatus === "resolved"
+      ? "finished"
+      : "endorsed";
+
   return (
     <SharedAdmReviewDialog
       open={open}
@@ -187,6 +210,9 @@ export function AdmReviewDialog({
       recommendationPlaceholder="What did your review find? What should happen next…"
       sessionNoun="counseling"
       hasActiveSession={bookedScheduled}
+      lockedReason={lockedReason}
+      createDisabledReason={createDisabledReason}
+      privacyReason={privacyReason}
       copy={{
         recommendationRequired: "Write your recommendation first — the record needs it.",
         rejectFailed: "Could not reject this case. Try again.",

@@ -67,6 +67,7 @@ export function GuidanceReferralsDialogsHost({
           onClose={onReviewClose}
           onChanged={onReviewChanged}
           onCreateReferral={onCreateReferral}
+          caseStatus={reviewAdmFor.status}
           mode="desk"
         />
       )}

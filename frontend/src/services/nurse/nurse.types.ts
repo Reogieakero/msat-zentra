@@ -206,6 +206,8 @@ export type NurseReferralStatus =
 export interface NurseAcceptInput {
   intakeNotes?: string;
   scheduledAt?: string;
+  /** Session kind (one-on-one by default) — same picker as the guidance desk. */
+  sessionType?: string;
   venue?: string;
 }
 
@@ -226,6 +228,8 @@ export interface SavedNurseAdmForm {
 
 export interface NurseScheduleSessionInput {
   scheduledAt: string;
+  /** Session kind (one-on-one by default) — same picker as the guidance desk. */
+  sessionType?: string;
   venue?: string;
 }
 

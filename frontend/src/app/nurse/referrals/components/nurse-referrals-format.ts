@@ -31,6 +31,7 @@ export type ActionFilter =
   | "clinic_booked"
   | "clinic_done"
   | "clinic_followup"
+  | "clinic_reject"
   | "clinic_cancelled";
 export type ActionValue = Exclude<ActionFilter, "">;
 export const ADM_MENU: { value: ActionValue; label: string }[] = [
@@ -46,6 +47,7 @@ export const CLINIC_MENU: { value: ActionValue; label: string }[] = [
   { value: "clinic_booked", label: "Booked session" },
   { value: "clinic_done", label: "Done" },
   { value: "clinic_followup", label: "Follow-up" },
+  { value: "clinic_reject", label: "Rejected" },
   { value: "clinic_cancelled", label: "Cancelled" },
 ];
 export function matchesActionFilter(row: NurseQueueRow, filter: ActionValue): boolean {
@@ -70,7 +72,15 @@ export function matchesActionFilter(row: NurseQueueRow, filter: ActionValue): bo
       return row.type === "Clinic" && sharedIsCaseDone(row);
     case "clinic_followup":
       return row.type === "Clinic" && row.status === "follow_up";
+    case "clinic_reject":
+      /* Rejected by the nurse — no teacher withdrawal behind it. */
+      return (
+        row.type === "Clinic" &&
+        (row.status === "dismissed" || row.status === "rejected") &&
+        !sharedIsWithdrawn(row)
+      );
     case "clinic_cancelled":
+      /* Withdrawn by the filing teacher. */
       return row.type === "Clinic" && sharedIsWithdrawn(row);
     default:
       return false;
@@ -94,7 +104,7 @@ export function caseStage(row: NurseQueueRow): CaseStage {
   if (row.status === "dismissed") {
     return row.type === "ADM"
       ? { key: "reject", label: "Reject", variant: "red" }
-      : { key: "cancelled", label: "Cancelled", variant: "red" };
+      : { key: "reject", label: "Rejected", variant: "red" };
   }
   if (row.status === "resolved") {
     return { key: "done", label: "Done", variant: "green" };
@@ -115,7 +125,9 @@ export function caseStage(row: NurseQueueRow): CaseStage {
     return { key: "endorsed", label: "Endorsed", variant: "green" };
   }
   if (row.status === "escalated") {
-    return { key: "escalated", label: "Sent to clinic", variant: "amber" };
+    // Same chip as the guidance desks — one label for an escalated case
+    // whichever desk it landed on.
+    return { key: "escalated", label: "Escalated", variant: "red" };
   }
   return {
     key: row.status,

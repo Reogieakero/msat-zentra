@@ -9,11 +9,18 @@ import { toast } from "@/components/ui/sonner";
 import { teacherNotificationTitle } from "@/lib/notifications/label";
 import {
   isAdviserAdmBooked,
+  isAdviserAdmBookedClinic,
+  isAdviserAdmEndorsedClinic,
   isAdviserAdmRejected,
+  isAdviserAdmRejectedClinic,
   isAdviserAdmRescheduled,
+  isAdviserAdmRescheduledClinic,
   isAdviserCounselingBooked,
   isAdviserCounselingRejected,
   isAdviserCounselingRescheduled,
+  isAdviserClinicBooked,
+  isAdviserClinicRejected,
+  isAdviserClinicRescheduled,
   isAdviserReferralClosed,
   isAdviserReferralEndorsed,
   isAdviserReferralSessionBooked,
@@ -161,6 +168,16 @@ export const ADVISER_COUNSELING_BOOKED_EVENT = "zentra:adviser-counseling-booked
 export const ADVISER_COUNSELING_RESCHEDULED_EVENT = "zentra:adviser-counseling-rescheduled";
 export const ADVISER_COUNSELING_REJECTED_EVENT = "zentra:adviser-counseling-rejected";
 
+/**
+ * Fired when the **clinic** (nurse) booked, moved or rejected a clinic referral
+ * the teacher filed. Same one-clip-per-action rule as the counseling set, but
+ * with the nurse clips (`/sounds/nurse_clinic_session.mp3`,
+ * `/sounds/nurse_clinic_reschedule.mp3`, `/sounds/nurse_clinic_reject.mp3`).
+ */
+export const ADVISER_CLINIC_BOOKED_EVENT = "zentra:adviser-clinic-booked";
+export const ADVISER_CLINIC_RESCHEDULED_EVENT = "zentra:adviser-clinic-rescheduled";
+export const ADVISER_CLINIC_REJECTED_EVENT = "zentra:adviser-clinic-rejected";
+
 function ringAdviserSession() {
   try {
     window.dispatchEvent(new CustomEvent(ADVISER_SESSION_ALERT_EVENT));
@@ -185,9 +202,11 @@ function ringAdviserSessionCancelled() {
   }
 }
 
-function ringAdviserReferralUpdate() {
+function ringAdviserReferralUpdate(clinic = false) {
   try {
-    window.dispatchEvent(new CustomEvent(ADVISER_REFERRAL_UPDATE_EVENT));
+    window.dispatchEvent(
+      new CustomEvent(ADVISER_REFERRAL_UPDATE_EVENT, { detail: { clinic } }),
+    );
   } catch {
     /* CustomEvent unavailable — the monitor's catch-up still lands. */
   }
@@ -201,25 +220,31 @@ function ringAdviserReferralClosed() {
   }
 }
 
-function ringAdviserAdmRejected() {
+function ringAdviserAdmRejected(clinic = false) {
   try {
-    window.dispatchEvent(new CustomEvent(ADVISER_ADM_REJECTED_EVENT));
+    window.dispatchEvent(
+      new CustomEvent(ADVISER_ADM_REJECTED_EVENT, { detail: { clinic } }),
+    );
   } catch {
     /* CustomEvent unavailable — the monitor's catch-up still lands. */
   }
 }
 
-function ringAdviserAdmBooked() {
+function ringAdviserAdmBooked(clinic = false) {
   try {
-    window.dispatchEvent(new CustomEvent(ADVISER_ADM_BOOKED_EVENT));
+    window.dispatchEvent(
+      new CustomEvent(ADVISER_ADM_BOOKED_EVENT, { detail: { clinic } }),
+    );
   } catch {
     /* CustomEvent unavailable — the monitor's catch-up still lands. */
   }
 }
 
-function ringAdviserAdmRescheduled() {
+function ringAdviserAdmRescheduled(clinic = false) {
   try {
-    window.dispatchEvent(new CustomEvent(ADVISER_ADM_RESCHEDULED_EVENT));
+    window.dispatchEvent(
+      new CustomEvent(ADVISER_ADM_RESCHEDULED_EVENT, { detail: { clinic } }),
+    );
   } catch {
     /* CustomEvent unavailable — the monitor's catch-up still lands. */
   }
@@ -245,6 +270,30 @@ function ringAdviserCounselingRescheduled() {
 function ringAdviserCounselingRejected() {
   try {
     window.dispatchEvent(new CustomEvent(ADVISER_COUNSELING_REJECTED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+function ringAdviserClinicBooked() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_CLINIC_BOOKED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+function ringAdviserClinicRescheduled() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_CLINIC_RESCHEDULED_EVENT));
+  } catch {
+    /* CustomEvent unavailable — the monitor's catch-up still lands. */
+  }
+}
+
+function ringAdviserClinicRejected() {
+  try {
+    window.dispatchEvent(new CustomEvent(ADVISER_CLINIC_REJECTED_EVENT));
   } catch {
     /* CustomEvent unavailable — the monitor's catch-up still lands. */
   }
@@ -305,6 +354,10 @@ export function useTeacherRealtime(enabled = true) {
         return true;
       });
       if (due.length === 0) return;
+      // The adviser rail's "new or updated" dots read `/api/teacher/nav-counts`;
+      // any frame the desk receives may have moved a queue, so refresh it in
+      // the same tick as the page data instead of waiting for the 5s poll.
+      void queryClient.invalidateQueries({ queryKey: ["teacher-nav-counts"] });
       for (const key of keysForScopes(due)) {
         void queryClient.invalidateQueries({ queryKey: [...key] });
       }
@@ -371,15 +424,22 @@ export function useTeacherRealtime(enabled = true) {
       // (`counseling_session_visible` is intervention-scoped), so this
       // notification is the adviser's only path to the session clips here.
       if (!isSelfNotification(row)) {
-        if (isAdviserCounselingBooked(row)) ringAdviserCounselingBooked();
+        if (isAdviserClinicBooked(row)) ringAdviserClinicBooked();
+        else if (isAdviserCounselingBooked(row)) ringAdviserCounselingBooked();
+        else if (isAdviserAdmBookedClinic(row)) ringAdviserAdmBooked(true);
         else if (isAdviserAdmBooked(row)) ringAdviserAdmBooked();
         else if (isAdviserReferralSessionBooked(row)) ringAdviserSession();
-        if (isAdviserCounselingRescheduled(row)) ringAdviserCounselingRescheduled();
+        if (isAdviserClinicRescheduled(row)) ringAdviserClinicRescheduled();
+        else if (isAdviserCounselingRescheduled(row)) ringAdviserCounselingRescheduled();
+        else if (isAdviserAdmRescheduledClinic(row)) ringAdviserAdmRescheduled(true);
         else if (isAdviserAdmRescheduled(row)) ringAdviserAdmRescheduled();
         else if (isAdviserReferralSessionRescheduled(row)) ringAdviserSessionResched();
         if (isAdviserReferralSessionCancelled(row)) ringAdviserSessionCancelled();
-        if (isAdviserReferralEndorsed(row)) ringAdviserReferralUpdate();
-        if (isAdviserCounselingRejected(row)) ringAdviserCounselingRejected();
+        if (isAdviserAdmEndorsedClinic(row)) ringAdviserReferralUpdate(true);
+        else if (isAdviserReferralEndorsed(row)) ringAdviserReferralUpdate();
+        if (isAdviserClinicRejected(row)) ringAdviserClinicRejected();
+        else if (isAdviserCounselingRejected(row)) ringAdviserCounselingRejected();
+        else if (isAdviserAdmRejectedClinic(row)) ringAdviserAdmRejected(true);
         else if (isAdviserAdmRejected(row)) ringAdviserAdmRejected();
         else if (isAdviserReferralClosed(row)) ringAdviserReferralClosed();
       }
@@ -521,9 +581,16 @@ export function useTeacherRealtime(enabled = true) {
           let admRejected = false;
           let admBooked = false;
           let admResched = false;
+          let admRejectedClinic = false;
+          let admBookedClinic = false;
+          let admReschedClinic = false;
+          let admEndorsedClinic = false;
           let counselingBooked = false;
           let counselingResched = false;
           let counselingRejected = false;
+          let clinicBooked = false;
+          let clinicResched = false;
+          let clinicRejected = false;
           for (const n of fresh) {
             seenIds.current.add(n.id);
             for (const s of scopesForNotification(n)) scopes.add(s);
@@ -559,15 +626,22 @@ export function useTeacherRealtime(enabled = true) {
             // Referral pipeline actions (see `notify`): always notification-
             // driven, so they do not gate on PUSH_ENABLED.
             if (!isSelfNotification(n)) {
-              if (isAdviserCounselingBooked(n)) counselingBooked = true;
+              if (isAdviserClinicBooked(n)) clinicBooked = true;
+              else if (isAdviserCounselingBooked(n)) counselingBooked = true;
+              else if (isAdviserAdmBookedClinic(n)) admBookedClinic = true;
               else if (isAdviserAdmBooked(n)) admBooked = true;
               else if (isAdviserReferralSessionBooked(n)) sessionBooked = true;
-              if (isAdviserCounselingRescheduled(n)) counselingResched = true;
+              if (isAdviserClinicRescheduled(n)) clinicResched = true;
+              else if (isAdviserCounselingRescheduled(n)) counselingResched = true;
+              else if (isAdviserAdmRescheduledClinic(n)) admReschedClinic = true;
               else if (isAdviserAdmRescheduled(n)) admResched = true;
               else if (isAdviserReferralSessionRescheduled(n)) sessionResched = true;
               if (isAdviserReferralSessionCancelled(n)) sessionCancelled = true;
-              if (isAdviserReferralEndorsed(n)) referralUpdate = true;
-              if (isAdviserCounselingRejected(n)) counselingRejected = true;
+              if (isAdviserAdmEndorsedClinic(n)) admEndorsedClinic = true;
+              else if (isAdviserReferralEndorsed(n)) referralUpdate = true;
+              if (isAdviserClinicRejected(n)) clinicRejected = true;
+              else if (isAdviserCounselingRejected(n)) counselingRejected = true;
+              else if (isAdviserAdmRejectedClinic(n)) admRejectedClinic = true;
               else if (isAdviserAdmRejected(n)) admRejected = true;
               else if (isAdviserReferralClosed(n)) referralClosed = true;
             }
@@ -577,16 +651,23 @@ export function useTeacherRealtime(enabled = true) {
             description: "Open the notifications bell to review them.",
           });
           if (detected) ringAdviserRisk();
+          if (clinicBooked) ringAdviserClinicBooked();
+          if (clinicResched) ringAdviserClinicRescheduled();
+          if (clinicRejected) ringAdviserClinicRejected();
           if (counselingBooked) ringAdviserCounselingBooked();
           if (counselingResched) ringAdviserCounselingRescheduled();
           if (counselingRejected) ringAdviserCounselingRejected();
           if (admBooked) ringAdviserAdmBooked();
+          if (admBookedClinic) ringAdviserAdmBooked(true);
           if (admResched) ringAdviserAdmRescheduled();
+          if (admReschedClinic) ringAdviserAdmRescheduled(true);
           if (sessionBooked) ringAdviserSession();
           if (sessionResched) ringAdviserSessionResched();
           if (sessionCancelled) ringAdviserSessionCancelled();
           if (referralUpdate) ringAdviserReferralUpdate();
+          if (admEndorsedClinic) ringAdviserReferralUpdate(true);
           if (admRejected) ringAdviserAdmRejected();
+          if (admRejectedClinic) ringAdviserAdmRejected(true);
           if (referralClosed) ringAdviserReferralClosed();
           invalidate([...scopes]);
           return;

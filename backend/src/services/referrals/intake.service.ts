@@ -228,7 +228,7 @@ export async function acceptGuidance(ctx: ReferralContext, referralId: string, i
 
 export interface AcceptNurseInput {
   intakeNotes?: string;
-  clinicSession?: { scheduledAt: string; venue?: string };
+  clinicSession?: { scheduledAt: string; sessionType?: string; venue?: string };
 }
 
 export async function acceptNurse(ctx: ReferralContext, referralId: string, input: AcceptNurseInput) {
@@ -289,7 +289,7 @@ export async function acceptNurse(ctx: ReferralContext, referralId: string, inpu
       sessionRow = await tx.counselingSession.create({
         data: {
           referralId: referral.id,
-          sessionType: "individual",
+          sessionType: input.clinicSession?.sessionType?.trim() || "individual",
           scheduledAt: sessionAt,
           venue: input.clinicSession?.venue?.trim() || "School clinic",
           status: "scheduled",
@@ -441,11 +441,18 @@ export async function nurseAdmReview(ctx: ReferralContext, referralId: string, i
         `${actor} endorsed the ADM consultation for ${card.who} — sent to you, ${r.fullName}.`,
     });
     if (referral.referredBy && referral.referredBy !== ctx.userId) {
+      // Endorsement and a first clinic session often happen in one review
+      // action. In that case the adviser gets a single booking message so the
+      // desk rings the *booked* clip (`nurse_adm_booked_session.mp3` via
+      // `isAdviserAdmBookedClinic`), not the endorsement one — one action, one
+      // clip, and the endorsement is stated in the same sentence.
       void fanoutNotification({
         userId: referral.referredBy,
         sourceTable: "referrals",
         action: "status",
-        message: `${actor} endorsed the ADM consultation for ${card.who} — now with the coordinator.`,
+        message: session
+          ? `${actor} (Clinic) booked an ADM consultation session for ${card.who} (${session.sessionType}, ${formatWhen(session.scheduledAt)} at ${session.venue || "School clinic"}) and endorsed the case — now with the coordinator.`
+          : `${actor} (Clinic) endorsed the ADM consultation for ${card.who} — now with the coordinator.`,
         sourceId: referral.id,
       });
     }
@@ -462,7 +469,7 @@ export async function nurseAdmReview(ctx: ReferralContext, referralId: string, i
         userId: referral.referredBy,
         sourceTable: "referrals",
         action: "status",
-        message: `Your ADM referral for ${card.who} was not endorsed — case closed.`,
+        message: `Your ADM referral for ${card.who} was not endorsed by the clinic — case closed.`,
         sourceId: referral.id,
       });
     }
@@ -608,7 +615,7 @@ export async function forwardNurseAdm(ctx: ReferralContext, referralId: string) 
       userId: referral.referredBy,
       sourceTable: "referrals",
       action: "status",
-      message: `Your ADM referral for ${card.who} was forwarded to the coordinator.`,
+      message: `Your ADM referral for ${card.who} was endorsed by the clinic — now with the coordinator.`,
       sourceId: referral.id,
     });
   }

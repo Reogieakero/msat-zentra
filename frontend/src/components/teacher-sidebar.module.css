@@ -94,6 +94,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Red "new or updated since you last looked" marker (same as the guidance
+   desk's sidebar dot). */
+.dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  margin-left: 0.25rem;
+  border-radius: 9999px;
+  background-color: #dc2626;
+  box-shadow: 0 0 0 2px color-mix(in oklch, #dc2626 22%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tab {
     transition: none;

@@ -217,6 +217,11 @@
   grid-row: 1 / span 2;
 }
 
+/* Details lane hidden (moving a session): one full-width column. */
+.lanesSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 @media (max-width: 900px) {
   .lanes {
     grid-template-columns: minmax(0, 1fr);

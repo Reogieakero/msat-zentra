@@ -80,9 +80,10 @@ export function AcceptDialog({
   /** Today's local day — the date picker refuses anything before it. */
   const today = todayKey();
 
-  /* A case whose session is already booked opens as a read-only review: the
-     board shows the booking details and nothing can be booked or rejected
-     again from here (reschedule/cancel live on the case card). */
+  /* A case whose session is already booked opens as a review: the board shows
+     the booking details and no further session can be booked from here
+     (reschedule/cancel live on the case card), but the case can still be
+     rejected. */
   const bookedSession =
     row && hasScheduledSession(row.sessions)
       ? row.sessions.find((s) => s.status === "scheduled") ?? null
@@ -188,17 +189,19 @@ export function AcceptDialog({
               <XCircle size={12} aria-hidden />
               Reject
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-6 px-3 text-xs"
-              onClick={handleBookSession}
-              disabled={isActionPending}
-            >
-              <CalendarPlus size={12} aria-hidden />
-              Book session
-            </Button>
+            {!reviewOnly ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 px-3 text-xs"
+                onClick={handleBookSession}
+                disabled={isActionPending}
+              >
+                <CalendarPlus size={12} aria-hidden />
+                Book session
+              </Button>
+            ) : null}
           </div>
         }
       >

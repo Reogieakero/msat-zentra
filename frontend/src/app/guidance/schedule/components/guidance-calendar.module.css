@@ -561,22 +561,12 @@
 
 /* States ------------------------------------------------------------------- */
 
-.skeletonBoard {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background-color: var(--card);
-}
-
-.skelGrid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.25rem;
-  padding: 0.5rem;
-}
-
-.skelCell {
-  height: 5rem;
+/* Loading placeholders reuse the real grid/cell/chip geometry above; only the
+   leaves are invented, so the board never shifts when the events land. */
+.skelChip {
+  width: 100%;
+  height: 1.25rem;
+  border-radius: var(--radius-md);
 }
 
 .errorCard {

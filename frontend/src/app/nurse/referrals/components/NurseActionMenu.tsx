@@ -40,6 +40,7 @@ export const ACTION_ICONS: Record<ActionValue, LucideIcon> = {
   clinic_booked: CalendarClock,
   clinic_done: CheckCircle2,
   clinic_followup: Activity,
+  clinic_reject: XCircle,
   clinic_cancelled: Ban,
 };
 
@@ -54,6 +55,7 @@ export const ACTION_ACCENTS: Record<ActionValue, string> = {
   clinic_booked: "text-blue-500",
   clinic_done: "text-emerald-600 dark:text-emerald-400",
   clinic_followup: "text-orange-500",
+  clinic_reject: "text-destructive",
   clinic_cancelled: "text-muted-foreground",
 };
 

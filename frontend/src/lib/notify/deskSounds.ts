@@ -59,12 +59,24 @@ const SOURCES = {
   adviserAdmBooked: "/sounds/guidance%20adm%20booked%20session.mp3",
   adviserAdmRejected: "/sounds/guidance%20adm%20reject.mp3",
   adviserAdmRescheduled: "/sounds/guidance%20adm%20reschedule.mp3",
+  // Clinic (nurse) desk actions on the same ADM track — the nurse desk reviews
+  // the case before guidance, so the adviser hears the clinic variants of the
+  // four ADM confirmations. Still adviser-only; the acting desk stays silent.
+  adviserAdmBookedClinic: "/sounds/nurse_adm_booked_session.mp3",
+  adviserAdmRejectedClinic: "/sounds/nurse_adm_reject.mp3",
+  adviserAdmRescheduledClinic: "/sounds/nurse_adm_reschedule.mp3",
+  adviserAdmEndorsedClinic: "/sounds/nurse_create_referral.mp3",
   // Counseling desk actions on a referral the teacher filed — adviser-only,
   // one clip per action so a counseling case never sounds like an ADM or an
   // intervention one.
   adviserCounselingBooked: "/sounds/guidance%20counseling%20session.mp3",
   adviserCounselingRejected: "/sounds/guidance%20counseling%20reject.mp3",
   adviserCounselingRescheduled: "/sounds/guidance%20counseling%20reschedule.mp3",
+  // Clinic (nurse) desk on a **clinic** referral — the adviser hears the nurse
+  // variants so a clinic case never sounds like a guidance counseling one.
+  adviserClinicBooked: "/sounds/nurse_clinic_session.mp3",
+  adviserClinicRejected: "/sounds/nurse_clinic_reject.mp3",
+  adviserClinicRescheduled: "/sounds/nurse_clinic_reschedule.mp3",
 } as const;
 
 export type DeskSound = keyof typeof SOURCES;
@@ -83,9 +95,16 @@ const MIN_REPLAY_MS: Record<DeskSound, number> = {
   adviserAdmRejected: 8_000,
   adviserAdmBooked: 8_000,
   adviserAdmRescheduled: 8_000,
+  adviserAdmRejectedClinic: 8_000,
+  adviserAdmBookedClinic: 8_000,
+  adviserAdmRescheduledClinic: 8_000,
+  adviserAdmEndorsedClinic: 8_000,
   adviserCounselingBooked: 8_000,
   adviserCounselingRejected: 8_000,
   adviserCounselingRescheduled: 8_000,
+  adviserClinicBooked: 8_000,
+  adviserClinicRejected: 8_000,
+  adviserClinicRescheduled: 8_000,
 };
 
 const players = new Map<DeskSound, HTMLAudioElement>();
@@ -93,6 +112,15 @@ const lastPlayed = new Map<DeskSound, number>();
 let unlockBound = false;
 /** True once the page has seen any pointer/key gesture (audio is unlocked). */
 let gestureSeen = false;
+/**
+ * Clips requested before the page saw its first gesture. Browsers reject
+ * `play()` until then, so a live arrival on a page nobody has clicked yet used
+ * to be dropped entirely (the desk looked silent while its data updated). The
+ * request is parked here and rings on the unlocking gesture instead.
+ */
+const pendingUntilGesture = new Map<DeskSound, number>();
+/** A parked clip older than this is stale work, not an alert — drop it. */
+const PENDING_MAX_AGE_MS = 90_000;
 /**
  * Clips this page is allowed to ring. Replaced on every `primeDeskSounds` call
  * so a desk owns exactly the clips it passes — the guidance desk never reaches
@@ -241,9 +269,25 @@ export function primeDeskSounds(kinds: readonly DeskSound[]) {
     unlockAll();
     window.removeEventListener("pointerdown", unlock, opts);
     window.removeEventListener("keydown", unlock, opts);
+    flushPendingSounds();
   };
   window.addEventListener("pointerdown", unlock, opts);
   window.addEventListener("keydown", unlock, opts);
+}
+
+/** Ring anything that arrived before audio was unlocked (one clip at a time). */
+function flushPendingSounds() {
+  if (pendingUntilGesture.size === 0) return;
+  const now = Date.now();
+  const due = [...pendingUntilGesture.entries()]
+    .filter(([, at]) => now - at < PENDING_MAX_AGE_MS)
+    .map(([kind]) => kind);
+  pendingUntilGesture.clear();
+  if (due.length === 0) return;
+  // Let the muted unlock probe settle so the one-clip bus is free.
+  window.setTimeout(() => {
+    for (const kind of due) playDeskSound(kind);
+  }, 150);
 }
 
 /** Ring a desk sound, throttled per clip so one event is one sound. */
@@ -253,6 +297,11 @@ export function playDeskSound(kind: DeskSound) {
   // for the adviser alert, and an adviser desk must never ring the guidance
   // alarm. `primeDeskSounds` decides which clips this page owns.
   if (!ownedKinds.has(kind)) return;
+  if (!gestureSeen) {
+    // Park it — `primeDeskSounds` rings it on the first gesture.
+    pendingUntilGesture.set(kind, Date.now());
+    return;
+  }
   const audio = players.get(kind) ?? createPlayer(kind);
   if (!audio) return;
   // One clip at a time across every desk sound, not just this kind.
@@ -417,6 +466,59 @@ export function isAdviserAdmRescheduled(row: {
 }
 
 /**
+ * Clinic-desk variants of the four ADM confirmations. The nurse desk reviews the
+ * ADM case before guidance, and its fanout messages are prefixed with
+ * "(Clinic)" / "Clinic" (or say "by the clinic") so the filing adviser hears the
+ * `nurse_adm_*` clips instead of the guidance ones. Check these **before** their
+ * guidance counterparts — every clinic row also matches the generic classifier.
+ */
+export function isAdviserAdmBookedClinic(row: {
+  sourceTable?: string | null;
+  message?: string | null;
+}): boolean {
+  if (row.sourceTable !== "referrals") return false;
+  const message = row.message ?? "";
+  if (/^you\b/i.test(message)) return false;
+  return (
+    /\(Clinic\)\s+booked an ADM consultation session for\b/i.test(message) ||
+    /\bClinic booked an ADM consultation session for\b/i.test(message)
+  );
+}
+
+export function isAdviserAdmRescheduledClinic(row: {
+  sourceTable?: string | null;
+  message?: string | null;
+}): boolean {
+  if (row.sourceTable !== "referrals") return false;
+  const message = row.message ?? "";
+  if (/^you\b/i.test(message)) return false;
+  return /\bClinic rescheduled an ADM consultation session for\b/i.test(message);
+}
+
+export function isAdviserAdmRejectedClinic(row: {
+  sourceTable?: string | null;
+  message?: string | null;
+}): boolean {
+  if (row.sourceTable !== "referrals") return false;
+  const message = row.message ?? "";
+  if (/^you\b/i.test(message)) return false;
+  return /\bADM referral for .+? was not endorsed by the clinic\b/i.test(message);
+}
+
+export function isAdviserAdmEndorsedClinic(row: {
+  sourceTable?: string | null;
+  message?: string | null;
+}): boolean {
+  if (row.sourceTable !== "referrals") return false;
+  const message = row.message ?? "";
+  if (/^you\b/i.test(message)) return false;
+  return (
+    /\(Clinic\)\s+endorsed the ADM consultation\b/i.test(message) ||
+    /\bADM referral for .+? was endorsed by the clinic\b/i.test(message)
+  );
+}
+
+/**
  * True when a notification row means "guidance booked a **counseling** session
  * on the referral this teacher filed". Counseling bookings ring their own clip
  * (`adviserCounselingBooked`) instead of the ADM / intervention ones, so check
@@ -461,6 +563,51 @@ export function isAdviserCounselingRejected(row: {
   const message = row.message ?? "";
   if (/^you\b/i.test(message)) return false;
   return /\bcounseling referral for .+? was (?:dismissed|rejected|closed)\b/i.test(message);
+}
+
+/**
+ * Clinic (nurse) desk variants for a **clinic** referral the teacher filed.
+ * Same one-clip-per-action rule as the counseling set, so a clinic case never
+ * rings the guidance clips. Check these **before** the counseling/generic
+ * classifiers — the clinic wording also matches the generic ones.
+ */
+export function isAdviserClinicBooked(row: {
+  sourceTable?: string | null;
+  message?: string | null;
+}): boolean {
+  if (row.sourceTable !== "referrals") return false;
+  const message = row.message ?? "";
+  if (/^you\b/i.test(message)) return false;
+  return (
+    /\(Clinic\)\s+booked a session for\b/i.test(message) ||
+    // Accepting a clinic case can book the first session in the same action —
+    // that is a booking from the adviser's point of view, so it rings the
+    // same clinic-session clip.
+    /\bclinic accepted your referral for .+? with a first session\b/i.test(message)
+  );
+}
+
+export function isAdviserClinicRescheduled(row: {
+  sourceTable?: string | null;
+  message?: string | null;
+}): boolean {
+  if (row.sourceTable !== "referrals") return false;
+  const message = row.message ?? "";
+  if (/^you\b/i.test(message)) return false;
+  return /\bClinic rescheduled a session for\b/i.test(message);
+}
+
+export function isAdviserClinicRejected(row: {
+  sourceTable?: string | null;
+  message?: string | null;
+}): boolean {
+  if (row.sourceTable !== "referrals") return false;
+  const message = row.message ?? "";
+  if (/^you\b/i.test(message)) return false;
+  return (
+    /\bclinic referral for .+? was (?:dismissed|rejected|closed)\b/i.test(message) ||
+    /\bClinic (?:rejected|dismissed|closed) your referral for\b/i.test(message)
+  );
 }
 
 /**

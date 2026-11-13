@@ -5,12 +5,14 @@ import settingsRoutes from "./settings.routes.js";
 import timetableRoutes from "./timetable.routes.js";
 import reportsRoutes from "./reports.routes.js";
 import lockGradesRoutes from "./lock-grades.routes.js";
+import navCountsRoutes from "./navCounts.routes.js";
 
 const router = Router();
 
 router.use(overviewRoutes);
 router.use(lockGradesRoutes);
 router.use(reportsRoutes);
+router.use(navCountsRoutes);
 router.use(settingsRoutes);
 router.use(directoryRoutes);
 router.use(timetableRoutes);

@@ -95,7 +95,11 @@ export async function dismissReferral(ctx: ReferralContext, referralId: string, 
             // "counseling referral" — the adviser desk rings the dedicated
             // counseling-reject clip (`isAdviserCounselingRejected`).
             ? `Your counseling referral for ${card.who} was dismissed.`
-            : `Your referral for ${card.who} was dismissed.`,
+            : referral.referredToRole === "nurse"
+              // "clinic referral" — the adviser desk rings the dedicated
+              // clinic-reject clip (`isAdviserClinicRejected`).
+              ? `Your clinic referral for ${card.who} was dismissed.`
+              : `Your referral for ${card.who} was dismissed.`,
       sourceId: referral.id,
     });
   }

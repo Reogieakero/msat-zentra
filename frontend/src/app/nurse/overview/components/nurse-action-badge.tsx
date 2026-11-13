@@ -22,7 +22,12 @@ export function NurseActionBadge({
   row: NurseQueueRow;
   className?: string;
 }) {
-  const action = deriveActionStatus(row.type, row.status, row.sessions);
+  const action = deriveActionStatus(
+    row.type,
+    row.status,
+    row.sessions,
+    row.dismissedByRole,
+  );
   return (
     <Pill
       tone={ACTION_TONE[action.key] ?? "neutral"}

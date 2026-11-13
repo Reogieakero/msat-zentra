@@ -259,6 +259,7 @@ export function GuidanceReferralsTable({
               onBookSession={(row) => openDialog(row.id, "schedule")}
               onPreview={setPreviewId}
               onPrivacy={setPrivacyFor}
+              onEndorsedNotice={setEndorsedFor}
               onOpenSession={(referralId, session, dialog) =>
                 openSessionDialog(referralId, session, dialog)
               }

@@ -17,9 +17,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Pill } from "@/components/ui/pill";
+import { InsightCallout } from "@/components/ui/insight-callout";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { Textarea } from "@/components/ui/textarea";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
+import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import { ClinicDatePicker } from "@/app/nurse/overview/components/ClinicDateTimePicker";
 import { TimePickers } from "@/app/teacher/chat/components/TimePickers";
 import { useAdmReviewDraft } from "./use-adm-review-draft";
@@ -88,6 +90,9 @@ export function AdmReviewDialog({
   copy: copyOverrides,
   formatError,
   fetchTakenTimes,
+  lockedReason,
+  createDisabledReason,
+  privacyReason = "finished",
   onBookSession,
   onReject,
   onCreateReferral,
@@ -114,6 +119,22 @@ export function AdmReviewDialog({
   formatError?: (err: unknown, fallback: string) => string;
   /** Async lookup of booked `HH:MM` slots for a date — omit for no availability check. */
   fetchTakenTimes?: (dateKey: string, signal: AbortSignal) => Promise<string[]>;
+  /**
+   * Set when the case can no longer be reviewed (already endorsed / rejected /
+   * closed). The action buttons are replaced with this message so the desk
+   * cannot book, reject or create another referral on a finished review.
+   */
+  lockedReason?: string | null;
+  /**
+   * Set when only "Create referral" must stay disabled (e.g. a session is
+   * already booked on the case). Shown as the button's tooltip.
+   */
+  createDisabledReason?: string | null;
+  /**
+   * Where the "kept private" notice points once `lockedReason` is set — the
+   * folder stays clickable but opens this notice instead of the report.
+   */
+  privacyReason?: "finished" | "endorsed";
   onBookSession: (scheduledAt: string) => Promise<void>;
   onReject: (recommendation: string) => Promise<void>;
   onCreateReferral: (draft: AdmReviewDraft) => void;
@@ -126,6 +147,9 @@ export function AdmReviewDialog({
     .map((part) => part.trim());
   const [taken, setTaken] = React.useState<string[]>([]);
   const [takenLoading, setTakenLoading] = React.useState(false);
+  // Locked cases keep the report folder clickable, but it opens the "kept
+  // private" notice instead of the OCForm-01 preview.
+  const [privacyOpen, setPrivacyOpen] = React.useState(false);
   const {
     recommendation,
     setRecommendation,
@@ -252,42 +276,59 @@ export function AdmReviewDialog({
             description={description}
             boardLabel={`Review ADM case, ${student}`}
             footer={
-              /* 24px action buttons — same metric as the kanban boards. */
-              <div className="flex flex-wrap items-center justify-end gap-1.5 px-1 pb-1">
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  className={`h-6 px-3 text-xs ${styles.btnRed}`}
-                  onClick={askReject}
-                  disabled={locked}
-                  aria-busy={acting || undefined}
-                >
-                  {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                  {acting ? "Rejecting…" : "Reject"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-3 text-xs"
-                  onClick={askBook}
-                  disabled={locked}
-                  aria-busy={booking || undefined}
-                >
-                  {booking ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                  {booking ? "Booking…" : "Book session"}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-6 px-3 text-xs"
-                  onClick={askCreate}
-                  disabled={locked}
-                >
-                  Create referral
-                </Button>
-              </div>
+              /* 24px action buttons — same metric as the kanban boards. A
+                 finished review shows the lock message instead. */
+              lockedReason ? (
+                <div className="flex items-center justify-end px-1 pb-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-3 text-xs"
+                    onClick={onClose}
+                    disabled={locked}
+                  >
+                    Close
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-end gap-1.5 px-1 pb-1">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className={`h-6 px-3 text-xs ${styles.btnRed}`}
+                    onClick={askReject}
+                    disabled={locked}
+                    aria-busy={acting || undefined}
+                  >
+                    {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                    {acting ? "Rejecting…" : "Reject"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-3 text-xs"
+                    onClick={askBook}
+                    disabled={locked}
+                    aria-busy={booking || undefined}
+                  >
+                    {booking ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                    {booking ? "Booking…" : "Book session"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-6 px-3 text-xs"
+                    onClick={askCreate}
+                    disabled={locked || !!createDisabledReason}
+                    title={createDisabledReason ?? undefined}
+                  >
+                    Create referral
+                  </Button>
+                </div>
+              )
             }
           >
             {/* One kanban card per section — 2-up grid; session sits left
@@ -360,8 +401,14 @@ export function AdmReviewDialog({
                   fileTag={`${humanizeCategory(category)} · tap to preview`}
                   folderColor={REPORT_FOLDER_COLOR}
                   folderAlign="start"
-                  openLabel={`Open the official anecdotal report for ${student}`}
-                  onOpen={() => setPreviewId(anecdotalId)}
+                  openLabel={
+                    lockedReason
+                      ? `The official anecdotal report for ${student} is unavailable`
+                      : `Open the official anecdotal report for ${student}`
+                  }
+                  onOpen={() =>
+                    lockedReason ? setPrivacyOpen(true) : setPreviewId(anecdotalId)
+                  }
                 />
               ) : (
                 <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-xl border border-border bg-muted/60 p-2.5 [font-family:var(--font-inter)] dark:bg-muted/20">
@@ -374,68 +421,77 @@ export function AdmReviewDialog({
                   </p>
                 </div>
               )}
-              <KanbanBoard
-                className="flex-1"
-                title={sessionSectionLabel}
-                icon={
-                  <span className="text-primary" aria-hidden>
-                    <CalendarClock size={14} />
-                  </span>
-                }
-                description={hasActiveSession ? copy.activeSessionExists : sessionFieldHint}
-              >
-                <div className={`${styles.sessionGrid} px-1`}>
-                  <ClinicDatePicker
-                    id="shared-adm-session-date"
-                    label="Date"
-                    labelClassName="text-xs"
-                    value={sessionDate}
-                    onChange={pickSessionDate}
-                    min={today}
-                  />
-                  <div>
-                    <Label className="text-xs">Time</Label>
-                    <div className="mt-1">
-                      {/* Clock-face picker — same control as the chat's
-                          anecdotal flow ("when it happened"), floored to the
-                          current time when booking for today. */}
-                      <TimePickers
-                        value={sessionTime}
-                        onChange={chooseSessionTime}
-                        minTime={sessionDate === today ? currentTimeKey() : undefined}
+              {lockedReason ? null : (
+                <>
+                  <KanbanBoard
+                    className="flex-1"
+                    title={sessionSectionLabel}
+                    icon={
+                      <span className="text-primary" aria-hidden>
+                        <CalendarClock size={14} />
+                      </span>
+                    }
+                    description={hasActiveSession ? copy.activeSessionExists : sessionFieldHint}
+                  >
+                    <div className={`${styles.sessionGrid} px-1`}>
+                      <ClinicDatePicker
+                        id="shared-adm-session-date"
+                        label="Date"
+                        labelClassName="text-xs"
+                        value={sessionDate}
+                        onChange={pickSessionDate}
+                        min={today}
+                      />
+                      <div>
+                        <Label className="text-xs">Time</Label>
+                        <div className="mt-1">
+                          {/* Clock-face picker — same control as the chat's
+                              anecdotal flow ("when it happened"), floored to the
+                              current time when booking for today. */}
+                          <TimePickers
+                            value={sessionTime}
+                            onChange={chooseSessionTime}
+                            minTime={sessionDate === today ? currentTimeKey() : undefined}
+                          />
+                        </div>
+                        {takenLoading ? (
+                          <p className={styles.fieldHint}>Checking availability…</p>
+                        ) : sessionDate && taken.length > 0 ? (
+                          <p className={styles.fieldHint}>
+                            Crossed-out times overlap a booked session
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </KanbanBoard>
+                  <KanbanBoard
+                    className="flex-1"
+                    title="Your recommendation (required)"
+                    icon={
+                      <span className="text-primary" aria-hidden>
+                        <NotebookPen size={14} />
+                      </span>
+                    }
+                  >
+                    <div className="px-1">
+                      <Textarea
+                        id="shared-adm-review-rec"
+                        aria-label="Your recommendation (required)"
+                        value={recommendation}
+                        onChange={(e) => setRecommendation(e.target.value)}
+                        placeholder={recommendationPlaceholder}
+                        maxLength={500}
                       />
                     </div>
-                    {takenLoading ? (
-                      <p className={styles.fieldHint}>Checking availability…</p>
-                    ) : sessionDate && taken.length > 0 ? (
-                      <p className={styles.fieldHint}>
-                        Crossed-out times overlap a booked session
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              </KanbanBoard>
-              <KanbanBoard
-                className="flex-1"
-                title="Your recommendation (required)"
-                icon={
-                  <span className="text-primary" aria-hidden>
-                    <NotebookPen size={14} />
-                  </span>
-                }
-              >
-                <div className="px-1">
-                  <Textarea
-                    id="shared-adm-review-rec"
-                    aria-label="Your recommendation (required)"
-                    value={recommendation}
-                    onChange={(e) => setRecommendation(e.target.value)}
-                    placeholder={recommendationPlaceholder}
-                    maxLength={500}
-                  />
-                </div>
-              </KanbanBoard>
+                  </KanbanBoard>
+                </>
+              )}
             </div>
+            {lockedReason ? (
+              <div className="px-1 pb-1">
+                <InsightCallout>{lockedReason}</InsightCallout>
+              </div>
+            ) : null}
             {error ? <p className={`${styles.dialogError} px-1`} role="alert">{error}</p> : null}
           </KanbanBoard>
         </div>
@@ -461,6 +517,12 @@ export function AdmReviewDialog({
       {previewId && (
         <OcForm01PreviewDialog recordId={previewId} onClose={() => setPreviewId(null)} />
       )}
+      <PrivacyNoticeDialog
+        open={privacyOpen}
+        onClose={() => setPrivacyOpen(false)}
+        studentName={student}
+        reason={privacyReason}
+      />
     </>,
     document.body,
   );

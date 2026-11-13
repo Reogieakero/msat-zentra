@@ -13,6 +13,7 @@ export async function acceptNurseCase(id: string, input: NurseAcceptInput): Prom
   if (input.scheduledAt) {
     body.clinicSession = {
       scheduledAt: input.scheduledAt,
+      ...(input.sessionType?.trim() ? { sessionType: input.sessionType.trim() } : {}),
       ...(input.venue?.trim() ? { venue: input.venue.trim() } : {}),
     };
   }

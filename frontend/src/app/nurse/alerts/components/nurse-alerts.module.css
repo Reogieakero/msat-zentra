@@ -69,10 +69,13 @@
 }
 
 .caseRow {
-  display: flex;
+  display: grid;
+  /* Same tracks as the guidance alerts board: left identity · fixed
+     status/risk column · fixed timestamp column · right controls. */
+  grid-template-columns: minmax(12rem, 1.5fr) 10rem 8rem minmax(10rem, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  column-gap: 6rem;
+  row-gap: 0.75rem;
   padding: 0.625rem 0.375rem;
   border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
   min-width: 0;
@@ -82,39 +85,78 @@
   border-bottom: none;
 }
 
-/* One row per case: mascot, then a stacked name block (name above the
-   LRN/grade/category pills). The name truncates first; pills and actions keep
-   their width. */
-.caseInfo {
+/* Rows open the case desk on click / Enter / Space. */
+.caseRowInteractive {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background-color 140ms ease-out;
+}
+
+.caseRowInteractive:hover {
+  background-color: color-mix(in oklch, var(--foreground), transparent 96%);
+}
+
+.caseRowInteractive:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.caseStudent {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex: 1;
   min-width: 0;
 }
 
-/* Name + meta stack — keeps the identity pills directly under the student
-   name instead of trailing it on the same line. */
-.caseNameBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
+/* Track lead (ADM | Clinic) sits left of the mascot as a rectangle pill; the
+   separator keeps the pipes in one column across rows. */
+.caseTypePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 5.25rem;
+  height: 1.375rem;
+  padding: 0 0.4375rem;
+  border-radius: var(--radius-md);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.caseSeparator {
+  display: inline-grid;
+  place-items: center;
+  align-self: center;
+  flex-shrink: 0;
+  width: 0.625rem;
+  height: 1.5rem;
+  margin: 0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1;
+  color: color-mix(in oklch, var(--foreground), transparent 65%);
+  user-select: none;
+}
+
+.caseIdentity {
   min-width: 0;
 }
 
-.caseMeta {
+/* Name + meta stack — the LRN/section chips sit under the student name. */
+.caseSubRow {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  min-width: 0;
+  gap: 0.375rem;
+  margin-top: 0.1875rem;
 }
 
-.cellMain {
+.studentName {
   margin: 0;
   max-width: 100%;
-  min-width: 0;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--primary);
   white-space: nowrap;
@@ -122,12 +164,142 @@
   text-overflow: ellipsis;
 }
 
-.cellActions {
+.cellSub {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
   gap: 0.375rem;
+  margin: 0.1875rem 0 0;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
   white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Status | risk column — left-aligned in its track. */
+.caseStatusCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+}
+
+/* Timestamp column — referral time, left-aligned in its track. */
+.caseTimeCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+}
+
+.splitPill {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  overflow: hidden;
+}
+
+.splitPart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Fixed segments keep the divider in the same spot across rows. */
+.splitPart:first-child {
+  min-width: 5.25rem;
+}
+
+.splitPart:last-child {
+  min-width: 4.25rem;
+}
+
+.splitDivider {
+  flex-shrink: 0;
+  width: 1px;
+  background-color: var(--border);
+}
+
+/* Right control column — done pill, latest-action glyph, booking + kebab. */
+.caseActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  justify-self: end;
+  gap: 0.375rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.actionIcon {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  opacity: 1;
+}
+
+/* Icon-only latest action — the label lives in a hover/focus tooltip. */
+.actionIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 140ms ease-out,
+    color 140ms ease-out;
+}
+
+.actionIconButton:hover {
+  color: var(--foreground);
+  background-color: color-mix(in oklch, var(--primary), transparent 88%);
+}
+
+.actionIconButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .caseRow,
+  .skeletonRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.75rem;
+  }
+
+  .caseStatusCell {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .caseTimeCell {
+    grid-column: 1;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
+
+  .caseActions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: start;
+    justify-content: flex-start;
+  }
 }
 
 /* Rows cascade in on mount — same entrance as the registry kanban boards. */
@@ -194,6 +366,17 @@
 }
 
 /* Case-row skeleton bars — mirror the flat board rows. */
+.skeletonRow {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.5fr) 10rem 8rem minmax(10rem, 1fr);
+  align-items: center;
+  column-gap: 6rem;
+  row-gap: 0.75rem;
+  padding: 0.625rem 0.375rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  min-width: 0;
+}
+
 .skelAvatar {
   height: 2rem;
   width: 2rem;
@@ -206,9 +389,9 @@
   width: 10rem;
 }
 
-.skelPill {
-  height: 1.375rem;
-  width: 4.5rem;
+.skelSplitPill {
+  height: 1.5rem;
+  width: 10rem;
   flex-shrink: 0;
 }
 

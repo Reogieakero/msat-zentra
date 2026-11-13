@@ -200,6 +200,12 @@ create policy referral_visible on "Referral"
     or "referredBy" = zentra_uid()
     or "consultReviewer" = zentra_uid()
     or ("referredToRole" = 'nurse' and zentra_role() = 'nurse')
+    -- `consultReviewer` stores the reviewing *role* ("nurse" /
+    -- "guidance_counselor"), not a user id, so the picked reviewer's desk must
+    -- match on the role. Without this an ADM case out for nurse consultation
+    -- never reached the nurse desk over realtime (no live board update, and the
+    -- referral-arrival sound could not ring off the row).
+    or ("consultReviewer" = zentra_role() and zentra_role() = 'nurse')
     or zentra_advises_learner("Referral"."studentId", "Referral"."rosterId")
   );
 

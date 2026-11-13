@@ -53,6 +53,7 @@ export const nurseAcceptSchema = z.object({
   clinicSession: z
     .object({
       scheduledAt: z.string().min(1),
+      sessionType: z.string().min(1).optional(),
       venue: z.string().trim().max(200).optional(),
     })
     .optional(),

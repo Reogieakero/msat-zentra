@@ -5,14 +5,20 @@ import { Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookSessionDialog } from "@/components/session-booking/BookSessionDialog";
 import { FinishSessionDialog as SharedFinishSessionDialog } from "@/components/session-booking/FinishSessionDialog";
-import { RescheduleSessionDialog as SharedRescheduleSessionDialog } from "@/components/session-booking/RescheduleSessionDialog";
 import { CancelSessionDialog as SharedCancelSessionDialog } from "@/components/session-booking/CancelSessionDialog";
 import { DeleteSessionDialog as SharedDeleteSessionDialog } from "@/components/session-booking/DeleteSessionDialog";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { toast } from "@/components/ui/sonner";
 import { useDock } from "@/components/dock/dock-store";
 import { markSelfNotified } from "@/lib/realtime/nurseChannel";
-import { formatDate, formatTime } from "@/lib/labels/datetime";
+import { SESSION_KIND_OPTIONS } from "@/lib/labels/sessions";
+import {
+  formatActionTime,
+  formatDate,
+  formatTime,
+  toDateInputValue,
+  toTimeInputValue,
+} from "@/lib/labels/datetime";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   cancelClinicSession,
@@ -45,9 +51,14 @@ export function ScheduleSessionDialog({
   onChanged,
 }: DialogProps & { row: NurseQueueRow }) {
   const bookMutation = useNurseMutation({
-    mutationFn: (fields: { scheduledAt: string; venue: string }) =>
+    mutationFn: (fields: {
+      scheduledAt: string;
+      sessionType: string;
+      venue: string;
+    }) =>
       scheduleClinicSession(row.id, {
         scheduledAt: fields.scheduledAt,
+        sessionType: fields.sessionType,
         ...(fields.venue ? { venue: fields.venue } : {}),
       }),
     successTitle: "Session booked",
@@ -84,14 +95,20 @@ export function ScheduleSessionDialog({
       description="Schedule a clinic session"
       studentCard={{
         name: row.student,
+        lrn: row.lrn,
+        section: row.section,
+        grade: row.grade,
         sub: [row.grade, row.section].filter(Boolean).join(" · "),
       }}
       venueHint="Held at the school clinic unless another venue is given."
       venuePlaceholder="School clinic"
+      showSessionType
+      sessionTypeOptions={SESSION_KIND_OPTIONS}
       hasActiveSession={row.sessions.some((s) => s.status === "scheduled")}
       busy={acting}
       serverError={serverError}
       idPrefix="nurse-book"
+      variant="board"
     />
   );
 }
@@ -301,7 +318,7 @@ export function FinishSessionDialog({
 export function MoveSessionDialog({
   referralId,
   session,
-  student,
+  row,
   open,
   onClose,
   onConfirmed,
@@ -309,7 +326,8 @@ export function MoveSessionDialog({
 }: DialogProps & {
   referralId: string;
   session: NurseSessionItem;
-  student: string;
+  /** Full queue row — drives the shared move overlay's learner strip. */
+  row: NurseQueueRow;
   /** Fired the moment the move is confirmed — the page closes the sessions
       board too and the Dock reports the outcome. */
   onConfirmed: () => void;
@@ -323,13 +341,13 @@ export function MoveSessionDialog({
   // sessions board close at once, so a slow request never leaves them stuck on
   // "Moving…". The wrapper unmounts on confirm, so the success side-effects
   // (toast, list refresh) run here in the closure instead of a mutation hook.
-  async function confirmMove(scheduledAt: string) {
+  async function confirmMove(scheduledAt: string, sessionType: string) {
     let taskId: string | null = null;
     try {
       taskId = dock.startTask({
         kind: "generic",
         title: "Moving clinic session",
-        description: `${student} · ${formatDate(scheduledAt.slice(0, 10))} · ${formatTime(scheduledAt)}`,
+        description: `${row.student} · ${formatDate(scheduledAt.slice(0, 10))} · ${formatTime(scheduledAt)}`,
       });
     } catch {
       taskId = null;
@@ -337,7 +355,7 @@ export function MoveSessionDialog({
     onClose();
     onConfirmed();
     try {
-      await rescheduleClinicSession(referralId, session.id, scheduledAt);
+      await rescheduleClinicSession(referralId, session.id, scheduledAt, sessionType);
       markSelfNotified(referralId);
       invalidateNurseQueries(queryClient);
       toast.success({ title: "Session moved", description: "The session was moved." });
@@ -353,12 +371,33 @@ export function MoveSessionDialog({
     }
   }
 
+  // Same board-style overlay the guidance desk uses to move a session: schedule
+  // picker on the left, session kind + venue on the right, learner strip on top.
   return (
-    <SharedRescheduleSessionDialog
+    <BookSessionDialog
       open
       onClose={onClose}
-      onSubmit={(scheduledAt) => void confirmMove(scheduledAt)}
+      onSubmit={(fields) => void confirmMove(fields.scheduledAt, fields.sessionType)}
+      description={`Currently ${formatActionTime(session.scheduledAt)}. Pick the new date and time.`}
+      studentCard={{
+        name: row.student,
+        lrn: row.lrn,
+        section: row.section,
+        grade: row.grade,
+        sub: [row.grade, row.section].filter(Boolean).join(" · "),
+      }}
+      venueHint="Held at the school clinic unless another venue is given."
+      venuePlaceholder="School clinic"
+      hideDetails
+      hasActiveSession={false}
       idPrefix="nurse-move"
+      title="Move session"
+      submitLabel="Move session"
+      busyLabel="Moving…"
+      initialDate={toDateInputValue(session.scheduledAt)}
+      initialTime={toTimeInputValue(session.scheduledAt)}
+      initialSessionType={session.sessionType}
+      variant="board"
     />
   );
 }

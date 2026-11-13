@@ -105,8 +105,7 @@ export function GuidanceEntryDocsHost({
               gateOnStart
               manageable={canManageSessions}
               // Reschedule/cancel live on the case card itself, so the
-              // sessions overlay keeps only "Mark done" — same for ADM and
-              // counseling cases.
+              // sessions overlay keeps only "Mark done".
               hideScheduledActions
               disabled={actionPending}
               onAction={(s, action) => {

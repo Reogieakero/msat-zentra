@@ -103,6 +103,14 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
   return useMutation<TData, Error, TVariables, { snapshots: [QueryKey, unknown][]; taskId: string | null }>({
     mutationFn: async (variables) => options.mutationFn(variables),
     onMutate: async (variables) => {
+      // Mark the case as the nurse's own *before* the write lands: the realtime
+      // frame (and the fanout notification) can reach the desk before this
+      // mutation's response, and the desk must not ring or toast its own action.
+      const selfId =
+        typeof options.sourceId === "function"
+          ? options.sourceId(variables)
+          : options.sourceId;
+      if (typeof selfId === "string" && selfId) markSelfNotified(selfId);
       const snapshots: [QueryKey, unknown][] = [];
       if (options.optimisticUpdate) {
         for (const key of scopeKeys) {

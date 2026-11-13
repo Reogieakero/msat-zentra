@@ -16,7 +16,9 @@ const ROWS = 8;
 /** Column widths mirror the real table (Student, Type, Desk, Status, Referred, Actions). */
 const WIDTHS = [230, 120, 160, 130, 130, 240];
 
-function ReferralRowSkeleton() {
+/** One table row mirroring the loaded referral row — reused when a page fetch
+    swaps the body rows for skeletons while the header/pager stay put. */
+export function ReferralRowSkeleton() {
   return (
     <TableRow>
       <TableCell style={{ width: WIDTHS[0] }}>

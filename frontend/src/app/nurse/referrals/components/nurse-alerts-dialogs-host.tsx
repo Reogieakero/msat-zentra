@@ -91,7 +91,7 @@ export function NurseAlertsDialogsHost({
         <MoveSessionDialog
           referralId={sessionDialog.row.id}
           session={sessionDialog.session}
-          student={sessionDialog.row.student}
+          row={sessionDialog.row}
           open
           onClose={onSessionClose}
           onConfirmed={onSessionConfirmed}

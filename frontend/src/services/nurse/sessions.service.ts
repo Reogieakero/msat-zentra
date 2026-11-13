@@ -8,7 +8,7 @@ export async function scheduleClinicSession(
 ): Promise<void> {
   await apiClient.post(`/api/referrals/${id}/sessions`, {
     scheduledAt: input.scheduledAt,
-    sessionType: "individual",
+    sessionType: input.sessionType ?? "individual",
     ...(input.venue?.trim() ? { venue: input.venue.trim() } : {}),
   });
 }
@@ -33,10 +33,12 @@ export async function completeClinicSession(
 export async function rescheduleClinicSession(
   id: string,
   sessionId: string,
-  scheduledAt: string
+  scheduledAt: string,
+  sessionType?: string
 ): Promise<void> {
   await apiClient.post(`/api/referrals/${id}/sessions/${sessionId}/reschedule`, {
     scheduledAt,
+    ...(sessionType ? { sessionType } : {}),
   });
 }
 

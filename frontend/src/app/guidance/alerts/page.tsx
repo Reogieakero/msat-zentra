@@ -4,13 +4,13 @@ import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { BellRing, Loader2 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import {
   GuidanceAlertsTable,
   type RiskFilter,
 } from "./components/guidance-alerts-table";
 import { GuidanceAlertsSideRail } from "./components/GuidanceAlertsSideRail";
+import { GuidanceAlertsSkeleton } from "./components/GuidanceAlertsSkeleton";
 import { fetchGuidanceAlertCases } from "@/services/guidance/alerts.service";
 import type {
   AlertCaseType,
@@ -66,42 +66,7 @@ export default function GuidanceAlertsPage() {
   const isTrueEmpty = (summary?.total ?? 0) === 0;
 
   if (casesQuery.isPending) {
-    return (
-      <section className={styles.page} aria-busy="true" aria-label="Loading referred cases">
-        <div className={styles.body}>
-          <div className={styles.mainCol}>
-            <div className={styles.skelPanel}>
-              <div className={styles.skelPanelHead}>
-                <div>
-                  <Skeleton className={styles.skelCardTitle} />
-                  <Skeleton className={styles.skelPanelDesc} />
-                </div>
-                <div className={styles.skelPanelActions}>
-                  <Skeleton className={styles.skelSearch} />
-                  <Skeleton className={styles.skelDrop} />
-                </div>
-              </div>
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <Skeleton key={i} className={styles.skelRow} />
-              ))}
-              <div className={styles.skelPager}>
-                <Skeleton className={styles.skelRange} />
-                <div className={styles.skelPagerBtns}>
-                  <Skeleton className={styles.skelBtn} />
-                  <Skeleton className={styles.skelPageLabel} aria-hidden="true" />
-                  <Skeleton className={styles.skelBtn} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className={styles.skelRail} aria-hidden="true">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className={styles.skelRailIcon} />
-            ))}
-          </div>
-        </div>
-      </section>
-    );
+    return <GuidanceAlertsSkeleton />;
   }
 
   if (casesQuery.isError || !data || !summary) {

@@ -71,7 +71,7 @@ export function buildNurseAdmReferrals(items: NurseAlertItem[]): NurseAdmReferra
 
   const counts = new Map<string, { label: string; count: number }>();
   for (const row of rows) {
-    const action = deriveActionStatus(row.type, row.status, row.sessions);
+    const action = deriveActionStatus(row.type, row.status, row.sessions, row.dismissedByRole);
 
     const key = action.key === "done_session" ? "done" : action.key;
     const label = key === "done" ? "Done" : action.label;
@@ -203,12 +203,15 @@ export function buildNurseAdmInsights(
       ? null
       : waits.reduce((sum, d) => sum + d, 0) / waits.length;
   const endorsed = rows.filter(
-    (r) => deriveActionStatus(r.type, r.status, r.sessions).key === "endorsed",
+    (r) =>
+      deriveActionStatus(r.type, r.status, r.sessions, r.dismissedByRole).key ===
+      "endorsed",
   ).length;
   const rejected = rows.filter(
     (r) =>
       r.type === "ADM" &&
-      deriveActionStatus(r.type, r.status, r.sessions).key === "rejected",
+      deriveActionStatus(r.type, r.status, r.sessions, r.dismissedByRole).key ===
+        "rejected",
   ).length;
   const decided = endorsed + rejected;
   const endorsementRate = decided === 0 ? null : Math.round((endorsed / decided) * 100);

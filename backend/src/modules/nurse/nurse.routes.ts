@@ -6,8 +6,11 @@ import { validate } from "../../middleware/validate.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
 import { registryProfileSchema } from "../registry/registry.schemas.js";
+import navCountsRoutes from "./navCounts.routes.js";
 
 const router = Router();
+
+router.use(navCountsRoutes);
 
 async function readNurseProfileSettings(nurseId: string) {
   const [user, profile] = await Promise.all([

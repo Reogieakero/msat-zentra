@@ -3,7 +3,6 @@ import * as React from "react";
 import {
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
@@ -13,7 +12,6 @@ import { FilePlus2, Loader2, MessageSquareText, SearchIcon, X } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { KanbanOverlay } from "@/components/ui/kanban-overlay";
 import { Pill } from "@/components/ui/pill";
-import { Skeleton } from "@/components/ui/skeleton";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { InsightCallout } from "@/components/ui/insight-callout";
 import {
@@ -25,7 +23,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/shared/pagination";
-import { PAGE_SIZE } from "@/components/shared/pagination";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import listStyles from "../../list/components/advisory-list.module.css";
 import refStyles from "./referrals.module.css";
@@ -35,7 +32,7 @@ import { isWithdrawnDismissal, type ReferralRow } from "./use-my-referrals";
 import { StudentMascot } from "./StudentMascot";
 import { ReferralEmptyKanban } from "./ReferralEmptyKanban";
 import { ReferralPageActions } from "./ReferralPageActions";
-import { ReferralsSkeleton } from "./ReferralsSkeleton";
+import { ReferralsSkeleton, ReferralRowSkeleton } from "./ReferralsSkeleton";
 
 type StatusMeta = { variant: "amber" | "blue" | "green" | "red" | "outline"; label: string };
 
@@ -168,6 +165,9 @@ export function ReferralsTable({
   onQueryChange,
   highlightId,
   referralsQuery,
+  page,
+  totalItems,
+  onPageChange,
   onTrack,
   onRequestCancel,
   onNewReferral,
@@ -178,7 +178,17 @@ export function ReferralsTable({
   query: string;
   onQueryChange: (v: string) => void;
   highlightId: string | null;
-  referralsQuery: { isPending: boolean; isError: boolean; isFetching: boolean; refetch: () => void };
+  referralsQuery: {
+    isPending: boolean;
+    isError: boolean;
+    isFetching: boolean;
+    /** True while the previous page's rows are held during a page/search fetch. */
+    isPlaceholderData: boolean;
+    refetch: () => void;
+  };
+  page: number;
+  totalItems: number;
+  onPageChange: (page: number) => void;
   onTrack: (row: ReferralRow) => void;
   onRequestCancel: (row: ReferralRow) => void;
   onNewReferral?: () => void;
@@ -188,11 +198,10 @@ export function ReferralsTable({
   ]);
   const [reasonFor, setReasonFor] = React.useState<ReferralRow | null>(null);
 
-  // Background refetches (e.g. after sending) keep the current list on
-  // screen and patch it in place — skeletons only run on the very first
-  // load, so the page never visibly refreshes.
-  const isPageLoading =
-    referralsQuery.isFetching && !referralsQuery.isPending && referrals.length === 0;
+  // Paging and searching hit the API, so the table holds the previous slice
+  // under `placeholderData` while the new page lands. Swap the body rows for
+  // skeletons during that fetch (a live poll of the same page never does).
+  const isPageLoading = referralsQuery.isPlaceholderData;
 
   const columns = React.useMemo<ColumnDef<ReferralRow>[]>(
     () => [
@@ -381,9 +390,7 @@ export function ReferralsTable({
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getRowId: (row) => row.id,
-    initialState: { pagination: { pageSize: PAGE_SIZE } },
   });
 
   if (referralsQuery.isPending) {
@@ -458,99 +465,86 @@ export function ReferralsTable({
         <ReferralPageActions onNewReferral={onNewReferral} />
       </div>
 
-      {isPageLoading ? (
-        <div className="relative" aria-hidden>
-          <div className={`${listStyles.tableWrap} ${refStyles.flatTable} p-2`}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={`skeleton-${i}`} className="flex items-center gap-3 border-b border-border/60 px-2 py-3 last:border-b-0">
-                <Skeleton className="h-7 w-7 rounded-full" />
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="ml-auto h-5 w-20" />
-              </div>
+      <div className={`${listStyles.tableWrap} ${refStyles.flatTable}`}>
+        <Table className="w-full table-fixed">
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    style={{ width: header.getSize() }}
+                    onClick={header.column.getToggleSortingHandler()}
+                    className={`h-10 truncate whitespace-nowrap select-none ${
+                      header.column.id === "actions" ? "text-right" : ""
+                    } ${header.column.getCanSort() ? "cursor-pointer" : ""}`}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
             ))}
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className={`${listStyles.tableWrap} ${refStyles.flatTable}`}>
-            <Table className="w-full table-fixed">
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        style={{ width: header.getSize() }}
-                        onClick={header.column.getToggleSortingHandler()}
-                        className={`h-10 truncate whitespace-nowrap select-none ${
-                          header.column.id === "actions" ? "text-right" : ""
-                        } ${header.column.getCanSort() ? "cursor-pointer" : ""}`}
+          </TableHeader>
+          <TableBody>
+            {isPageLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <ReferralRowSkeleton key={`page-skeleton-${i}`} />
+              ))
+            ) : table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map((row) => {
+                const r = row.original;
+                const highlighted = highlightId !== null && highlightId === r.id;
+                return (
+                  <TableRow
+                    key={row.id}
+                    id={`teacher-referral-${r.id}`}
+                    data-highlighted={highlighted || undefined}
+                    onClick={() => onTrack(r)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onTrack(r);
+                      }
+                    }}
+                    tabIndex={0}
+                    aria-label={`Referral for ${r.studentName}, ${statusBadge(r.status, r.dismissedByRole).label}`}
+                    className={`${listStyles.row} ${highlighted ? listStyles.selected : ""}`}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        style={{ width: cell.column.getSize() }}
+                        className="truncate"
                       >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
                     ))}
                   </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.length ? (
-                  table.getRowModel().rows.map((row) => {
-                    const r = row.original;
-                    const highlighted = highlightId !== null && highlightId === r.id;
-                    return (
-                      <TableRow
-                        key={row.id}
-                        id={`teacher-referral-${r.id}`}
-                        data-highlighted={highlighted || undefined}
-                        onClick={() => onTrack(r)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            onTrack(r);
-                          }
-                        }}
-                        tabIndex={0}
-                        aria-label={`Referral for ${r.studentName}, ${statusBadge(r.status, r.dismissedByRole).label}`}
-                        className={`${listStyles.row} ${highlighted ? listStyles.selected : ""}`}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell
-                            key={cell.id}
-                            style={{ width: cell.column.getSize() }}
-                            className="truncate"
-                          >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={columns.length} className="h-40 whitespace-normal">
-                      <div className="flex w-full justify-center">
-                        <InsightCallout role="status" className="w-full max-w-xl text-left">
-                          <strong>No referrals match your search.</strong> Try a different
-                          name, LRN, desk, or status — or clear the filter to see every
-                          referral.
-                        </InsightCallout>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <Pagination
-            currentPage={table.getState().pagination.pageIndex + 1}
-            totalItems={table.getPrePaginationRowModel().rows.length}
-            onPageChange={(p) => table.setPageIndex(p - 1)}
-          />
-        </>
-      )}
+                );
+              })
+            ) : (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={columns.length} className="h-40 whitespace-normal">
+                  <div className="flex w-full justify-center">
+                    <InsightCallout role="status" className="w-full max-w-xl text-left">
+                      <strong>No referrals match your search.</strong> Try a different
+                      name, LRN, desk, or status — or clear the filter to see every
+                      referral.
+                    </InsightCallout>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <Pagination
+        currentPage={page}
+        totalItems={totalItems}
+        onPageChange={onPageChange}
+      />
 
       <KanbanOverlay
         open={reasonFor !== null}

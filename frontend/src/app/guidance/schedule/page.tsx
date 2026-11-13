@@ -13,7 +13,6 @@ import {
   startOfWeek,
 } from "date-fns";
 import { CalendarDays, Loader2, RefreshCw } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { KanbanBoard } from "@/components/ui/kanban-board";
 import { PageEmptyCallout } from "@/components/shared/page-empty-callout";
 import { GuidancePageHeader } from "../components/GuidancePageHeader";
@@ -33,6 +32,7 @@ import {
 import { CalendarMonth } from "./components/calendar-month";
 import { CalendarWeek } from "./components/calendar-week";
 import { CalendarDayRail } from "./components/calendar-day-rail";
+import { GuidanceScheduleSkeleton } from "./components/calendar-skeleton";
 import { dateKey, groupByDay, parseDateKey } from "./components/calendar-utils";
 import styles from "./components/guidance-calendar.module.css";
 
@@ -163,13 +163,7 @@ export default function GuidanceSchedulePage() {
       />
 
       {calendarQuery.isLoading || !termReady ? (
-        <div className={styles.skeletonBoard}>
-          <div className={styles.skelGrid} aria-hidden="true">
-            {Array.from({ length: 42 }, (_, i) => (
-              <Skeleton key={i} className={styles.skelCell} />
-            ))}
-          </div>
-        </div>
+        <GuidanceScheduleSkeleton view={view} cursor={cursor} />
       ) : calendarQuery.isError ? (
         <div className={styles.errorCard}>
           <p className={styles.errorTitle}>Couldn&apos;t load the calendar.</p>
