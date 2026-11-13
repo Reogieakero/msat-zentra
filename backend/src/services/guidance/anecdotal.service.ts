@@ -3,7 +3,10 @@ import {
   GRADE_LABELS,
   GRADE_ORDER,
 } from "../../modules/guidance/guidance.repository.js";
-import { archivedAdvisoryLearnerIds } from "../../lib/learnerVisibility.js";
+import {
+  archivedAdvisoryLearnerIds,
+  excludeArchivedLearnerRows,
+} from "../../lib/learnerVisibility.js";
 import type { GuidanceContext } from "./guidance.types.js";
 
 export type AnecdotalCategory = "behavioral" | "bullying" | "academic" | "attendance" | "health";
@@ -57,6 +60,14 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
     ],
   };
   const scopeClauses: any[] = [deskScope];
+  /* Only live records belong on the desk: a soft-deleted (then restored)
+     anecdotal record must not surface, and a learner the adviser removed from
+     the advisory list must leave every board the way it already leaves the
+     other desks (roster/attendance/referral/anecdotal reads). */
+  scopeClauses.push({ anecdotalRecord: { deletedAt: null } });
+  const archivedLearners = await archivedAdvisoryLearnerIds();
+  const archivedClause = excludeArchivedLearnerRows(archivedLearners);
+  if (Object.keys(archivedClause).length > 0) scopeClauses.push(archivedClause);
   if (scopeTermId) scopeClauses.push({ termId: scopeTermId });
   if (anecdotalDbClauses.length) scopeClauses.push(...anecdotalDbClauses);
   const summaryWhere: any = { AND: scopeClauses };
@@ -75,6 +86,7 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
       anecdotalTypeFilter,
       page,
       pageSize,
+      archivedClause,
     });
   }
 
@@ -412,8 +424,9 @@ async function getAnecdotalDocsPage(args: {
   anecdotalTypeFilter: "adm" | "counseling" | null;
   page: number;
   pageSize: number;
+  archivedClause?: any;
 }) {
-  const { scopeClauses, summaryWhere, scopeTermId, q, anecdotalTypeFilter, page, pageSize } = args;
+  const { scopeClauses, summaryWhere, scopeTermId, q, anecdotalTypeFilter, page, pageSize, archivedClause } = args;
 
   const sessionSelect = {
     orderBy: { scheduledAt: "asc" as const },
@@ -482,6 +495,9 @@ async function getAnecdotalDocsPage(args: {
     prisma.intervention.findMany({
       where: {
         ...(scopeTermId ? { termId: scopeTermId } : {}),
+        ...(archivedClause && Object.keys(archivedClause).length > 0
+          ? archivedClause
+          : {}),
         counselingSessions: { some: { attachments: IMAGE_ATTACHMENT_FILTER } },
       },
       select: {

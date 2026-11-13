@@ -84,6 +84,30 @@ function isCancellable(status: ReferralRow["status"]): boolean {
   return status !== "resolved" && status !== "dismissed";
 }
 
+/**
+ * Closing state of a cancelled/rejected referral: the standard timeline
+ * message plus the note the desk (or the filing teacher, on a withdrawal)
+ * left when it closed the case. The original referral reason is deliberately
+ * not reused here.
+ */
+export function dismissalMeta(
+  r: ReferralRow,
+): { note: string; label: string } | null {
+  if (r.status !== "dismissed") return null;
+  const step = [...(r.timeline ?? [])]
+    .reverse()
+    .find((entry) => entry.action === "referral_dismissed");
+  const withdrawn = isWithdrawnDismissal(r.dismissedByRole);
+  return {
+    note: step?.detail?.trim() ?? "",
+    label:
+      step?.label ??
+      (withdrawn
+        ? "The referral was cancelled by the filing teacher."
+        : "The referral was rejected and the case is closed."),
+  };
+}
+
 const REVIEWER_LABELS: Record<string, string> = {
   nurse: "School Nurse",
   guidance_counselor: "Guidance Counselor",
@@ -324,8 +348,20 @@ export function ReferralsTable({
               <button
                 type="button"
                 onClick={() => setReasonFor(r)}
-                aria-label={`Show the reason ${r.studentName} was referred`}
-                title="Reason for referral"
+                aria-label={
+                  cancelled
+                    ? `Show why the referral for ${r.studentName} was ${
+                        isWithdrawnDismissal(r.dismissedByRole) ? "cancelled" : "rejected"
+                      }`
+                    : `Show the reason ${r.studentName} was referred`
+                }
+                title={
+                  cancelled
+                    ? isWithdrawnDismissal(r.dismissedByRole)
+                      ? "Reason for cancellation"
+                      : "Reason for rejection"
+                    : "Reason for referral"
+                }
                 className="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted hover:text-foreground"
               >
                 <MessageSquareText size={13} aria-hidden />
@@ -396,6 +432,13 @@ export function ReferralsTable({
     );
   }
 
+  const closedMeta = reasonFor ? dismissalMeta(reasonFor) : null;
+  const reasonTitle = closedMeta
+    ? isWithdrawnDismissal(reasonFor?.dismissedByRole)
+      ? "Reason for cancellation"
+      : "Reason for rejection"
+    : "Reason for referral";
+
   return (
     <div className="flex min-w-0 flex-col gap-4" aria-busy={isPageLoading || undefined}>
       {/* Search sits on the top-left gutter, page actions on the top-right —
@@ -441,8 +484,8 @@ export function ReferralsTable({
                         style={{ width: header.getSize() }}
                         onClick={header.column.getToggleSortingHandler()}
                         className={`h-10 truncate whitespace-nowrap select-none ${
-                          header.column.getCanSort() ? "cursor-pointer" : ""
-                        }`}
+                          header.column.id === "actions" ? "text-right" : ""
+                        } ${header.column.getCanSort() ? "cursor-pointer" : ""}`}
                       >
                         {header.isPlaceholder
                           ? null
@@ -512,9 +555,11 @@ export function ReferralsTable({
       <KanbanOverlay
         open={reasonFor !== null}
         onClose={() => setReasonFor(null)}
-        title="Reason for referral"
+        title={reasonTitle}
         ariaLabel={
-          reasonFor ? `Reason for referral for ${reasonFor.studentName}` : "Reason for referral"
+          reasonFor
+            ? `${reasonTitle} for ${reasonFor.studentName}`
+            : "Reason for referral"
         }
         icon={
           <span className="text-amber-500" aria-hidden>
@@ -560,9 +605,36 @@ export function ReferralsTable({
               </Pill>
               <Pill label="Desk handling the case">{deskHolding(reasonFor)}</Pill>
             </div>
-            <p className="m-0 break-words text-[13px] leading-relaxed whitespace-pre-wrap text-foreground">
-              {reasonFor.reason?.trim() || "No reason was recorded for this referral."}
-            </p>
+            {closedMeta ? (
+              <>
+                <p className="m-0 break-words text-[13px] leading-relaxed whitespace-pre-wrap text-foreground">
+                  {closedMeta.label}
+                </p>
+                {closedMeta.note ? (
+                  <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-border/70 bg-muted/40 p-2.5">
+                    <span className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                      {isWithdrawnDismissal(reasonFor.dismissedByRole)
+                        ? "Note from the filing teacher"
+                        : "Note from the desk"}
+                    </span>
+                    <p className="m-0 break-words text-[12px] leading-relaxed whitespace-pre-wrap text-foreground">
+                      {closedMeta.note}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="m-0 text-[12px] text-muted-foreground">
+                    No note was left
+                    {isWithdrawnDismissal(reasonFor.dismissedByRole)
+                      ? " by the filing teacher."
+                      : " by the desk."}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="m-0 break-words text-[13px] leading-relaxed whitespace-pre-wrap text-foreground">
+                {reasonFor.reason?.trim() || "No reason was recorded for this referral."}
+              </p>
+            )}
           </div>
         ) : null}
       </KanbanOverlay>

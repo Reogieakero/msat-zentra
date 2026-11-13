@@ -284,24 +284,13 @@ export default function AdvisoryAttendancePage() {
       className={`${listStyles.pageLock} flex min-w-0 flex-col gap-3`}
     >
       {rows.length === 0 ? (
-        <div className="flex h-full w-full items-center justify-center">
-          <div className={`${assign.card} w-full max-w-md`}>
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
-            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-                aria-hidden="true"
-              >
-                <Users size={24} className="text-muted-foreground" />
-              </span>
-              <p className="font-medium">No students in this section yet</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                Students will appear here once enrolled in this advisory section.
-              </p>
-            </div>
-          </div>
+        <div className="relative flex h-full min-h-[calc(100dvh-9rem)] w-full items-center justify-center">
+          <InsightCallout role="status" className="w-full max-w-xl self-center text-left">
+            <strong>No advisory students yet.</strong>{" "}
+            {sectionLabel
+              ? `${sectionLabel} has no enlisted learners this term.`
+              : "Students enlisted in your advisory section will appear here."}
+          </InsightCallout>
         </div>
       ) : (
         <div className={listStyles.panel} aria-label="Advisory attendance board">

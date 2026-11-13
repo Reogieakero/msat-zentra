@@ -1,5 +1,5 @@
 "use client";
-import { BookSessionDialog, type BookSessionDialogProps } from "@/components/session-booking/BookSessionDialog";
+import { BookSessionDialog, type BookSessionDialogProps, type BookSessionFields } from "@/components/session-booking/BookSessionDialog";
 import { SESSION_KIND_OPTIONS } from "@/lib/labels/sessions";
 import { toDateInputValue, toTimeInputValue } from "@/lib/labels/datetime";
 import { fetchDaySchedule } from "@/services/guidance/sessions.service";
@@ -18,14 +18,14 @@ export function InterventionMoveDialog({
   studentCard: BookSessionDialogProps["studentCard"];
   activeSession: CounselingSessionItem | null;
   isActionPending: boolean;
-  onSubmit: (scheduledAt: string) => void;
+  onSubmit: (fields: BookSessionFields) => void;
 }) {
   if (!open) return null;
   return (
     <BookSessionDialog
       open
       onClose={onClose}
-      onSubmit={(fields) => onSubmit(fields.scheduledAt)}
+      onSubmit={(fields) => onSubmit(fields)}
       description={
         activeSession
           ? `Currently ${formatActionTime(activeSession.scheduledAt)}. Pick the new date and time.`

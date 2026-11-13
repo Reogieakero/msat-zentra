@@ -53,7 +53,7 @@ interface InterventionDialogsProps {
   onSubmitOutcome: () => void;
   onSubmitSchedule: (fields: BookSessionFields) => void;
   onSubmitFinish: (fields: FinishSessionFields) => void;
-  onSubmitMove: (scheduledAt: string) => void;
+  onSubmitMove: (fields: BookSessionFields) => void;
   onSubmitCancelSess: (reason?: string) => void;
   canSubmitStart: boolean;
   canSubmitChange: boolean;

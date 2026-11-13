@@ -130,6 +130,7 @@ export function GuidanceSessionDialogs({
             handleAction("move", {
               sessionId: activeSession.id,
               scheduledAt: fields.scheduledAt,
+              sessionType: fields.sessionType as CounselingSessionType,
             });
           }}
           description={

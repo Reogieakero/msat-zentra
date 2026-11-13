@@ -5,6 +5,7 @@ import {
 } from "../../lib/learnerVisibility.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import {
+  attendanceTotalFor,
   computeRiskFactors,
   levelFromFlags,
   sectionAttendanceTotals,
@@ -385,10 +386,11 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
           const key = r.student?.userId ?? (r.roster?.id ? `roster:${r.roster.id}` : null);
           if (!key) continue;
           const sectionId = r.student?.section?.id ?? r.roster?.section?.id ?? "";
+          const rosterId = r.roster?.id ?? null;
           const flags = computeRiskFactors({
             finalGrades: gradesByKey.get(key) ?? [],
             attendance: attendanceByKey.get(key) ?? [],
-            attendanceTotal: sectionTotals.get(sectionId),
+            attendanceTotal: attendanceTotalFor(sectionTotals, sectionId, rosterId),
             anecdotalCount: anecdByKey.get(key) ?? 0,
             enrolled: headcounts.get(sectionId) ?? 0,
           });

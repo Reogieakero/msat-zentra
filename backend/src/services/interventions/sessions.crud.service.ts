@@ -191,12 +191,16 @@ export async function rescheduleSession(
   interventionId: string,
   sessionId: string,
   scheduledAt: string,
+  sessionType?: string,
 ) {
   const row = await getIntervention(interventionId, ctx.termId);
   ensureWorkable(row);
   const session = await getInterventionSession(row.id, sessionId);
   if (session.status !== "scheduled") {
     throw new AppError(400, "INVALID_ACTION", "Only an upcoming session can be moved");
+  }
+  if (sessionType !== undefined && !isSessionType(sessionType)) {
+    throw new AppError(400, "INVALID_ACTION", "Unknown session type");
   }
   const nextDate = parseScheduledAt(scheduledAt);
   await assertSessionSlotFree(prisma, {
@@ -206,9 +210,13 @@ export async function rescheduleSession(
   });
   const updated = await prisma.counselingSession.update({
     where: { id: session.id },
-    data: { scheduledAt: nextDate },
+    data: {
+      scheduledAt: nextDate,
+      // Same picker as the booking overlay — persist a changed kind.
+      ...(sessionType ? { sessionType } : {}),
+    },
   });
-  await writeAudit({ userId: ctx.userId, actionType: "session_rescheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session moved", oldValue: { scheduledAt: session.scheduledAt }, newValue: { scheduledAt: nextDate } });
+  await writeAudit({ userId: ctx.userId, actionType: "session_rescheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session moved", oldValue: { scheduledAt: session.scheduledAt, sessionType: session.sessionType }, newValue: { scheduledAt: nextDate, sessionType: updated.sessionType } });
   const wasMoved = formatWhen(session.scheduledAt);
   const nowMoved = formatWhen(nextDate);
   let movedFor = "the student";

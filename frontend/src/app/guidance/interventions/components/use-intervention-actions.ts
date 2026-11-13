@@ -193,7 +193,11 @@ function applyInterventionAction(
       };
     }
     case "move": {
-      const sp = p as { sessionId?: string; scheduledAt?: string };
+      const sp = p as {
+        sessionId?: string;
+        scheduledAt?: string;
+        sessionType?: CounselingSessionType;
+      };
       return {
         ...item,
         intervention: {
@@ -204,6 +208,7 @@ function applyInterventionAction(
                   ...s,
                   scheduledAt: (sp.scheduledAt as string) ?? s.scheduledAt,
                   date: sp.scheduledAt ? dateOnly(sp.scheduledAt) : s.date,
+                  sessionType: sp.sessionType ?? s.sessionType,
                 }
               : s
           ),
@@ -370,8 +375,14 @@ export function useInterventionActions(onMutateSuccess: () => void) {
             followUpId: string;
             sessionId: string;
             scheduledAt: string;
+            sessionType?: CounselingSessionType;
           };
-          return rescheduleFollowUpSession(p.followUpId, p.sessionId, p.scheduledAt);
+          return rescheduleFollowUpSession(
+            p.followUpId,
+            p.sessionId,
+            p.scheduledAt,
+            p.sessionType
+          );
         }
         case "cancelSess": {
           const p = payload as {

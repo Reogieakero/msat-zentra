@@ -270,14 +270,14 @@ export function ReferralTrackDialog({
             >
               {referral.timeline.map((step, index) => (
                 <li
-                  key={`${step.label}-${step.date}-${index}`}
+                  key={`${step.label}-${step.at ?? step.date}-${index}`}
                   className="flex min-w-0 flex-col gap-2 overflow-hidden rounded-xl border border-border bg-muted/60 p-2.5 dark:bg-muted/20"
                 >
                   <div className="-mx-2.5 flex min-w-0 items-center gap-1.5 border-b border-border px-3.5 pb-2">
                     <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">
                       Update {index + 1}
                     </span>
-                    <Pill label="Logged">{formatDateTime(step.date)}</Pill>
+                    <Pill label="Logged">{formatDateTime(step.at ?? step.date)}</Pill>
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden rounded-lg border border-border bg-white p-2 shadow-sm dark:bg-card">
                     <span

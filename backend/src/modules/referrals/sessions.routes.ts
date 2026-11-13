@@ -115,6 +115,7 @@ router.post(
         String(req.params.id),
         String(req.params.sessionId),
         req.body.scheduledAt as string,
+        req.body.sessionType as string | undefined,
       );
       await invalidateTags(REFERRAL_WRITE_TAGS);
       res.json(updated);

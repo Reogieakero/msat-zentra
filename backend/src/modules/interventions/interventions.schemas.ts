@@ -36,6 +36,8 @@ export const completeInterventionSessionSchema = z.object({
 
 export const rescheduleInterventionSessionSchema = z.object({
   scheduledAt: z.string().min(1),
+  // Optional: the move overlay also offers the session-kind picker.
+  sessionType: z.string().min(1).optional(),
 });
 
 export const cancelInterventionSessionSchema = z.object({

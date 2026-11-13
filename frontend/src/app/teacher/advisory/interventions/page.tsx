@@ -270,6 +270,19 @@ function AdviserInterventionsPageInner() {
     );
   }
 
+  if (allRows.length === 0) {
+    return (
+      <section className={styles.page} aria-label="Advisory interventions">
+        <div className="relative flex h-full min-h-[calc(100dvh-9rem)] w-full items-center justify-center">
+          <InsightCallout role="status" className="w-full max-w-xl self-center text-left">
+            <strong>No advisees flagged this term.</strong> Learners flagged by the risk
+            engine, or with a guidance follow-up, will appear here.
+          </InsightCallout>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className={styles.page} aria-label="Advisory interventions">
       <KanbanBoard

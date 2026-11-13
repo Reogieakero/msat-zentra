@@ -309,12 +309,21 @@ function applyReferralAction(
       };
     }
     case "move": {
-      const s = p as { sessionId?: string; scheduledAt?: string };
+      const s = p as {
+        sessionId?: string;
+        scheduledAt?: string;
+        sessionType?: GuidanceReferralItem["sessions"][number]["sessionType"];
+      };
       return {
         ...base,
         sessions: r.sessions.map((sess) =>
           sess.id === s.sessionId
-            ? { ...sess, scheduledAt: (s.scheduledAt as string) ?? sess.scheduledAt, date: (s.scheduledAt as string) ?? sess.date }
+            ? {
+                ...sess,
+                scheduledAt: (s.scheduledAt as string) ?? sess.scheduledAt,
+                date: (s.scheduledAt as string) ?? sess.date,
+                sessionType: s.sessionType ?? sess.sessionType,
+              }
             : sess
         ),
       };
@@ -508,8 +517,17 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
           });
         }
         case "move": {
-          const p = payload as { sessionId: string; scheduledAt: string };
-          return rescheduleSession(id, p.sessionId, p.scheduledAt);
+          const p = payload as {
+            sessionId: string;
+            scheduledAt: string;
+            sessionType?: CounselingSessionType;
+          };
+          return rescheduleSession(
+            id,
+            p.sessionId,
+            p.scheduledAt,
+            p.sessionType
+          );
         }
         case "cancelSess": {
           const p = payload as { sessionId: string; cancelReason?: string };
