@@ -29,6 +29,7 @@ import 'bama/bama_chat_page.dart';
 import 'bama/bama_conversations.dart';
 import 'bama/bama_history_page.dart';
 import 'home/role_home.dart';
+import 'home/overview_page.dart';
 import 'referral/referral_page.dart';
 import 'teacher/classes_page.dart';
 import 'teacher/gradebook_dashboard_page.dart';
@@ -63,8 +64,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final role = container.read(authProvider).role;
       if (loc.startsWith('/adviser/') && role == 'subject_teacher') return '/workspace/classes';
       // Root redirects to defaults.
-      if (loc == '/adviser') return '/adviser/advisory';
-      if (loc == '/teacher') return '/workspace/classes';
+      if (loc == '/adviser') return '/workspace/overview';
+      if (loc == '/teacher') return '/workspace/overview';
       return null;
     },
     routes: [
@@ -138,6 +139,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       // Shared Workspace (both roles, same web data)
+      GoRoute(path: '/workspace/overview', builder: (context, _) => const WorkspaceShell(selected: WorkspaceRoute.overview, child: OverviewPage())),
+      GoRoute(path: '/workspace/schedule', builder: (context, _) => const WorkspaceShell(selected: WorkspaceRoute.schedule, child: AdviserSchedulePage())),
       GoRoute(path: '/workspace/classes', builder: (context, _) => const WorkspaceShell(selected: WorkspaceRoute.classes, child: ClassesPage())),
       GoRoute(path: '/workspace/gradebook', builder: (context, _) => const WorkspaceShell(selected: WorkspaceRoute.gradebook, child: GradebookDashboardPage())),
       GoRoute(

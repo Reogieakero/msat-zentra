@@ -13,12 +13,32 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/session.dart';
 import '../../design/brand.dart';
 import '../../design/theme_mode.dart';
+import '../../design/theme_picker.dart';
 import '../../shared/widgets.dart';
+import '../../shared/spinner.dart';
 import '../../shared/user_messages.dart';
 import 'settings_data.dart';
 
-const _primaryPresets = ['#7c3aed', '#2563eb', '#0d9488', '#16a34a', '#d97706', '#ea580c', '#e11d48', '#db2777'];
-const _secondaryPresets = ['#27272a', '#3f3f46', '#52525b', '#a1a1aa', '#e4e4e7', '#f4f4f5', '#fef3c7', '#ede9fe'];
+const _primaryPresets = [
+  '#7c3aed',
+  '#2563eb',
+  '#0d9488',
+  '#16a34a',
+  '#d97706',
+  '#ea580c',
+  '#e11d48',
+  '#db2777',
+];
+const _secondaryPresets = [
+  '#27272a',
+  '#3f3f46',
+  '#52525b',
+  '#a1a1aa',
+  '#e4e4e7',
+  '#f4f4f5',
+  '#fef3c7',
+  '#ede9fe',
+];
 
 Color? _swatch(String hex) => hexToColor(hex);
 
@@ -51,11 +71,19 @@ class _State extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
-    final file = await ImagePicker().pickImage(source: source, maxWidth: 1024, imageQuality: 85);
+    final file = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
     if (file == null || !mounted) return;
     final bytes = await file.readAsBytes();
     if (bytes.length > 2 * 1024 * 1024) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo must be 2MB or smaller.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo must be 2MB or smaller.')),
+        );
+      }
       return;
     }
     final ext = file.path.split('.').last.toLowerCase();
@@ -63,9 +91,17 @@ class _State extends ConsumerState<SettingsPage> {
     setState(() => _photoBusy = true);
     try {
       await uploadTeacherPhoto(ref, 'data:$mime;base64,${base64Encode(bytes)}');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile photo updated.')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profile photo updated.')));
+      }
     } on DioException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settingsError(e, 'Could not update photo.'))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(settingsError(e, 'Could not update photo.'))),
+        );
+      }
     } finally {
       if (mounted) setState(() => _photoBusy = false);
     }
@@ -75,27 +111,35 @@ class _State extends ConsumerState<SettingsPage> {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(6))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+      ),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(
-            leading: const Icon(Icons.photo_camera_outlined),
-            title: const Text('Take photo', style: TextStyle(fontSize: 13)),
-            onTap: () {
-              Navigator.pop(ctx);
-              _pickPhoto(ImageSource.camera);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: const Text('Choose from gallery', style: TextStyle(fontSize: 13)),
-            onTap: () {
-              Navigator.pop(ctx);
-              _pickPhoto(ImageSource.gallery);
-            },
-          ),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take photo', style: TextStyle(fontSize: 13)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickPhoto(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text(
+                'Choose from gallery',
+                style: TextStyle(fontSize: 13),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickPhoto(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -103,29 +147,63 @@ class _State extends ConsumerState<SettingsPage> {
   Future<void> _saveName() async {
     final value = _name.text.trim();
     if (value.isEmpty || value.length > 100) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name must be 1–100 characters.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Name must be 1–100 characters.')),
+      );
       return;
     }
     try {
       await patchTeacherProfile(ref, {'fullName': value});
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Profile updated.')));
+      }
     } on DioException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settingsError(e, 'Could not update profile.'))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(settingsError(e, 'Could not update profile.')),
+          ),
+        );
+      }
     }
   }
 
-  Future<void> _toggleMaster(bool next, {required bool takenByOther, String? holderName}) async {
+  Future<void> _toggleMaster(
+    bool next, {
+    required bool takenByOther,
+    String? holderName,
+  }) async {
     if (next && takenByOther) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(holderName != null ? 'Master Teacher is currently designated by $holderName.' : 'Master Teacher is currently designated.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            holderName != null
+                ? 'Master Teacher is currently designated by $holderName.'
+                : 'Master Teacher is currently designated.',
+          ),
+        ),
+      );
       return;
     }
     setState(() => _mtBusy = true);
     try {
       await setMasterTeacher(ref, next);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next ? 'Master Teacher enabled.' : 'Master Teacher disabled.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              next ? 'Master Teacher enabled.' : 'Master Teacher disabled.',
+            ),
+          ),
+        );
+      }
     } on DioException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settingsError(e, 'Could not update status.'))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(settingsError(e, 'Could not update status.'))),
+        );
+      }
     } finally {
       if (mounted) setState(() => _mtBusy = false);
     }
@@ -133,7 +211,9 @@ class _State extends ConsumerState<SettingsPage> {
 
   Future<void> _savePassword() async {
     if (_next.text.length < 8) {
-      setState(() => _passError = 'New password must be at least 8 characters.');
+      setState(
+        () => _passError = 'New password must be at least 8 characters.',
+      );
       return;
     }
     if (_next.text != _confirm.text) {
@@ -145,13 +225,30 @@ class _State extends ConsumerState<SettingsPage> {
       _passBusy = true;
     });
     try {
-      await changePassword(ref, currentPassword: _current.text, newPassword: _next.text);
+      await changePassword(
+        ref,
+        currentPassword: _current.text,
+        newPassword: _next.text,
+      );
       _current.clear();
       _next.clear();
       _confirm.clear();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated. Use your new password next time you sign in.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Password updated. Use your new password next time you sign in.',
+            ),
+          ),
+        );
+      }
     } on DioException catch (e) {
-      setState(() => _passError = settingsError(e, 'We couldn’t update your password. Please try again.'));
+      setState(
+        () => _passError = settingsError(
+          e,
+          'We couldn’t update your password. Please try again.',
+        ),
+      );
     } finally {
       if (mounted) setState(() => _passBusy = false);
     }
@@ -160,201 +257,355 @@ class _State extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Keep the locally cached palette in sync with the server profile.
-    ref.listen(teacherProfileProvider, (_, next) {
-      next.maybeWhen(
-        data: (p) => ref.read(themeSettingsProvider.notifier).syncPalette(p.primaryColor, p.secondaryColor),
-        orElse: () {},
-      );
-    });
     final profile = ref.watch(teacherProfileProvider);
-    return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 80), children: [
-      Text('Settings', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-      Text('Your profile, appearance, and account security.', style: theme.textTheme.bodySmall),
-      const SizedBox(height: 12),
-      profile.when(
-        loading: () => const ZSkeletonList(count: 2),
-        error: (e, _) => ErrorView(message: e, onRetry: () => ref.invalidate(teacherProfileProvider)),
-        data: (p) {
-          if (!_nameInit) {
-            _name.text = p.fullName;
-            _nameInit = true;
-          }
-          return Column(children: [
-            _section(
-              context,
-              title: 'Profile',
-              subtitle: 'Your display name and photo.',
-              child: Column(children: [
-                Row(children: [
-                  TeacherAvatar(photoUrl: p.photoUrl, radius: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: _photoBusy ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.photo_camera_outlined, size: 16),
-                      label: Text(_photoBusy ? 'Uploading…' : 'Change photo'),
-                      onPressed: _photoBusy ? null : _choosePhotoSource,
-                    ),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      children: [
+        Text('Settings', style: theme.textTheme.headlineSmall),
+        Text(
+          'Your profile, appearance, and account security.',
+          style: theme.textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        profile.when(
+          loading: () => const ZSkeletonList(count: 2),
+          error: (e, _) => ErrorView(
+            message: e,
+            onRetry: () => ref.invalidate(teacherProfileProvider),
+          ),
+          data: (p) {
+            if (!_nameInit) {
+              _name.text = p.fullName;
+              _nameInit = true;
+            }
+            return Column(
+              children: [
+                _section(
+                  context,
+                  title: 'Profile',
+                  subtitle: 'Your display name and photo.',
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          TeacherAvatar(photoUrl: p.photoUrl, radius: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              icon: _photoBusy
+                                  ? const ZSpinner(size: 14)
+                                  : const Icon(
+                                      Icons.photo_camera_outlined,
+                                      size: 16,
+                                    ),
+                              label: Text(
+                                _photoBusy ? 'Uploading…' : 'Change photo',
+                              ),
+                              onPressed: _photoBusy ? null : _choosePhotoSource,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _name,
+                        decoration: const InputDecoration(
+                          labelText: 'Full name',
+                        ),
+                        maxLength: 100,
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton(
+                          onPressed: _saveName,
+                          child: const Text('Save profile'),
+                        ),
+                      ),
+                    ],
                   ),
-                ]),
-                const SizedBox(height: 12),
-                TextField(controller: _name, decoration: const InputDecoration(labelText: 'Full name'), maxLength: 100),
-                const SizedBox(height: 8),
-                Align(alignment: Alignment.centerRight, child: FilledButton(onPressed: _saveName, child: const Text('Save profile'))),
-              ]),
-            ),
-            const SizedBox(height: 8),
-            _AdviserCard(
-              picking: _pickingSection,
-              selected: _selectedSection,
-              onPicking: (v) => setState(() {
-                _pickingSection = v;
-                if (!v) _selectedSection = null;
-              }),
-              onSelect: (id) => setState(() => _selectedSection = id),
-            ),
-            const SizedBox(height: 8),
-            _MasterTeacherCard(
-              busy: _mtBusy,
-              onToggle: (next, {required takenByOther, holderName}) => _toggleMaster(next, takenByOther: takenByOther, holderName: holderName),
-            ),
-            const SizedBox(height: 8),
-            _section(
-              context,
-              title: 'Appearance',
-              subtitle: 'Applies instantly across the whole workspace.',
-              child: _ThemePicker(),
-            ),
-            const SizedBox(height: 8),
-            _PaletteCard(profile: p),
-            const SizedBox(height: 8),
-            _section(
-              context,
-              title: 'Password',
-              subtitle: 'Choose a new password at least 8 characters long.',
-              child: Column(children: [
-                TextField(controller: _current, decoration: const InputDecoration(labelText: 'Current password'), obscureText: true),
-                const SizedBox(height: 8),
-                TextField(controller: _next, decoration: const InputDecoration(labelText: 'New password'), obscureText: true),
-                const SizedBox(height: 8),
-                TextField(controller: _confirm, decoration: const InputDecoration(labelText: 'Confirm new password'), obscureText: true),
-                if (_passError != null) ...[
-                  const SizedBox(height: 4),
-                  Text(_passError!, style: TextStyle(color: theme.colorScheme.error, fontSize: 13)),
-                ],
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton(onPressed: _passBusy ? null : _savePassword, child: Text(_passBusy ? 'Saving…' : 'Update password')),
                 ),
-              ]),
-            ),
-          ]);
-        },
-      ),
-      const SizedBox(height: 8),
-      const ZCard(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Grade flags', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-          SizedBox(height: 4),
-          Text('Raise and resolve flags inside each class workspace. Overdue flags escalate to the Principal.', style: TextStyle(fontSize: 13)),
-        ]),
-      ),
-    ]);
+                const SizedBox(height: 8),
+                _AdviserCard(
+                  picking: _pickingSection,
+                  selected: _selectedSection,
+                  onPicking: (v) => setState(() {
+                    _pickingSection = v;
+                    if (!v) _selectedSection = null;
+                  }),
+                  onSelect: (id) => setState(() => _selectedSection = id),
+                ),
+                const SizedBox(height: 8),
+                _MasterTeacherCard(
+                  busy: _mtBusy,
+                  onToggle: (next, {required takenByOther, holderName}) =>
+                      _toggleMaster(
+                        next,
+                        takenByOther: takenByOther,
+                        holderName: holderName,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                _section(
+                  context,
+                  title: 'Appearance',
+                  subtitle: 'Applies instantly across the whole workspace.',
+                  child: _ThemePicker(),
+                ),
+                const SizedBox(height: 8),
+                _PaletteCard(profile: p),
+                const SizedBox(height: 8),
+                _section(
+                  context,
+                  title: 'Password',
+                  subtitle: 'Choose a new password at least 8 characters long.',
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _current,
+                        decoration: const InputDecoration(
+                          labelText: 'Current password',
+                        ),
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _next,
+                        decoration: const InputDecoration(
+                          labelText: 'New password',
+                        ),
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _confirm,
+                        decoration: const InputDecoration(
+                          labelText: 'Confirm new password',
+                        ),
+                        obscureText: true,
+                      ),
+                      if (_passError != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _passError!,
+                          style: TextStyle(
+                            color: theme.colorScheme.error,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton(
+                          onPressed: _passBusy ? null : _savePassword,
+                          child: Text(
+                            _passBusy ? 'Saving…' : 'Update password',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        const ZCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Grade flags',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Raise and resolve flags inside each class workspace. Overdue flags escalate to the Principal.',
+                style: TextStyle(fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
-  static Widget _section(BuildContext context, {required String title, required String subtitle, required Widget child}) => ZCard(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 2),
-          Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 12),
-          child,
-        ]),
-      );
+  static Widget _section(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) => ZCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 2),
+        Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 12),
+        child,
+      ],
+    ),
+  );
 }
 
 class _ThemePicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mode = ref.watch(themeSettingsProvider).mode;
-    String selected = switch (mode) { ThemeMode.light => 'light', ThemeMode.dark => 'dark', _ => 'system' };
-    return SegTabs<String>(
-      values: const ['light', 'dark', 'system'],
-      labels: const ['Light', 'Dark', 'System'],
-      selected: selected,
-      onChanged: (v) => ref.read(themeSettingsProvider.notifier).setMode(switch (v) {
-        'light' => ThemeMode.light,
-        'dark' => ThemeMode.dark,
-        _ => ThemeMode.system,
-      }),
-    );
+    return const WorkspaceThemePicker();
   }
 }
 
-class _PaletteCard extends ConsumerWidget {
+class _PaletteCard extends ConsumerStatefulWidget {
   final TeacherProfile profile;
   const _PaletteCard({required this.profile});
 
-  Future<void> _apply(WidgetRef ref, BuildContext context, {String? primary, String? secondary, bool keepPrimary = true}) async {
-    final nextPrimary = keepPrimary ? (primary ?? profile.primaryColor) : primary;
-    final nextSecondary = keepPrimary ? (secondary ?? profile.secondaryColor) : secondary;
+  @override
+  ConsumerState<_PaletteCard> createState() => _PaletteCardState();
+}
+
+class _PaletteCardState extends ConsumerState<_PaletteCard> {
+  bool _saving = false;
+  TeacherProfile get profile => widget.profile;
+
+  Future<void> _apply(
+    WidgetRef ref,
+    BuildContext context, {
+    String? primary,
+    String? secondary,
+    bool keepPrimary = true,
+  }) async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final nextPrimary = keepPrimary
+        ? (primary ?? profile.primaryColor)
+        : primary;
+    final nextSecondary = keepPrimary
+        ? (secondary ?? profile.secondaryColor)
+        : secondary;
     try {
-      await patchTeacherProfile(ref, {'primaryColor': nextPrimary, 'secondaryColor': nextSecondary});
-      await ref.read(themeSettingsProvider.notifier).syncPalette(nextPrimary, nextSecondary);
-    } on DioException catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settingsError(e, 'Could not update palette.'))));
+      await patchTeacherProfile(ref, {
+        'primaryColor': nextPrimary,
+        'secondaryColor': nextSecondary,
+      });
+      if (!mounted) return;
+      await ref
+          .read(themeSettingsProvider.notifier)
+          .syncPalette(nextPrimary, nextSecondary);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              userMessage(
+                error,
+                fallback:
+                    'We couldn’t save your workspace colors. Please try again.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    Widget swatches(List<String> presets, String? selected, ValueChanged<String> onPick) => Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final hex in presets)
-              InkWell(
+  Widget build(BuildContext context) {
+    Widget swatches(
+      List<String> presets,
+      String? selected,
+      ValueChanged<String> onPick,
+    ) => Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final hex in presets)
+          Semantics(
+            label: 'Color $hex',
+            button: true,
+            enabled: !_saving,
+            selected: selected?.toLowerCase() == hex,
+            child: Tooltip(
+              message: hex,
+              child: InkWell(
                 borderRadius: BorderRadius.circular(999),
-                onTap: () => onPick(hex),
+                onTap: _saving ? null : () => onPick(hex),
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _swatch(hex),
                     border: Border.all(
-                      color: selected == hex ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline,
-                      width: selected == hex ? 3 : 1,
+                      color: selected?.toLowerCase() == hex
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(context).colorScheme.outline,
+                      width: selected?.toLowerCase() == hex ? 3 : 1,
                     ),
                   ),
+                  child: selected?.toLowerCase() == hex
+                      ? Icon(
+                          Icons.check,
+                          size: 20,
+                          color: contrastForeground(_swatch(hex)!),
+                        )
+                      : null,
                 ),
               ),
-          ],
-        );
+            ),
+          ),
+      ],
+    );
     return _State._section(
       context,
       title: 'Workspace palette',
-      subtitle: 'Paints cards, buttons, and accents across your workspace.',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Primary', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 6),
-        swatches(_primaryPresets, profile.primaryColor, (hex) => _apply(ref, context, primary: hex)),
-        const SizedBox(height: 12),
-        Text('Secondary', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 6),
-        swatches(_secondaryPresets, profile.secondaryColor, (hex) => _apply(ref, context, secondary: hex)),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerRight,
-          child: OutlinedButton(
-            onPressed: () async {
-              await _apply(ref, context, primary: null, secondary: null, keepPrimary: false);
-            },
-            child: const Text('Reset to default'),
+      subtitle:
+          'Uses the same saved button and accent colors as your web workspace.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Primary', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 6),
+          swatches(
+            _primaryPresets,
+            profile.primaryColor,
+            (hex) => _apply(ref, context, primary: hex),
           ),
-        ),
-      ]),
+          const SizedBox(height: 12),
+          Text('Secondary', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 6),
+          swatches(
+            _secondaryPresets,
+            profile.secondaryColor,
+            (hex) => _apply(ref, context, secondary: hex),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton(
+              onPressed: _saving
+                  ? null
+                  : () async {
+                      await _apply(
+                        ref,
+                        context,
+                        primary: null,
+                        secondary: null,
+                        keepPrimary: false,
+                      );
+                    },
+              child: Text(_saving ? 'Saving palette…' : 'Reset to default'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -364,109 +615,218 @@ class _AdviserCard extends ConsumerWidget {
   final String? selected;
   final ValueChanged<bool> onPicking;
   final ValueChanged<String> onSelect;
-  const _AdviserCard({required this.picking, required this.selected, required this.onPicking, required this.onSelect});
+  const _AdviserCard({
+    required this.picking,
+    required this.selected,
+    required this.onPicking,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final overview = ref.watch(overviewProvider);
     final sections = ref.watch(adviserSectionsProvider);
-    final isAdviser = overview.maybeWhen(data: (d) => d['isAdviser'] == true, orElse: () => false);
-    final advisoryName = overview.maybeWhen(data: (d) => d['advisorySection']?['name']?.toString(), orElse: () => null);
+    final isAdviser = overview.maybeWhen(
+      data: (d) => d['isAdviser'] == true,
+      orElse: () => false,
+    );
+    final advisoryName = overview.maybeWhen(
+      data: (d) => d['advisorySection']?['name']?.toString(),
+      orElse: () => null,
+    );
     return _State._section(
       context,
       title: 'Adviser',
       subtitle: 'Pick your section from the master teacher\u2019s schedule.',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(isAdviser && advisoryName != null ? 'Adviser of $advisoryName' : 'Not an adviser',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        if (!isAdviser) Text('Only Overview, Workspace and Settings show until you claim a section.', style: theme.textTheme.bodySmall),
-        const SizedBox(height: 8),
-        sections.when(
-          loading: () => const Text('Loading sections…', style: TextStyle(fontSize: 13)),
-          error: (e, _) => Text(userMessage(e), style: TextStyle(color: theme.colorScheme.error, fontSize: 13)),
-          data: (list) {
-            final mine = list.where((s) => s.advisedByMe).toList();
-            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (mine.isNotEmpty)
-                for (final s in mine)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(children: [
-                      Expanded(child: Text(s.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
-                      TextButton(
-                        onPressed: () async {
-                          try {
-                            await releaseAdvisorySection(ref, s.id);
-                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Advisory released.')));
-                          } on DioException catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settingsError(e, 'Could not release.'))));
-                            }
-                          }
-                        },
-                        child: const Text('Release', style: TextStyle(fontSize: 13)),
-                      ),
-                    ]),
-                  ),
-              if (picking) ...[
-                for (final s in list)
-                  Builder(builder: (_) {
-                    final selectable = s.claimable || s.advisedByMe;
-                    final isSel = selected == s.id;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          alignment: Alignment.centerLeft,
-                          side: BorderSide(color: isSel ? theme.colorScheme.primary : theme.colorScheme.outline, width: isSel ? 2 : 1),
-                        ),
-                        onPressed: selectable ? () => onSelect(s.id) : null,
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(s.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          Text(
-                            'Grade ${s.gradeNumber}${s.adviserLabel.isNotEmpty ? ' · Listed as "${s.adviserLabel}"' : ''} · ${!selectable ? (s.holderName != null ? 'Advised by ${s.holderName}' : 'Already claimed') : (isSel ? 'Selected' : 'Select this section')}',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ]),
-                      ),
-                    );
-                  }),
-                Row(children: [
-                  Expanded(child: OutlinedButton(onPressed: () => onPicking(false), child: const Text('Close'))),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: selected == null
-                          ? null
-                          : () async {
-                              try {
-                                await claimAdvisorySection(ref, selected!);
-                                onPicking(false);
-                                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Advisory saved.')));
-                              } on DioException catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settingsError(e, 'Could not save.'))));
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isAdviser && advisoryName != null
+                ? 'Adviser of $advisoryName'
+                : 'Not an adviser',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          if (!isAdviser)
+            Text(
+              'Only Overview, Workspace and Settings show until you claim a section.',
+              style: theme.textTheme.bodySmall,
+            ),
+          const SizedBox(height: 8),
+          sections.when(
+            loading: () =>
+                const Text('Loading sections…', style: TextStyle(fontSize: 13)),
+            error: (e, _) => Text(
+              userMessage(e),
+              style: TextStyle(color: theme.colorScheme.error, fontSize: 13),
+            ),
+            data: (list) {
+              final mine = list.where((s) => s.advisedByMe).toList();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (mine.isNotEmpty)
+                    for (final s in mine)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                s.name,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                try {
+                                  await releaseAdvisorySection(ref, s.id);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Advisory released.'),
+                                      ),
+                                    );
+                                  }
+                                } on DioException catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          settingsError(
+                                            e,
+                                            'Could not release.',
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 }
-                              }
-                            },
-                      child: const Text('Save section'),
+                              },
+                              child: const Text(
+                                'Release',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  if (picking) ...[
+                    for (final s in list)
+                      Builder(
+                        builder: (_) {
+                          final selectable = s.claimable || s.advisedByMe;
+                          final isSel = selected == s.id;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                alignment: Alignment.centerLeft,
+                                side: BorderSide(
+                                  color: isSel
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.outline,
+                                  width: isSel ? 2 : 1,
+                                ),
+                              ),
+                              onPressed: selectable
+                                  ? () => onSelect(s.id)
+                                  : null,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    s.name,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Grade ${s.gradeNumber}${s.adviserLabel.isNotEmpty ? ' · Listed as "${s.adviserLabel}"' : ''} · ${!selectable ? (s.holderName != null ? 'Advised by ${s.holderName}' : 'Already claimed') : (isSel ? 'Selected' : 'Select this section')}',
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => onPicking(false),
+                            child: const Text('Close'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: selected == null
+                                ? null
+                                : () async {
+                                    try {
+                                      await claimAdvisorySection(
+                                        ref,
+                                        selected!,
+                                      );
+                                      onPicking(false);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Advisory saved.'),
+                                          ),
+                                        );
+                                      }
+                                    } on DioException catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  settingsError(
+                                                    e,
+                                                    'Could not save.',
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                      }
+                                    }
+                                  },
+                            child: const Text('Save section'),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ]),
-              ] else
-                OutlinedButton(onPressed: () => onPicking(true), child: Text(isAdviser ? 'Change section' : 'I\u2019m an adviser')),
-            ]);
-          },
-        ),
-      ]),
+                  ] else
+                    OutlinedButton(
+                      onPressed: () => onPicking(true),
+                      child: Text(
+                        isAdviser ? 'Change section' : 'I\u2019m an adviser',
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _MasterTeacherCard extends ConsumerWidget {
   final bool busy;
-  final void Function(bool, {required bool takenByOther, String? holderName}) onToggle;
+  final void Function(bool, {required bool takenByOther, String? holderName})
+  onToggle;
   const _MasterTeacherCard({required this.busy, required this.onToggle});
 
   @override
@@ -480,31 +840,55 @@ class _MasterTeacherCard extends ConsumerWidget {
         final holder = d['masterTeacherHolderName']?.toString();
         final takenByOther = !isMaster && taken;
         if (!eligible && !isMaster) return const SizedBox.shrink();
-        return Column(children: [
-          _State._section(
-            context,
-            title: 'Master Teacher',
-            subtitle: 'Self-declared designation for grades 7–10 classes.',
-            child: Row(children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Master Teacher status', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  Text(
-                    isMaster
-                        ? 'Currently designated — only one designation at a time.'
-                        : takenByOther
-                            ? (holder != null ? 'Currently designated by $holder — unavailable until released.' : 'Currently designated — unavailable until released.')
-                            : 'Not designated',
-                    style: Theme.of(context).textTheme.bodySmall,
+        return Column(
+          children: [
+            _State._section(
+              context,
+              title: 'Master Teacher',
+              subtitle: 'Self-declared designation for grades 7–10 classes.',
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Master Teacher status',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          isMaster
+                              ? 'Currently designated — only one designation at a time.'
+                              : takenByOther
+                              ? (holder != null
+                                    ? 'Currently designated by $holder — unavailable until released.'
+                                    : 'Currently designated — unavailable until released.')
+                              : 'Not designated',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
                   ),
-                ]),
+                  if (!takenByOther)
+                    Switch(
+                      value: isMaster,
+                      onChanged: busy
+                          ? null
+                          : (v) => onToggle(
+                              v,
+                              takenByOther: takenByOther,
+                              holderName: holder,
+                            ),
+                    ),
+                ],
               ),
-              if (!takenByOther)
-                Switch(value: isMaster, onChanged: busy ? null : (v) => onToggle(v, takenByOther: takenByOther, holderName: holder)),
-            ]),
-          ),
-          const SizedBox(height: 8),
-        ]);
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
       },
       orElse: () => const SizedBox.shrink(),
     );

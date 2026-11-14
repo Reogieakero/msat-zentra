@@ -10,7 +10,7 @@ import '../settings/settings_page.dart' show SettingsPage;
 
 enum AdviserRoute { advisory, academic, admCases, anecdotal, schedule, bama, referrals }
 
-enum WorkspaceRoute { classes, gradebook, attendance, more }
+enum WorkspaceRoute { overview, classes, gradebook, attendance, schedule, more }
 
 class AdviserShell extends StatelessWidget {
   final AdviserRoute selected;

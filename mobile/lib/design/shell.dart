@@ -19,6 +19,7 @@ import '../shared/models.dart' show Term;
 import '../shared/widgets.dart';
 import '../shared/user_messages.dart';
 import 'brand.dart';
+import 'workspace_palette_gate.dart';
 
 class ZentraShell extends ConsumerWidget {
   final Widget child;
@@ -31,11 +32,11 @@ class ZentraShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+    return WorkspacePaletteGate(child: Scaffold(
       appBar: const ZentraAppBar(),
       drawer: ZentraDrawer(selectedPath: selectedPath),
       body: child,
-    );
+    ));
   }
 }
 
@@ -110,13 +111,14 @@ class ZentraDrawer extends ConsumerWidget {
           const SizedBox(height: 8),
           const ZTermSwitcher(),
           const SizedBox(height: 4),
+          _item(context, Icons.dashboard_outlined, 'Overview', '/workspace/overview', _selected('/workspace/overview')),
           if (isAdviser) ...[
             const _DrawerHeader('Advisory'),
             _item(context, Icons.group_outlined, 'Advisory list', '/adviser/advisory', _selected('/adviser/advisory')),
             _item(context, Icons.school_outlined, 'Academic', '/adviser/academic', _selected('/adviser/academic')),
             _item(context, Icons.folder_shared_outlined, 'ADM cases', '/adviser/adm-cases', _selected('/adviser/adm-cases')),
             _item(context, Icons.note_outlined, 'Anecdotal', '/adviser/anecdotal', _selected('/adviser/anecdotal')),
-            _item(context, Icons.calendar_month_outlined, 'Section schedule', '/adviser/schedule', _selected('/adviser/schedule')),
+            _item(context, Icons.calendar_month_outlined, 'Section schedule', '/adviser/schedule', _selected('/adviser/schedule') || _selected('/workspace/schedule')),
             _item(context, Icons.chat_bubble_outline, 'Chat with Bama', '/adviser/bama', _selected('/adviser/bama')),
             _item(context, Icons.send_outlined, 'Referrals', '/adviser/referrals', _selected('/adviser/referrals')),
           ],
@@ -124,6 +126,7 @@ class ZentraDrawer extends ConsumerWidget {
           _item(context, Icons.class_outlined, 'Class', '/workspace/classes', _selected('/workspace/classes')),
           _item(context, Icons.grade_outlined, 'Gradebook', '/workspace/gradebook', _selected('/workspace/gradebook')),
           _item(context, Icons.fact_check_outlined, 'Attendance', '/workspace/attendance', _selected('/workspace/attendance')),
+          if (!isAdviser) _item(context, Icons.calendar_month_outlined, 'My schedule', '/workspace/schedule', _selected('/workspace/schedule')),
         ]),
       ),
     );
@@ -261,9 +264,11 @@ extension AdviserRouteLocation on AdviserRoute {
 
 extension WorkspaceRouteLocation on WorkspaceRoute {
   String get path => switch (this) {
+        WorkspaceRoute.overview => '/workspace/overview',
         WorkspaceRoute.classes => '/workspace/classes',
         WorkspaceRoute.gradebook => '/workspace/gradebook',
         WorkspaceRoute.attendance => '/workspace/attendance',
+        WorkspaceRoute.schedule => '/workspace/schedule',
         WorkspaceRoute.more => '/teacher/more',
       };
 }
@@ -345,7 +350,7 @@ void showZNotifications(BuildContext context, WidgetRef ref) {
                         },
                         child: Row(children: [
                           if (!n.isRead)
-                            Container(width: 8, height: 8, margin: const EdgeInsets.only(right: 8), decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF1C1C1C))),
+                            Container(width: 8, height: 8, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(shape: BoxShape.circle, color: Theme.of(context).colorScheme.onSurface)),
                           Expanded(
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text(teacherNotificationTitle(n), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),

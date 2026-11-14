@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../shared/user_messages.dart';
 import '../../core/session.dart';
+import '../../shared/models.dart' show ApiException;
 import '../adviser/advisory_list_page.dart' show advisoryProvider, archivedAdvisoryProvider;
 
 class TeacherProfile {
@@ -28,6 +29,8 @@ class TeacherProfile {
 }
 
 final teacherProfileProvider = FutureProvider<TeacherProfile>((ref) async {
+  final session = ref.watch(authProvider.select((state) => (state.loggedIn, state.portal)));
+  if (!session.$1 || session.$2 != 'staff') throw ApiException('UNAUTHORIZED', 'Sign in to view your workspace profile.');
   final api = ref.watch(apiClientProvider);
   try {
     final res = await api.dio.get('/api/teacher/settings/profile');
@@ -90,6 +93,7 @@ final adviserSectionsProvider = FutureProvider<List<AdviserSectionOption>>((ref)
 });
 
 void _refreshSettings(WidgetRef ref) {
+  if (!ref.context.mounted) return;
   ref.invalidate(teacherProfileProvider);
   ref.invalidate(overviewProvider);
   ref.invalidate(adviserSectionsProvider);

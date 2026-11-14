@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/session.dart' show termProvider;
 import '../../shared/models.dart';
 import '../../shared/widgets.dart';
 
 final adviserScheduleProvider = FutureProvider<List<TimetableSlot>>((ref) async {
+  ref.watch(termProvider);
   final api = ref.watch(apiClientProvider);
   try {
     final res = await api.dio.get('/api/teacher/schedule/my-slots');

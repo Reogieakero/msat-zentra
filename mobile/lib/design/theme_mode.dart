@@ -3,6 +3,8 @@
 // localStorage. Palette persists server-side (StaffProfile) and is cached
 // locally so it paints on cold start.
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -25,11 +27,18 @@ Color? hexToColor(String? hex) {
 
 /// Web contrastForeground: luminance > 0.4 → dark ink else near-white.
 Color contrastForeground(Color c) {
-  final lum = (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b);
+  double channel(double value) => value <= 0.03928
+      ? value / 12.92
+      : math.pow((value + 0.055) / 1.055, 2.4).toDouble();
+  final lum =
+      0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
   return lum > 0.4 ? const Color(0xFF18181B) : const Color(0xFFFAFAFA);
 }
 
-final themeSettingsProvider = StateNotifierProvider<ThemeSettingsNotifier, ThemeSettings>((ref) => ThemeSettingsNotifier());
+final themeSettingsProvider =
+    StateNotifierProvider<ThemeSettingsNotifier, ThemeSettings>(
+      (ref) => ThemeSettingsNotifier(),
+    );
 
 class ThemeSettingsNotifier extends StateNotifier<ThemeSettings> {
   ThemeSettingsNotifier() : super(const ThemeSettings(mode: ThemeMode.system)) {
@@ -52,11 +61,26 @@ class ThemeSettingsNotifier extends StateNotifier<ThemeSettings> {
   }
 
   Future<void> setMode(ThemeMode mode) async {
+    state = ThemeSettings(
+      mode: mode,
+      primaryHex: state.primaryHex,
+      secondaryHex: state.secondaryHex,
+    );
     await Hive.box(_boxName).put('themeMode', mode.name);
-    state = ThemeSettings(mode: mode, primaryHex: state.primaryHex, secondaryHex: state.secondaryHex);
   }
 
   Future<void> syncPalette(String? primaryHex, String? secondaryHex) async {
+    primaryHex = hexToColor(primaryHex) == null ? null : primaryHex;
+    secondaryHex = hexToColor(secondaryHex) == null ? null : secondaryHex;
+    if (state.primaryHex == primaryHex && state.secondaryHex == secondaryHex) {
+      return;
+    }
+    state = ThemeSettings(
+      mode: state.mode,
+      primaryHex: primaryHex,
+      secondaryHex: secondaryHex,
+    );
+    if (!Hive.isBoxOpen(_boxName)) return;
     final box = Hive.box(_boxName);
     if (primaryHex == null) {
       await box.delete('primaryColor');
@@ -68,7 +92,6 @@ class ThemeSettingsNotifier extends StateNotifier<ThemeSettings> {
     } else {
       await box.put('secondaryColor', secondaryHex);
     }
-    state = ThemeSettings(mode: state.mode, primaryHex: primaryHex, secondaryHex: secondaryHex);
   }
 }
 

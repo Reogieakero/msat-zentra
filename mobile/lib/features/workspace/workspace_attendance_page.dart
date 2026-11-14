@@ -320,15 +320,19 @@ class _State extends ConsumerState<WorkspaceAttendancePage> {
                   final m = _marks[i];
                   return ZCard(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Row(children: [
-                      Expanded(child: Text(m['name']?.toString() ?? m['studentId'].toString(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
-                      SegTabs<String>(
+                    child: LayoutBuilder(builder: (context, constraints) {
+                      final name = Text(m['name']?.toString() ?? m['studentId'].toString(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600));
+                      final picker = SegTabs<String>(
                         values: const ['present', 'absent', 'late', 'excused'],
                         labels: const ['P', 'A', 'L', 'E'],
                         selected: (m['status'] ?? 'present').toString(),
                         onChanged: (v) => setState(() => _marks[i] = {...m, 'status': v}),
-                      ),
-                    ]),
+                      );
+                      if (constraints.maxWidth < 400 || MediaQuery.textScalerOf(context).scale(13) > 16) {
+                        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [name, const SizedBox(height: 8), picker]);
+                      }
+                      return Row(children: [Expanded(child: name), const SizedBox(width: 12), picker]);
+                    }),
                   );
                 },
               ),

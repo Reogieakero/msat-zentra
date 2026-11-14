@@ -18,7 +18,7 @@ PortalModules fixture() => PortalModules.fromJson({
 
 void main() {
   testWidgets('parent module view is read-only and fits a narrow phone', (tester) async {
-    await tester.view.setPhysicalSize(const Size(320, 800));
+    tester.view.physicalSize = const Size(320, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);

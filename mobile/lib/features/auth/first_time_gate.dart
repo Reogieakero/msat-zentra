@@ -13,6 +13,7 @@ import '../../core/api_client.dart';
 import '../../core/session.dart';
 import '../../shared/widgets.dart';
 import '../../shared/user_messages.dart';
+import 'auth_flow_ui.dart';
 
 class FirstTimeGate extends ConsumerStatefulWidget {
   const FirstTimeGate({super.key});
@@ -32,6 +33,12 @@ class _GateState extends ConsumerState<FirstTimeGate> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     setState(() {
       _busy = true;
@@ -42,17 +49,24 @@ class _GateState extends ConsumerState<FirstTimeGate> {
       final me = (await api.dio.get('/api/teacher/schedule/teachers/me')).data as Map<String, dynamic>;
       // Ensure overview (sets role) is ready before routing.
       await ref.read(overviewProvider.future);
+      if (!mounted) return;
       setState(() {
         _me = me;
         _busy = false;
       });
-    } on DioException catch (e) {
+    } catch (e) {
+      if (!mounted) return;
       final msg = userMessage(e, fallback: 'We couldn’t load your workspace. Please try again.');
       setState(() {
         _busy = false;
         _error = msg;
       });
     }
+  }
+
+  void _retry() {
+    ref.invalidate(overviewProvider);
+    _load();
   }
 
   Future<void> _claim() async {
@@ -90,12 +104,12 @@ class _GateState extends ConsumerState<FirstTimeGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (_busy) return const Scaffold(body: LoadingView(label: 'Preparing workspace…'));
-    if (_error != null) return Scaffold(body: ErrorView(message: _error!, onRetry: _load));
+    if (_busy) return const AuthFlowScaffold(centerContent: true, child: AuthLoading(label: 'Preparing workspace…'));
+    if (_error != null) return AuthFlowScaffold(child: ErrorView(message: _error!, onRetry: _retry));
     final overview = ref.watch(overviewProvider);
     return overview.when(
-      loading: () => const Scaffold(body: LoadingView()),
-      error: (e, _) => Scaffold(body: ErrorView(message: e, onRetry: () => ref.invalidate(overviewProvider))),
+      loading: () => const AuthFlowScaffold(centerContent: true, child: AuthLoading(label: 'Preparing workspace…')),
+      error: (e, _) => AuthFlowScaffold(child: ErrorView(message: e, onRetry: _retry)),
       data: (data) {
         final isAdviser = data['isAdviser'] == true;
         final teacherName = _me?['teacherName'];
@@ -154,11 +168,11 @@ class _GateState extends ConsumerState<FirstTimeGate> {
             ),
           );
         }
-        // Ready — route by role to drawer defaults.
+        // Both staff roles land on Overview only after verification succeeds.
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) context.go(isAdviser ? '/adviser/advisory' : '/workspace/classes');
+          if (mounted) context.go('/workspace/overview');
         });
-        return const Scaffold(body: LoadingView(label: 'Opening workspace…'));
+        return const AuthFlowScaffold(centerContent: true, child: AuthLoading(label: 'Opening workspace…'));
       },
     );
   }

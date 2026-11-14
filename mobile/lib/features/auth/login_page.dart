@@ -11,6 +11,7 @@ import '../../core/config.dart';
 import '../../core/session.dart';
 import '../../design/brand.dart';
 import 'login_background.dart';
+import 'auth_flow_ui.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -433,14 +434,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                                       MainAxisAlignment.center,
                                                   children: [
                                                     if (_busy) ...[
-                                                      const SizedBox(
-                                                        width: 16,
-                                                        height: 16,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                              color: muted,
-                                                            ),
+                                                      const AuthSpinner(
+                                                        size: 16,
+                                                        color: muted,
                                                       ),
                                                       const SizedBox(width: 10),
                                                     ],
@@ -487,13 +483,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                                     ? null
                                                     : _googleSignIn,
                                                 icon: _googleBusy
-                                                    ? const SizedBox(
-                                                        width: 16,
-                                                        height: 16,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                            ),
+                                                    ? const AuthSpinner(
+                                                        size: 16,
                                                       )
                                                     : SvgPicture.string(
                                                         _googleLogoSvg,

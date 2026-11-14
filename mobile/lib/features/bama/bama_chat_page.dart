@@ -853,7 +853,7 @@ class _State extends ConsumerState<BamaChatPage> {
             const SizedBox(width: 8),
             Expanded(
               child: FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
                 onPressed: () {
                   Navigator.pop(ctx);
                   _confirmDelete(target);

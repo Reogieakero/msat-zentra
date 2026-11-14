@@ -14,7 +14,7 @@ class SchoolYear {
         id: j['id'] as String,
         name: j['name'] as String,
         isActive: (j['isActive'] ?? j['is_active'] ?? false) as bool,
-        terms: [for (final t in (j['terms'] as List? ?? [])) Term.fromJson(t as Map<String, dynamic>, j['id'] as String)],
+        terms: [for (final t in (j['terms'] as List? ?? [])) Term.fromJson(t as Map<String, dynamic>, j['id'] as String, j['name'] as String)],
       );
 }
 
@@ -23,13 +23,17 @@ class Term {
   final String schoolYearId;
   final String schoolYearName;
   final int termNumber;
-  Term({required this.id, required this.schoolYearId, required this.schoolYearName, required this.termNumber});
+  final DateTime? startDate;
+  final DateTime? endDate;
+  Term({required this.id, required this.schoolYearId, required this.schoolYearName, required this.termNumber, this.startDate, this.endDate});
 
   factory Term.fromJson(Map<String, dynamic> j, String syId, [String syName = '']) => Term(
         id: j['id'] as String,
         schoolYearId: (j['schoolYearId'] ?? syId) as String,
         schoolYearName: (j['schoolYearName'] ?? syName) as String,
         termNumber: (j['termNumber'] ?? j['term_number'] ?? 1) as int,
+        startDate: DateTime.tryParse(j['startDate']?.toString() ?? ''),
+        endDate: DateTime.tryParse(j['endDate']?.toString() ?? ''),
       );
 
   Map<String, dynamic> toJson() => {
@@ -37,6 +41,8 @@ class Term {
         'schoolYearName': schoolYearName,
         'termId': id,
         'termNumber': termNumber,
+        if (startDate != null) 'startDate': startDate!.toIso8601String(),
+        if (endDate != null) 'endDate': endDate!.toIso8601String(),
       };
 
   factory Term.fromCache(Map<String, dynamic> j) => Term(
@@ -44,6 +50,8 @@ class Term {
         schoolYearId: j['schoolYearId'] as String,
         schoolYearName: j['schoolYearName'] as String? ?? '',
         termNumber: j['termNumber'] as int? ?? 1,
+        startDate: DateTime.tryParse(j['startDate']?.toString() ?? ''),
+        endDate: DateTime.tryParse(j['endDate']?.toString() ?? ''),
       );
 }
 

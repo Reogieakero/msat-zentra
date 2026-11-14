@@ -19,6 +19,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../shared/models.dart';
 import '../../shared/widgets.dart';
+import '../../shared/spinner.dart';
 import '../../shared/user_messages.dart';
 import 'anecdotal_data.dart';
 import 'signature_block.dart';
@@ -206,7 +207,7 @@ class _PreviewState extends ConsumerState<RecordPreviewPage> {
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: _exportingXlsx
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const ZSpinner(size: 16)
                           : const Icon(Icons.download_outlined, size: 16),
                       onPressed: _exportingXlsx ? null : _shareXlsx,
                       label: Text(_exportingXlsx ? 'Preparing…' : 'Download .xlsx'),
@@ -216,7 +217,7 @@ class _PreviewState extends ConsumerState<RecordPreviewPage> {
                   Expanded(
                     child: FilledButton.icon(
                       icon: _exportingPdf
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const ZSpinner(size: 16)
                           : const Icon(Icons.picture_as_pdf_outlined, size: 16),
                       onPressed: _exportingPdf ? null : _sharePdf,
                       label: Text(_exportingPdf ? 'Preparing…' : 'Download .PDF'),

@@ -1,10 +1,12 @@
 // Zentra component library — web-matched (monochrome ink, 6px, 1px borders).
-// Ports: Button h-32px, Badge pill h-20px, KpiCard, tables, skeletons, empties.
+// Web visuals, with 48px interactive targets and scalable metadata chips.
 
 import 'package:flutter/material.dart';
 
 import '../design/tokens.dart';
+import '../design/status_palette.dart';
 import 'user_messages.dart';
+import 'spinner.dart';
 
 // --- Legacy names kept (restyled to web tokens) ---
 
@@ -13,11 +15,11 @@ class LoadingView extends StatelessWidget {
   const LoadingView({super.key, this.label = 'Loading…'});
   @override
   Widget build(BuildContext context) => Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-          const SizedBox(height: 8),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ]),
+        child: Semantics(liveRegion: true, label: label, child: ExcludeSemantics(child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const ZSpinner(),
+          const SizedBox(width: 12),
+          Flexible(child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
+        ]))),
       );
 }
 
@@ -53,21 +55,26 @@ class RiskBadge extends StatelessWidget {
   final String level;
   const RiskBadge({super.key, required this.level});
   @override
+  Widget build(BuildContext context) => ZStatusPill(text: level, tone: riskTone(level), badge: true);
+}
+
+class ZStatusPill extends StatelessWidget {
+  const ZStatusPill({super.key, required this.text, this.tone = StatusTone.neutral, this.badge = false});
+  final String text;
+  final StatusTone tone;
+  final bool badge;
+
+  @override
   Widget build(BuildContext context) {
-    final color = switch (level) {
-      'High' => ZTokens.riskHigh,
-      'Moderate' => ZTokens.riskModerate,
-      _ => ZTokens.riskLow,
-    };
+    final colors = statusColors(tone, Theme.of(context), badge: badge);
     return Container(
-      height: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      constraints: const BoxConstraints(minHeight: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ZTokens.radiusPill),
-        color: color.withValues(alpha: 0.12),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        color: colors.background,
+        borderRadius: BorderRadius.circular(badge ? ZTokens.radiusPill : ZTokens.radiusMd),
       ),
-      child: Center(child: Text(level, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color))),
+      child: Text(text, style: TextStyle(color: colors.foreground, fontSize: 11, fontWeight: FontWeight.w600, height: 1.2)),
     );
   }
 }
@@ -76,19 +83,12 @@ class FlagChip extends StatelessWidget {
   final String flag; // academic | attendance | behavioral
   const FlagChip({super.key, required this.flag});
   @override
-  Widget build(BuildContext context) {
-    final color = switch (flag) {
-      'academic' => ZTokens.factorAcademic,
-      'attendance' => ZTokens.factorAttendance,
-      _ => ZTokens.factorBehavioral,
-    };
-    return Container(
-      height: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(ZTokens.radiusPill), color: color.withValues(alpha: 0.12)),
-      child: Center(child: Text(flag, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color))),
-    );
-  }
+  Widget build(BuildContext context) => ZStatusPill(text: flag.replaceAll('_', ' '), tone: switch (flag.toLowerCase()) {
+    'academic' => StatusTone.amber,
+    'attendance' => StatusTone.green,
+    'behavioral' => StatusTone.blue,
+    _ => statusTone(flag),
+  });
 }
 
 class PendingChip extends StatelessWidget {
@@ -114,9 +114,15 @@ class ZCard extends StatelessWidget {
   const ZCard({super.key, required this.child, this.padding = const EdgeInsets.all(16), this.onTap});
   @override
   Widget build(BuildContext context) {
-    final card = Card(margin: EdgeInsets.zero, child: Padding(padding: padding, child: child));
-    if (onTap == null) return card;
-    return InkWell(borderRadius: BorderRadius.circular(ZTokens.radiusLg), onTap: onTap, child: card);
+    final content = Padding(padding: padding, child: child);
+    return Card(
+      margin: EdgeInsets.zero, clipBehavior: Clip.antiAlias,
+      child: onTap == null ? content : Semantics(button: true, child: InkWell(
+        customBorder: Theme.of(context).cardTheme.shape,
+        onTap: onTap,
+        child: ConstrainedBox(constraints: const BoxConstraints(minHeight: ZTokens.controlH), child: content),
+      )),
+    );
   }
 }
 
@@ -169,19 +175,20 @@ class ZEmpty extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ZTokens.radiusLg),
-        border: Border.all(color: theme.colorScheme.outline, style: BorderStyle.solid, width: 1.5),
+        color: ZTokens.factorAcademic.withValues(alpha: 0.10),
+        borderRadius: const BorderRadius.horizontal(right: Radius.circular(ZTokens.radiusLg)),
+        border: const Border(left: BorderSide(color: ZTokens.factorAcademic, width: 3)),
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(shape: BoxShape.circle, color: theme.colorScheme.surfaceContainerLow),
-          child: Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
+            decoration: const BoxDecoration(shape: BoxShape.circle),
+            child: Icon(icon, size: 20, color: theme.brightness == Brightness.dark ? ZTokens.factorAcademic : const Color(0xFFB45309)),
         ),
         const SizedBox(height: 8),
-        Text(title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        Text(title, textAlign: TextAlign.center, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
         if (subtitle != null) ...[const SizedBox(height: 4), Text(subtitle!, textAlign: TextAlign.center, style: theme.textTheme.bodySmall)],
         if (actionLabel != null) ...[const SizedBox(height: 12), FilledButton(onPressed: onAction, child: Text(actionLabel!))],
       ]),
@@ -226,22 +233,22 @@ class SegTabs<T> extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(ZTokens.radiusLg), color: theme.colorScheme.surfaceContainerLow),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           for (var i = 0; i < values.length; i++)
-            GestureDetector(
-              onTap: () => onChanged(values[i]),
-              child: AnimatedContainer(
-                duration: ZTokens.micro,
-                height: 24,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(ZTokens.radiusMd),
-                  color: values[i] == selected ? theme.colorScheme.surface : Colors.transparent,
-                  border: values[i] == selected ? Border.all(color: theme.colorScheme.outline) : null,
+            Semantics(
+              checked: values[i] == selected, inMutuallyExclusiveGroup: true,
+              child: TextButton(
+                onPressed: () => onChanged(values[i]),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, ZTokens.controlH),
+                  foregroundColor: theme.colorScheme.onSurface,
+                  backgroundColor: values[i] == selected ? theme.colorScheme.surface : Colors.transparent,
+                  side: values[i] == selected ? BorderSide(color: theme.colorScheme.outline) : BorderSide.none,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZTokens.radiusMd)),
                 ),
-                child: Center(child: Text(labels[i], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+                child: Text(labels[i], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
               ),
             ),
         ],

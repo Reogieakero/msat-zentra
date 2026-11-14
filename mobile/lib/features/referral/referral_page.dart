@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../shared/user_messages.dart';
 import '../../shared/widgets.dart';
+import '../../design/status_palette.dart';
 
 final referralsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final api = ref.watch(apiClientProvider);
@@ -47,16 +48,6 @@ String _humanize(String? v) {
   return v.split('_').map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}').join(' ');
 }
 
-Color _statusColor(String status) => switch (status) {
-      'pending' => const Color(0xFFF59E0B),
-      'in_progress' => const Color(0xFF3B82F6),
-      'info_requested' => const Color(0xFF3B82F6),
-      'follow_up' => const Color(0xFFF59E0B),
-      'resolved' => const Color(0xFF22C55E),
-      'escalated' => const Color(0xFFDC2626),
-      _ => const Color(0xFF8A8A8A),
-    };
-
 String _statusLabel(String status) => switch (status) {
       'pending' => 'Pending',
       'in_progress' => 'In progress',
@@ -74,30 +65,14 @@ class _StatusBadge extends StatelessWidget {
   final String status;
   const _StatusBadge({required this.status});
   @override
-  Widget build(BuildContext context) {
-    final c = _statusColor(status);
-    return Container(
-      height: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(999), color: c.withValues(alpha: 0.12)),
-      child: Center(child: Text(_statusLabel(status), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c))),
-    );
-  }
+  Widget build(BuildContext context) => ZStatusPill(text: _statusLabel(status), tone: statusTone(status));
 }
 
 class _TypeBadge extends StatelessWidget {
   final bool adm;
   const _TypeBadge({required this.adm});
   @override
-  Widget build(BuildContext context) {
-    final c = adm ? const Color(0xFFF59E0B) : const Color(0xFF3B82F6);
-    return Container(
-      height: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(999), color: c.withValues(alpha: 0.12)),
-      child: Center(child: Text(adm ? 'ADM case' : 'Other matters', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c))),
-    );
-  }
+  Widget build(BuildContext context) => ZStatusPill(text: adm ? 'ADM case' : 'Other matters', tone: adm ? StatusTone.amber : StatusTone.blue);
 }
 
 class ReferralPage extends ConsumerStatefulWidget {
@@ -280,7 +255,7 @@ class _ReferralCard extends ConsumerWidget {
             if (error != null) Text(error!, style: TextStyle(color: Theme.of(ctx).colorScheme.error, fontSize: 13)),
             const SizedBox(height: 8),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
               onPressed: () async {
                 if (reason.text.trim().isEmpty) {
                   setSheet(() => error = 'A reason is required.');
@@ -388,7 +363,7 @@ class _ReferralCard extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
                 onPressed: () async {
                   try {
                     await ref.read(apiClientProvider).dio.delete('/api/referrals/${referral['id']}');
